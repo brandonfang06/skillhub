@@ -1,0 +1,2 @@
+"""SkillHub Python backend package."""
+
