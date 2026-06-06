@@ -69,6 +69,7 @@ Defer APIs when they require:
 | --- | --- | --- | --- |
 | 0 | `GET /api/v1/health` | python | Python skeleton and envelope established. |
 | 1 | `GET /.well-known/clawhub.json` | python | Plain JSON discovery route migrated with no DB dependency. |
+| 2 | `GET /api/v1/labels`, `GET /api/web/labels` | python | Public labels read API migrated as first PostgreSQL-backed Python route. |
 
 ## Planned Migration Order
 
@@ -78,6 +79,10 @@ Routes:
 
 - `GET /api/v1/labels`
 - `GET /api/web/labels`
+
+Status:
+
+- Completed. Keep this section for historical context and contract ownership.
 
 Why next:
 
@@ -381,11 +386,12 @@ When this plan changes:
 
 The next implementation milestone should be:
 
-`GET /api/v1/labels` and `GET /api/web/labels`
+`GET /api/v1/skills/{namespace}/{slug}/labels` and
+`GET /api/web/skills/{namespace}/{slug}/labels`
 
 Before implementation starts:
 
-- Review and update `docs/backend-python-migration/plans/2026-06-06-public-labels-api.md`.
-- Confirm the exact database URL strategy for Windows/macOS Docker and Ubuntu organization
-  PostgreSQL.
+- Create a milestone-specific plan for skill labels list.
+- Reuse the Python DB and label response conventions introduced by the public labels milestone.
+- Confirm anonymous/public visibility behavior against Java before writing code.
 - Announce the API boundary, allowed files, and acceptance criteria.

@@ -29,4 +29,14 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys).toContain('/.well-known/clawhub.json')
     expect(keys.indexOf('/.well-known/clawhub.json')).toBeLessThan(keys.indexOf('/api'))
   })
+
+  it('routes public labels aliases to Python before the Java API fallback', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+
+    expect(proxy['/api/v1/labels']?.target).toBe('http://localhost:8081')
+    expect(proxy['/api/web/labels']?.target).toBe('http://localhost:8081')
+    expect(keys.indexOf('/api/v1/labels')).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf('/api/web/labels')).toBeLessThan(keys.indexOf('/api'))
+  })
 })
