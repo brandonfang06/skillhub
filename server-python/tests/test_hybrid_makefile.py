@@ -12,6 +12,10 @@ def read_hybrid_doc() -> str:
     return (ROOT / "docs" / "backend-python-migration" / "hybrid-local-e2e.md").read_text(encoding="utf-8")
 
 
+def read_sdlc_readme() -> str:
+    return (ROOT / "SDLC-README.md").read_text(encoding="utf-8")
+
+
 def test_makefile_defines_python_dev_process() -> None:
     makefile = read_makefile()
 
@@ -63,10 +67,33 @@ def test_hybrid_local_e2e_doc_covers_windows_macos_and_ubuntu() -> None:
     assert "## Ubuntu" in doc
     assert "Docker Desktop" in doc
     assert "Colima" in doc
-    assert "Docker Engine" in doc
     assert "Git for Windows" in doc
     assert "brew install make" in doc
     assert "sudo apt-get install" in doc
+    assert "Ubuntu does not use Docker for dependency services" in doc
+    assert "organization-managed PostgreSQL" in doc
+    assert "organization-managed Redis" in doc
+    assert "organization-managed MinIO" in doc
+    assert "server/skillhub-app/src/main/resources/application-local.yml" in doc
     assert "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\\dev-hybrid.ps1 up" in doc
     assert "make dev-all-hybrid" in doc
     assert "make test-e2e-smoke-hybrid" in doc
+
+
+def test_sdlc_readme_documents_team_environment_rules_in_chinese() -> None:
+    readme = read_sdlc_readme()
+
+    assert "SkillHub SDLC README" in readme
+    assert "專案定位" in readme
+    assert "Backend Python Migration" in readme
+    assert "server/ 不可修改" in readme
+    assert "Windows" in readme
+    assert "macOS" in readme
+    assert "Ubuntu" in readme
+    assert "Docker" in readme
+    assert "server/skillhub-app/src/main/resources/application-local.yml" in readme
+    assert "PostgreSQL" in readme
+    assert "Redis" in readme
+    assert "MinIO" in readme
+    assert "plan" in readme
+    assert "result" in readme

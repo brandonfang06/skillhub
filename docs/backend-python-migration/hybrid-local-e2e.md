@@ -2,13 +2,15 @@
 
 Use this workflow when Java, Python, and the Vite frontend must run together.
 
-The hybrid stack starts:
+On Windows and macOS, the hybrid stack starts:
 
 - dependency services through Docker Compose
 - Java backend on `http://localhost:8080`
 - Python backend on `http://localhost:8081`
 - Vite frontend on `http://localhost:3000`
 - scanner on `http://localhost:8000`
+
+On Ubuntu, dependency services are organization-managed instead of Docker-managed.
 
 ## Windows
 
@@ -107,14 +109,18 @@ make dev-all-down
 
 Recommended shell: bash.
 
+Ubuntu does not use Docker for dependency services. This environment is intended for development
+inside the organization network, where Java connects to organization-managed PostgreSQL,
+organization-managed Redis, and organization-managed MinIO.
+
 Prerequisites:
 
-- Docker Engine with Compose plugin
 - Java 21
 - Node.js 22 with Corepack
 - Python 3.12
 - `uv`
 - `make`
+- `curl`
 
 Install missing basics when needed:
 
@@ -123,11 +129,15 @@ sudo apt-get update
 sudo apt-get install -y make curl ca-certificates openjdk-21-jdk python3.12
 ```
 
-Install Docker Engine using Docker's official instructions, then verify:
+Before starting Java, manually adjust this local-only file so the Java backend points at the
+organization-managed PostgreSQL, Redis, and MinIO endpoints:
 
 ```bash
-docker compose version
+server/skillhub-app/src/main/resources/application-local.yml
 ```
+
+Do not commit that local environment change unless the project owner explicitly approves it. Agents
+must not edit any file under `server/`.
 
 Install Node.js 22 and enable Corepack:
 
@@ -141,28 +151,40 @@ Install `uv` if it is missing:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Start the hybrid stack:
+Start Java in one terminal after `application-local.yml` points to the organization services:
 
 ```bash
-make dev-all-hybrid
+cd server
+./scripts/run-dev-app.sh
+```
+
+Start Python in a second terminal:
+
+```bash
+cd server-python
+UV_CACHE_DIR=.uv-cache uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+```
+
+Start the Vite frontend in a third terminal:
+
+```bash
+cd web
+corepack pnpm install --frozen-lockfile
+corepack pnpm run dev -- --host 0.0.0.0 --strictPort
 ```
 
 Run smoke E2E:
 
 ```bash
-make test-e2e-smoke-hybrid
+cd web
+corepack pnpm run test:e2e:smoke
 ```
 
 Run full E2E:
 
 ```bash
-make test-e2e-hybrid
-```
-
-Stop everything:
-
-```bash
-make dev-all-down
+cd web
+corepack pnpm run test:e2e
 ```
 
 ## Health Checks
@@ -198,4 +220,3 @@ SERVICE=frontend make dev-logs
 ```
 
 For Windows PowerShell users, inspect the `.dev/*.log` files directly.
-
