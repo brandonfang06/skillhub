@@ -1,12 +1,15 @@
-.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install db-reset dev dev-all dev-all-down dev-all-reset dev-down dev-logs dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-smoke-frontend test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
+.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install db-reset dev dev-all dev-all-hybrid dev-all-down dev-all-reset dev-down dev-logs dev-python dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-hybrid test-e2e-smoke-frontend test-e2e-smoke-hybrid test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
+DEV_PYTHON_PID := $(DEV_DIR)/python.pid
 DEV_WEB_PID := $(DEV_DIR)/web.pid
 DEV_SERVER_LOG := $(DEV_DIR)/server.log
+DEV_PYTHON_LOG := $(DEV_DIR)/python.log
 DEV_WEB_LOG := $(DEV_DIR)/web.log
 DEV_WEB_URL := http://localhost:3000
 DEV_API_URL := http://localhost:8080
+DEV_PYTHON_URL := http://localhost:8081
 DEV_SCANNER_URL := http://localhost:8000
 STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
@@ -15,6 +18,8 @@ DEV_PROCESS := bash scripts/dev-process.sh
 DEV_SERVER_PREPARE := true
 DEV_SERVER_CMD := ./scripts/run-dev-app.sh
 DEV_SERVER_SCANNER_ENV := SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_URL=$(DEV_SCANNER_URL) SKILLHUB_SECURITY_SCANNER_MODE=upload
+DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache
+DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 BACKEND_TEST_JAVA_OPTIONS ?= -XX:+EnableDynamicAgentLoading
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
@@ -125,8 +130,57 @@ dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端�
 	@echo "  Backend: $(DEV_SERVER_LOG)"
 	@echo "  Frontend: $(DEV_WEB_LOG)"
 
+dev-all-hybrid: ## Start dependencies, Java backend, Python backend, frontend, and scanner
+	@mkdir -p $(DEV_DIR)
+	@$(MAKE) dev-all
+	@if $(DEV_PROCESS) status --pid-file $(DEV_PYTHON_PID) >/dev/null 2>&1; then \
+		echo "Python backend already running with PID $$(cat $(DEV_PYTHON_PID))"; \
+	else \
+		echo "Starting Python backend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null; \
+	fi
+	@echo "Waiting for Python backend on $(DEV_PYTHON_URL) ..."
+	@python_ready=0; \
+	for i in $$(seq 1 30); do \
+		if curl -sf $(DEV_PYTHON_URL)/api/v1/health >/dev/null; then \
+			echo "Python backend ready."; \
+			python_ready=1; \
+			break; \
+		fi; \
+		if ! $(DEV_PROCESS) status --pid-file $(DEV_PYTHON_PID) >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$python_ready" -ne 1 ]; then \
+		echo "Python backend failed to become ready. Check $(DEV_PYTHON_LOG)"; \
+		exit 1; \
+	fi
+	@echo "Checking Vite proxy to Python health route ..."
+	@for i in $$(seq 1 15); do \
+		if curl -sf $(DEV_WEB_URL)/api/v1/health >/dev/null; then \
+			echo "Vite proxy to Python backend ready."; \
+			echo "Hybrid local environment is ready:"; \
+			echo "  Web UI:         $(DEV_WEB_URL)"; \
+			echo "  Java Backend:   $(DEV_API_URL)"; \
+			echo "  Python Backend: $(DEV_PYTHON_URL)"; \
+			echo "  Scanner:        $(DEV_SCANNER_URL)"; \
+			echo "Logs:"; \
+			echo "  Java Backend:   $(DEV_SERVER_LOG)"; \
+			echo "  Python Backend: $(DEV_PYTHON_LOG)"; \
+			echo "  Frontend:       $(DEV_WEB_LOG)"; \
+			exit 0; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Vite proxy did not reach Python health route. Check $(DEV_WEB_LOG) and $(DEV_PYTHON_LOG)"; \
+	exit 1
+
 dev-server: ## 启动后端开发服务器
 	cd server && /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)'
+
+dev-python: ## Start Python FastAPI backend in the foreground
+	cd server-python && $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
 
 dev-server-restart: ## 重启后端开发服务器
 	@mkdir -p $(DEV_DIR)
@@ -151,11 +205,13 @@ dev-down: ## 停止本地开发环境（含 skill-scanner）
 
 dev-all-down: ## 停止本地开发环境（依赖 + scanner + 后端 + 前端）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
+	@$(DEV_PROCESS) stop --pid-file $(DEV_PYTHON_PID)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_WEB_PID)
 	@$(MAKE) dev-down
 
 dev-all-reset: ## 重置本地开发环境（清理依赖数据卷后重新启动）
 	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
+	@$(DEV_PROCESS) stop --pid-file $(DEV_PYTHON_PID)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_WEB_PID)
 	$(DEV_COMPOSE) down -v --remove-orphans
 	rm -rf $(DEV_DIR)
@@ -171,6 +227,12 @@ dev-status: ## 查看本地开发服务状态
 	else \
 		echo "  Not running"; \
 	fi
+	@echo "=== Python Backend ==="
+	@if $(DEV_PROCESS) status --pid-file $(DEV_PYTHON_PID) >/dev/null 2>&1; then \
+		echo "  Running (PID $$(cat $(DEV_PYTHON_PID)))"; \
+	else \
+		echo "  Not running"; \
+	fi
 	@echo "=== Frontend ==="
 	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
 		echo "  Running (PID $$(cat $(DEV_WEB_PID)))"; \
@@ -182,10 +244,13 @@ dev-logs: ## 实时查看开发服务日志（backend/frontend，默认 backend�
 	@SERVICE=$${SERVICE:-backend}; \
 	if [ "$$SERVICE" = "backend" ]; then \
 		tail -f $(DEV_SERVER_LOG); \
+	elif [ "$$SERVICE" = "python" ]; then \
+		tail -f $(DEV_PYTHON_LOG); \
 	elif [ "$$SERVICE" = "frontend" ]; then \
 		tail -f $(DEV_WEB_LOG); \
 	else \
-		echo "Unknown service: $$SERVICE. Use SERVICE=backend or SERVICE=frontend"; \
+		echo "Unknown service: $$SERVICE. Use SERVICE=backend, SERVICE=python, or SERVICE=frontend"; \
+		echo "Example: SERVICE=python make dev-logs"; \
 		exit 1; \
 	fi
 
@@ -250,6 +315,14 @@ test-e2e-frontend: web-deps ## 运行前端 E2E 测试（Playwright）
 
 test-e2e-smoke-frontend: web-deps ## 运行前端 E2E smoke 测试（Playwright）
 	cd web && pnpm run test:e2e:smoke
+
+test-e2e-smoke-hybrid: web-deps ## Start hybrid local stack and run Playwright smoke E2E
+	@$(MAKE) dev-all-hybrid
+	cd web && pnpm run test:e2e:smoke
+
+test-e2e-hybrid: web-deps ## Start hybrid local stack and run full Playwright E2E
+	@$(MAKE) dev-all-hybrid
+	cd web && pnpm run test:e2e
 
 build-web: build-frontend ## 构建前端
 
