@@ -30,6 +30,10 @@ export default defineConfig({
       interval: 150,
     },
     proxy: {
+      '/.well-known/clawhub.json': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api/v1/health': {
         target: 'http://localhost:8081',
         changeOrigin: true,

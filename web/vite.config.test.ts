@@ -20,4 +20,13 @@ describe('Vite dev proxy route ownership', () => {
 
     expect(proxy['/oauth2']?.target).toBe('http://localhost:8080')
   })
+
+  it('routes ClawHub well-known discovery to Python', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+
+    expect(proxy['/.well-known/clawhub.json']?.target).toBe('http://localhost:8081')
+    expect(keys).toContain('/.well-known/clawhub.json')
+    expect(keys.indexOf('/.well-known/clawhub.json')).toBeLessThan(keys.indexOf('/api'))
+  })
 })
