@@ -2,21 +2,32 @@
 
 Use this workflow when Java, Python, and the Vite frontend must run together.
 
-## PowerShell Workflow
-
-This is the recommended workflow on Windows.
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 up
-```
-
-The command starts:
+The hybrid stack starts:
 
 - dependency services through Docker Compose
 - Java backend on `http://localhost:8080`
 - Python backend on `http://localhost:8081`
 - Vite frontend on `http://localhost:3000`
 - scanner on `http://localhost:8000`
+
+## Windows
+
+Recommended shell: PowerShell.
+
+Prerequisites:
+
+- Docker Desktop
+- Git for Windows
+- Java 21
+- Node.js 22 with Corepack
+- Python 3.12
+- `uv`
+
+Start the hybrid stack:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 up
+```
 
 Check status:
 
@@ -42,29 +53,130 @@ Stop everything:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 down
 ```
 
-## Makefile Workflow
+## macOS
 
-Use this when `make` is available in the shell.
+Recommended shell: zsh or bash.
+
+Prerequisites:
+
+- Docker Desktop or Colima
+- Java 21
+- Node.js 22 with Corepack
+- Python 3.12
+- `uv`
+- `make`
+
+Install missing basics with Homebrew when needed:
+
+```bash
+brew install make openjdk@21 node python@3.12 uv
+```
+
+If using Colima instead of Docker Desktop:
+
+```bash
+brew install colima docker docker-compose
+colima start
+```
+
+Start the hybrid stack:
 
 ```bash
 make dev-all-hybrid
+```
+
+Run smoke E2E:
+
+```bash
 make test-e2e-smoke-hybrid
+```
+
+Run full E2E:
+
+```bash
 make test-e2e-hybrid
+```
+
+Stop everything:
+
+```bash
 make dev-all-down
 ```
 
-## Expected Health Checks
+## Ubuntu
+
+Recommended shell: bash.
+
+Prerequisites:
+
+- Docker Engine with Compose plugin
+- Java 21
+- Node.js 22 with Corepack
+- Python 3.12
+- `uv`
+- `make`
+
+Install missing basics when needed:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y make curl ca-certificates openjdk-21-jdk python3.12
+```
+
+Install Docker Engine using Docker's official instructions, then verify:
+
+```bash
+docker compose version
+```
+
+Install Node.js 22 and enable Corepack:
+
+```bash
+corepack enable
+```
+
+Install `uv` if it is missing:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Start the hybrid stack:
+
+```bash
+make dev-all-hybrid
+```
+
+Run smoke E2E:
+
+```bash
+make test-e2e-smoke-hybrid
+```
+
+Run full E2E:
+
+```bash
+make test-e2e-hybrid
+```
+
+Stop everything:
+
+```bash
+make dev-all-down
+```
+
+## Health Checks
 
 Direct Python:
 
-```powershell
-curl.exe -i http://localhost:8081/api/v1/health
+```bash
+curl -i http://localhost:8081/api/v1/health
 ```
 
 Vite proxy to Python:
 
-```powershell
-curl.exe -i http://localhost:3000/api/v1/health
+```bash
+curl -i http://localhost:3000/api/v1/health
 ```
 
 Both should return the SkillHub envelope with `data.message` set to `UP`.
@@ -84,4 +196,6 @@ SERVICE=backend make dev-logs
 SERVICE=python make dev-logs
 SERVICE=frontend make dev-logs
 ```
+
+For Windows PowerShell users, inspect the `.dev/*.log` files directly.
 

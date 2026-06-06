@@ -8,6 +8,10 @@ def read_makefile() -> str:
     return (ROOT / "Makefile").read_text(encoding="utf-8")
 
 
+def read_hybrid_doc() -> str:
+    return (ROOT / "docs" / "backend-python-migration" / "hybrid-local-e2e.md").read_text(encoding="utf-8")
+
+
 def test_makefile_defines_python_dev_process() -> None:
     makefile = read_makefile()
 
@@ -49,3 +53,20 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "playwright.config.ts" in script
     assert '$WebUrl/api/v1/health' in script
     assert "Docker CLI not available" in script
+
+
+def test_hybrid_local_e2e_doc_covers_windows_macos_and_ubuntu() -> None:
+    doc = read_hybrid_doc()
+
+    assert "## Windows" in doc
+    assert "## macOS" in doc
+    assert "## Ubuntu" in doc
+    assert "Docker Desktop" in doc
+    assert "Colima" in doc
+    assert "Docker Engine" in doc
+    assert "Git for Windows" in doc
+    assert "brew install make" in doc
+    assert "sudo apt-get install" in doc
+    assert "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\\dev-hybrid.ps1 up" in doc
+    assert "make dev-all-hybrid" in doc
+    assert "make test-e2e-smoke-hybrid" in doc
