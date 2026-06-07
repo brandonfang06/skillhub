@@ -98,6 +98,7 @@ Defer APIs when they require:
 | 5.1 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Public anonymous published version detail migrated. File routes remain Java-owned. |
 | 6 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill files metadata list migrated. Content/download remain Java-owned. |
 | 7 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Public anonymous skill detail migrated. Authenticated owner/admin preview remains deferred. |
+| 8 | `GET /api/web/skills` | python | Public anonymous portal search migrated. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
 
 ## Planned Migration Order
 
@@ -363,11 +364,10 @@ Status:
 - Authenticated owner/admin preview, namespace role checks, lifecycle permissions, and viewer state
   remain deferred until the auth/session bridge is designed.
 
-### 8. Public Skill Search
+### 8. Public Portal Skill Search
 
 Routes:
 
-- `GET /api/v1/skills`
 - `GET /api/web/skills`
 
 Why after detail:
@@ -383,6 +383,10 @@ Primary dependencies:
 
 Constraints:
 
+- Do not migrate `GET /api/v1/skills`; that route is ClawHub compatibility list and remains
+  Java-owned.
+- Do not migrate `POST /api/v1/skills`; that route is ClawHub compatibility publish and remains
+  Java-owned.
 - Do not introduce a new search engine.
 - Do not change ranking semantics without explicit product approval.
 
@@ -390,6 +394,14 @@ Acceptance focus:
 
 - Match Java query parameters and page response.
 - Compare representative search/filter fixtures against Java.
+
+Status:
+
+- Completed for anonymous public portal behavior.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-search-api.md`
+- `GET /api/v1/skills` remains Java-owned because it is ClawHub compatibility list/publish, not
+  portal search.
 
 ## Deferred High-Dependency Groups
 
@@ -485,14 +497,20 @@ The public skill detail milestone is complete for anonymous public behavior:
 - Result:
   `docs/backend-python-migration/results/2026-06-07-public-skill-detail-api.md`
 
-The next planned milestone is public skill search:
+The public portal skill search milestone is complete for anonymous public behavior:
 
-`GET /api/v1/skills` and
 `GET /api/web/skills`
 
-Before implementation:
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-07-public-skill-search-api.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-search-api.md`
 
-- Write a milestone-specific plan under `docs/backend-python-migration/plans/`.
-- Scope the first search pass to anonymous public behavior.
-- Define representative filter/sort/pagination fixtures for live Java/Python/proxy comparison.
-- Keep all mutating, auth-specific, and lifecycle routes Java-owned.
+The next API milestone should be selected with a new plan. Current notes:
+
+- `GET /api/v1/search` is a possible low-risk ClawHub compatibility search candidate because it is
+  a distinct GET route.
+- Do not migrate `GET /api/v1/skills` without a separate ClawHub compatibility plan and a
+  method-aware routing decision; the same path also owns `POST /api/v1/skills`.
+- Keep all mutating, auth-specific, lifecycle, and download routes Java-owned until their bridge
+  designs are written.

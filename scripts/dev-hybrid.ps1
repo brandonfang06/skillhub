@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -389,6 +389,12 @@ function ConvertTo-StableDetailContractJson {
     $json = ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
     $json = [regex]::Replace($json, '("ratingAvg":-?\d+\.\d*?[1-9])0+(?=[,}])', '$1')
     return [regex]::Replace($json, '("ratingAvg":-?\d+)\.0+(?=[,}])', '$1')
+}
+
+function ConvertTo-StableSearchContractJson {
+    param([object]$Response)
+
+    return ConvertTo-StableDetailContractJson -Response $Response
 }
 
 function Invoke-PostgresSql {
@@ -1044,6 +1050,276 @@ END $$;
     Invoke-PostgresSql -Sql $sql
 }
 
+function Ensure-SearchContractFixture {
+    $sql = @'
+DO $$
+DECLARE
+    fixture_user_id VARCHAR(128) := 'codex-search-owner';
+    ns_id BIGINT;
+    archived_ns_id BIGINT;
+    alpha_skill_id BIGINT;
+    beta_skill_id BIGINT;
+    gamma_skill_id BIGINT;
+    hidden_skill_id BIGINT;
+    archived_skill_id BIGINT;
+    alpha_version_id BIGINT;
+    beta_version_id BIGINT;
+    gamma_version_id BIGINT;
+    hidden_version_id BIGINT;
+    archived_version_id BIGINT;
+    label_row_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES (fixture_user_id, 'Codex Search Owner', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-archived-search', 'Codex Archived Search', 'TEAM', 'ARCHIVED', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ARCHIVED',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO archived_ns_id;
+
+    INSERT INTO label_definition (slug, type, visible_in_filter, sort_order, created_by)
+    VALUES ('codex-search-featured', 'RECOMMENDED', TRUE, 20, fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET type = 'RECOMMENDED',
+            visible_in_filter = TRUE,
+            sort_order = 20,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO label_row_id;
+
+    INSERT INTO label_translation (label_id, locale, display_name)
+    VALUES (label_row_id, 'en', 'Codex Search Featured')
+    ON CONFLICT (label_id, locale) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, rating_avg, rating_count, created_by, updated_by,
+        hidden, created_at, updated_at
+    )
+    VALUES (
+        ns_id, 'codex-search-alpha-20260607233000', 'Codex Search Alpha Fixture',
+        'codex-search-fixture alpha summary codex-search-alpha-unique',
+        fixture_user_id, 'PUBLIC', 'ACTIVE', 11, 4, 4.75, 8,
+        fixture_user_id, fixture_user_id, FALSE,
+        '2026-06-07T08:00:00Z'::timestamptz, '2026-06-07T11:00:00Z'::timestamptz
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            download_count = 11,
+            star_count = 4,
+            rating_avg = 4.75,
+            rating_count = 8,
+            hidden = FALSE,
+            updated_at = '2026-06-07T11:00:00Z'::timestamptz
+    RETURNING id INTO alpha_skill_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, rating_avg, rating_count, created_by, updated_by,
+        hidden, created_at, updated_at
+    )
+    VALUES (
+        ns_id, 'codex-search-beta-20260607233000', 'Codex Search Beta Fixture',
+        'codex-search-fixture beta summary',
+        fixture_user_id, 'PUBLIC', 'ACTIVE', 7, 2, 4.25, 6,
+        fixture_user_id, fixture_user_id, FALSE,
+        '2026-06-07T08:00:00Z'::timestamptz, '2026-06-07T10:00:00Z'::timestamptz
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            download_count = 7,
+            star_count = 2,
+            rating_avg = 4.25,
+            rating_count = 6,
+            hidden = FALSE,
+            updated_at = '2026-06-07T10:00:00Z'::timestamptz
+    RETURNING id INTO beta_skill_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, rating_avg, rating_count, created_by, updated_by,
+        hidden, created_at, updated_at
+    )
+    VALUES (
+        ns_id, 'codex-search-gamma-20260607233000', 'Codex Search Gamma Fixture',
+        'codex-search-fixture gamma summary',
+        fixture_user_id, 'PUBLIC', 'ACTIVE', 3, 1, 4.95, 3,
+        fixture_user_id, fixture_user_id, FALSE,
+        '2026-06-07T08:00:00Z'::timestamptz, '2026-06-07T09:00:00Z'::timestamptz
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            download_count = 3,
+            star_count = 1,
+            rating_avg = 4.95,
+            rating_count = 3,
+            hidden = FALSE,
+            updated_at = '2026-06-07T09:00:00Z'::timestamptz
+    RETURNING id INTO gamma_skill_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        ns_id, 'codex-search-hidden-20260607233000', 'Codex Search Hidden Fixture',
+        'codex-search-fixture hidden summary',
+        fixture_user_id, 'PUBLIC', 'ACTIVE',
+        fixture_user_id, fixture_user_id, TRUE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO hidden_skill_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        archived_ns_id, 'codex-search-archived-20260607233000', 'Codex Search Archived Fixture',
+        'codex-search-fixture archived summary',
+        fixture_user_id, 'PUBLIC', 'ACTIVE',
+        fixture_user_id, fixture_user_id, FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO archived_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at,
+        bundle_ready, download_ready, requested_visibility
+    )
+    VALUES
+        (alpha_skill_id, '1.0.0', 'PUBLISHED', 'alpha search fixture',
+         jsonb_build_object('name', 'search-alpha', 'version', '1.0.0'),
+         jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+         1, 100, '2026-06-07T11:00:00Z'::timestamptz, fixture_user_id,
+         '2026-06-07T11:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'),
+        (beta_skill_id, '1.0.0', 'PUBLISHED', 'beta search fixture',
+         jsonb_build_object('name', 'search-beta', 'version', '1.0.0'),
+         jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+         1, 100, '2026-06-07T10:00:00Z'::timestamptz, fixture_user_id,
+         '2026-06-07T10:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'),
+        (gamma_skill_id, '1.0.0', 'PUBLISHED', 'gamma search fixture',
+         jsonb_build_object('name', 'search-gamma', 'version', '1.0.0'),
+         jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+         1, 100, '2026-06-07T09:00:00Z'::timestamptz, fixture_user_id,
+         '2026-06-07T09:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'),
+        (hidden_skill_id, '1.0.0', 'PUBLISHED', 'hidden search fixture',
+         jsonb_build_object('name', 'search-hidden', 'version', '1.0.0'),
+         jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+         1, 100, '2026-06-07T09:00:00Z'::timestamptz, fixture_user_id,
+         '2026-06-07T09:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'),
+        (archived_skill_id, '1.0.0', 'PUBLISHED', 'archived search fixture',
+         jsonb_build_object('name', 'search-archived', 'version', '1.0.0'),
+         jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+         1, 100, '2026-06-07T09:00:00Z'::timestamptz, fixture_user_id,
+         '2026-06-07T09:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC')
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC';
+
+    SELECT id INTO alpha_version_id FROM skill_version WHERE skill_id = alpha_skill_id AND version = '1.0.0';
+    SELECT id INTO beta_version_id FROM skill_version WHERE skill_id = beta_skill_id AND version = '1.0.0';
+    SELECT id INTO gamma_version_id FROM skill_version WHERE skill_id = gamma_skill_id AND version = '1.0.0';
+    SELECT id INTO hidden_version_id FROM skill_version WHERE skill_id = hidden_skill_id AND version = '1.0.0';
+    SELECT id INTO archived_version_id FROM skill_version WHERE skill_id = archived_skill_id AND version = '1.0.0';
+
+    UPDATE skill SET latest_version_id = alpha_version_id WHERE id = alpha_skill_id;
+    UPDATE skill SET latest_version_id = beta_version_id WHERE id = beta_skill_id;
+    UPDATE skill SET latest_version_id = gamma_version_id WHERE id = gamma_skill_id;
+    UPDATE skill SET latest_version_id = hidden_version_id WHERE id = hidden_skill_id;
+    UPDATE skill SET latest_version_id = archived_version_id WHERE id = archived_skill_id;
+
+    INSERT INTO skill_label (skill_id, label_id, created_by)
+    VALUES
+        (alpha_skill_id, label_row_id, fixture_user_id),
+        (beta_skill_id, label_row_id, fixture_user_id)
+    ON CONFLICT (skill_id, label_id) DO NOTHING;
+
+    INSERT INTO skill_search_document (
+        skill_id, namespace_id, namespace_slug, owner_id, title, summary, keywords,
+        search_text, visibility, status, updated_at
+    )
+    VALUES
+        (alpha_skill_id, ns_id, 'global', fixture_user_id, 'Codex Search Alpha Fixture',
+         'codex-search-fixture alpha summary codex-search-alpha-unique',
+         'codex-search-featured alpha', 'codex-search-fixture codex-search-alpha-unique',
+         'PUBLIC', 'ACTIVE', '2026-06-07T11:00:00Z'::timestamptz),
+        (beta_skill_id, ns_id, 'global', fixture_user_id, 'Codex Search Beta Fixture',
+         'codex-search-fixture beta summary',
+         'codex-search-featured beta', 'codex-search-fixture',
+         'PUBLIC', 'ACTIVE', '2026-06-07T10:00:00Z'::timestamptz),
+        (gamma_skill_id, ns_id, 'global', fixture_user_id, 'Codex Search Gamma Fixture',
+         'codex-search-fixture gamma summary',
+         'gamma', 'codex-search-fixture',
+         'PUBLIC', 'ACTIVE', '2026-06-07T09:00:00Z'::timestamptz),
+        (hidden_skill_id, ns_id, 'global', fixture_user_id, 'Codex Search Hidden Fixture',
+         'codex-search-fixture hidden summary',
+         'hidden', 'codex-search-fixture',
+         'PUBLIC', 'ACTIVE', '2026-06-07T09:00:00Z'::timestamptz),
+        (archived_skill_id, archived_ns_id, 'codex-archived-search', fixture_user_id, 'Codex Search Archived Fixture',
+         'codex-search-fixture archived summary',
+         'archived', 'codex-search-fixture',
+         'PUBLIC', 'ACTIVE', '2026-06-07T09:00:00Z'::timestamptz)
+    ON CONFLICT (skill_id) DO UPDATE
+        SET namespace_id = EXCLUDED.namespace_id,
+            namespace_slug = EXCLUDED.namespace_slug,
+            owner_id = EXCLUDED.owner_id,
+            title = EXCLUDED.title,
+            summary = EXCLUDED.summary,
+            keywords = EXCLUDED.keywords,
+            search_text = EXCLUDED.search_text,
+            visibility = EXCLUDED.visibility,
+            status = EXCLUDED.status,
+            updated_at = EXCLUDED.updated_at;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
 function Invoke-LabelsContractComparison {
     $java = Invoke-RestMethod "$JavaUrl/api/v1/labels"
     $python = Invoke-RestMethod "$PythonUrl/api/v1/labels"
@@ -1189,6 +1465,70 @@ function Invoke-DetailContractComparison {
     }
 }
 
+function Invoke-SearchContractComparison {
+    Ensure-SearchContractFixture
+
+    $cases = @(
+        [ordered]@{ name = 'defaultNewest'; query = '?q=codex-search-fixture&sort=newest&page=0&size=5' },
+        [ordered]@{ name = 'relevanceSingle'; query = '?q=codex-search-alpha-unique&sort=relevance&page=0&size=5' },
+        [ordered]@{ name = 'namespaceFilter'; query = '?q=codex-search-fixture&namespace=global&sort=newest&page=0&size=5' },
+        [ordered]@{ name = 'labelFilter'; query = '?q=codex-search-fixture&label=codex-search-featured&sort=newest&page=0&size=5' },
+        [ordered]@{ name = 'downloadsSort'; query = '?q=codex-search-fixture&sort=downloads&page=0&size=5' },
+        [ordered]@{ name = 'ratingSort'; query = '?q=codex-search-fixture&sort=rating&page=0&size=5' },
+        [ordered]@{ name = 'invalidPagination'; query = '?q=codex-search-fixture&sort=newest&page=-1&size=0' }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing portal skill search contract: $($case.name)"
+        $query = $case.query
+        $java = Invoke-RestMethod "$JavaUrl/api/web/skills$query"
+        $python = Invoke-RestMethod "$PythonUrl/api/web/skills$query"
+        $proxyWeb = Invoke-RestMethod "$WebUrl/api/web/skills$query"
+
+        $javaStable = ConvertTo-StableSearchContractJson -Response $java
+        $pythonStable = ConvertTo-StableSearchContractJson -Response $python
+        $proxyWebStable = ConvertTo-StableSearchContractJson -Response $proxyWeb
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            query = $query
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+            total = $python.data.total
+            page = $python.data.page
+            size = $python.data.size
+            slugs = @($python.data.items | ForEach-Object { $_.slug })
+        }
+    }
+
+    $v1Response = Invoke-RestMethod "$WebUrl/api/v1/skills?page=0&limit=1"
+    $v1HasPortalEnvelope = [bool]($v1Response.PSObject.Properties['code'] -and $v1Response.PSObject.Properties['data'])
+    $v1HasClawHubShape = [bool]($v1Response.PSObject.Properties['items'] -and -not $v1HasPortalEnvelope)
+
+    $result = [ordered]@{
+        cases = $caseResults
+        allJavaMatchesPython = -not [bool]($caseResults | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxyWeb = -not [bool]($caseResults | Where-Object { -not $_.pythonMatchesProxyWeb })
+        v1SkillsRemainsJava = $v1HasClawHubShape
+        comparedFields = @('code', 'msg', 'data')
+    }
+
+    $resultPath = Join-Path $DevDir 'search-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python portal search contracts differ. See .dev/search-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyWeb) {
+        throw 'Vite proxy /api/web/skills does not match Python. See .dev/search-contract-result.json.'
+    }
+    if (-not $result.v1SkillsRemainsJava) {
+        throw 'Vite /api/v1/skills no longer has the Java ClawHub list shape. See .dev/search-contract-result.json.'
+    }
+}
+
 function Invoke-FilesContractComparison {
     Ensure-FilesContractFixture
 
@@ -1314,6 +1654,23 @@ function Invoke-HybridDetailSmokeVerification {
     }
 }
 
+function Invoke-HybridSearchSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-SearchContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -1321,6 +1678,7 @@ switch ($Action) {
     'verify-labels-smoke' { Invoke-HybridLabelsSmokeVerification }
     'verify-files-smoke' { Invoke-HybridFilesSmokeVerification }
     'verify-detail-smoke' { Invoke-HybridDetailSmokeVerification }
+    'verify-search-smoke' { Invoke-HybridSearchSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

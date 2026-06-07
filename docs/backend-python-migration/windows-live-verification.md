@@ -192,6 +192,33 @@ The command writes the latest detail comparison summary to:
 The detail comparison normalizes only the JSON numeric scale for `ratingAvg`; Java may preserve
 BigDecimal scale such as `4.50`, while Python serializes the same JSON number as `4.5`.
 
+## One-Command Portal Search Verification Gate
+
+For the migrated public portal skill search API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-search-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyWeb: true
+v1SkillsRemainsJava: true
+6 passed
+```
+
+The command writes the latest search comparison summary to:
+
+```text
+.dev/search-contract-result.json
+```
+
+This gate intentionally verifies that `/api/v1/skills` still has the Java ClawHub list shape.
+
 ## Shutdown
 
 ```powershell

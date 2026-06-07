@@ -2,6 +2,7 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from hashlib import sha256
 from inspect import isawaitable
+import re
 from typing import Any
 from urllib.parse import quote
 
@@ -49,6 +50,68 @@ def paginate_rows(rows: list[dict[str, Any]], page: int, size: int) -> tuple[lis
     start = min(page * size, len(rows))
     end = min(start + size, len(rows))
     return rows[start:end], len(rows)
+
+
+def normalize_search_sort(sort: str | None) -> str:
+    if sort is None or sort.strip() == "":
+        return "newest"
+    return sort.strip()
+
+
+def parse_non_negative_int(raw_value: str | None, default_value: int) -> int:
+    if raw_value is None or raw_value.strip() == "":
+        return default_value
+    normalized = raw_value.strip()
+    if not re.fullmatch(r"\d+", normalized):
+        return default_value
+    try:
+        return int(normalized)
+    except ValueError:
+        return default_value
+
+
+def parse_positive_int(raw_value: str | None, default_value: int) -> int:
+    parsed = parse_non_negative_int(raw_value, default_value)
+    return parsed if parsed > 0 else default_value
+
+
+def normalize_label_slugs(label_slugs: list[str] | None) -> list[str]:
+    if not label_slugs:
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in label_slugs:
+        slug = value.strip().lower()
+        if slug == "" or slug in seen:
+            continue
+        normalized.append(slug)
+        seen.add(slug)
+    return normalized
+
+
+def normalize_search_keyword(keyword: str | None) -> str | None:
+    if keyword is None or keyword.strip() == "":
+        return None
+    return keyword.strip().lower()
+
+
+def build_skill_search_ts_query(keyword: str | None) -> str | None:
+    normalized = normalize_search_keyword(keyword)
+    if normalized is None:
+        return None
+    terms = re.findall(r"[\w\u4e00-\u9fff]+", normalized)[:8]
+    compatible_terms = [
+        term
+        for term in terms
+        if any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" or ch == "_" for ch in term)
+    ]
+    if not compatible_terms:
+        return None
+    ts_terms = [
+        f"{term}:*" if all(ord(ch) < 128 for ch in term) and any(ch.isalpha() for ch in term) else term
+        for term in compatible_terms
+    ]
+    return " & ".join(ts_terms)
 
 
 def build_versions_page_response(
@@ -132,6 +195,43 @@ def build_skill_detail_response(
         "ownerPreviewVersion": None,
         "ownerPreviewReviewComment": None,
         "resolutionMode": str(row["resolution_mode"]),
+    }
+
+
+def build_skill_summary_response(row: dict[str, Any]) -> dict[str, object]:
+    published_version = to_lifecycle_version(row)
+    return {
+        "id": int(row["id"]),
+        "slug": str(row["slug"]),
+        "displayName": row["display_name"],
+        "summary": row["summary"],
+        "visibility": str(row["visibility"]),
+        "status": str(row["status"]),
+        "downloadCount": int(row["download_count"]),
+        "starCount": int(row["star_count"]),
+        "ratingAvg": float(row["rating_avg"]),
+        "ratingCount": int(row["rating_count"]),
+        "namespace": str(row["namespace"]),
+        "updatedAt": to_java_instant(row["updated_at"]),
+        "canSubmitPromotion": False,
+        "headlineVersion": published_version,
+        "publishedVersion": published_version,
+        "ownerPreviewVersion": None,
+        "resolutionMode": str(row["resolution_mode"]),
+    }
+
+
+def build_skill_search_response(
+    rows: list[dict[str, Any]],
+    total: int,
+    page: int,
+    size: int,
+) -> dict[str, object]:
+    return {
+        "items": [build_skill_summary_response(row) for row in rows],
+        "total": total,
+        "page": page,
+        "size": size,
     }
 
 
@@ -546,6 +646,144 @@ async def read_skill_detail(
     return build_skill_detail_response(row, label_rows)
 
 
+async def read_skill_search(
+    engine: AsyncEngine,
+    keyword: str | None,
+    namespace: str | None,
+    labels: list[str],
+    sort: str,
+    page: int,
+    size: int,
+) -> dict[str, object]:
+    normalized_keyword = normalize_search_keyword(keyword)
+    ts_query = build_skill_search_ts_query(normalized_keyword)
+    has_keyword = normalized_keyword is not None
+    use_relevance_ordering = sort == "relevance" and has_keyword
+
+    filters = [
+        "d.visibility = 'PUBLIC'",
+        "d.status = 'ACTIVE'",
+        "s.status = 'ACTIVE'",
+        "s.hidden = FALSE",
+        "n.status <> 'ARCHIVED'",
+    ]
+    params: dict[str, object] = {
+        "limit": size,
+        "offset": page * size,
+    }
+
+    if namespace is not None and namespace.strip() != "":
+        filters.append("d.namespace_slug = :namespace")
+        params["namespace"] = namespace.strip()
+
+    if labels:
+        filters.append(
+            """
+            d.skill_id IN (
+                SELECT sl.skill_id
+                FROM skill_label sl
+                JOIN label_definition ld ON ld.id = sl.label_id
+                WHERE LOWER(ld.slug) = ANY(CAST(:label_slugs AS text[]))
+            )
+            """
+        )
+        params["label_slugs"] = labels
+
+    if has_keyword:
+        keyword_filters = []
+        if ts_query is not None:
+            keyword_filters.append("d.search_vector @@ to_tsquery('simple', :ts_query)")
+            params["ts_query"] = ts_query
+        keyword_filters.append("LOWER(d.title) LIKE :title_like")
+        filters.append("(" + " OR ".join(keyword_filters) + ")")
+        params["title_like"] = f"%{normalized_keyword}%"
+
+    if sort == "downloads":
+        order_sql = "s.download_count DESC, s.updated_at DESC, d.skill_id DESC"
+    elif sort == "rating":
+        order_sql = "s.rating_avg DESC, s.updated_at DESC, d.skill_id DESC"
+    elif use_relevance_ordering:
+        params["title_exact"] = normalized_keyword
+        params["title_prefix"] = f"{normalized_keyword}%"
+        if ts_query is not None:
+            rank_sql = "ts_rank_cd(d.search_vector, to_tsquery('simple', :ts_query)) DESC,"
+        else:
+            rank_sql = ""
+        order_sql = (
+            "CASE "
+            "WHEN LOWER(d.title) = :title_exact THEN 4 "
+            "WHEN LOWER(d.title) LIKE :title_prefix THEN 3 "
+            "WHEN LOWER(d.title) LIKE :title_like THEN 2 "
+            f"ELSE 1 END DESC, {rank_sql} d.updated_at DESC, d.skill_id DESC"
+        )
+    else:
+        order_sql = "s.updated_at DESC, d.skill_id DESC"
+
+    where_sql = " AND ".join(filters)
+
+    async with engine.connect() as connection:
+        total = (
+            await connection.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*)
+                    FROM skill_search_document d
+                    JOIN skill s ON s.id = d.skill_id
+                    JOIN namespace n ON n.id = d.namespace_id
+                    WHERE {where_sql}
+                    """
+                ),
+                params,
+            )
+        ).scalar_one()
+
+        rows = (
+            await connection.execute(
+                text(
+                    f"""
+                    SELECT s.id,
+                           s.slug,
+                           s.display_name,
+                           s.summary,
+                           s.visibility,
+                           s.status,
+                           s.download_count,
+                           s.star_count,
+                           s.rating_avg,
+                           s.rating_count,
+                           n.slug AS namespace,
+                           s.updated_at,
+                           pv.id AS published_version_id,
+                           pv.version AS published_version,
+                           pv.status AS published_version_status,
+                           CASE WHEN pv.id IS NULL THEN 'NONE' ELSE 'PUBLISHED' END AS resolution_mode
+                    FROM skill_search_document d
+                    JOIN skill s ON s.id = d.skill_id
+                    JOIN namespace n ON n.id = d.namespace_id
+                    LEFT JOIN LATERAL (
+                        SELECT sv.id, sv.version, sv.status
+                        FROM skill_version sv
+                        WHERE sv.skill_id = s.id
+                          AND sv.status = 'PUBLISHED'
+                        ORDER BY
+                          CASE WHEN sv.id = s.latest_version_id THEN 0 ELSE 1 END,
+                          sv.published_at DESC NULLS LAST,
+                          sv.created_at DESC NULLS LAST,
+                          sv.id DESC
+                        LIMIT 1
+                    ) pv ON TRUE
+                    WHERE {where_sql}
+                    ORDER BY {order_sql}
+                    LIMIT :limit OFFSET :offset
+                    """
+                ),
+                params,
+            )
+        ).mappings().all()
+
+    return build_skill_search_response([dict(row) for row in rows], int(total), page, size)
+
+
 async def read_skill_version_files(
     engine: AsyncEngine,
     namespace: str,
@@ -729,6 +967,48 @@ async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str,
     if isawaitable(result):
         return await result
     return result
+
+
+@router.get("/api/web/skills")
+async def search_skills(
+    request: Request,
+    q: str | None = None,
+    namespace: str | None = None,
+    label: list[str] = Query(default_factory=list),
+    sort: str | None = None,
+    page: str | None = None,
+    size: str | None = None,
+) -> dict[str, object]:
+    normalized_labels = normalize_label_slugs(label)
+    normalized_sort = normalize_search_sort(sort)
+    normalized_page = parse_non_negative_int(page, 0)
+    normalized_size = parse_positive_int(size, 20)
+    reader = getattr(request.app.state, "skill_search_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(
+                reader(
+                    keyword=q,
+                    namespace=namespace,
+                    labels=normalized_labels,
+                    sort=normalized_sort,
+                    page=normalized_page,
+                    size=normalized_size,
+                )
+            )
+        else:
+            data = await read_skill_search(
+                request.app.state.db_engine,
+                keyword=q,
+                namespace=namespace,
+                labels=normalized_labels,
+                sort=normalized_sort,
+                page=normalized_page,
+                size=normalized_size,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}")

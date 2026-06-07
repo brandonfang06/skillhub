@@ -100,11 +100,29 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/resolve')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8080')
+  })
+
+  it('routes portal skill search to Python while keeping ClawHub v1 skills on Java', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+
+    const webSkillSearch = '^/api/web/skills(?:\\?.*)?$'
+
+    expect(proxy[webSkillSearch]?.target).toBe('http://localhost:8081')
+    expect(proxy['/api/v1/skills']?.target).toBeUndefined()
+    expect(keys.indexOf(webSkillSearch)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills?q=agent')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills?page=0&limit=25')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
   it('routes skill versions list aliases to Python without taking over all skill routes', () => {
