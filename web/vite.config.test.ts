@@ -5,6 +5,24 @@ type ProxyTarget = {
   target?: string
 }
 
+function matchingProxyTarget(pathname: string): string | undefined {
+  const proxy = config.server?.proxy as Record<string, ProxyTarget>
+  for (const [key, value] of Object.entries(proxy)) {
+    if (key.startsWith('^')) {
+      if (new RegExp(key).test(pathname)) {
+        return value.target
+      }
+      continue
+    }
+
+    if (pathname.startsWith(key)) {
+      return value.target
+    }
+  }
+
+  return undefined
+}
+
 describe('Vite dev proxy route ownership', () => {
   it('routes Python-owned health before the Java API fallback', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
@@ -85,19 +103,22 @@ describe('Vite dev proxy route ownership', () => {
   it('routes skill version detail aliases to Python without taking over file or compare routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
-    const v1SkillVersionDetail = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+$'
-    const webSkillVersionDetail = '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+$'
+    const v1SkillVersionDetail = '^/api/v1/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
+    const webSkillVersionDetail = '^/api/web/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
 
     expect(proxy[v1SkillVersionDetail]?.target).toBe('http://localhost:8081')
     expect(proxy[webSkillVersionDetail]?.target).toBe('http://localhost:8081')
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/compare$']?.target).toBeUndefined()
-    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/compare$']?.target).toBeUndefined()
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
-    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
-    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
     expect(keys.indexOf(v1SkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/compare')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/compare')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
   })
 
   it('routes skill files list aliases to Python without taking over file content or download routes', () => {
@@ -123,5 +144,12 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(v1SkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/files')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/files')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/files')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/files')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
   })
 })

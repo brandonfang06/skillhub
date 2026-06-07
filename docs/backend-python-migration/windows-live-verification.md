@@ -255,3 +255,18 @@ Verification status from 2026-06-07:
 - Labels `code`, `msg`, and `data` matched between Java, Python, and both Vite proxy routes.
 - Playwright smoke E2E passed: `6 passed`.
 - Shutdown left no `LISTENING` ports on `3000`, `8080`, or `8081`; only `TIME_WAIT` remained.
+
+## Lessons Learned & Future Testing Strategy (Timing & Tools)
+
+1. **Spring Boot Boot-up Timing Delay**:
+   - Spring Boot takes about 10-12 seconds to fully initialize Tomcat and database connections.
+   - **Failed Experience**: Running `scripts/dev-hybrid.ps1 up` in the background and immediately executing `curl` resulted in `curl: (7) Failed to connect` because port 8080 was not yet open.
+   - **Solution**: Always wait for `dev-hybrid.ps1 up` to complete health check wait loops synchronously, or manually verify `/actuator/health` returns `200 OK` before running API requests.
+
+2. **PowerShell `curl` Alias Conflict**:
+   - On Windows PowerShell, the command `curl` is aliased to `Invoke-WebRequest`.
+   - **Failed Experience**: Running `curl -s -i --max-time 5 ...` threw a parameter binding exception: `MissingArgument,Microsoft.PowerShell.Commands.InvokeWebRequestCommand`.
+   - **Solution**: Always use `curl.exe` explicitly when writing test requests, or use `Invoke-RestMethod` / `Invoke-WebRequest` natively in PowerShell.
+
+3. **Future Testing Approach**:
+   - Implement automated, single-command contract verification actions (e.g. `verify-files-smoke` in `dev-hybrid.ps1`) to boot the stack, perform comparisons, run E2E, and tear it down automatically. This eliminates manual timing issues and guarantees clean environments.
