@@ -1,4 +1,4 @@
-from app.api.labels import build_label_response
+from app.api.labels import build_label_response, build_skill_label_response
 
 
 def test_build_label_response_sorts_visible_labels_and_uses_requested_locale() -> None:
@@ -45,4 +45,23 @@ def test_build_label_response_falls_back_to_language_then_english_then_slug() ->
         {"slug": "localized", "type": "RECOMMENDED", "displayName": "Chinese"},
         {"slug": "english-only", "type": "RECOMMENDED", "displayName": "English"},
         {"slug": "slug-only", "type": "RECOMMENDED", "displayName": "slug-only"},
+    ]
+
+
+def test_build_skill_label_response_sorts_by_type_then_slug_and_localizes() -> None:
+    labels = [
+        {"id": 3, "slug": "team", "type": "RECOMMENDED"},
+        {"id": 1, "slug": "verified", "type": "PRIVILEGED"},
+        {"id": 2, "slug": "official", "type": "PRIVILEGED"},
+    ]
+    translations = [
+        {"label_id": 1, "locale": "en", "display_name": "Verified"},
+        {"label_id": 2, "locale": "en", "display_name": "Official"},
+        {"label_id": 3, "locale": "en", "display_name": "Team"},
+    ]
+
+    assert build_skill_label_response(labels, translations, "en") == [
+        {"slug": "official", "type": "PRIVILEGED", "displayName": "Official"},
+        {"slug": "verified", "type": "PRIVILEGED", "displayName": "Verified"},
+        {"slug": "team", "type": "RECOMMENDED", "displayName": "Team"},
     ]

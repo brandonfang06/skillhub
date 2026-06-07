@@ -48,3 +48,40 @@ def test_public_labels_passes_requested_locale_to_reader() -> None:
     assert response.status_code == 200
     assert response.json()["data"] == []
     assert seen_locales == ["zh-TW"]
+
+
+def test_skill_labels_v1_route_returns_envelope() -> None:
+    app = create_app()
+    app.state.skill_label_reader = lambda namespace, slug, locale: [
+        {"slug": "official", "type": "PRIVILEGED", "displayName": "Official"}
+    ]
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/v1/skills/global/demo/labels",
+        headers={"X-Request-Id": "skill-labels-test"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-Id"] == "skill-labels-test"
+    assert response.json()["code"] == 0
+    assert response.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
+    assert response.json()["requestId"] == "skill-labels-test"
+    assert response.json()["data"] == [
+        {"slug": "official", "type": "PRIVILEGED", "displayName": "Official"}
+    ]
+
+
+def test_skill_labels_web_alias_returns_same_contract() -> None:
+    app = create_app()
+    app.state.skill_label_reader = lambda namespace, slug, locale: [
+        {"slug": "team", "type": "RECOMMENDED", "displayName": "Team"}
+    ]
+
+    client = TestClient(app)
+    response = client.get("/api/web/skills/global/demo/labels")
+
+    assert response.status_code == 200
+    assert response.json()["data"] == [
+        {"slug": "team", "type": "RECOMMENDED", "displayName": "Team"}
+    ]

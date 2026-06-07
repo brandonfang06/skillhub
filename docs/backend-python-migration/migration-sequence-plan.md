@@ -92,6 +92,7 @@ Defer APIs when they require:
 | 0 | `GET /api/v1/health` | python | Python skeleton and envelope established. |
 | 1 | `GET /.well-known/clawhub.json` | python | Plain JSON discovery route migrated with no DB dependency. |
 | 2 | `GET /api/v1/labels`, `GET /api/web/labels` | python | Public labels read API migrated as first PostgreSQL-backed Python route. |
+| 3 | `GET /api/v1/skills/{namespace}/{slug}/labels`, `GET /api/web/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list migrated. Auth-specific preview remains deferred. |
 
 ## Planned Migration Order
 
@@ -163,6 +164,13 @@ Acceptance focus:
 - Anonymous public behavior matches Java for published visible skills.
 - If viewer-specific owner preview behavior is required by Java, document it before coding.
 - Route aliases both behave identically.
+
+Status:
+
+- Completed for anonymous public behavior.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-skill-labels-list-api.md`
+- Auth-specific preview behavior remains deferred until the auth/session bridge is designed.
 
 ### 4. Public Skill Resolve API
 
@@ -406,25 +414,21 @@ When this plan changes:
 
 ## Current Next Step
 
-The current blocker is completing the Windows live verification gate for the already migrated
-public labels API:
+The skill labels list milestone is complete for anonymous public behavior:
 
 - Plan:
-  `docs/backend-python-migration/plans/2026-06-07-public-labels-live-verification.md`
+  `docs/backend-python-migration/plans/2026-06-07-skill-labels-list-api.md`
 - Result:
-  `docs/backend-python-migration/results/2026-06-07-public-labels-live-verification.md`
+  `docs/backend-python-migration/results/2026-06-07-skill-labels-list-api.md`
 
-Do not start the next API migration until this blocker is resolved or the project owner explicitly
-accepts continuing with the recorded blocker.
+The next implementation milestone should be:
 
-After the blocker is resolved, the next implementation milestone should be:
-
-`GET /api/v1/skills/{namespace}/{slug}/labels` and
-`GET /api/web/skills/{namespace}/{slug}/labels`
+`GET /api/v1/skills/{namespace}/{slug}/resolve` and
+`GET /api/web/skills/{namespace}/{slug}/resolve`
 
 Before implementation starts:
 
-- Create a milestone-specific plan for skill labels list.
-- Reuse the Python DB and label response conventions introduced by the public labels milestone.
-- Confirm anonymous/public visibility behavior against Java before writing code.
-- Announce the API boundary, allowed files, and acceptance criteria.
+- Create a milestone-specific plan for public skill resolve.
+- Reuse anonymous public skill lookup rules from the skill labels list milestone.
+- Confirm Java version selector behavior for `version`, `tag`, and `hash`.
+- Do not migrate file download, file streaming, download counters, or object storage behavior.
