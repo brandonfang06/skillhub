@@ -76,12 +76,14 @@ function Start-ManagedProcess {
     }
 
     New-Item -ItemType File -Force -Path $LogFile | Out-Null
+    $errorLogFile = "$LogFile.err"
+    New-Item -ItemType File -Force -Path $errorLogFile | Out-Null
     $process = Start-Process `
         -FilePath $FilePath `
         -ArgumentList $ArgumentList `
         -WorkingDirectory $WorkingDirectory `
         -RedirectStandardOutput $LogFile `
-        -RedirectStandardError $LogFile `
+        -RedirectStandardError $errorLogFile `
         -WindowStyle Hidden `
         -PassThru
 
@@ -124,6 +126,40 @@ function Resolve-GitShell {
     throw 'Git sh.exe is required to start the Java backend on Windows.'
 }
 
+function Resolve-JavaHome {
+    if ($env:JAVA_HOME -and (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
+        return $env:JAVA_HOME
+    }
+
+    $candidates = @(
+        'C:\Program Files\Eclipse Adoptium',
+        'C:\Program Files\Microsoft',
+        'C:\Program Files\Java',
+        'C:\Program Files\JetBrains\PyCharm 2025.2.1.1\jbr',
+        'C:\Program Files\JetBrains\PyCharm Community Edition 2023.3.4\jbr'
+    )
+
+    foreach ($candidate in $candidates) {
+        if (-not (Test-Path -LiteralPath $candidate)) {
+            continue
+        }
+
+        if (Test-Path -LiteralPath (Join-Path $candidate 'bin\java.exe')) {
+            return $candidate
+        }
+
+        $javaHome = Get-ChildItem -LiteralPath $candidate -Directory -ErrorAction SilentlyContinue |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'bin\java.exe') } |
+            Sort-Object Name -Descending |
+            Select-Object -First 1
+        if ($javaHome) {
+            return $javaHome.FullName
+        }
+    }
+
+    throw 'Java 21 JDK is required to start the Java backend. Install it with: winget install --id EclipseAdoptium.Temurin.21.JDK -e'
+}
+
 function Test-CommandAvailable {
     param([string]$Name)
 
@@ -160,6 +196,9 @@ function Start-Hybrid {
     Invoke-WebDeps
 
     $shell = Resolve-GitShell
+    $javaHome = Resolve-JavaHome
+    $env:JAVA_HOME = $javaHome
+    $env:Path = (Join-Path $javaHome 'bin') + ';' + $env:Path
     $serverDir = Join-Path $Root 'server'
     Start-ManagedProcess `
         -Name 'Java backend' `
@@ -169,7 +208,7 @@ function Start-Hybrid {
         -FilePath $shell `
         -ArgumentList @('-lc', './scripts/run-dev-app.sh')
 
-    $pythonCommand = '$env:UV_CACHE_DIR=".uv-cache"; uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload'
+    $pythonCommand = '$env:UV_CACHE_DIR = ''.uv-cache''; uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload'
     Start-ManagedProcess `
         -Name 'Python backend' `
         -PidFile $PythonPidFile `

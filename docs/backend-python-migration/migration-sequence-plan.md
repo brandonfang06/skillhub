@@ -28,11 +28,33 @@ This file is the source of truth for migration order. For every milestone:
 3. Implement with TDD.
 4. Update `docs/backend-python-migration/route-registry.md` when ownership changes.
 5. Write a result document under `docs/backend-python-migration/results/YYYY-MM-DD-<topic>.md`.
-6. Run verification.
-7. Confirm `git diff --name-only -- server` returns no paths.
-8. Commit and push to `dev`.
+6. Run unit/proxy verification.
+7. Run the live verification gate before starting the next API migration.
+8. Confirm `git diff --name-only -- server` returns no paths.
+9. Commit and push to `dev`.
 
 If priorities change, update this file first, then continue from the revised order.
+
+## Live Verification Gate
+
+Every API migration must pass a live verification gate before the next API migration starts. This
+gate is required even when unit tests and Vite proxy tests pass.
+
+Windows procedure:
+
+- `docs/backend-python-migration/windows-live-verification.md`
+
+Minimum gate for routes migrated from Java:
+
+- Start the hybrid stack for the target platform.
+- Call the Java reference route directly when it still exists on Java.
+- Call the Python-owned route directly.
+- Compare the stable contract fields; ignore volatile fields such as `timestamp` and `requestId`.
+- Call the Vite proxy route and confirm it reaches the Python-owned implementation.
+- Run frontend smoke E2E when the route affects frontend flows.
+- Record pass/fail/blocker details in a result document.
+- Do not begin the next API migration until this gate has passed or the project owner explicitly
+  accepts a recorded blocker.
 
 ## Non-Negotiable Boundaries
 
@@ -384,7 +406,18 @@ When this plan changes:
 
 ## Current Next Step
 
-The next implementation milestone should be:
+The current blocker is completing the Windows live verification gate for the already migrated
+public labels API:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-07-public-labels-live-verification.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-labels-live-verification.md`
+
+Do not start the next API migration until this blocker is resolved or the project owner explicitly
+accepts continuing with the recorded blocker.
+
+After the blocker is resolved, the next implementation milestone should be:
 
 `GET /api/v1/skills/{namespace}/{slug}/labels` and
 `GET /api/web/skills/{namespace}/{slug}/labels`
