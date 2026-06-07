@@ -390,6 +390,185 @@ async def read_skill_version_detail(
     return build_version_detail_response(dict(row))
 
 
+async def read_skill_version_files(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    version: str,
+) -> list[dict[str, object]]:
+    async with engine.connect() as connection:
+        skill_id = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).scalar_one_or_none()
+
+        if skill_id is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND version = :version
+                      AND status = 'PUBLISHED'
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_id, "version": version},
+            )
+        ).mappings().one_or_none()
+
+        if version_row is None:
+            raise SkillResolveError("error.skill.version.notFound")
+
+        version_id = version_row["id"]
+
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, file_path, file_size, content_type, sha256
+                    FROM skill_file
+                    WHERE version_id = :version_id
+                    ORDER BY file_path ASC
+                    """
+                ),
+                {"version_id": version_id},
+            )
+        ).mappings().all()
+
+    return [
+        {
+            "id": int(row["id"]),
+            "filePath": str(row["file_path"]),
+            "fileSize": int(row["file_size"]),
+            "contentType": row["content_type"],
+            "sha256": str(row["sha256"]),
+        }
+        for row in rows
+    ]
+
+
+async def read_skill_tag_files(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    tag_name: str,
+) -> list[dict[str, object]]:
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.latest_version_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        skill_id = skill_row["id"]
+
+        if tag_name.lower() == "latest":
+            version_id = skill_row["latest_version_id"]
+        else:
+            version_id = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT version_id
+                        FROM skill_tag
+                        WHERE skill_id = :skill_id
+                          AND tag_name = :tag_name
+                        LIMIT 1
+                        """
+                    ),
+                    {"skill_id": skill_id, "tag_name": tag_name},
+                )
+            ).scalar_one_or_none()
+
+            if version_id is None:
+                raise SkillResolveError("error.skill.tag.notFound")
+
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM skill_version
+                    WHERE id = :version_id
+                      AND status = 'PUBLISHED'
+                    LIMIT 1
+                    """
+                ),
+                {"version_id": version_id},
+            )
+        ).mappings().one_or_none()
+
+        if version_row is None:
+            raise SkillResolveError("error.skill.tag.version.notFound")
+
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, file_path, file_size, content_type, sha256
+                    FROM skill_file
+                    WHERE version_id = :version_id
+                    ORDER BY file_path ASC
+                    """
+                ),
+                {"version_id": version_id},
+            )
+        ).mappings().all()
+
+    return [
+        {
+            "id": int(row["id"]),
+            "filePath": str(row["file_path"]),
+            "fileSize": int(row["file_size"]),
+            "contentType": row["content_type"],
+            "sha256": str(row["sha256"]),
+        }
+        for row in rows
+    ]
+
+
+
 async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str, object]]) -> dict[str, object]:
     if isawaitable(result):
         return await result
