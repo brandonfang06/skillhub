@@ -1,4 +1,5 @@
 from collections.abc import Awaitable
+from datetime import UTC, datetime
 from hashlib import sha256
 from inspect import isawaitable
 from typing import Any
@@ -22,6 +23,56 @@ class SkillResolveError(ValueError):
 
 def has_text(value: str | None) -> bool:
     return value is not None and value.strip() != ""
+
+
+def to_java_instant(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        instant = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        return instant.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    return str(value).replace("+00:00", "Z")
+
+
+def normalize_page_request(page: int, size: int) -> tuple[int, int]:
+    normalized_page = max(page, 0)
+    if size < 1:
+        normalized_size = 20
+    else:
+        normalized_size = min(size, 100)
+    return normalized_page, normalized_size
+
+
+def paginate_rows(rows: list[dict[str, Any]], page: int, size: int) -> tuple[list[dict[str, Any]], int]:
+    start = min(page * size, len(rows))
+    end = min(start + size, len(rows))
+    return rows[start:end], len(rows)
+
+
+def build_versions_page_response(
+    rows: list[dict[str, Any]],
+    total: int,
+    page: int,
+    size: int,
+) -> dict[str, object]:
+    return {
+        "items": [
+            {
+                "id": int(row["id"]),
+                "version": str(row["version"]),
+                "status": str(row["status"]),
+                "changelog": row["changelog"],
+                "fileCount": int(row["file_count"]),
+                "totalSize": int(row["total_size"]),
+                "publishedAt": to_java_instant(row["published_at"]),
+                "downloadAvailable": str(row["status"]) == "PUBLISHED" and bool(row["download_ready"]),
+            }
+            for row in rows
+        ],
+        "total": total,
+        "page": page,
+        "size": size,
+    }
 
 
 def compute_version_fingerprint(files: list[FileRow]) -> str:
@@ -227,6 +278,59 @@ async def read_skill_resolve(
     )
 
 
+async def read_skill_versions(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    page: int,
+    size: int,
+) -> dict[str, object]:
+    page, size = normalize_page_request(page, size)
+    async with engine.connect() as connection:
+        skill_id = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).scalar_one_or_none()
+
+        if skill_id is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND status = 'PUBLISHED'
+                    ORDER BY created_at DESC
+                    """
+                ),
+                {"skill_id": skill_id},
+            )
+        ).mappings().all()
+
+    page_rows, total = paginate_rows([dict(row) for row in rows], page, size)
+    return build_versions_page_response(page_rows, total, page, size)
+
+
 async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str, object]]) -> dict[str, object]:
     if isawaitable(result):
         return await result
@@ -249,6 +353,27 @@ async def resolve_skill_version(
             data = await _resolve_reader_result(reader(namespace, slug, version, tag, hash_value))
         else:
             data = await read_skill_resolve(request.app.state.db_engine, namespace, slug, version, tag, hash_value)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions")
+@router.get("/api/web/skills/{namespace}/{slug}/versions")
+async def list_skill_versions(
+    namespace: str,
+    slug: str,
+    request: Request,
+    page: int = 0,
+    size: int = 20,
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_versions_reader", None)
+    page, size = normalize_page_request(page, size)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, page, size))
+        else:
+            data = await read_skill_versions(request.app.state.db_engine, namespace, slug, page, size)
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)

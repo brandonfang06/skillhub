@@ -62,6 +62,14 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/skills/[^/]+/[^/]+/versions$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/web/skills/[^/]+/[^/]+/versions$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

@@ -94,6 +94,7 @@ Defer APIs when they require:
 | 2 | `GET /api/v1/labels`, `GET /api/web/labels` | python | Public labels read API migrated as first PostgreSQL-backed Python route. |
 | 3 | `GET /api/v1/skills/{namespace}/{slug}/labels`, `GET /api/web/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list migrated. Auth-specific preview remains deferred. |
 | 4 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution migrated. Download remains Java-owned. |
+| 5 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions` | python | Public anonymous published version list migrated. Version detail remains Java-owned. |
 
 ## Planned Migration Order
 
@@ -214,14 +215,12 @@ Status:
 - Auth-specific preview behavior and download execution remain deferred until their bridge designs
   are written.
 
-### 5. Public Skill Version List and Version Detail
+### 5. Public Skill Version List
 
 Routes:
 
 - `GET /api/v1/skills/{namespace}/{slug}/versions`
 - `GET /api/web/skills/{namespace}/{slug}/versions`
-- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`
-- `GET /api/web/skills/{namespace}/{slug}/versions/{version}`
 
 Why after resolve:
 
@@ -234,11 +233,12 @@ Primary dependencies:
 - PostgreSQL.
 - Pagination.
 - Published version filtering.
-- Metadata JSON / manifest JSON fields.
+- Java-compatible `PageResponse<SkillVersionResponse>`.
 
 Constraints:
 
 - Do not expose owner preview versions until auth/role bridge is designed.
+- Do not migrate version detail in this milestone.
 - Do not migrate file content or download endpoints.
 
 Acceptance focus:
@@ -246,6 +246,42 @@ Acceptance focus:
 - Match Java page envelope and version DTOs.
 - Confirm behavior for anonymous public caller first.
 - Add viewer-specific behavior only after explicit design.
+
+Status:
+
+- Completed for anonymous public behavior.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-versions-list-api.md`
+- Auth-specific manager-visible non-published versions remain deferred until the auth/session bridge
+  is designed.
+
+### 5.1. Public Skill Version Detail
+
+Routes:
+
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`
+- `GET /api/web/skills/{namespace}/{slug}/versions/{version}`
+
+Why after version list:
+
+- Builds on public skill lookup and published version filtering.
+- Adds metadata JSON and manifest JSON fields without file bytes or object storage.
+
+Primary dependencies:
+
+- PostgreSQL.
+- Exact published version lookup.
+- Metadata JSON / manifest JSON fields.
+
+Constraints:
+
+- Do not expose owner preview versions until auth/role bridge is designed.
+- Do not migrate file list, file content, compare, or download routes.
+
+Acceptance focus:
+
+- Match Java `SkillVersionDetailResponse`.
+- Confirm anonymous public behavior before any auth-specific behavior.
 
 ### 6. Public Skill File Metadata
 
@@ -423,22 +459,23 @@ When this plan changes:
 
 ## Current Next Step
 
-The public skill resolve milestone is complete for anonymous public behavior:
+The public skill versions list milestone is complete for anonymous public behavior:
 
 - Plan:
-  `docs/backend-python-migration/plans/2026-06-07-public-skill-resolve-api.md`
+  `docs/backend-python-migration/plans/2026-06-07-public-skill-versions-list-api.md`
 - Result:
-  `docs/backend-python-migration/results/2026-06-07-public-skill-resolve-api.md`
+  `docs/backend-python-migration/results/2026-06-07-public-skill-versions-list-api.md`
 
 The next implementation milestone should be:
 
-`GET /api/v1/skills/{namespace}/{slug}/versions` and
-`GET /api/web/skills/{namespace}/{slug}/versions`
+`GET /api/v1/skills/{namespace}/{slug}/versions/{version}` and
+`GET /api/web/skills/{namespace}/{slug}/versions/{version}`
 
 Before implementation starts:
 
-- Create a milestone-specific plan for public skill version list and version detail if they stay
-  grouped together; split them if the Java contract is larger than expected.
-- Reuse anonymous public skill lookup and published-version filtering from the resolve milestone.
-- Confirm Java pagination, version DTO fields, and published/yanked behavior before coding.
+- Create a milestone-specific plan for public skill version detail.
+- Reuse anonymous public skill lookup and published-version filtering from the versions list
+  milestone.
+- Confirm Java `SkillVersionDetailResponse` fields, metadata JSON shape, manifest JSON shape, and
+  not-published behavior before coding.
 - Do not migrate file download, file streaming, download counters, or object storage behavior.
