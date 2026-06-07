@@ -43,6 +43,14 @@ Run smoke E2E:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 e2e-smoke
 ```
 
+Run the public labels live verification gate:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-labels-smoke
+```
+
 Run full E2E:
 
 ```powershell
@@ -210,6 +218,8 @@ Logs are written under `.dev/`:
 - `.dev/server.log`
 - `.dev/python.log`
 - `.dev/web.log`
+- `.dev/labels-contract-result.json` for the latest public labels comparison
+- `.dev/ms-playwright` for workspace-local Playwright browser binaries on Windows
 
 For Makefile users:
 

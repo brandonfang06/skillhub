@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -13,6 +13,7 @@ $WebPidFile = Join-Path $DevDir 'web.pid'
 $JavaLog = Join-Path $DevDir 'server.log'
 $PythonLog = Join-Path $DevDir 'python.log'
 $WebLog = Join-Path $DevDir 'web.log'
+$PlaywrightBrowsersPath = Join-Path $DevDir 'ms-playwright'
 
 $WebUrl = 'http://localhost:3000'
 $JavaUrl = 'http://localhost:8080'
@@ -21,6 +22,21 @@ $ScannerUrl = 'http://localhost:8000'
 
 function Ensure-DevDir {
     New-Item -ItemType Directory -Force -Path $DevDir | Out-Null
+}
+
+function Join-CmdArguments {
+    param([string[]]$Arguments)
+
+    $escapedArgs = foreach ($argument in $Arguments) {
+        $escaped = $argument.Replace('"', '\"')
+        if ($escaped -match '[\s&()^|<>"]') {
+            '"{0}"' -f $escaped
+        } else {
+            $escaped
+        }
+    }
+
+    return ($escapedArgs -join ' ')
 }
 
 function Test-ProcessRunning {
@@ -63,7 +79,10 @@ function Stop-ProcessTree {
 
     $taskkill = Get-Command taskkill.exe -ErrorAction SilentlyContinue
     if ($taskkill) {
-        & $taskkill.Source /F /T /PID $ProcessId 2>$null | Out-Null
+        & cmd.exe /d /c "taskkill.exe /F /T /PID $ProcessId >NUL 2>NUL"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "taskkill could not stop PID ${ProcessId}."
+        }
     }
 
     if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
@@ -82,7 +101,7 @@ function Stop-ProcessOnPort {
 
     foreach ($listenerPid in $listeners) {
         $processId = [int]$listenerPid
-        if ($processId -eq $PID) {
+        if ($processId -le 0 -or $processId -eq $PID) {
             continue
         }
 
@@ -113,12 +132,11 @@ function Start-ManagedProcess {
     New-Item -ItemType File -Force -Path $LogFile | Out-Null
     $errorLogFile = "$LogFile.err"
     New-Item -ItemType File -Force -Path $errorLogFile | Out-Null
+    $arguments = Join-CmdArguments -Arguments $ArgumentList
+    $command = 'cd /d "{0}" && "{1}" {2} 1> "{3}" 2> "{4}"' -f $WorkingDirectory, $FilePath, $arguments, $LogFile, $errorLogFile
     $process = Start-Process `
-        -FilePath $FilePath `
-        -ArgumentList $ArgumentList `
-        -WorkingDirectory $WorkingDirectory `
-        -RedirectStandardOutput $LogFile `
-        -RedirectStandardError $errorLogFile `
+        -FilePath 'cmd.exe' `
+        -ArgumentList @('/d', '/c', $command) `
         -WindowStyle Hidden `
         -PassThru
 
@@ -201,6 +219,18 @@ function Test-CommandAvailable {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Invoke-NativeCommand {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments
+    )
+
+    & $FilePath @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+    }
+}
+
 function Invoke-DockerComposeRequired {
     param([string[]]$Arguments)
 
@@ -208,17 +238,39 @@ function Invoke-DockerComposeRequired {
         throw 'Docker CLI is required for hybrid local dependencies, but docker was not found in PATH.'
     }
 
-    docker @Arguments
+    Invoke-NativeCommand -FilePath 'docker' -Arguments $Arguments
 }
 
 function Invoke-WebDeps {
     $webDir = Join-Path $Root 'web'
     $corepackHome = 'C:\tmp\corepack'
+    $pnpmStore = Join-Path $DevDir 'pnpm-store'
     New-Item -ItemType Directory -Force -Path $corepackHome | Out-Null
+    New-Item -ItemType Directory -Force -Path $pnpmStore | Out-Null
+    New-Item -ItemType Directory -Force -Path $PlaywrightBrowsersPath | Out-Null
     $env:COREPACK_HOME = $corepackHome
+    $env:CI = 'true'
+    $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
     Push-Location $webDir
     try {
-        corepack pnpm install --frozen-lockfile
+        Invoke-NativeCommand -FilePath 'corepack' -Arguments @(
+            'pnpm',
+            'install',
+            '--frozen-lockfile',
+            '--config.confirmModulesPurge=false',
+            '--store-dir',
+            $pnpmStore
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
+function Install-PlaywrightBrowsers {
+    Push-Location (Join-Path $Root 'web')
+    try {
+        $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('install', 'chromium')
     } finally {
         Pop-Location
     }
@@ -233,7 +285,11 @@ function Start-Hybrid {
     $shell = Resolve-GitShell
     $javaHome = Resolve-JavaHome
     $env:JAVA_HOME = $javaHome
+    $env:JAVA_BIN = Join-Path $javaHome 'bin\java.exe'
     $env:Path = (Join-Path $javaHome 'bin') + ';' + $env:Path
+    $mavenRepo = Join-Path $DevDir 'm2-repository'
+    New-Item -ItemType Directory -Force -Path $mavenRepo | Out-Null
+    $env:MAVEN_OPTS = "-Dmaven.repo.local=$mavenRepo"
     $serverDir = Join-Path $Root 'server'
     Start-ManagedProcess `
         -Name 'Java backend' `
@@ -308,11 +364,89 @@ function Invoke-HybridE2E {
     param([string]$Config)
 
     Start-Hybrid
+    Install-PlaywrightBrowsers
     Push-Location (Join-Path $Root 'web')
     try {
-        .\node_modules\.bin\playwright.CMD test -c $Config
+        $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', $Config)
     } finally {
         Pop-Location
+    }
+}
+
+function ConvertTo-StableContractJson {
+    param([object]$Response)
+
+    return ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-LabelsContractComparison {
+    $java = Invoke-RestMethod "$JavaUrl/api/v1/labels"
+    $python = Invoke-RestMethod "$PythonUrl/api/v1/labels"
+    $proxyV1 = Invoke-RestMethod "$WebUrl/api/v1/labels"
+    $proxyWeb = Invoke-RestMethod "$WebUrl/api/web/labels"
+
+    $javaStable = ConvertTo-StableContractJson -Response $java
+    $pythonStable = ConvertTo-StableContractJson -Response $python
+    $proxyV1Stable = ConvertTo-StableContractJson -Response $proxyV1
+    $proxyWebStable = ConvertTo-StableContractJson -Response $proxyWeb
+
+    $result = [ordered]@{
+        javaStatus = [ordered]@{
+            code = $java.code
+            msg = $java.msg
+            count = @($java.data).Count
+        }
+        pythonStatus = [ordered]@{
+            code = $python.code
+            msg = $python.msg
+            count = @($python.data).Count
+        }
+        proxyV1Status = [ordered]@{
+            code = $proxyV1.code
+            msg = $proxyV1.msg
+            count = @($proxyV1.data).Count
+        }
+        proxyWebStatus = [ordered]@{
+            code = $proxyWeb.code
+            msg = $proxyWeb.msg
+            count = @($proxyWeb.data).Count
+        }
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxyV1 = ($pythonStable -eq $proxyV1Stable)
+        pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+        comparedFields = @('code', 'msg', 'data')
+    }
+
+    $resultPath = Join-Path $DevDir 'labels-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.javaMatchesPython) {
+        throw 'Java and Python labels contracts differ. See .dev/labels-contract-result.json.'
+    }
+    if (-not $result.pythonMatchesProxyV1) {
+        throw 'Vite /api/v1/labels proxy does not match Python. See .dev/labels-contract-result.json.'
+    }
+    if (-not $result.pythonMatchesProxyWeb) {
+        throw 'Vite /api/web/labels proxy does not match Python. See .dev/labels-contract-result.json.'
+    }
+}
+
+function Invoke-HybridLabelsSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-LabelsContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
     }
 }
 
@@ -320,6 +454,7 @@ switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
     'status' { Show-Status }
+    'verify-labels-smoke' { Invoke-HybridLabelsSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

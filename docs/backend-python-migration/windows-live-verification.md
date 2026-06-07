@@ -19,6 +19,8 @@ Do not edit any file under `server/` during verification. Java is a read-only re
 - Java 21 JDK is available.
 - `uv` is available for `server-python/`.
 - Node/corepack/pnpm are available for `web/`.
+- Docker Desktop exposes the daemon on `tcp://localhost:2375` when running from the Codex sandbox.
+- The Codex sandbox account can traverse `C:\Users\USER` when the workspace lives under OneDrive.
 
 Recommended Java install:
 
@@ -45,6 +47,8 @@ PowerShell for normal hybrid verification.
 
 ```powershell
 $env:Path = "C:\Program Files\Docker\Docker\resources\bin;$env:Path"
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 up
 ```
 
@@ -117,6 +121,46 @@ Ignore volatile fields such as `timestamp` and `requestId`.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 e2e-smoke
 ```
 
+## One-Command Labels Verification Gate
+
+For the migrated public labels API, prefer the one-command gate because it keeps Java, Python, Vite,
+contract comparison, Playwright smoke E2E, and cleanup inside one PowerShell lifecycle:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-labels-smoke
+```
+
+Expected result:
+
+```text
+Java backend ready.
+Python backend ready.
+Scanner ready.
+Vite frontend ready.
+Vite proxy to Python health route ready.
+javaMatchesPython: true
+pythonMatchesProxyV1: true
+pythonMatchesProxyWeb: true
+6 passed
+```
+
+The command writes the latest labels comparison summary to:
+
+```text
+.dev/labels-contract-result.json
+```
+
+Playwright browser binaries are installed under:
+
+```text
+.dev/ms-playwright
+```
+
+The first run may need network access to download Chromium. After download, later runs reuse the
+workspace-local browser binaries.
+
 ## Shutdown
 
 ```powershell
@@ -156,6 +200,16 @@ The Codex sandbox may not have permission to access the Docker Desktop named pip
 Docker config if it is not running as the interactive user. In that case, fix the user/session
 context instead of switching to admin PowerShell for every verification.
 
+For this Windows setup, the stable no-admin sandbox path is:
+
+1. Add the sandbox account to `docker-users`.
+2. Enable Docker Desktop setting `Expose daemon on tcp://localhost:2375 without TLS`.
+3. Set `DOCKER_HOST=tcp://127.0.0.1:2375` before Docker commands.
+4. Set `DOCKER_CONFIG` to `.dev\docker-config` so the sandbox does not need
+   `C:\Users\USER\.docker\config.json`.
+5. Grant read/traverse permission to `CodexSandboxUsers` on `C:\Users\USER` when the workspace is
+   under `C:\Users\USER\OneDrive\...`; Vite/esbuild traverses parent directories during startup.
+
 Known sandbox symptoms:
 
 - `permission denied while trying to connect to the docker API at npipe:////./pipe/docker_engine`
@@ -182,6 +236,11 @@ Observed failures:
    Compose and Java local config use `skillhub_dev`.
 7. `dev-hybrid.ps1 down` removed pid files but left child Java/Python/Vite processes running on
    Windows. The script now uses process-tree and port fallback cleanup.
+8. Playwright failed because Chromium was missing under the default user profile path. The script
+   now uses workspace-local `.dev/ms-playwright`.
+9. `taskkill` can emit access-denied warnings for transient wrapper PIDs in the sandbox. Treat this
+   as non-fatal when `netstat` shows no `LISTENING` entries and Docker Compose has no running
+   containers.
 
 Root causes found during the failed verification session:
 
@@ -190,10 +249,9 @@ Root causes found during the failed verification session:
 - Python's default database URL did not match `docker-compose.yml`.
 - Windows process cleanup needed process-tree and port fallback handling.
 
-Required next action:
+Verification status from 2026-06-07:
 
-- Ensure no admin-owned stale processes are listening on `3000`, `8080`, or `8081`.
-- Run `scripts\dev-hybrid.ps1 up` from a normal user PowerShell after confirming Java 21 is
-  installed or `JAVA_HOME` points to a valid JDK.
-- Only after all four health checks pass, perform Java/Python/proxy contract comparison and smoke
-  E2E.
+- `scripts\dev-hybrid.ps1 verify-labels-smoke` passed.
+- Labels `code`, `msg`, and `data` matched between Java, Python, and both Vite proxy routes.
+- Playwright smoke E2E passed: `6 passed`.
+- Shutdown left no `LISTENING` ports on `3000`, `8080`, or `8081`; only `TIME_WAIT` remained.

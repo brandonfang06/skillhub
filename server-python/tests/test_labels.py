@@ -15,7 +15,7 @@ def test_public_labels_v1_route_returns_envelope() -> None:
     assert response.status_code == 200
     assert response.headers["X-Request-Id"] == "labels-test"
     assert response.json()["code"] == 0
-    assert response.json()["msg"] == "response.success.read"
+    assert response.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
     assert response.json()["requestId"] == "labels-test"
     assert response.json()["data"] == [
         {"slug": "official", "type": "RECOMMENDED", "displayName": "Official"}

@@ -48,7 +48,7 @@ def test_makefile_defines_hybrid_e2e_targets() -> None:
 def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     script = (ROOT / "scripts" / "dev-hybrid.ps1").read_text(encoding="utf-8")
 
-    assert "[ValidateSet('up', 'down', 'status', 'e2e-smoke', 'e2e')]" in script
+    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'e2e-smoke', 'e2e')]" in script
     assert "Start-ManagedProcess" in script
     assert "server-python" in script
     assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in script
@@ -60,6 +60,23 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Stop-ProcessTree" in script
     assert "Stop-ProcessOnPort" in script
     assert "taskkill" in script
+    assert "confirmModulesPurge=false" in script
+    assert "Join-CmdArguments" in script
+    assert "cmd.exe" in script
+    assert "-Dmaven.repo.local=$mavenRepo" in script
+    assert "$env:JAVA_BIN" in script
+    assert "Invoke-NativeCommand" in script
+    assert "LASTEXITCODE" in script
+    assert "--store-dir" in script
+    assert "pnpm-store" in script
+    assert "$processId -le 0" in script
+    assert "verify-labels-smoke" in script
+    assert "Invoke-LabelsContractComparison" in script
+    assert "labels-contract-result.json" in script
+    assert "javaMatchesPython" in script
+    assert "PLAYWRIGHT_BROWSERS_PATH" in script
+    assert "ms-playwright" in script
+    assert "playwright.CMD' -Arguments @('install', 'chromium')" in script
 
 
 def test_hybrid_local_e2e_doc_covers_windows_macos_and_ubuntu() -> None:

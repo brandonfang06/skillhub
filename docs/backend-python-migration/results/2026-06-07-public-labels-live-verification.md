@@ -2,7 +2,7 @@
 
 Date: 2026-06-07
 
-Status: blocked
+Status: passed
 
 ## Scope
 
@@ -40,41 +40,65 @@ This milestone did not migrate a new API.
 - Python unit tests passed after fixing config:
   - `cd server-python; uv run pytest`
   - Result: `17 passed, 1 warning`
+- Windows live verification passed with the repo script:
 
-## What Failed
-
-The full live verification gate did not pass.
-
-First failure:
-
-Java backend was not reliably kept running as a detached process from the earlier
-agent-controlled Windows sandbox before the verification session was stopped. Because Java was not
-available on `localhost:8080` at the time of comparison, these required checks were not completed:
-
-- Direct Java `GET /api/v1/labels`
-- Direct Python-vs-Java stable contract comparison
-- Vite proxy comparison for `/api/v1/labels`
-- Vite proxy comparison for `/api/web/labels`
-- Frontend smoke E2E
-
-Follow-up failure:
-
-After the hybrid stack became reachable, direct Python labels failed with HTTP 500. Root cause was
-Python using a default database URL with password `skillhub`, while `docker-compose.yml` and Java
-local config use `skillhub_dev`.
-
-After fixing that config, the currently running Python process still used the stale DB engine. A
-restart was required, but the old Java/Python/Vite processes had been started from an elevated
-PowerShell during earlier troubleshooting and could not be terminated from the normal user session:
-
-```text
-ERROR: The process with PID 30212 could not be terminated.
-Reason: Access is denied.
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-labels-smoke
 ```
 
-Because stale admin-owned processes still occupy `3000`, `8080`, and `8081`, contract comparison
-and smoke E2E remain blocked until those processes are manually closed or the machine is rebooted
-once.
+Result:
+
+```text
+Java backend ready.
+Python backend ready.
+Scanner ready.
+Vite frontend ready.
+Vite proxy to Python health route ready.
+javaMatchesPython: true
+pythonMatchesProxyV1: true
+pythonMatchesProxyWeb: true
+6 passed (19.0s)
+```
+
+The verified stable fields were `code`, `msg`, and `data`. Volatile `timestamp` and `requestId`
+were intentionally ignored.
+
+After shutdown, `docker compose -p skillhub ps` returned no running containers. `netstat` showed no
+`LISTENING` entries for `3000`, `8080`, or `8081`; only short-lived `TIME_WAIT` sockets remained.
+
+- General Windows smoke E2E action also passed after the workspace-local Playwright browser path
+  was added:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 e2e-smoke
+```
+
+Result:
+
+```text
+6 passed (14.4s)
+```
+
+## What Failed And Was Fixed
+
+Earlier verification attempts exposed these issues:
+
+- The agent-controlled Windows sandbox could start Java/Python/Vite, but detached child processes
+  were unreliable after the command ended. The script now provides `verify-labels-smoke` so the live
+  stack, labels comparison, smoke E2E, and cleanup run in one PowerShell lifecycle.
+- Direct Python labels initially returned HTTP 500 because the Python default database URL used
+  password `skillhub`; Docker Compose and Java local config use `skillhub_dev`.
+- Labels contract comparison initially failed because Python returned `msg:
+  "response.success.read"` while Java returns localized `msg: "获取成功"`. Python labels now match
+  the Java contract.
+- Playwright initially failed because Chromium was not installed. The script now uses
+  `.dev/ms-playwright` through `PLAYWRIGHT_BROWSERS_PATH` so browser binaries are workspace-local.
+- `taskkill` stderr from Windows cleanup could terminate the script. Cleanup now warns and
+  continues to port cleanup and Docker Compose shutdown.
 
 ## Evidence
 
@@ -111,7 +135,22 @@ Python labels failure:
 asyncpg.exceptions.InvalidPasswordError: password authentication failed for user "skillhub"
 ```
 
-Stale elevated process cleanup failure:
+Initial labels contract mismatch:
+
+```text
+javaMatchesPython: false
+pythonStatus.msg: response.success.read
+```
+
+Playwright browser failure:
+
+```text
+Executable doesn't exist at C:\Users\USER\AppData\Local\ms-playwright\...
+Please run the following command to download new browsers:
+npx playwright install
+```
+
+Stale elevated process cleanup failure from earlier troubleshooting:
 
 ```text
 ERROR: The process with PID 30212 (child process of PID 1320) could not be terminated.
@@ -131,15 +170,28 @@ Reason: Access is denied.
     `C:\Program Files\Java`, and PyCharm JBR.
   - Fixed Python `UV_CACHE_DIR` PowerShell quoting.
   - Added process-tree cleanup and port fallback cleanup for `down` on Windows.
+  - Added `verify-labels-smoke` to run health checks, labels contract comparison, Playwright smoke
+    E2E, and cleanup in one command.
+  - Added workspace-local Playwright browser management under `.dev/ms-playwright`.
+  - Applied the same workspace-local Playwright browser setup to `e2e-smoke` and `e2e`.
 
 - `server-python/app/core/config.py`
   - Changed the default local Docker database URL to use `skillhub_dev`.
 
+- `server-python/app/api/labels.py`
+  - Aligned the public labels success `msg` with Java's localized `response.success.read`
+    resolution.
+
 - `server-python/tests/test_config.py`
   - Added coverage for the default Docker-compatible database URL and env override behavior.
 
+- `server-python/tests/test_labels.py`
+  - Updated labels envelope coverage for the Java-compatible success message.
+
 - `server-python/tests/test_hybrid_makefile.py`
   - Added coverage for Windows process cleanup support in `scripts/dev-hybrid.ps1`.
+  - Added coverage for the live labels verification action and workspace-local Playwright browser
+    path.
 
 - `docs/backend-python-migration/windows-live-verification.md`
   - Added the Windows live verification procedure and troubleshooting notes.
@@ -152,35 +204,32 @@ No tracked source changes under `server/` are intended or allowed.
 The Java build may create ignored build artifacts under `server/**/target/` during local runtime
 verification. These must not be staged or committed.
 
-Required check before any commit:
+Executed check before commit:
 
 ```powershell
 git diff --name-only -- server
 ```
 
-Expected output: empty.
+Expected and observed output: empty.
 
 ## Follow-Up
 
-Before starting the next API migration, complete the Windows live verification from a normal user
-PowerShell session:
+Future API migrations must run the live verification gate before moving to the next API.
 
-First ensure no stale elevated processes listen on `3000`, `8080`, or `8081`. If the process owner
-is elevated/admin and normal `taskkill` returns `Access is denied`, close the elevated terminal or
-reboot once. Future runs should not use admin PowerShell.
+For Windows public labels verification, use:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 up
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-labels-smoke
 ```
 
-Then run:
+For the next API, keep the same gate shape:
 
-```powershell
-Invoke-RestMethod http://localhost:8080/actuator/health
-Invoke-RestMethod http://localhost:8081/api/v1/health
-Invoke-RestMethod http://localhost:3000/api/v1/health
-Invoke-RestMethod http://localhost:8000/health
-```
-
-Only after those health checks pass should the labels contract comparison and frontend smoke E2E
-be rerun.
+- Java reference endpoint reachable when applicable.
+- Python direct endpoint reachable.
+- Vite proxy endpoint routes to Python for Python-owned paths.
+- Stable `code`, `msg`, and `data` comparison passes unless the milestone plan explicitly narrows
+  the comparison rule.
+- Frontend smoke E2E passes.
+- `git diff --name-only -- server` remains empty.

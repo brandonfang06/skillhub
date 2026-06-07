@@ -130,4 +130,4 @@ async def list_visible_labels(request: Request) -> dict[str, object]:
         data = await _resolve_reader_result(reader(locale))
     else:
         data = await read_visible_labels(request.app.state.db_engine, locale)
-    return ok("response.success.read", data, request)
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
