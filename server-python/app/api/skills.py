@@ -634,3 +634,42 @@ async def list_skill_versions(
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/files")
+@router.get("/api/web/skills/{namespace}/{slug}/versions/{version}/files")
+async def list_skill_version_files(
+    namespace: str,
+    slug: str,
+    version: str,
+    request: Request,
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_version_files_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, version))
+        else:
+            data = await read_skill_version_files(request.app.state.db_engine, namespace, slug, version)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files")
+@router.get("/api/web/skills/{namespace}/{slug}/tags/{tagName}/files")
+async def list_skill_tag_files(
+    namespace: str,
+    slug: str,
+    tagName: str,
+    request: Request,
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_tag_files_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, tagName))
+        else:
+            data = await read_skill_tag_files(request.app.state.db_engine, namespace, slug, tagName)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
