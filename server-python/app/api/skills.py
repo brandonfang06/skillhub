@@ -18,7 +18,9 @@ FileRow = dict[str, Any]
 
 
 class SkillResolveError(ValueError):
-    pass
+    def __init__(self, message: str, status_code: int = 400) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def has_text(value: str | None) -> bool:
@@ -86,6 +88,50 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
         "publishedAt": to_java_instant(row["published_at"]),
         "parsedMetadataJson": row["parsed_metadata_json"],
         "manifestJson": row["manifest_json"],
+    }
+
+
+def to_lifecycle_version(row: dict[str, Any]) -> dict[str, object] | None:
+    if row["published_version_id"] is None:
+        return None
+    return {
+        "id": int(row["published_version_id"]),
+        "version": str(row["published_version"]),
+        "status": str(row["published_version_status"]),
+    }
+
+
+def build_skill_detail_response(
+    row: dict[str, Any],
+    labels: list[dict[str, object]],
+) -> dict[str, object]:
+    published_version = to_lifecycle_version(row)
+    return {
+        "id": int(row["id"]),
+        "slug": str(row["slug"]),
+        "displayName": row["display_name"],
+        "ownerId": str(row["owner_id"]),
+        "ownerDisplayName": row["owner_display_name"],
+        "summary": row["summary"],
+        "visibility": str(row["visibility"]),
+        "status": str(row["status"]),
+        "downloadCount": int(row["download_count"]),
+        "starCount": int(row["star_count"]),
+        "subscriptionCount": int(row["subscription_count"]),
+        "ratingAvg": float(row["rating_avg"]),
+        "ratingCount": int(row["rating_count"]),
+        "hidden": bool(row["hidden"]),
+        "namespace": str(row["namespace"]),
+        "labels": labels,
+        "canManageLifecycle": False,
+        "canSubmitPromotion": False,
+        "canInteract": published_version is None or published_version["status"] == "PUBLISHED",
+        "canReport": True,
+        "headlineVersion": published_version,
+        "publishedVersion": published_version,
+        "ownerPreviewVersion": None,
+        "ownerPreviewReviewComment": None,
+        "resolutionMode": str(row["resolution_mode"]),
     }
 
 
@@ -390,6 +436,116 @@ async def read_skill_version_detail(
     return build_version_detail_response(dict(row))
 
 
+async def read_skill_detail(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+) -> dict[str, object]:
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id,
+                           s.slug,
+                           s.display_name,
+                           s.owner_id,
+                           NULLIF(BTRIM(ua.display_name), '') AS owner_display_name,
+                           s.summary,
+                           s.visibility,
+                           s.status,
+                           s.download_count,
+                           s.star_count,
+                           s.subscription_count,
+                           s.rating_avg,
+                           s.rating_count,
+                           s.hidden,
+                           s.namespace_id,
+                           s.latest_version_id,
+                           n.slug AS namespace,
+                           n.status AS namespace_status
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    LEFT JOIN user_account ua ON ua.id = s.owner_id
+                    WHERE n.slug = :namespace
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+        if str(skill_row["namespace_status"]) == "ARCHIVED":
+            raise SkillResolveError("error.namespace.archived", status_code=403)
+        if str(skill_row["visibility"]) != "PUBLIC":
+            raise SkillResolveError("error.skill.access.denied", status_code=403)
+
+        published_version = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, version, status
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND status = 'PUBLISHED'
+                    ORDER BY
+                      CASE WHEN id = :latest_version_id THEN 0 ELSE 1 END,
+                      published_at DESC NULLS LAST,
+                      created_at DESC NULLS LAST,
+                      id DESC
+                    LIMIT 1
+                    """
+                ),
+                {
+                    "skill_id": skill_row["id"],
+                    "latest_version_id": skill_row["latest_version_id"],
+                },
+            )
+        ).mappings().one_or_none()
+
+        labels = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT ld.slug,
+                           ld.type,
+                           COALESCE(lt.display_name, ld.slug) AS display_name
+                    FROM skill_label sl
+                    JOIN label_definition ld ON ld.id = sl.label_id
+                    LEFT JOIN label_translation lt
+                      ON lt.label_id = ld.id
+                     AND LOWER(REPLACE(lt.locale, '_', '-')) = 'en'
+                    WHERE sl.skill_id = :skill_id
+                    ORDER BY sl.id ASC
+                    """
+                ),
+                {"skill_id": skill_row["id"]},
+            )
+        ).mappings().all()
+
+    row = dict(skill_row)
+    row["published_version_id"] = published_version["id"] if published_version is not None else None
+    row["published_version"] = published_version["version"] if published_version is not None else None
+    row["published_version_status"] = published_version["status"] if published_version is not None else None
+    row["resolution_mode"] = "PUBLISHED" if published_version is not None else "NONE"
+    label_rows = [
+        {
+            "slug": str(label["slug"]),
+            "type": str(label["type"]),
+            "displayName": str(label["display_name"]),
+        }
+        for label in labels
+    ]
+    return build_skill_detail_response(row, label_rows)
+
+
 async def read_skill_version_files(
     engine: AsyncEngine,
     namespace: str,
@@ -575,6 +731,24 @@ async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str,
     return result
 
 
+@router.get("/api/v1/skills/{namespace}/{slug}")
+@router.get("/api/web/skills/{namespace}/{slug}")
+async def get_skill_detail(
+    namespace: str,
+    slug: str,
+    request: Request,
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_detail_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug))
+        else:
+            data = await read_skill_detail(request.app.state.db_engine, namespace, slug)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
+
 @router.get("/api/v1/skills/{namespace}/{slug}/resolve")
 @router.get("/api/web/skills/{namespace}/{slug}/resolve")
 async def resolve_skill_version(
@@ -672,4 +846,3 @@ async def list_skill_tag_files(
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
-

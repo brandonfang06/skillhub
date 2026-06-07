@@ -14,6 +14,9 @@ content, downloads, and search remain Java-owned.
 **Tech Stack:** FastAPI, SQLAlchemy async engine, asyncpg, pytest, Vitest, Vite dev proxy, Windows
 hybrid Java/Python/DB/Vite live contract comparison.
 
+**Status:** Completed for anonymous public behavior on 2026-06-07. Result:
+`docs/backend-python-migration/results/2026-06-07-public-skill-detail-api.md`.
+
 ---
 
 ## Milestone Announcement
@@ -163,7 +166,7 @@ These patterns must not capture:
 - Create: `server-python/tests/test_skill_detail_repository.py`
 - Modify: `server-python/app/api/skills.py`
 
-- [ ] **Step 1: Write failing response mapping tests**
+- [x] **Step 1: Write failing response mapping tests**
 
 Add tests for Java-compatible field names, decimal preservation, labels, lifecycle projections, and
 anonymous public capability flags.
@@ -229,7 +232,7 @@ def test_build_skill_detail_response_maps_java_fields() -> None:
     }
 ```
 
-- [ ] **Step 2: Run test and confirm RED**
+- [x] **Step 2: Run test and confirm RED**
 
 Run:
 
@@ -241,7 +244,7 @@ uv run pytest tests/test_skill_detail_repository.py -v
 
 Expected: FAIL because `build_skill_detail_response` does not exist.
 
-- [ ] **Step 3: Implement minimal response builder**
+- [x] **Step 3: Implement minimal response builder**
 
 Add helper functions in `server-python/app/api/skills.py`:
 
@@ -290,7 +293,7 @@ def build_skill_detail_response(
     }
 ```
 
-- [ ] **Step 4: Run test and confirm GREEN**
+- [x] **Step 4: Run test and confirm GREEN**
 
 Run:
 
@@ -309,7 +312,7 @@ Expected: PASS.
 - Create: `server-python/tests/test_skill_detail.py`
 - Modify: `server-python/app/api/skills.py`
 
-- [ ] **Step 1: Write failing route tests**
+- [x] **Step 1: Write failing route tests**
 
 Add tests for both aliases, envelope, request id propagation, and parameter forwarding.
 
@@ -395,7 +398,7 @@ def test_skill_detail_route_forwards_params_to_reader() -> None:
     assert seen == [("team-a", "demo-skill")]
 ```
 
-- [ ] **Step 2: Run route tests and confirm RED**
+- [x] **Step 2: Run route tests and confirm RED**
 
 Run:
 
@@ -407,7 +410,7 @@ uv run pytest tests/test_skill_detail.py -v
 
 Expected: FAIL with `404 Not Found`.
 
-- [ ] **Step 3: Add route handlers**
+- [x] **Step 3: Add route handlers**
 
 Add the detail route below the helper functions and before narrower nested routes are affected:
 
@@ -430,7 +433,7 @@ async def get_skill_detail(
     return ok("?瑕???", data, request)
 ```
 
-- [ ] **Step 4: Run route tests and confirm GREEN**
+- [x] **Step 4: Run route tests and confirm GREEN**
 
 Run:
 
@@ -449,7 +452,7 @@ Expected: PASS.
 - Modify: `server-python/app/api/skills.py`
 - Modify: `server-python/tests/test_skill_detail_repository.py`
 
-- [ ] **Step 1: Add repository-level tests for labels and no-published projection**
+- [x] **Step 1: Add repository-level tests for labels and no-published projection**
 
 Extend `tests/test_skill_detail_repository.py` with builder tests for:
 
@@ -458,7 +461,7 @@ Extend `tests/test_skill_detail_repository.py` with builder tests for:
   published projection for the selected public skill
 - `ownerDisplayName = null` when owner display name is blank or missing
 
-- [ ] **Step 2: Implement DB reader**
+- [x] **Step 2: Implement DB reader**
 
 Add `read_skill_detail(engine, namespace, slug)` using raw SQL:
 
@@ -486,7 +489,7 @@ Add `read_skill_detail(engine, namespace, slug)` using raw SQL:
 
 The reader returns `build_skill_detail_response(row, labels)`.
 
-- [ ] **Step 3: Run focused Python tests**
+- [x] **Step 3: Run focused Python tests**
 
 Run:
 
@@ -507,7 +510,7 @@ Expected: PASS.
 - Modify: `docs/backend-python-migration/route-registry.md`
 - Modify: `docs/backend-python-migration/migration-sequence-plan.md`
 
-- [ ] **Step 1: Add proxy matching tests**
+- [x] **Step 1: Add proxy matching tests**
 
 Extend `web/vite.config.test.ts` to assert:
 
@@ -518,7 +521,7 @@ Extend `web/vite.config.test.ts` to assert:
 - nested routes already owned by Python still route to Python
 - nested routes owned by Java still route to Java
 
-- [ ] **Step 2: Run proxy tests and confirm RED**
+- [x] **Step 2: Run proxy tests and confirm RED**
 
 Run:
 
@@ -529,7 +532,7 @@ cd web
 
 Expected: FAIL because detail proxy entries do not exist.
 
-- [ ] **Step 3: Add proxy entries**
+- [x] **Step 3: Add proxy entries**
 
 Add exact regex entries in `web/vite.config.ts` before `/api` fallback:
 
@@ -544,7 +547,7 @@ Add exact regex entries in `web/vite.config.ts` before `/api` fallback:
       },
 ```
 
-- [ ] **Step 4: Run proxy tests and confirm GREEN**
+- [x] **Step 4: Run proxy tests and confirm GREEN**
 
 Run:
 
@@ -555,7 +558,7 @@ cd web
 
 Expected: PASS.
 
-- [ ] **Step 5: Update docs**
+- [x] **Step 5: Update docs**
 
 Update:
 
@@ -575,7 +578,7 @@ verification.
 - Modify: `docs/backend-python-migration/windows-live-verification.md` if new Windows-specific
   troubleshooting is learned
 
-- [ ] **Step 1: Add `verify-detail-smoke` action**
+- [x] **Step 1: Add `verify-detail-smoke` action**
 
 Extend `scripts/dev-hybrid.ps1` with a new action that:
 
@@ -597,7 +600,7 @@ Fixture should include:
 - hidden skill with same shape for negative status comparison
 - public active skill with no `latest_version_id` for negative status comparison
 
-- [ ] **Step 2: Run live gate**
+- [x] **Step 2: Run live gate**
 
 Run:
 
@@ -612,7 +615,7 @@ Expected:
 - hidden/no-public-version negative statuses match Java
 - Playwright smoke passes
 
-- [ ] **Step 3: Run final verification**
+- [x] **Step 3: Run final verification**
 
 Run:
 
@@ -635,7 +638,7 @@ Expected:
 - `git diff --check` has no whitespace errors
 - `git diff --name-only -- server` is empty
 
-- [ ] **Step 4: Write result document**
+- [x] **Step 4: Write result document**
 
 Create `docs/backend-python-migration/results/2026-06-07-public-skill-detail-api.md` with:
 
@@ -648,7 +651,7 @@ Create `docs/backend-python-migration/results/2026-06-07-public-skill-detail-api
 - boundary check
 - risks and follow-up
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
 
 Commit and push only after the result document is complete:
 

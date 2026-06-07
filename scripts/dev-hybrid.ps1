@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -383,6 +383,14 @@ function ConvertTo-StableContractJson {
     return ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
 }
 
+function ConvertTo-StableDetailContractJson {
+    param([object]$Response)
+
+    $json = ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
+    $json = [regex]::Replace($json, '("ratingAvg":-?\d+\.\d*?[1-9])0+(?=[,}])', '$1')
+    return [regex]::Replace($json, '("ratingAvg":-?\d+)\.0+(?=[,}])', '$1')
+}
+
 function Invoke-PostgresSql {
     param([string]$Sql)
 
@@ -606,6 +614,436 @@ END $$;
     Invoke-PostgresSql -Sql $sql
 }
 
+function Ensure-DetailContractFixture {
+    $sql = @'
+DO $$
+DECLARE
+    fixture_user_id VARCHAR(128) := 'codex-detail-owner';
+    ns_id BIGINT;
+    archived_ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    hidden_skill_id BIGINT;
+    no_latest_skill_id BIGINT;
+    archived_skill_id BIGINT;
+    old_version_id BIGINT;
+    latest_version_row_id BIGINT;
+    draft_version_id BIGINT;
+    hidden_version_id BIGINT;
+    archived_version_id BIGINT;
+    label_row_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES (fixture_user_id, 'Codex Detail Owner', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-archived-detail', 'Codex Archived Detail', 'TEAM', 'ARCHIVED', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ARCHIVED',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO archived_ns_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        download_count,
+        star_count,
+        subscription_count,
+        rating_avg,
+        rating_count,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        ns_id,
+        'codex-detail-fixture-20260607230000',
+        'Codex Detail Fixture',
+        'Fixture for public skill detail contract comparison',
+        fixture_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        7,
+        3,
+        2,
+        4.50,
+        4,
+        fixture_user_id,
+        fixture_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            download_count = 7,
+            star_count = 3,
+            subscription_count = 2,
+            rating_avg = 4.50,
+            rating_count = 4,
+            updated_by = fixture_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        ns_id,
+        'codex-detail-hidden-20260607230000',
+        'Codex Hidden Detail Fixture',
+        'Hidden fixture',
+        fixture_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        fixture_user_id,
+        fixture_user_id,
+        TRUE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO hidden_skill_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        latest_version_id,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        ns_id,
+        'codex-detail-no-latest-20260607230000',
+        'Codex No Latest Detail Fixture',
+        'No latest fixture',
+        fixture_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        NULL,
+        fixture_user_id,
+        fixture_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            latest_version_id = NULL,
+            hidden = FALSE,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO no_latest_skill_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        archived_ns_id,
+        'codex-detail-archived-20260607230000',
+        'Codex Archived Detail Fixture',
+        'Archived namespace fixture',
+        fixture_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        fixture_user_id,
+        fixture_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO archived_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES (
+        fixture_skill_id,
+        '1.0.0',
+        'PUBLISHED',
+        'older public detail fixture',
+        jsonb_build_object('name', 'detail-fixture', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1,
+        123,
+        '2026-06-07T09:00:00Z'::timestamptz,
+        fixture_user_id,
+        '2026-06-07T09:00:00Z'::timestamptz,
+        TRUE,
+        TRUE,
+        'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO old_version_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES (
+        fixture_skill_id,
+        '1.2.0',
+        'PUBLISHED',
+        'latest public detail fixture',
+        jsonb_build_object('name', 'detail-fixture', 'version', '1.2.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1,
+        456,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        fixture_user_id,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        TRUE,
+        TRUE,
+        'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO latest_version_row_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES (
+        fixture_skill_id,
+        '2.0.0-draft',
+        'DRAFT',
+        'anonymous users must not see this preview',
+        jsonb_build_object('name', 'detail-fixture', 'version', '2.0.0-draft'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1,
+        789,
+        fixture_user_id,
+        '2026-06-07T11:00:00Z'::timestamptz,
+        FALSE,
+        FALSE,
+        'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'DRAFT',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = FALSE,
+            download_ready = FALSE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO draft_version_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES (
+        hidden_skill_id,
+        '1.0.0',
+        'PUBLISHED',
+        0,
+        0,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        fixture_user_id,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        TRUE,
+        TRUE,
+        'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO hidden_version_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES (
+        archived_skill_id,
+        '1.0.0',
+        'PUBLISHED',
+        0,
+        0,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        fixture_user_id,
+        '2026-06-07T10:00:00Z'::timestamptz,
+        TRUE,
+        TRUE,
+        'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO archived_version_id;
+
+    UPDATE skill
+    SET latest_version_id = latest_version_row_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = fixture_skill_id;
+
+    UPDATE skill
+    SET latest_version_id = hidden_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = hidden_skill_id;
+
+    UPDATE skill
+    SET latest_version_id = archived_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = archived_skill_id;
+
+    INSERT INTO label_definition (slug, type, visible_in_filter, sort_order, created_by)
+    VALUES ('codex-detail-featured', 'RECOMMENDED', TRUE, 10, fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET type = 'RECOMMENDED',
+            visible_in_filter = TRUE,
+            sort_order = 10,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO label_row_id;
+
+    INSERT INTO label_translation (label_id, locale, display_name)
+    VALUES (label_row_id, 'en', 'Codex Detail Featured')
+    ON CONFLICT (label_id, locale) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill_label (skill_id, label_id, created_by)
+    VALUES (fixture_skill_id, label_row_id, fixture_user_id)
+    ON CONFLICT (skill_id, label_id) DO NOTHING;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
 function Invoke-LabelsContractComparison {
     $java = Invoke-RestMethod "$JavaUrl/api/v1/labels"
     $python = Invoke-RestMethod "$PythonUrl/api/v1/labels"
@@ -656,6 +1094,98 @@ function Invoke-LabelsContractComparison {
     }
     if (-not $result.pythonMatchesProxyWeb) {
         throw 'Vite /api/web/labels proxy does not match Python. See .dev/labels-contract-result.json.'
+    }
+}
+
+function Invoke-HttpStatus {
+    param([string]$Url)
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 10
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Invoke-DetailContractComparison {
+    Ensure-DetailContractFixture
+
+    $slug = 'codex-detail-fixture-20260607230000'
+    $hiddenSlug = 'codex-detail-hidden-20260607230000'
+    $noLatestSlug = 'codex-detail-no-latest-20260607230000'
+    $archivedNamespace = 'codex-archived-detail'
+    $archivedSlug = 'codex-detail-archived-20260607230000'
+
+    Write-Host "Comparing public skill detail contract..."
+    $java = Invoke-RestMethod "$JavaUrl/api/v1/skills/global/$slug"
+    $python = Invoke-RestMethod "$PythonUrl/api/v1/skills/global/$slug"
+    $proxyV1 = Invoke-RestMethod "$WebUrl/api/v1/skills/global/$slug"
+    $proxyWeb = Invoke-RestMethod "$WebUrl/api/web/skills/global/$slug"
+
+    $javaStable = ConvertTo-StableDetailContractJson -Response $java
+    $pythonStable = ConvertTo-StableDetailContractJson -Response $python
+    $proxyV1Stable = ConvertTo-StableDetailContractJson -Response $proxyV1
+    $proxyWebStable = ConvertTo-StableDetailContractJson -Response $proxyWeb
+
+    $hiddenJavaStatus = Invoke-HttpStatus "$JavaUrl/api/v1/skills/global/$hiddenSlug"
+    $hiddenPythonStatus = Invoke-HttpStatus "$PythonUrl/api/v1/skills/global/$hiddenSlug"
+    $noLatestJavaStatus = Invoke-HttpStatus "$JavaUrl/api/v1/skills/global/$noLatestSlug"
+    $noLatestPythonStatus = Invoke-HttpStatus "$PythonUrl/api/v1/skills/global/$noLatestSlug"
+    $archivedJavaStatus = Invoke-HttpStatus "$JavaUrl/api/v1/skills/$archivedNamespace/$archivedSlug"
+    $archivedPythonStatus = Invoke-HttpStatus "$PythonUrl/api/v1/skills/$archivedNamespace/$archivedSlug"
+
+    $result = [ordered]@{
+        fixtureSlug = $slug
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxyV1 = ($pythonStable -eq $proxyV1Stable)
+        pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+        publicDetail = [ordered]@{
+            id = $python.data.id
+            slug = $python.data.slug
+            ownerDisplayName = $python.data.ownerDisplayName
+            labels = @($python.data.labels).Count
+            headlineVersion = $python.data.headlineVersion.version
+            publishedVersion = $python.data.publishedVersion.version
+            ownerPreviewVersion = $python.data.ownerPreviewVersion
+            resolutionMode = $python.data.resolutionMode
+        }
+        hidden = [ordered]@{
+            javaStatus = $hiddenJavaStatus
+            pythonStatus = $hiddenPythonStatus
+            matches = ($hiddenJavaStatus -eq $hiddenPythonStatus)
+        }
+        noLatest = [ordered]@{
+            javaStatus = $noLatestJavaStatus
+            pythonStatus = $noLatestPythonStatus
+            matches = ($noLatestJavaStatus -eq $noLatestPythonStatus)
+        }
+        archivedNamespace = [ordered]@{
+            javaStatus = $archivedJavaStatus
+            pythonStatus = $archivedPythonStatus
+            matches = ($archivedJavaStatus -eq $archivedPythonStatus)
+        }
+        comparedFields = @('code', 'msg', 'data')
+    }
+
+    $resultPath = Join-Path $DevDir 'detail-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.javaMatchesPython) {
+        throw 'Java and Python detail contracts differ. See .dev/detail-contract-result.json.'
+    }
+    if (-not $result.pythonMatchesProxyV1) {
+        throw 'Vite proxy /api/v1 skill detail does not match Python. See .dev/detail-contract-result.json.'
+    }
+    if (-not $result.pythonMatchesProxyWeb) {
+        throw 'Vite proxy /api/web skill detail does not match Python. See .dev/detail-contract-result.json.'
+    }
+    if (-not $result.hidden.matches -or -not $result.noLatest.matches -or -not $result.archivedNamespace.matches) {
+        throw 'Detail negative-case statuses differ. See .dev/detail-contract-result.json.'
     }
 }
 
@@ -767,12 +1297,30 @@ function Invoke-HybridFilesSmokeVerification {
     }
 }
 
+function Invoke-HybridDetailSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-DetailContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
     'status' { Show-Status }
     'verify-labels-smoke' { Invoke-HybridLabelsSmokeVerification }
     'verify-files-smoke' { Invoke-HybridFilesSmokeVerification }
+    'verify-detail-smoke' { Invoke-HybridDetailSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

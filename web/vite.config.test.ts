@@ -86,6 +86,27 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillResolve)).toBeLessThan(keys.indexOf('/api'))
   })
 
+  it('routes public skill detail aliases to Python without taking over search or nested routes', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const v1SkillDetail = '^/api/v1/skills/[^/]+/[^/]+$'
+    const webSkillDetail = '^/api/web/skills/[^/]+/[^/]+$'
+
+    expect(proxy[v1SkillDetail]?.target).toBe('http://localhost:8081')
+    expect(proxy[webSkillDetail]?.target).toBe('http://localhost:8081')
+    expect(keys.indexOf(v1SkillDetail)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webSkillDetail)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/resolve')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8080')
+  })
+
   it('routes skill versions list aliases to Python without taking over all skill routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

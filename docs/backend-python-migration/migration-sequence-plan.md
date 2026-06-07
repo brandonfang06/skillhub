@@ -97,6 +97,7 @@ Defer APIs when they require:
 | 5 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions` | python | Public anonymous published version list migrated. Version detail remains Java-owned. |
 | 5.1 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Public anonymous published version detail migrated. File routes remain Java-owned. |
 | 6 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill files metadata list migrated. Content/download remain Java-owned. |
+| 7 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Public anonymous skill detail migrated. Authenticated owner/admin preview remains deferred. |
 
 ## Planned Migration Order
 
@@ -354,6 +355,14 @@ Acceptance focus:
 - `hidden=true`, archived, yanked, and no-published-version cases match Java.
 - Capability flags are explicitly documented for anonymous and authenticated callers.
 
+Status:
+
+- Completed for anonymous public behavior.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-detail-api.md`
+- Authenticated owner/admin preview, namespace role checks, lifecycle permissions, and viewer state
+  remain deferred until the auth/session bridge is designed.
+
 ### 8. Public Skill Search
 
 Routes:
@@ -469,22 +478,21 @@ When this plan changes:
 
 ## Current Next Step
 
-The public skill file metadata milestone is complete for anonymous public behavior:
+The public skill detail milestone is complete for anonymous public behavior:
 
 - Plan:
-  `docs/backend-python-migration/plans/2026-06-07-public-skill-file-metadata-api.md`
-- Result:
-  `docs/backend-python-migration/results/2026-06-07-public-skill-file-metadata-api.md`
-
-The next implementation milestone should be:
-
-`GET /api/v1/skills/{namespace}/{slug}` and
-`GET /api/web/skills/{namespace}/{slug}`
-
-Before implementation starts:
-
-- Use milestone-specific plan:
   `docs/backend-python-migration/plans/2026-06-07-public-skill-detail-api.md`
-- Combine skill core fields, lifecycle projection, labels, permissions, rating/star counts, and viewer capabilities.
-- Start with anonymous/public behavior only unless auth bridge is designed.
-- Do not migrate lifecycle mutation endpoints with detail.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-detail-api.md`
+
+The next planned milestone is public skill search:
+
+`GET /api/v1/skills` and
+`GET /api/web/skills`
+
+Before implementation:
+
+- Write a milestone-specific plan under `docs/backend-python-migration/plans/`.
+- Scope the first search pass to anonymous public behavior.
+- Define representative filter/sort/pagination fixtures for live Java/Python/proxy comparison.
+- Keep all mutating, auth-specific, and lifecycle routes Java-owned.

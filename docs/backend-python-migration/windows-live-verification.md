@@ -161,6 +161,37 @@ Playwright browser binaries are installed under:
 The first run may need network access to download Chromium. After download, later runs reuse the
 workspace-local browser binaries.
 
+## One-Command Skill Detail Verification Gate
+
+For the migrated public skill detail API, use the dedicated gate:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-detail-smoke
+```
+
+Expected result:
+
+```text
+javaMatchesPython: true
+pythonMatchesProxyV1: true
+pythonMatchesProxyWeb: true
+hidden.matches: true
+noLatest.matches: true
+archivedNamespace.matches: true
+6 passed
+```
+
+The command writes the latest detail comparison summary to:
+
+```text
+.dev/detail-contract-result.json
+```
+
+The detail comparison normalizes only the JSON numeric scale for `ratingAvg`; Java may preserve
+BigDecimal scale such as `4.50`, while Python serializes the same JSON number as `4.5`.
+
 ## Shutdown
 
 ```powershell
