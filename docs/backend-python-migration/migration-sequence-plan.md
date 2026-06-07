@@ -483,7 +483,8 @@ The next implementation milestone should be:
 
 Before implementation starts:
 
-- Create a milestone-specific plan for public skill detail.
+- Use milestone-specific plan:
+  `docs/backend-python-migration/plans/2026-06-07-public-skill-detail-api.md`
 - Combine skill core fields, lifecycle projection, labels, permissions, rating/star counts, and viewer capabilities.
 - Start with anonymous/public behavior only unless auth bridge is designed.
 - Do not migrate lifecycle mutation endpoints with detail.
