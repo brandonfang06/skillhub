@@ -125,6 +125,22 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
+  it('routes ClawHub search to Python without taking over other ClawHub routes', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const clawHubSearch = '^/api/v1/search(?:\\?.*)?$'
+
+    expect(proxy[clawHubSearch]?.target).toBe('http://localhost:8081')
+    expect(keys.indexOf(clawHubSearch)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/search')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/search?q=agent')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/resolve?slug=demo')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8080')
+  })
+
   it('routes skill versions list aliases to Python without taking over all skill routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

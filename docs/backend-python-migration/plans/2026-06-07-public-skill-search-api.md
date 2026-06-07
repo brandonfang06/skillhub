@@ -457,7 +457,7 @@ Create `docs/backend-python-migration/results/2026-06-07-public-skill-search-api
 - route scope correction for `/api/v1/skills`
 - risks and follow-up
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
 
 Commit and push only after the result document is complete.
 

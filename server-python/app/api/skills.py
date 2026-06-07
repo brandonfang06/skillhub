@@ -37,6 +37,19 @@ def to_java_instant(value: Any) -> str | None:
     return str(value).replace("+00:00", "Z")
 
 
+def to_epoch_millis(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        instant = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+    else:
+        normalized = str(value).replace("Z", "+00:00")
+        instant = datetime.fromisoformat(normalized)
+        if instant.tzinfo is None:
+            instant = instant.replace(tzinfo=UTC)
+    return int(instant.astimezone(UTC).timestamp() * 1000)
+
+
 def normalize_page_request(page: int, size: int) -> tuple[int, int]:
     normalized_page = max(page, 0)
     if size < 1:
@@ -233,6 +246,30 @@ def build_skill_search_response(
         "page": page,
         "size": size,
     }
+
+
+def to_clawhub_canonical_slug(namespace: str, slug: str) -> str:
+    return slug if namespace == "global" else f"{namespace}--{slug}"
+
+
+def build_clawhub_search_response(search_response: dict[str, object]) -> dict[str, object]:
+    results = []
+    for item in search_response["items"]:  # type: ignore[index]
+        summary = dict(item)  # type: ignore[arg-type]
+        published_version = summary.get("publishedVersion")
+        star_count = summary.get("starCount") or 0
+        download_count = summary.get("downloadCount") or 0
+        results.append(
+            {
+                "slug": to_clawhub_canonical_slug(str(summary["namespace"]), str(summary["slug"])),
+                "displayName": summary["displayName"],
+                "summary": summary["summary"],
+                "version": published_version["version"] if published_version is not None else None,  # type: ignore[index]
+                "score": ((int(star_count) * 10) + int(download_count)) / 100.0,
+                "updatedAt": to_epoch_millis(summary.get("updatedAt")),
+            }
+        )
+    return {"results": results}
 
 
 def compute_version_fingerprint(files: list[FileRow]) -> str:
@@ -1009,6 +1046,44 @@ async def search_skills(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/search")
+async def search_clawhub_skills(
+    request: Request,
+    q: str = "",
+    page: int = 0,
+    limit: int = 20,
+) -> dict[str, object]:
+    normalized_page = max(page, 0)
+    normalized_limit = limit if limit > 0 else 20
+    sort = "newest" if q.strip() == "" else "relevance"
+    reader = getattr(request.app.state, "clawhub_search_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(
+                reader(
+                    keyword=q,
+                    namespace=None,
+                    labels=[],
+                    sort=sort,
+                    page=normalized_page,
+                    size=normalized_limit,
+                )
+            )
+        else:
+            data = await read_skill_search(
+                request.app.state.db_engine,
+                keyword=q,
+                namespace=None,
+                labels=[],
+                sort=sort,
+                page=normalized_page,
+                size=normalized_limit,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_clawhub_search_response(data)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}")

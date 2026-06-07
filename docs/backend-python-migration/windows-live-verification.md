@@ -219,6 +219,32 @@ The command writes the latest search comparison summary to:
 
 This gate intentionally verifies that `/api/v1/skills` still has the Java ClawHub list shape.
 
+## One-Command ClawHub Search Verification Gate
+
+For the migrated ClawHub compatibility search API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-clawhub-search-smoke
+```
+
+Expected result:
+
+```text
+javaMatchesPython: true
+pythonMatchesProxy: true
+v1SkillsRemainsJava: true
+plainShape: true
+6 passed
+```
+
+The command writes the latest ClawHub search comparison summary to:
+
+```text
+.dev/clawhub-search-contract-result.json
+```
+
 ## Shutdown
 
 ```powershell

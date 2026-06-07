@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -395,6 +395,12 @@ function ConvertTo-StableSearchContractJson {
     param([object]$Response)
 
     return ConvertTo-StableDetailContractJson -Response $Response
+}
+
+function ConvertTo-StablePlainJson {
+    param([object]$Response)
+
+    return ($Response | ConvertTo-Json -Depth 50 -Compress)
 }
 
 function Invoke-PostgresSql {
@@ -1529,6 +1535,51 @@ function Invoke-SearchContractComparison {
     }
 }
 
+function Invoke-ClawHubSearchContractComparison {
+    Ensure-SearchContractFixture
+
+    $query = '?q=codex-search-alpha-unique&page=0&limit=5'
+    Write-Host "Comparing ClawHub search contract..."
+    $java = Invoke-RestMethod "$JavaUrl/api/v1/search$query"
+    $python = Invoke-RestMethod "$PythonUrl/api/v1/search$query"
+    $proxy = Invoke-RestMethod "$WebUrl/api/v1/search$query"
+
+    $javaStable = ConvertTo-StablePlainJson -Response $java
+    $pythonStable = ConvertTo-StablePlainJson -Response $python
+    $proxyStable = ConvertTo-StablePlainJson -Response $proxy
+
+    $v1Skills = Invoke-RestMethod "$WebUrl/api/v1/skills?page=0&limit=1"
+    $v1HasPortalEnvelope = [bool]($v1Skills.PSObject.Properties['code'] -and $v1Skills.PSObject.Properties['data'])
+    $v1HasClawHubShape = [bool]($v1Skills.PSObject.Properties['items'] -and -not $v1HasPortalEnvelope)
+
+    $result = [ordered]@{
+        query = $query
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+        v1SkillsRemainsJava = $v1HasClawHubShape
+        resultCount = @($python.results).Count
+        firstSlug = if (@($python.results).Count -gt 0) { $python.results[0].slug } else { $null }
+        plainShape = [bool]($python.PSObject.Properties['results'] -and -not $python.PSObject.Properties['code'])
+    }
+
+    $resultPath = Join-Path $DevDir 'clawhub-search-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.javaMatchesPython) {
+        throw 'Java and Python ClawHub search contracts differ. See .dev/clawhub-search-contract-result.json.'
+    }
+    if (-not $result.pythonMatchesProxy) {
+        throw 'Vite proxy /api/v1/search does not match Python. See .dev/clawhub-search-contract-result.json.'
+    }
+    if (-not $result.v1SkillsRemainsJava) {
+        throw 'Vite /api/v1/skills no longer has the Java ClawHub list shape. See .dev/clawhub-search-contract-result.json.'
+    }
+    if (-not $result.plainShape) {
+        throw 'Python /api/v1/search is not returning the plain ClawHub response shape.'
+    }
+}
+
 function Invoke-FilesContractComparison {
     Ensure-FilesContractFixture
 
@@ -1671,6 +1722,23 @@ function Invoke-HybridSearchSmokeVerification {
     }
 }
 
+function Invoke-HybridClawHubSearchSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-ClawHubSearchContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -1679,6 +1747,7 @@ switch ($Action) {
     'verify-files-smoke' { Invoke-HybridFilesSmokeVerification }
     'verify-detail-smoke' { Invoke-HybridDetailSmokeVerification }
     'verify-search-smoke' { Invoke-HybridSearchSmokeVerification }
+    'verify-clawhub-search-smoke' { Invoke-HybridClawHubSearchSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
