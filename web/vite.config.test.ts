@@ -92,13 +92,36 @@ describe('Vite dev proxy route ownership', () => {
     expect(proxy[webSkillVersionDetail]?.target).toBe('http://localhost:8081')
     expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/compare$']?.target).toBeUndefined()
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/compare$']?.target).toBeUndefined()
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/files$']?.target).toBeUndefined()
-    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/files$']?.target).toBeUndefined()
     expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
     expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
     expect(keys.indexOf(v1SkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
+  })
+
+  it('routes skill files list aliases to Python without taking over file content or download routes', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const v1SkillVersionFiles = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/files$'
+    const webSkillVersionFiles = '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/files$'
+    const v1SkillTagFiles = '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/files$'
+    const webSkillTagFiles = '^/api/web/skills/[^/]+/[^/]+/tags/[^/]+/files$'
+
+    expect(proxy[v1SkillVersionFiles]?.target).toBe('http://localhost:8081')
+    expect(proxy[webSkillVersionFiles]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1SkillTagFiles]?.target).toBe('http://localhost:8081')
+    expect(proxy[webSkillTagFiles]?.target).toBe('http://localhost:8081')
+
+    // file and download should NOT route to Python
+    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
+    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
+    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
+    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
+
+    expect(keys.indexOf(v1SkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webSkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1SkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webSkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
   })
 })

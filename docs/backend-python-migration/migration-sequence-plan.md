@@ -96,6 +96,7 @@ Defer APIs when they require:
 | 4 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution migrated. Download remains Java-owned. |
 | 5 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions` | python | Public anonymous published version list migrated. Version detail remains Java-owned. |
 | 5.1 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Public anonymous published version detail migrated. File routes remain Java-owned. |
+| 6 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill files metadata list migrated. Content/download remain Java-owned. |
 
 ## Planned Migration Order
 
@@ -468,23 +469,21 @@ When this plan changes:
 
 ## Current Next Step
 
-The public skill version detail milestone is complete for anonymous public behavior:
+The public skill file metadata milestone is complete for anonymous public behavior:
 
 - Plan:
-  `docs/backend-python-migration/plans/2026-06-07-public-skill-version-detail-api.md`
+  `docs/backend-python-migration/plans/2026-06-07-public-skill-file-metadata-api.md`
 - Result:
-  `docs/backend-python-migration/results/2026-06-07-public-skill-version-detail-api.md`
+  `docs/backend-python-migration/results/2026-06-07-public-skill-file-metadata-api.md`
 
 The next implementation milestone should be:
 
-`GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files` and
-`GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`
+`GET /api/v1/skills/{namespace}/{slug}` and
+`GET /api/web/skills/{namespace}/{slug}`
 
 Before implementation starts:
 
-- Create a milestone-specific plan for public skill file metadata.
-- Reuse anonymous public skill lookup and published-version filtering from the version detail
-  milestone.
-- Confirm Java `SkillFileResponse` fields, ordering, version/tag route differences, and
-  not-published behavior before coding.
-- Do not migrate file content, file download, download counters, or object storage behavior.
+- Create a milestone-specific plan for public skill detail.
+- Combine skill core fields, lifecycle projection, labels, permissions, rating/star counts, and viewer capabilities.
+- Start with anonymous/public behavior only unless auth bridge is designed.
+- Do not migrate lifecycle mutation endpoints with detail.
