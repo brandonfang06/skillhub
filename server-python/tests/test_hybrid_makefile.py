@@ -57,6 +57,9 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "playwright.config.ts" in script
     assert '$WebUrl/api/v1/health' in script
     assert "Docker CLI not available" in script
+    assert "Stop-ProcessTree" in script
+    assert "Stop-ProcessOnPort" in script
+    assert "taskkill" in script
 
 
 def test_hybrid_local_e2e_doc_covers_windows_macos_and_ubuntu() -> None:

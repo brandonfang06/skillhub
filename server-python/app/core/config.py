@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 
-DEFAULT_DATABASE_URL = "postgresql+asyncpg://skillhub:skillhub@localhost:5432/skillhub"
+DEFAULT_DATABASE_URL = "postgresql+asyncpg://skillhub:skillhub_dev@localhost:5432/skillhub"
 
 
 @dataclass(frozen=True)

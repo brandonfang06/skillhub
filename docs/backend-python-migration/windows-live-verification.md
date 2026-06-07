@@ -40,7 +40,8 @@ Expected major version: `21`.
 
 ## Start Hybrid Stack
 
-Run from the repository root in a normal user PowerShell window:
+Run from the repository root in a normal user PowerShell window. Do not use an elevated/admin
+PowerShell for normal hybrid verification.
 
 ```powershell
 $env:Path = "C:\Program Files\Docker\Docker\resources\bin;$env:Path"
@@ -124,9 +125,36 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 d
 
 ## Agent/Codex Notes
 
+Docker Desktop does not require an admin PowerShell for this project once the Windows user is in
+the `docker-users` group and Docker Desktop is already running.
+
+Verification commands should run as the normal Windows user:
+
+```powershell
+whoami
+whoami /groups | Select-String docker-users
+docker version
+```
+
+Expected:
+
+- `whoami` is the normal interactive user.
+- `docker-users` appears in the enabled groups.
+- `docker version` shows both Client and Server.
+
+Do not start Java/Python/Vite dev servers from an elevated PowerShell. Elevated processes can leave
+ports `3000`, `8080`, and `8081` owned by an admin token, which a normal user shell cannot stop.
+If that happened once during troubleshooting, close those elevated processes manually or reboot one
+time. After that, use only normal PowerShell for:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 down
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 up
+```
+
 The Codex sandbox may not have permission to access the Docker Desktop named pipe or the user's
-Docker config. In that case, run Docker-dependent commands in the normal Windows user session and
-write logs under `C:\tmp\`.
+Docker config if it is not running as the interactive user. In that case, fix the user/session
+context instead of switching to admin PowerShell for every verification.
 
 Known sandbox symptoms:
 
@@ -150,15 +178,21 @@ Observed failures:
 4. The sandbox did not initially have Java 21 on PATH. PyCharm JBR 21 was present and usable.
 5. Maven dependency download was blocked by sandbox networking until rerun with external-network
    permission.
+6. Python labels returned 500 because the default Python DB password was `skillhub`, while Docker
+   Compose and Java local config use `skillhub_dev`.
+7. `dev-hybrid.ps1 down` removed pid files but left child Java/Python/Vite processes running on
+   Windows. The script now uses process-tree and port fallback cleanup.
 
-Root cause for the failed verification session:
+Root causes found during the failed verification session:
 
-- The hybrid stack was not fully started. Docker dependencies, Python, and Vite reached listening
-  ports, but Java backend was not reliably started by the agent-controlled Windows sandbox before
-  the verification attempt was stopped.
+- Early attempts used an elevated/admin PowerShell to reach Docker Desktop. That created dev server
+  processes that the normal user session could not later stop.
+- Python's default database URL did not match `docker-compose.yml`.
+- Windows process cleanup needed process-tree and port fallback handling.
 
 Required next action:
 
+- Ensure no admin-owned stale processes are listening on `3000`, `8080`, or `8081`.
 - Run `scripts\dev-hybrid.ps1 up` from a normal user PowerShell after confirming Java 21 is
   installed or `JAVA_HOME` points to a valid JDK.
 - Only after all four health checks pass, perform Java/Python/proxy contract comparison and smoke

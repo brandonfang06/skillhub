@@ -54,8 +54,43 @@ function Stop-ManagedProcess {
     }
 
     $processId = [int](Get-Content -LiteralPath $PidFile | Select-Object -First 1)
-    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    Stop-ProcessTree -ProcessId $processId
     Remove-Item -Force -LiteralPath $PidFile -ErrorAction SilentlyContinue
+}
+
+function Stop-ProcessTree {
+    param([int]$ProcessId)
+
+    $taskkill = Get-Command taskkill.exe -ErrorAction SilentlyContinue
+    if ($taskkill) {
+        & $taskkill.Source /F /T /PID $ProcessId 2>$null | Out-Null
+    }
+
+    if (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
+        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Stop-ProcessOnPort {
+    param([int]$Port)
+
+    $listeners = netstat -ano |
+        Select-String ":$Port\s" |
+        ForEach-Object { ($_ -split '\s+')[-1] } |
+        Where-Object { $_ -match '^\d+$' } |
+        Sort-Object -Unique
+
+    foreach ($listenerPid in $listeners) {
+        $processId = [int]$listenerPid
+        if ($processId -eq $PID) {
+            continue
+        }
+
+        Stop-ProcessTree -ProcessId $processId
+        if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
+            Write-Warning "Could not stop process $processId on port $Port. If it was started from an elevated session, close it manually or reboot once."
+        }
+    }
 }
 
 function Start-ManagedProcess {
@@ -247,6 +282,9 @@ function Stop-Hybrid {
     Stop-ManagedProcess -PidFile $JavaPidFile
     Stop-ManagedProcess -PidFile $PythonPidFile
     Stop-ManagedProcess -PidFile $WebPidFile
+    Stop-ProcessOnPort -Port 8080
+    Stop-ProcessOnPort -Port 8081
+    Stop-ProcessOnPort -Port 3000
     if (Test-CommandAvailable -Name 'docker') {
         docker compose -p skillhub down --remove-orphans
     } else {
