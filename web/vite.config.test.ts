@@ -53,4 +53,18 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(v1SkillLabels)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillLabels)).toBeLessThan(keys.indexOf('/api'))
   })
+
+  it('routes skill resolve aliases to Python without taking over all skill routes', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const v1SkillResolve = '^/api/v1/skills/[^/]+/[^/]+/resolve$'
+    const webSkillResolve = '^/api/web/skills/[^/]+/[^/]+/resolve$'
+
+    expect(proxy[v1SkillResolve]?.target).toBe('http://localhost:8081')
+    expect(proxy[webSkillResolve]?.target).toBe('http://localhost:8081')
+    expect(proxy['/api/v1/skills']?.target).toBeUndefined()
+    expect(proxy['/api/web/skills']?.target).toBeUndefined()
+    expect(keys.indexOf(v1SkillResolve)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webSkillResolve)).toBeLessThan(keys.indexOf('/api'))
+  })
 })

@@ -93,6 +93,7 @@ Defer APIs when they require:
 | 1 | `GET /.well-known/clawhub.json` | python | Plain JSON discovery route migrated with no DB dependency. |
 | 2 | `GET /api/v1/labels`, `GET /api/web/labels` | python | Public labels read API migrated as first PostgreSQL-backed Python route. |
 | 3 | `GET /api/v1/skills/{namespace}/{slug}/labels`, `GET /api/web/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list migrated. Auth-specific preview remains deferred. |
+| 4 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution migrated. Download remains Java-owned. |
 
 ## Planned Migration Order
 
@@ -204,6 +205,14 @@ Acceptance focus:
 - Match Java `ResolveVersionResponse`.
 - `latest` tag follows latest published version only.
 - Unpublished/yanked versions are not exposed to anonymous public callers.
+
+Status:
+
+- Completed for anonymous public behavior.
+- Result:
+  `docs/backend-python-migration/results/2026-06-07-public-skill-resolve-api.md`
+- Auth-specific preview behavior and download execution remain deferred until their bridge designs
+  are written.
 
 ### 5. Public Skill Version List and Version Detail
 
@@ -414,21 +423,22 @@ When this plan changes:
 
 ## Current Next Step
 
-The skill labels list milestone is complete for anonymous public behavior:
+The public skill resolve milestone is complete for anonymous public behavior:
 
 - Plan:
-  `docs/backend-python-migration/plans/2026-06-07-skill-labels-list-api.md`
+  `docs/backend-python-migration/plans/2026-06-07-public-skill-resolve-api.md`
 - Result:
-  `docs/backend-python-migration/results/2026-06-07-skill-labels-list-api.md`
+  `docs/backend-python-migration/results/2026-06-07-public-skill-resolve-api.md`
 
 The next implementation milestone should be:
 
-`GET /api/v1/skills/{namespace}/{slug}/resolve` and
-`GET /api/web/skills/{namespace}/{slug}/resolve`
+`GET /api/v1/skills/{namespace}/{slug}/versions` and
+`GET /api/web/skills/{namespace}/{slug}/versions`
 
 Before implementation starts:
 
-- Create a milestone-specific plan for public skill resolve.
-- Reuse anonymous public skill lookup rules from the skill labels list milestone.
-- Confirm Java version selector behavior for `version`, `tag`, and `hash`.
+- Create a milestone-specific plan for public skill version list and version detail if they stay
+  grouped together; split them if the Java contract is larger than expected.
+- Reuse anonymous public skill lookup and published-version filtering from the resolve milestone.
+- Confirm Java pagination, version DTO fields, and published/yanked behavior before coding.
 - Do not migrate file download, file streaming, download counters, or object storage behavior.

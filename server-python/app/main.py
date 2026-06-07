@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.api.health import router as health_router
 from app.api.labels import router as labels_router
+from app.api.skills import router as skills_router
 from app.api.well_known import router as well_known_router
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health_router)
     app.include_router(labels_router)
+    app.include_router(skills_router)
     app.include_router(well_known_router)
     return app
 

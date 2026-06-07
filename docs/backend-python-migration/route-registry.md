@@ -22,5 +22,7 @@ Python-owned local development routes.
 | GET | `/api/web/labels` | python | Frontend alias for public visible label filters. |
 | GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. Label mutations remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/labels` | python | Frontend alias for public anonymous skill labels list. Label mutations remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution. Download remains Java-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/resolve` | python | Frontend alias for public anonymous version selector resolution. Download remains Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
