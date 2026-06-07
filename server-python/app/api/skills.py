@@ -75,6 +75,20 @@ def build_versions_page_response(
     }
 
 
+def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
+    return {
+        "id": int(row["id"]),
+        "version": str(row["version"]),
+        "status": str(row["status"]),
+        "changelog": row["changelog"],
+        "fileCount": int(row["file_count"]),
+        "totalSize": int(row["total_size"]),
+        "publishedAt": to_java_instant(row["published_at"]),
+        "parsedMetadataJson": row["parsed_metadata_json"],
+        "manifestJson": row["manifest_json"],
+    }
+
+
 def compute_version_fingerprint(files: list[FileRow]) -> str:
     digest = sha256()
     for file in sorted(files, key=lambda row: str(row["file_path"])):
@@ -331,6 +345,51 @@ async def read_skill_versions(
     return build_versions_page_response(page_rows, total, page, size)
 
 
+async def read_skill_version_detail(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    version: str,
+) -> dict[str, object]:
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT sv.id,
+                           sv.version,
+                           sv.status,
+                           sv.changelog,
+                           sv.file_count,
+                           sv.total_size,
+                           sv.published_at,
+                           sv.parsed_metadata_json::text AS parsed_metadata_json,
+                           sv.manifest_json::text AS manifest_json
+                    FROM skill_version sv
+                    JOIN skill s ON s.id = sv.skill_id
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                      AND sv.version = :version
+                      AND sv.status = 'PUBLISHED'
+                    ORDER BY sv.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug, "version": version},
+            )
+        ).mappings().one_or_none()
+
+    if row is None:
+        raise SkillResolveError("error.skill.version.notFound")
+    return build_version_detail_response(dict(row))
+
+
 async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str, object]]) -> dict[str, object]:
     if isawaitable(result):
         return await result
@@ -353,6 +412,25 @@ async def resolve_skill_version(
             data = await _resolve_reader_result(reader(namespace, slug, version, tag, hash_value))
         else:
             data = await read_skill_resolve(request.app.state.db_engine, namespace, slug, version, tag, hash_value)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}")
+@router.get("/api/web/skills/{namespace}/{slug}/versions/{version}")
+async def get_skill_version_detail(
+    namespace: str,
+    slug: str,
+    version: str,
+    request: Request,
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_version_detail_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, version))
+        else:
+            data = await read_skill_version_detail(request.app.state.db_engine, namespace, slug, version)
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
