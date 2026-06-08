@@ -86,6 +86,21 @@ describe('Vite dev proxy route ownership', () => {
     expect(proxy['/oauth2']?.target).toBe('http://localhost:8080')
   })
 
+  it('routes current user auth bridge to Python while keeping auth setup on Java', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const authMe = '^/api/v1/auth/me(?:\\?.*)?$'
+
+    expect(proxy[authMe]?.target).toBe('http://localhost:8081')
+    expect(keys.indexOf(authMe)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/auth/me')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/auth/me?fresh=true')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/auth/methods')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/auth/providers')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
+  })
+
   it('routes ClawHub well-known discovery to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

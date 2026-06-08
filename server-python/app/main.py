@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.labels import router as labels_router
 from app.api.skills import router as skills_router
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="SkillHub Python Backend", lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)
+    app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(labels_router)
     app.include_router(skills_router)

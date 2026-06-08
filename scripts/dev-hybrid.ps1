@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -381,6 +381,25 @@ function ConvertTo-StableContractJson {
     param([object]$Response)
 
     return ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableAuthMeContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            userId = $Response.data.userId
+            displayName = $Response.data.displayName
+            email = $Response.data.email
+            avatarUrl = $Response.data.avatarUrl
+            oauthProvider = $Response.data.oauthProvider
+            platformRoles = @($Response.data.platformRoles | Sort-Object)
+        }
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
 }
 
 function ConvertTo-StableDetailContractJson {
@@ -2037,6 +2056,140 @@ function Invoke-HybridClawHubListSmokeVerification {
     }
 }
 
+function Ensure-AuthContractFixture {
+    $sql = @'
+DO $$
+DECLARE
+    super_admin_role_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('local-user', 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        ('local-admin', 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    SELECT id INTO super_admin_role_id
+    FROM role
+    WHERE code = 'SUPER_ADMIN';
+
+    IF super_admin_role_id IS NOT NULL THEN
+        INSERT INTO user_role_binding (user_id, role_id)
+        VALUES ('local-admin', super_admin_role_id)
+        ON CONFLICT (user_id, role_id) DO NOTHING;
+    END IF;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-HttpStatusWithHeaders {
+    param(
+        [string]$Url,
+        [hashtable]$Headers = @{}
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Headers $Headers -UseBasicParsing -TimeoutSec 10
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Invoke-AuthMeContractComparison {
+    Ensure-AuthContractFixture
+
+    $users = @('local-user', 'local-admin')
+    $caseResults = @()
+    foreach ($userId in $users) {
+        $headers = @{ 'X-Mock-User-Id' = $userId }
+
+        Write-Host "Comparing auth/me contract for $userId..."
+        $java = Invoke-RestMethod "$JavaUrl/api/v1/auth/me" -Headers $headers
+        $python = Invoke-RestMethod "$PythonUrl/api/v1/auth/me" -Headers $headers
+        $proxy = Invoke-RestMethod "$WebUrl/api/v1/auth/me" -Headers $headers
+
+        $javaStable = ConvertTo-StableAuthMeContractJson -Response $java
+        $pythonStable = ConvertTo-StableAuthMeContractJson -Response $python
+        $proxyStable = ConvertTo-StableAuthMeContractJson -Response $proxy
+
+        $caseResults += [ordered]@{
+            userId = $userId
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+            roles = @($python.data.platformRoles | Sort-Object)
+            javaStable = $javaStable
+            pythonStable = $pythonStable
+            proxyStable = $proxyStable
+        }
+    }
+
+    $javaNoHeaderStatus = Invoke-HttpStatusWithHeaders "$JavaUrl/api/v1/auth/me"
+    $pythonNoHeaderStatus = Invoke-HttpStatusWithHeaders "$PythonUrl/api/v1/auth/me"
+    $proxyNoHeaderStatus = Invoke-HttpStatusWithHeaders "$WebUrl/api/v1/auth/me"
+
+    $javaMethods = Invoke-RestMethod "$JavaUrl/api/v1/auth/methods"
+    $proxyMethods = Invoke-RestMethod "$WebUrl/api/v1/auth/methods"
+    $javaMethodsStable = ConvertTo-StableContractJson -Response $javaMethods
+    $proxyMethodsStable = ConvertTo-StableContractJson -Response $proxyMethods
+
+    $result = [ordered]@{
+        cases = $caseResults
+        allJavaMatchesPython = -not [bool]($caseResults | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxy = -not [bool]($caseResults | Where-Object { -not $_.pythonMatchesProxy })
+        noHeaderStatuses = [ordered]@{
+            java = $javaNoHeaderStatus
+            python = $pythonNoHeaderStatus
+            proxy = $proxyNoHeaderStatus
+        }
+        noHeaderMatches = ($javaNoHeaderStatus -eq 401 -and $pythonNoHeaderStatus -eq 401 -and $proxyNoHeaderStatus -eq 401)
+        authMethodsRemainsJava = ($javaMethodsStable -eq $proxyMethodsStable)
+    }
+
+    $resultPath = Join-Path $DevDir 'auth-me-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python auth/me contracts differ. See .dev/auth-me-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxy) {
+        throw 'Vite proxy /api/v1/auth/me does not match Python. See .dev/auth-me-contract-result.json.'
+    }
+    if (-not $result.noHeaderMatches) {
+        throw 'Missing mock-user auth/me status behavior is not 401 across Java/Python/Vite. See .dev/auth-me-contract-result.json.'
+    }
+    if (-not $result.authMethodsRemainsJava) {
+        throw 'Vite /api/v1/auth/methods no longer matches Java. See .dev/auth-me-contract-result.json.'
+    }
+}
+
+function Invoke-HybridAuthMeSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-AuthMeContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -2049,6 +2202,7 @@ switch ($Action) {
     'verify-clawhub-resolve-smoke' { Invoke-HybridClawHubResolveSmokeVerification }
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
+    'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

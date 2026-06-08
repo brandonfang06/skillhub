@@ -125,6 +125,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/auth/me(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api/v1/labels': {
         target: 'http://localhost:8081',
         changeOrigin: true,

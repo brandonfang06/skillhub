@@ -346,6 +346,40 @@ This gate verifies the Group A method boundary:
 - `DELETE /api/v1/skills/{canonicalSlug}` still follows Java status behavior through Vite.
 - `GET /api/v1/download/{canonicalSlug}` remains the Java redirect route.
 
+## One-Command Auth Current User Verification Gate
+
+For the migrated current-user bridge, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-auth-me-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxy: true
+noHeaderMatches: true
+authMethodsRemainsJava: true
+6 passed
+```
+
+The command writes the latest auth comparison summary to:
+
+```text
+.dev/auth-me-contract-result.json
+```
+
+This gate verifies the Group C auth boundary:
+
+- `GET /api/v1/auth/me` reaches Python through Vite.
+- `X-Mock-User-Id: local-user` and `X-Mock-User-Id: local-admin` match Java direct behavior.
+- Missing mock-user header returns `401` for Java, Python, and Vite.
+- `GET /api/v1/auth/methods` still matches Java through Vite.
+- OAuth, login, token, session bootstrap, and CLI auth routes remain Java-owned.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

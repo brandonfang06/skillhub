@@ -146,16 +146,22 @@ async function primeAuthProviders(page: Page) {
 }
 
 async function tryBootstrapMockSession(page: Page, worker: number): Promise<{ username: string, password: string } | null> {
+  await page.context().setExtraHTTPHeaders({
+    'X-Mock-User-Id': 'local-user',
+  })
+
   try {
     await page.context().request.get('/api/v1/auth/providers', {
       headers: { 'X-Mock-User-Id': 'local-user' },
       timeout: requestTimeoutMs,
     })
   } catch {
+    await page.context().setExtraHTTPHeaders({})
     return null
   }
 
   if (!(await hasActiveSession(page))) {
+    await page.context().setExtraHTTPHeaders({})
     return null
   }
 

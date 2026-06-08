@@ -105,6 +105,7 @@ Still plan carefully when a group requires:
 | 10.5 | Method-aware Vite proxy infrastructure | n/a | Enables future GET-only migration on paths that share Java-owned mutating methods. |
 | 11 | `GET /api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail migrated with method-aware GET-only routing. List, publish, delete, undelete, and download remain Java-owned. |
 | 12 | `GET /api/v1/skills` | python | ClawHub compatibility list migrated with method-aware GET-only routing. Root publish, delete, undelete, and download remain Java-owned. |
+| 13 | `GET /api/v1/auth/me` | python | First Group C current-user bridge using local `X-Mock-User-Id`. Login, OAuth, API tokens, session bootstrap, and CLI auth remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -202,11 +203,28 @@ Goal:
 - Establish the minimum Python auth/session model required for internal use before migrating
   viewer-specific reads or mutations.
 
-Candidate routes:
+Python-owned in this group:
 
-- current-user / whoami-style APIs used by the web app.
-- local development mock-user behavior.
-- session-aware request context used by frontend workflows.
+- `GET /api/v1/auth/me`
+
+Still Java-owned in this group:
+
+- `GET /api/v1/auth/methods`
+- `GET /api/v1/auth/providers`
+- `POST /api/v1/auth/session/bootstrap`
+- `POST /api/v1/auth/direct/login`
+- `/api/v1/auth/local/**`
+- `/api/v1/tokens/**`
+- `/oauth2/**`
+- `GET /api/v1/whoami`
+- `GET /api/cli/v1/auth/whoami`
+
+Next candidate routes:
+
+- Viewer-specific read capabilities for already Python-owned skill APIs.
+- Namespace/platform role resolution helpers needed by protected frontend workflows.
+- Local session-aware request context if internal development needs cookie-based web login before
+  publish/upload migration.
 
 Bridge design required before implementation:
 
@@ -718,12 +736,13 @@ When this plan changes:
 
 Group A public catalog read ownership is complete after the ClawHub list milestone.
 
-Next milestone choice should be one of:
+Group C has started with the narrow `GET /api/v1/auth/me` current-user bridge. The next milestone
+choice should be one of:
 
-- Group B file content and download read path, if the priority is install/download parity and
+- Continue Group C into viewer-specific read context and role helpers, if the priority is protected
+  frontend workflows and later mutations.
+- Start Group B file content and download read path, if the priority is install/download parity and
   object storage handling.
-- Group C auth and current user bridge, if the priority is protected frontend workflows and later
-  mutations.
 
 Do not start Group D publish/upload until Group B storage/download and Group C auth assumptions are
 planned or explicitly scoped.
@@ -788,3 +807,12 @@ The ClawHub skills list milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-clawhub-skills-list-api.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-clawhub-skills-list-api.md`
+
+The auth current-user bridge milestone is complete:
+
+- Route:
+  `GET /api/v1/auth/me`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-auth-current-user-bridge.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-auth-current-user-bridge.md`
