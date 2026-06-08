@@ -168,6 +168,7 @@ Still plan carefully when a group requires:
 | 34 | Publish CLI replacement lookup foundation | n/a | Direct Python CLI publish route finds same-owner same-version replaceable versions and delegates cleanup to publish orchestration. No publish POST route ownership moved. |
 | 35 | Publish pending-review auto-withdraw foundation | n/a | Direct Python CLI publish withdraws earlier pending-review versions for the same skill before inserting the next publish version. No publish POST route ownership moved. |
 | 36 | Publish storage-failure cleanup evidence | n/a | Direct Python CLI publish has unit and live evidence that storage write failure rolls back publish database rows. No publish POST route ownership moved. |
+| 37 | `POST /api/cli/v1/skills/{namespace}/publish` | python | CLI publish write ownership moved through Vite after repeated proxy publish matrix covered replacement, pending-review auto-withdraw, Java-owned portal/root route boundaries, and scanner result boundary documentation. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1131,20 +1132,18 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through
-storage-failure cleanup evidence, but write route ownership has not moved.
+the current pre-launch publish work. Group D publish foundations are complete through CLI publish
+write ownership for `POST /api/cli/v1/skills/{namespace}/publish`.
 
 Next decision point:
 
-- Finish the remaining CLI publish write parity gaps before moving
-  `POST /api/cli/v1/skills/{namespace}/publish` ownership: scanner result processing boundaries
-  and repeated publish Java/Python live matrix.
 - Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
-  `POST /api/web/skills/{namespace}/publish`) first if frontend publishing becomes the priority,
-  but it must reuse the same parity gates.
+  `POST /api/web/skills/{namespace}/publish`) when frontend publishing becomes the priority. It
+  should reuse the CLI publish service path and add frontend workflow coverage.
+- Plan scanner result processing if the next priority is completing asynchronous scan lifecycle
+  status updates after Redis handoff.
 
-Either choice must include scanner behavior, transaction cleanup on storage failure, and
-route-specific frontend/CLI E2E coverage.
+Either choice must include route-specific live gates and must keep `server/` read-only.
 
 Recently completed context:
 

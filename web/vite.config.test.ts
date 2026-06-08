@@ -350,16 +350,19 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
   })
 
-  it('routes CLI publish validate to Python while keeping publish writes on Java', () => {
+  it('routes CLI publish validate and write to Python while keeping portal publish writes on Java', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const cliValidate = '^/api/cli/v1/skills/[^/]+/publish/validate$'
+    const cliWrite = '^/api/cli/v1/skills/[^/]+/publish$'
 
     expect(proxy[cliValidate]?.target).toBe('http://localhost:8081')
+    expect(proxy[cliWrite]?.target).toBe('http://localhost:8081')
     expect(keys.indexOf(cliValidate)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(cliWrite)).toBeLessThan(keys.indexOf('/api'))
 
     expect(matchingProxyTarget('/api/cli/v1/skills/global/publish/validate')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/cli/v1/skills/global/publish')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/cli/v1/skills/global/publish')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/publish')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/publish')).toBe('http://localhost:8080')
   })

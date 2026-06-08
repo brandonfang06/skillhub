@@ -63,6 +63,6 @@ deferred routes are still visible.
 | POST | `/api/v1/skills/{namespace}/publish` | java | Portal publish upload remains Java-owned; Python has package helper foundation only. |
 | POST | `/api/web/skills/{namespace}/publish` | java | Frontend publish upload alias remains Java-owned; Vite must not route this shape to Python detail GET. |
 | POST | `/api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only dry-run route. Multipart adapter over Python dry-run model; no DB/storage publish writes. |
-| POST | `/api/cli/v1/skills/{namespace}/publish` | java | CLI publish remains Java-owned. |
+| POST | `/api/cli/v1/skills/{namespace}/publish` | python | CLI publish write moved to Python after publish foundation, replacement, pending-review auto-withdraw, scanner handoff, and rollback live gates. Portal/root publish routes remain Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
