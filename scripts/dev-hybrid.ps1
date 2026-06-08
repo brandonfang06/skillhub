@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5131,6 +5131,156 @@ function Invoke-PublishOrchestrationFoundationTests {
     }
 }
 
+function Invoke-PublishHttpValidateTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_publish_http_validate.py', 'tests/test_publish_dry_run.py', 'tests/test_publish_package.py', '-q')
+    } finally {
+        Pop-Location
+    }
+}
+
+function New-PublishValidateFixtureZip {
+    $zipPath = Join-Path $DevDir 'publish-validate-fixture.zip'
+    $fixtureDir = Join-Path $DevDir 'publish-validate-fixture'
+    if (Test-Path -LiteralPath $fixtureDir) {
+        Remove-Item -LiteralPath $fixtureDir -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $zipPath) {
+        Remove-Item -LiteralPath $zipPath -Force
+    }
+
+    New-Item -ItemType Directory -Force -Path (Join-Path $fixtureDir 'src') | Out-Null
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    $skillMd = @"
+---
+name: Codex Validate Skill
+description: Validate-only fixture
+version: 1.0.0
+---
+# Codex Validate Skill
+"@
+    [System.IO.File]::WriteAllText((Join-Path $fixtureDir 'SKILL.md'), $skillMd, $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $fixtureDir 'src/main.py'), "print('validate')`n", $utf8NoBom)
+    $fixtureItems = Get-ChildItem -LiteralPath $fixtureDir
+    Compress-Archive -LiteralPath $fixtureItems.FullName -DestinationPath $zipPath -Force
+    return $zipPath
+}
+
+function Invoke-MultipartPostJson {
+    param(
+        [string]$Url,
+        [string]$FilePath,
+        [hashtable]$Headers = @{},
+        [string]$Visibility = 'PUBLIC'
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    foreach ($key in $Headers.Keys) {
+        $client.DefaultRequestHeaders.Remove($key) | Out-Null
+        $client.DefaultRequestHeaders.Add($key, [string]$Headers[$key])
+    }
+
+    $content = [System.Net.Http.MultipartFormDataContent]::new()
+    $fileBytes = [System.IO.File]::ReadAllBytes($FilePath)
+    $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
+    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse('application/zip')
+    $content.Add($fileContent, 'file', [System.IO.Path]::GetFileName($FilePath))
+    $content.Add([System.Net.Http.StringContent]::new($Visibility), 'visibility')
+
+    try {
+        $response = $client.PostAsync($Url, $content).GetAwaiter().GetResult()
+        $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            body = if ($body) { $body | ConvertFrom-Json } else { $null }
+        }
+    } finally {
+        $content.Dispose()
+        $client.Dispose()
+    }
+}
+
+function Invoke-PublishHttpValidateContractComparison {
+    param([string]$ResultFileName = 'publish-http-validate-contract-result.json')
+
+    $zipPath = New-PublishValidateFixtureZip
+    $headers = @{ 'X-Mock-User-Id' = 'local-admin' }
+    $path = '/api/cli/v1/skills/global/publish/validate'
+
+    Write-Host "Comparing publish validate route: POST $path"
+    $java = Invoke-MultipartPostJson "$JavaUrl$path" -FilePath $zipPath -Headers $headers
+    $python = Invoke-MultipartPostJson "$PythonUrl$path" -FilePath $zipPath -Headers $headers
+    $proxy = Invoke-MultipartPostJson "$WebUrl$path" -FilePath $zipPath -Headers $headers
+
+    $writeCases = @(
+        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
+        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' },
+        [ordered]@{ name = 'portalV1NamespacePublish'; path = '/api/v1/skills/global/publish'; method = 'POST' },
+        [ordered]@{ name = 'portalWebNamespacePublish'; path = '/api/web/skills/global/publish'; method = 'POST' },
+        [ordered]@{ name = 'cliPublishWrite'; path = '/api/cli/v1/skills/global/publish'; method = 'POST' }
+    )
+
+    $writeResults = @()
+    foreach ($case in $writeCases) {
+        $javaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$($case.path)" -Method $case.method
+        $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$($case.path)" -Method $case.method
+        $writeResults += [ordered]@{
+            name = $case.name
+            path = $case.path
+            javaStatus = $javaStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaStatus -eq $proxyStatus)
+        }
+    }
+
+    $javaData = $java.body.data
+    $pythonData = $python.body.data
+    $proxyData = $proxy.body.data
+    $result = [ordered]@{
+        validate = [ordered]@{
+            javaStatus = $java.status
+            pythonStatus = $python.status
+            proxyStatus = $proxy.status
+            javaMatchesPython = (
+                $java.status -eq $python.status -and
+                $java.body.code -eq $python.body.code -and
+                $javaData.valid -eq $pythonData.valid -and
+                $javaData.resolvedSlug -eq $pythonData.resolvedSlug -and
+                $javaData.resolvedVersion -eq $pythonData.resolvedVersion -and
+                (@($javaData.errors) -join '|') -eq (@($pythonData.errors) -join '|') -and
+                (@($javaData.warnings) -join '|') -eq (@($pythonData.warnings) -join '|')
+            )
+            pythonMatchesProxy = (
+                $python.status -eq $proxy.status -and
+                $python.body.code -eq $proxy.body.code -and
+                $pythonData.valid -eq $proxyData.valid -and
+                $pythonData.resolvedSlug -eq $proxyData.resolvedSlug -and
+                $pythonData.resolvedVersion -eq $proxyData.resolvedVersion -and
+                (@($pythonData.errors) -join '|') -eq (@($proxyData.errors) -join '|') -and
+                (@($pythonData.warnings) -join '|') -eq (@($proxyData.warnings) -join '|')
+            )
+            java = $java
+            python = $python
+            proxy = $proxy
+        }
+        writeRoutes = $writeResults
+        allWriteRoutesRemainJavaOwned = -not [bool]($writeResults | Where-Object { -not $_.proxyMatchesJava })
+        comparedFields = @('status', 'code', 'data.valid', 'data.errors', 'data.warnings', 'data.resolvedSlug', 'data.resolvedVersion')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.validate.javaMatchesPython -or -not $result.validate.pythonMatchesProxy -or -not $result.allWriteRoutesRemainJavaOwned) {
+        throw "Publish validate contract check failed. See .dev/$ResultFileName."
+    }
+}
+
 function Invoke-HybridPublishDryRunSmokeVerification {
     try {
         Invoke-PublishDryRunTests
@@ -5257,6 +5407,24 @@ function Invoke-HybridPublishOrchestrationFoundationSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishHttpValidateSmokeVerification {
+    try {
+        Invoke-PublishHttpValidateTests
+        Start-Hybrid
+        Invoke-PublishHttpValidateContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -5287,6 +5455,7 @@ switch ($Action) {
     'verify-publish-replacement-foundation-smoke' { Invoke-HybridPublishReplacementFoundationSmokeVerification }
     'verify-publish-transaction-split-smoke' { Invoke-HybridPublishTransactionSplitSmokeVerification }
     'verify-publish-orchestration-foundation-smoke' { Invoke-HybridPublishOrchestrationFoundationSmokeVerification }
+    'verify-publish-http-validate-smoke' { Invoke-HybridPublishHttpValidateSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

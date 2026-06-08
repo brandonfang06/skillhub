@@ -162,6 +162,7 @@ Still plan carefully when a group requires:
 | 28 | Publish replacement cleanup foundation | n/a | Python helper cleans replaceable non-published versions and records local storage delete compensation. No publish POST route ownership moved. |
 | 29 | Publish transaction split foundation | n/a | Python DB helper supports prepare/finalize phases so storage can be written after skill/version IDs are allocated. No publish POST route ownership moved. |
 | 30 | Publish orchestration foundation | n/a | Python service helper composes replacement cleanup, prepare/storage/finalize, side effects, and after-commit replacement storage deletion. No publish POST route ownership moved. |
+| 31 | `POST /api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only multipart route moved to Python while all publish write routes remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -525,6 +526,23 @@ Completed orchestration foundation milestone:
 - Explicitly not implemented:
   publish HTTP route ownership, multipart request parsing, dry-run HTTP route, scanner HTTP call,
   Redis stream delivery, CSRF/session behavior, and live DB mutation through a Python route.
+
+Completed HTTP validate route adapter milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-http-validate-route.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-http-validate-route.md`
+- Scope:
+  Python CLI publish validate-only HTTP adapter.
+- Route ownership:
+  moved only `POST /api/cli/v1/skills/{namespace}/publish/validate` to Python.
+- Keep Java-owned:
+  all publish routes that write DB rows, storage objects, scanner tasks, audit logs, or lifecycle
+  state.
+- Acceptance focus:
+  multipart upload parsing, Java-compatible dry-run response data, Vite proxy ownership for the
+  validate route only, and live proof that publish write routes still reach Java.
 
 Candidate routes:
 
@@ -1043,18 +1061,19 @@ When this plan changes:
 
 ## Current Next Step
 
-Group A public catalog read ownership is complete after the ClawHub list milestone.
+Group A public catalog read ownership is complete. Group B file content/download read path is
+complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
+the current pre-launch publish work. Group D publish foundations are complete through orchestration.
 
-Group C has started with the narrow `GET /api/v1/auth/me` current-user bridge. The next milestone
-choice should be one of:
+Next decision point:
 
-- Continue Group C into viewer-specific read context and role helpers, if the priority is protected
-  frontend workflows and later mutations.
-- Start Group B file content and download read path, if the priority is install/download parity and
-  object storage handling.
+- Move CLI publish write (`POST /api/cli/v1/skills/{namespace}/publish`) first if the priority is
+  CLI compatibility and a smaller write-route surface.
+- Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
+  `POST /api/web/skills/{namespace}/publish`) first if the priority is frontend publishing.
 
-Do not start Group D publish/upload until Group B storage/download and Group C auth assumptions are
-planned or explicitly scoped.
+Either choice must include scanner behavior, transaction cleanup on storage failure, and
+route-specific frontend/CLI E2E coverage.
 
 Recently completed context:
 

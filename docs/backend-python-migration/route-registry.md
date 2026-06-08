@@ -62,7 +62,7 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | java | Web download alias is not migrated; v1 tag download is Python-owned. |
 | POST | `/api/v1/skills/{namespace}/publish` | java | Portal publish upload remains Java-owned; Python has package helper foundation only. |
 | POST | `/api/web/skills/{namespace}/publish` | java | Frontend publish upload alias remains Java-owned; Vite must not route this shape to Python detail GET. |
-| POST | `/api/cli/v1/skills/{namespace}/publish/validate` | java | CLI publish validation remains Java-owned. |
+| POST | `/api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only dry-run route. Multipart adapter over Python dry-run model; no DB/storage publish writes. |
 | POST | `/api/cli/v1/skills/{namespace}/publish` | java | CLI publish remains Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
