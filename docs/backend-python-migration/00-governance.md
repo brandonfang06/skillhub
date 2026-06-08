@@ -1,7 +1,12 @@
 # Backend Python Migration Governance
 
-This document defines the rules for gradually replacing Java backend endpoints
-with a Python FastAPI backend while both services run side by side.
+This document defines the rules for replacing Java backend endpoints with a
+Python FastAPI backend before SkillHub goes live for the organization.
+
+The project is still pre-launch. Java/Python coexistence is a verification
+tool, not the long-term production architecture. Prefer coherent Python
+ownership by API area or workflow when that reduces proxy complexity and makes
+the system easier to validate.
 
 ## Absolute Java Boundary
 
@@ -20,6 +25,8 @@ with a Python FastAPI backend while both services run side by side.
 - Vite dev proxy routes Python-owned API paths to port `8081`.
 - All non-migrated `/api` paths and `/oauth2` continue to route to Java on
   port `8080`.
+- During pre-launch migration, a milestone may move a broader API group to
+  Python once the plan, tests, and live gate cover the whole group.
 
 ## Route Ownership
 
@@ -29,6 +36,8 @@ with a Python FastAPI backend while both services run side by side.
   result document, commit, and push.
 - Vite proxy config must be updated whenever local development ownership
   changes.
+- Route ownership can move by cohesive route group, not only one endpoint at a
+  time. Group migrations must include a route matrix in the plan and result.
 
 ## Python Backend Rules
 
@@ -42,7 +51,7 @@ with a Python FastAPI backend while both services run side by side.
 
 ## API Contract Rules
 
-- Preserve the Java API response envelope:
+- Preserve the Java API response envelope for SkillHub web/API routes:
 
 ```json
 {
@@ -58,8 +67,11 @@ with a Python FastAPI backend while both services run side by side.
 - Return `X-Request-Id` in response headers.
 - Preserve Java status codes, field names, pagination shapes, and file/download
   exceptions for migrated endpoints.
-- Mutating endpoints may not move to Python until equivalent idempotency behavior
-  is implemented.
+- ClawHub compatibility routes intentionally return plain ClawHub JSON. Do not
+  wrap ClawHub compatibility responses in the SkillHub envelope.
+- Mutating endpoints may move to Python before production only when the plan
+  documents authorization assumptions, idempotency behavior, transaction
+  boundaries, rollback/failure behavior, and test coverage.
 - Auth, session, OAuth, and API token behavior remain Java-owned until a written
   bridge plan is approved.
 
@@ -80,4 +92,3 @@ Each result must include:
 - boundary check proving `server/` was not changed
 - known risks
 - follow-up work
-

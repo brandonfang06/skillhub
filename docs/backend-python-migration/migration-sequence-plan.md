@@ -5,12 +5,12 @@
 > the living migration order document; update this file whenever priorities change.
 
 **Goal:** Maintain the agreed migration order for moving SkillHub backend APIs from Java to
-FastAPI while Java and Python coexist.
+FastAPI before the service goes live for the organization.
 
-**Architecture:** Migration proceeds from low-dependency public read APIs toward database-backed
-read models, then viewer-specific skill reads, then storage/search/auth/mutation workflows. Java
-under `server/` remains read-only throughout migration; Python-owned routes live under
-`server-python/` and are routed by Vite dev proxy during coexistence.
+**Architecture:** Java under `server/` remains read-only throughout migration and is used as a
+contract/reference runtime. Python-owned routes live under `server-python/` and are routed by Vite
+dev proxy during migration. Because this is pre-launch, future milestones should prefer cohesive
+API areas or complete workflows over long-term fine-grained Java/Python coexistence.
 
 **Tech Stack:** Spring Boot Java backend as read-only reference, FastAPI Python backend on port
 `8081`, Vite dev proxy on port `3000`, Java backend on port `8080`, PostgreSQL introduced only
@@ -22,14 +22,14 @@ after no-DB routes are stable.
 
 This file is the source of truth for migration order. For every milestone:
 
-1. Announce the selected API or API group before changing files.
+1. Announce the selected API, API group, or workflow before changing files.
 2. Create or update a milestone-specific plan under
    `docs/backend-python-migration/plans/YYYY-MM-DD-<topic>.md`.
 3. Implement with TDD.
 4. Update `docs/backend-python-migration/route-registry.md` when ownership changes.
 5. Write a result document under `docs/backend-python-migration/results/YYYY-MM-DD-<topic>.md`.
 6. Run unit/proxy verification.
-7. Run the live verification gate before starting the next API migration.
+7. Run the live verification gate before starting the next migration group.
 8. Confirm `git diff --name-only -- server` returns no paths.
 9. Commit and push to `dev`.
 
@@ -37,7 +37,7 @@ If priorities change, update this file first, then continue from the revised ord
 
 ## Live Verification Gate
 
-Every API migration must pass a live verification gate before the next API migration starts. This
+Every migration milestone must pass a live verification gate before the next group starts. This
 gate is required even when unit tests and Vite proxy tests pass.
 
 Windows procedure:
@@ -53,7 +53,7 @@ Minimum gate for routes migrated from Java:
 - Call the Vite proxy route and confirm it reaches the Python-owned implementation.
 - Run frontend smoke E2E when the route affects frontend flows.
 - Record pass/fail/blocker details in a result document.
-- Do not begin the next API migration until this gate has passed or the project owner explicitly
+- Do not begin the next migration group until this gate has passed or the project owner explicitly
   accepts a recorded blocker.
 
 ## Non-Negotiable Boundaries
@@ -63,19 +63,20 @@ Minimum gate for routes migrated from Java:
 - Do not manually edit `web/src/api/generated/schema.d.ts`.
 - Do not migrate auth, session, OAuth, CSRF, API token, idempotency, publish, lifecycle mutation,
   storage download, or admin mutation APIs until their bridge designs are explicitly planned.
-- Keep route ownership small and explicit. One milestone should own one API or a small alias group.
+- Pre-launch milestones may own a larger API group when the group has a written route matrix,
+  tests, and live verification. Avoid unnecessary proxy fragmentation.
 
 ## Selection Criteria
 
-Prefer earlier APIs when they are:
+Prefer earlier groups when they are:
 
 - Public or anonymous-readable.
-- GET-only.
-- Easy to compare against Java with `curl`.
-- Low dependency: no auth/session, no object storage, no Redis, no MinIO, no mutation.
-- Useful for establishing reusable Python infrastructure.
+- Internally cohesive as a workflow or API area.
+- Easy to compare against Java with direct HTTP calls and deterministic fixtures.
+- Useful for reducing Java/Python proxy split complexity.
+- A good foundation for the next high-dependency group.
 
-Defer APIs when they require:
+Still plan carefully when a group requires:
 
 - Viewer-specific permissions.
 - Namespace role resolution.
@@ -104,7 +105,223 @@ Defer APIs when they require:
 | 10.5 | Method-aware Vite proxy infrastructure | n/a | Enables future GET-only migration on paths that share Java-owned mutating methods. |
 | 11 | `GET /api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail migrated with method-aware GET-only routing. List, publish, delete, undelete, and download remain Java-owned. |
 
-## Planned Migration Order
+## Revised Pre-Launch Milestone Order
+
+The earlier migrations intentionally used small public GET endpoints to establish Python
+infrastructure, Vite route ownership, Windows live verification, and Java/Python contract
+comparison. Those completed milestones remain valid and are listed above.
+
+From this point forward, migration should use larger, cohesive milestones. Each milestone must
+still be small enough to verify end-to-end before commit/push.
+
+### Group A. Finish Public Catalog Read Ownership
+
+Goal:
+
+- Make Python the clear owner for public browsing and ClawHub read-only compatibility.
+- Reduce Vite proxy fragmentation around already-migrated read routes.
+
+Already Python-owned in this group:
+
+- `GET /api/web/skills`
+- `GET /api/web/labels`
+- `GET /api/v1/labels`
+- `GET /api/v1/search`
+- `GET /api/v1/resolve`
+- `GET /api/v1/resolve/{canonicalSlug}`
+- `GET /api/v1/skills/{canonicalSlug}`
+- `GET /api/v1/skills/{namespace}/{slug}`
+- `GET /api/web/skills/{namespace}/{slug}`
+- `GET /api/v1/skills/{namespace}/{slug}/labels`
+- `GET /api/web/skills/{namespace}/{slug}/labels`
+- `GET /api/v1/skills/{namespace}/{slug}/resolve`
+- `GET /api/web/skills/{namespace}/{slug}/resolve`
+- `GET /api/v1/skills/{namespace}/{slug}/versions`
+- `GET /api/web/skills/{namespace}/{slug}/versions`
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`
+- `GET /api/web/skills/{namespace}/{slug}/versions/{version}`
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`
+- `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`
+- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`
+- `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files`
+
+Remaining candidate in this group:
+
+- `GET /api/v1/skills` ClawHub list.
+
+Keep Java-owned in this group:
+
+- `POST /api/v1/skills`
+- `DELETE /api/v1/skills/{canonicalSlug}`
+- `POST /api/v1/skills/{canonicalSlug}/undelete`
+- all download/file-content routes.
+
+Acceptance focus:
+
+- `GET /api/v1/skills` plain ClawHub list matches Java.
+- Root `POST /api/v1/skills` still reaches Java until publish/upload is planned.
+- Existing Python read routes stay green.
+- Vite proxy rules become simpler where possible, but method collisions remain explicitly tested.
+
+### Group B. File Content And Download Read Path
+
+Goal:
+
+- Move public file content and download routes to Python as one storage/read workflow.
+
+Candidate routes:
+
+- `GET /api/v1/download/{canonicalSlug}`
+- `GET /api/v1/skills/{namespace}/{slug}/download`
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
+- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`
+- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file`
+
+Bridge design required before implementation:
+
+- Object storage abstraction for Python: local file, MinIO/S3-compatible behavior.
+- Redirect vs stream behavior and headers.
+- Download counter behavior.
+- Rate-limit assumptions.
+- Missing object fallback behavior.
+- Live fixture including stored file bytes.
+
+Acceptance focus:
+
+- Java/Python/Vite contract comparison for headers, status, redirects, and file bytes.
+- No schema change under Python unless explicitly planned.
+- Download metrics behavior is documented and tested.
+
+### Group C. Auth And Current User Bridge
+
+Goal:
+
+- Establish the minimum Python auth/session model required for internal use before migrating
+  viewer-specific reads or mutations.
+
+Candidate routes:
+
+- current-user / whoami-style APIs used by the web app.
+- local development mock-user behavior.
+- session-aware request context used by frontend workflows.
+
+Bridge design required before implementation:
+
+- Whether Python temporarily reads Java session state, replaces it, or uses a simplified internal
+  auth model.
+- CSRF handling for mutating web APIs.
+- `X-Mock-User-Id` local behavior.
+- Organization internal identity assumptions.
+- Test users and fixtures.
+
+Acceptance focus:
+
+- Frontend can run against Python-owned auth context for migrated workflows.
+- Protected route behavior is explicit and tested.
+- OAuth remains Java-owned unless the milestone explicitly moves it.
+
+### Group D. Skill Publish / Upload Vertical Slice
+
+Goal:
+
+- Move package upload, validation, scanner handoff, storage write, and initial version creation to
+  Python as one coherent workflow.
+
+Candidate routes:
+
+- ClawHub `POST /api/v1/skills`
+- Web skill publish/upload endpoints.
+- Package validation endpoints or helpers needed by publish.
+
+Bridge design required before implementation:
+
+- Auth requirement from Group C.
+- Multipart upload handling.
+- Skill package extraction and validation parity.
+- Object storage write path from Group B.
+- Scanner API integration and failure behavior.
+- Transaction boundary for skill/version/file records.
+- Idempotency and duplicate publish behavior.
+
+Acceptance focus:
+
+- Publish a deterministic fixture package through Python.
+- Java reference comparison where practical.
+- DB rows, stored objects, scanner result, and frontend publish flow are verified.
+
+### Group E. Skill Lifecycle And Governance Mutations
+
+Goal:
+
+- Move lifecycle state transitions and governance actions after auth, storage, and publish are
+  available in Python.
+
+Candidate routes:
+
+- submit review / approve / reject / withdraw.
+- confirm publish / rerelease.
+- archive / unarchive.
+- yank / hide / restore.
+- delete / undelete / hard-delete if used internally.
+
+Bridge design required before implementation:
+
+- Namespace role checks and platform RBAC.
+- Audit log behavior.
+- Notification/event behavior.
+- Idempotency behavior for repeated requests.
+- Transaction and compensation behavior.
+
+Acceptance focus:
+
+- State transitions match `docs/14-skill-lifecycle.md`.
+- Mutations are covered by unit, integration, and live workflow tests.
+- Java remains a reference only; Python becomes workflow owner after passing the gate.
+
+### Group F. Social, Ratings, Subscriptions, Notifications
+
+Goal:
+
+- Move viewer-specific interaction APIs after auth and lifecycle foundations are stable.
+
+Candidate routes:
+
+- star / unstar.
+- rate.
+- subscribe / unsubscribe.
+- notification reads and SSE if needed for internal workflows.
+
+Bridge design required before implementation:
+
+- Auth context from Group C.
+- Duplicate interaction behavior.
+- Notification delivery expectations.
+- Frontend state refresh behavior.
+
+### Group G. Admin, Labels Mutation, Namespace, Tokens, OAuth
+
+Goal:
+
+- Move remaining protected administrative and platform-security routes after core internal flows are
+  stable.
+
+Candidate areas:
+
+- Admin user management.
+- Label creation/update/delete.
+- Namespace management.
+- API token management.
+- OAuth/device flow if the organization still needs it.
+
+Bridge design required before implementation:
+
+- RBAC model.
+- Internal identity provider decision.
+- Token hashing/secret handling.
+- Audit and recovery behavior.
+
+## Historical Endpoint Milestones
 
 ### 2. Public Labels Read API
 
@@ -407,7 +624,10 @@ Status:
 - `GET /api/v1/skills` remains Java-owned because it is ClawHub compatibility list/publish, not
   portal search.
 
-## Deferred High-Dependency Groups
+## High-Dependency Notes From The Original Plan
+
+These notes explain why later groups need bridge designs before implementation. They are no longer
+the migration order; the active order is `Revised Pre-Launch Milestone Order` above.
 
 ### Download and File Content
 
@@ -494,6 +714,25 @@ When this plan changes:
 
 ## Current Next Step
 
+The old endpoint-by-endpoint phase is complete enough to change strategy. The next milestone should
+start Group A from the revised pre-launch order:
+
+- Candidate:
+  `GET /api/v1/skills` ClawHub list.
+- Goal:
+  finish the remaining public/ClawHub read ownership that is adjacent to routes already migrated.
+- Required boundary:
+  `POST /api/v1/skills`, `DELETE /api/v1/skills/{canonicalSlug}`,
+  `POST /api/v1/skills/{canonicalSlug}/undelete`, and download/file-content routes remain
+  Java-owned until their group plans are written.
+- Plan file to create before implementation:
+  `docs/backend-python-migration/plans/YYYY-MM-DD-clawhub-skills-list-api.md`
+- Live gate:
+  compare Java/Python/Vite for ClawHub list shape and verify root `POST /api/v1/skills` still
+  reaches Java.
+
+Recently completed context:
+
 The public skill detail milestone is complete for anonymous public behavior:
 
 - Plan:
@@ -544,12 +783,10 @@ The ClawHub skill detail milestone is complete:
 - Result:
   `docs/backend-python-migration/results/2026-06-08-clawhub-skill-detail-api.md`
 
-The next API milestone should be selected with a new plan after the ClawHub skill detail result is
-committed and pushed. Current notes:
+Next action is Group A planning, not another arbitrary endpoint pick:
 
-- Do not migrate `GET /api/v1/skills` without a separate ClawHub compatibility plan and a
-  method-aware routing decision; the same path also owns `POST /api/v1/skills`.
-- Do not migrate download routes until object storage and redirect/download metrics behavior have
-  a separate bridge plan.
-- Keep all mutating, auth-specific, lifecycle, and download routes Java-owned until their bridge
-  designs are written.
+- Write the ClawHub list plan for `GET /api/v1/skills`.
+- Keep `POST /api/v1/skills`, delete/undelete, downloads, auth, lifecycle, and admin mutations
+  Java-owned until their group plans are written.
+- After Group A is complete, choose between Group B file/download read path and Group C auth/current
+  user bridge based on which unblocks the most internal workflows.

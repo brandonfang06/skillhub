@@ -4,6 +4,11 @@ This registry is the human-readable source of truth for Java/Python route
 ownership during backend migration. Vite proxy config must stay in sync with
 Python-owned local development routes.
 
+The project is pre-launch, so future ownership changes may happen by cohesive
+API group instead of one endpoint at a time. When a group moves, keep this table
+explicit enough that Java-owned mutations, auth, OAuth, downloads, and other
+deferred routes are still visible.
+
 ## Ownership Legend
 
 | Owner | Meaning |
