@@ -112,6 +112,7 @@ Still plan carefully when a group requires:
 | 17 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Manager-only owner preview access migrated for version file metadata. Tag preview, file bytes, and downloads remain deferred. |
 | 18 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Authenticated context forwarding and Java-compatible negative owner-preview resolve coverage completed. Non-published resolve remains rejected. |
 | 19 | `GET /api/v1/skills/{namespace}/{slug}/versions/compare`, `GET /api/web/skills/{namespace}/{slug}/versions/compare` | python | Manager-only owner preview version compare migrated with Java-compatible text diff behavior. File bytes/download endpoints remain deferred. |
+| 20 | `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Authenticated context forwarding and Java-compatible negative owner-preview tag file metadata coverage completed. Non-published tag targets remain rejected. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -153,6 +154,10 @@ Already Python-owned in this group:
 - `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`
 - `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files`
+
+Note: tag file metadata routes are Python-owned but remain published-only for tag selectors.
+Java's tag path does not call owner-preview access checks, so owners/admins are still rejected for
+non-published tag targets.
 
 Remaining candidate in this group:
 
@@ -906,3 +911,13 @@ The owner preview version compare milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-owner-preview-version-compare.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-owner-preview-version-compare.md`
+
+The owner preview tag files parity milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`,
+  `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-owner-preview-tag-files.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-owner-preview-tag-files.md`

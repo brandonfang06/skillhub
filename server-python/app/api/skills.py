@@ -1638,6 +1638,7 @@ async def read_skill_tag_files(
     namespace: str,
     slug: str,
     tag_name: str,
+    current_user_id: str | None = None,
 ) -> list[dict[str, object]]:
     async with engine.connect() as connection:
         skill_row = (
@@ -2108,13 +2109,21 @@ async def list_skill_tag_files(
     slug: str,
     tagName: str,
     request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_tag_files_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug, tagName))
+            data = await _resolve_reader_result(reader(namespace, slug, tagName, current_user_id))
         else:
-            data = await read_skill_tag_files(request.app.state.db_engine, namespace, slug, tagName)
+            data = await read_skill_tag_files(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                tagName,
+                current_user_id,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)

@@ -533,6 +533,45 @@ This gate verifies the Group C owner-preview file metadata boundary:
 - tag owner preview, file bytes, downloads, non-public visibility, and lifecycle mutations remain
   outside this gate.
 
+## One-Command Owner Preview Tag File Metadata Verification Gate
+
+For portal tag file metadata authenticated context forwarding and Java-compatible negative
+owner-preview tag selector behavior, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-tag-files-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+publishedFilesSorted: true
+allPendingStatusesMatch: true
+allPendingRejected: true
+6 passed
+```
+
+The command writes the latest owner preview tag files comparison summary to:
+
+```text
+.dev/owner-preview-tag-files-contract-result.json
+```
+
+This gate verifies the tag file metadata boundary:
+
+- anonymous, owner, and namespace `ADMIN` callers can read published tag file metadata with
+  matching Java/Python/Vite contracts.
+- anonymous, owner, and namespace `ADMIN` callers are all rejected for `PENDING_REVIEW` tag file
+  metadata, matching Java's published-only tag selector behavior.
+- route handlers forward local mock-user context, but Python does not broaden Java semantics.
+- file bytes, downloads, non-public visibility, and lifecycle mutations remain outside this gate.
+
 ## One-Command Owner Preview Resolve Verification Gate
 
 For portal resolve authenticated parity and the Java-compatible negative owner-preview resolve

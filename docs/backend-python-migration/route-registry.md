@@ -47,7 +47,7 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend alias for public published version detail with manager-only non-published owner preview access. Files metadata and compare are Python-owned; downloads and DELETE remain Java-owned. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/files` | python | Public published version files metadata list with manager-only owner preview access for non-published versions. Content and downloads remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Frontend alias for public published version files metadata list with manager-only owner preview access for non-published versions. Content and downloads remain Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill tag files metadata list. Tag owner preview, content, and downloads remain Java-owned/deferred. |
-| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Frontend alias for public anonymous skill tag files metadata list. Tag owner preview, content, and downloads remain Java-owned/deferred. |
+| GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public published tag files metadata list with authenticated context forwarding. Non-published tag targets remain rejected to match Java. Content and downloads remain Java-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Frontend alias for public published tag files metadata list with authenticated context forwarding. Non-published tag targets remain rejected to match Java. Content and downloads remain Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

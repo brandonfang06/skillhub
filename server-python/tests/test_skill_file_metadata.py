@@ -49,7 +49,7 @@ def test_skill_version_files_web_alias_returns_same() -> None:
 
 def test_skill_tag_files_route_returns_envelope() -> None:
     app = create_app()
-    app.state.skill_tag_files_reader = lambda namespace, slug, tag: files_response()
+    app.state.skill_tag_files_reader = lambda namespace, slug, tag, current_user_id: files_response()
 
     client = TestClient(app)
     response = client.get(
@@ -66,7 +66,7 @@ def test_skill_tag_files_route_returns_envelope() -> None:
 
 def test_skill_tag_files_web_alias_returns_same() -> None:
     app = create_app()
-    app.state.skill_tag_files_reader = lambda namespace, slug, tag: files_response()
+    app.state.skill_tag_files_reader = lambda namespace, slug, tag, current_user_id: files_response()
 
     client = TestClient(app)
     response = client.get("/api/web/skills/global/demo/tags/latest/files")
@@ -123,18 +123,50 @@ def test_skill_version_files_route_forwards_blank_current_user_as_none() -> None
     assert response.status_code == 200
     assert seen == [None]
 
-def test_skill_tag_files_route_forwards_params_to_reader() -> None:
-    seen: list[tuple[str, str, str]] = []
+def test_skill_tag_files_route_forwards_params_and_current_user_to_reader() -> None:
+    seen: list[tuple[str, str, str, str | None]] = []
     app = create_app()
 
-    def reader(namespace: str, slug: str, tag: str) -> list[dict[str, object]]:
-        seen.append((namespace, slug, tag))
+    def reader(
+        namespace: str,
+        slug: str,
+        tag: str,
+        current_user_id: str | None,
+    ) -> list[dict[str, object]]:
+        seen.append((namespace, slug, tag, current_user_id))
         return files_response()
 
     app.state.skill_tag_files_reader = reader
 
     client = TestClient(app)
-    response = client.get("/api/v1/skills/global/demo/tags/stable/files")
+    response = client.get(
+        "/api/v1/skills/global/demo/tags/stable/files",
+        headers={"X-Mock-User-Id": " owner-1 "},
+    )
 
     assert response.status_code == 200
-    assert seen == [("global", "demo", "stable")]
+    assert seen == [("global", "demo", "stable", "owner-1")]
+
+def test_skill_tag_files_route_forwards_blank_current_user_as_none() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+
+    def reader(
+        namespace: str,
+        slug: str,
+        tag: str,
+        current_user_id: str | None,
+    ) -> list[dict[str, object]]:
+        seen.append(current_user_id)
+        return files_response()
+
+    app.state.skill_tag_files_reader = reader
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/global/demo/tags/stable/files",
+        headers={"X-Mock-User-Id": "   "},
+    )
+
+    assert response.status_code == 200
+    assert seen == [None]
