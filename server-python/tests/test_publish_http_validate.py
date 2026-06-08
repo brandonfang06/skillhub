@@ -6,8 +6,11 @@ from zipfile import ZipFile
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.publish.orchestration import PublishWriteResult
 from app.publish.dry_run import PublishDryRunResult
 from app.publish.package import PackageEntry
+from app.publish.side_effects import PublishSideEffectResult
+from app.publish.storage import StoredPackageResult
 
 
 def skill_zip(skill_md: bytes | None = None) -> bytes:
@@ -114,4 +117,137 @@ def test_cli_publish_validate_returns_java_compatible_dry_run_envelope() -> None
         "publisher_id": "local-user",
         "visibility": "PRIVATE",
         "platform_roles": ["SUPER_ADMIN"],
+    }
+
+
+def test_cli_publish_write_requires_mock_user() -> None:
+    app = create_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 401
+
+
+def test_cli_publish_write_rejects_invalid_preflight_before_write() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user()
+    writer_called = False
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=False,
+            errors=["Publisher is not a member of namespace: global"],
+            warnings=[],
+            resolved_slug=None,
+            resolved_version=None,
+        )
+
+    async def write_reader(*args: object, **kwargs: object) -> PublishWriteResult:
+        nonlocal writer_called
+        writer_called = True
+        raise AssertionError("write must not run")
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Publisher is not a member of namespace: global"
+    assert not writer_called
+
+
+def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        seen["slug"] = getattr(request, "slug")
+        seen["version"] = getattr(request, "version")
+        seen["visibility"] = getattr(request, "visibility")
+        seen["auto_publish"] = getattr(request, "auto_publish")
+        seen["publisher_id"] = getattr(request, "publisher_id")
+        return PublishWriteResult(
+            skill_id=7,
+            version_id=42,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/7/42/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=[],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user", "X-Request-Id": "publish-write-test"},
+        data={"visibility": "PUBLIC"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 0
+    assert body["msg"] == "response.success.published"
+    assert body["requestId"] == "publish-write-test"
+    assert body["data"] == {
+        "namespace": "global",
+        "slug": "agent-helper",
+        "version": "1.0.0",
+        "visibility": "PUBLIC",
+    }
+    assert seen == {
+        "slug": "agent-helper",
+        "version": "1.0.0",
+        "visibility": "PUBLIC",
+        "auto_publish": True,
+        "publisher_id": "local-user",
     }

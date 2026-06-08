@@ -163,6 +163,7 @@ Still plan carefully when a group requires:
 | 29 | Publish transaction split foundation | n/a | Python DB helper supports prepare/finalize phases so storage can be written after skill/version IDs are allocated. No publish POST route ownership moved. |
 | 30 | Publish orchestration foundation | n/a | Python service helper composes replacement cleanup, prepare/storage/finalize, side effects, and after-commit replacement storage deletion. No publish POST route ownership moved. |
 | 31 | `POST /api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only multipart route moved to Python while all publish write routes remain Java-owned. |
+| 32 | Publish CLI write direct route foundation | n/a | Python direct backend route for `POST /api/cli/v1/skills/{namespace}/publish` composes dry-run preflight and publish orchestration. Vite/proxy ownership remains Java for the write route. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -543,6 +544,27 @@ Completed HTTP validate route adapter milestone:
 - Acceptance focus:
   multipart upload parsing, Java-compatible dry-run response data, Vite proxy ownership for the
   validate route only, and live proof that publish write routes still reach Java.
+
+Completed CLI write direct route foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-cli-write-direct-route-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-cli-write-direct-route-foundation.md`
+- Scope:
+  Python direct backend implementation for `POST /api/cli/v1/skills/{namespace}/publish`.
+- Route ownership:
+  no ownership change. Vite proxy and route registry still keep this write route Java-owned.
+- Implemented behavior:
+  direct Python multipart write route uses dry-run preflight, local mock auth bridge, package
+  extraction, namespace authorization lookup, publish orchestration, local object storage writes,
+  DB inserts/updates, and side-effect helpers for the new-version happy path.
+- Explicitly not implemented:
+  scanner HTTP handoff, same-version replacement lookup from the HTTP route, pending review
+  auto-withdraw before replacement, and full repeated publish route ownership matrix.
+- Acceptance focus:
+  direct Java/Python write comparison for stable publish response fields, live Python DB/storage
+  write, and proof that proxy write traffic still reaches Java.
 
 Candidate routes:
 
@@ -1063,14 +1085,18 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through orchestration.
+the current pre-launch publish work. Group D publish foundations are complete through direct CLI
+write route foundation, but write route ownership has not moved.
 
 Next decision point:
 
-- Move CLI publish write (`POST /api/cli/v1/skills/{namespace}/publish`) first if the priority is
-  CLI compatibility and a smaller write-route surface.
+- Finish the remaining CLI publish write parity gaps before moving
+  `POST /api/cli/v1/skills/{namespace}/publish` ownership: scanner HTTP handoff, route-level
+  same-version replacement lookup/cleanup, pending-review auto-withdraw, storage-failure cleanup
+  evidence, and repeated publish live matrix.
 - Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
-  `POST /api/web/skills/{namespace}/publish`) first if the priority is frontend publishing.
+  `POST /api/web/skills/{namespace}/publish`) first if frontend publishing becomes the priority,
+  but it must reuse the same parity gates.
 
 Either choice must include scanner behavior, transaction cleanup on storage failure, and
 route-specific frontend/CLI E2E coverage.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -101,6 +102,10 @@ def build_parsed_metadata_json(metadata: SkillMetadata) -> dict[str, object]:
     if metadata.version is not None:
         payload["version"] = metadata.version
     return payload
+
+
+def encode_jsonb(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
 async def create_publish_db_records(engine: Any, request: PublishDbTransactionInput) -> PublishDbTransactionResult:
@@ -232,8 +237,8 @@ async def prepare_publish_db_records(connection: Any, request: PublishDbPrepareI
                     "skill_id": skill_id,
                     "version": request.version,
                     "status": version_status,
-                    "parsed_metadata_json": build_parsed_metadata_json(request.metadata),
-                    "manifest_json": build_manifest_json(request.entries),
+                    "parsed_metadata_json": encode_jsonb(build_parsed_metadata_json(request.metadata)),
+                    "manifest_json": encode_jsonb(build_manifest_json(request.entries)),
                     "published_at": published_at,
                     "publisher_id": request.publisher_id,
                     "now": now,

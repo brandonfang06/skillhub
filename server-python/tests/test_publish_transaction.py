@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -168,6 +169,25 @@ class FakeEngine:
 
     def begin(self) -> FakeTransactionContext:
         return FakeTransactionContext(self.connection)
+
+
+@pytest.mark.anyio
+async def test_prepare_publish_db_records_encodes_jsonb_parameters_for_asyncpg() -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+        ]
+    )
+
+    await prepare_publish_db_records(connection, prepare_input(auto_publish=True))
+    version_params = connection.params[2]
+
+    assert isinstance(version_params["parsed_metadata_json"], str)
+    assert isinstance(version_params["manifest_json"], str)
+    assert json.loads(version_params["parsed_metadata_json"]) == build_parsed_metadata_json(transaction_input().metadata)
+    assert json.loads(version_params["manifest_json"]) == build_manifest_json(package_entries())
 
 
 @pytest.mark.anyio
