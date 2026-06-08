@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -116,6 +117,34 @@ def test_scanner_payload_local_mode_uses_skill_path() -> None:
     assert payload.bundle_key is None
 
 
+def test_scanner_payload_generates_task_id_when_missing() -> None:
+    request = side_effect_input(scanner_enabled=True, scan_mode="upload")
+    request = PublishSideEffectInput(
+        skill_id=request.skill_id,
+        version_id=request.version_id,
+        namespace_id=request.namespace_id,
+        publisher_id=request.publisher_id,
+        version_status=request.version_status,
+        visibility=request.visibility,
+        scanner_enabled=request.scanner_enabled,
+        scan_mode=request.scan_mode,
+        bundle_key=request.bundle_key,
+        skill_path=request.skill_path,
+        request_id=request.request_id,
+        client_ip=request.client_ip,
+        user_agent=request.user_agent,
+        compat_namespace=request.compat_namespace,
+        compat_slug=request.compat_slug,
+        now=request.now,
+        task_id=None,
+    )
+
+    payload = build_scan_task_payload(request)
+
+    assert payload.task_id
+    assert len(payload.task_id) == 36
+
+
 def test_compat_audit_detail_matches_java_fields() -> None:
     assert build_compat_publish_audit_detail(namespace="global", slug="agent-helper") == (
         '{"namespace":"global","slug":"agent-helper"}'
@@ -158,7 +187,8 @@ async def test_apply_side_effects_scanner_enabled_adds_audit_task_and_scanning_s
     assert audit_params["verdict"] == "SUSPICIOUS"
     assert audit_params["is_safe"] is False
     assert audit_params["findings_count"] == 0
-    assert audit_params["findings"] == []
+    assert isinstance(audit_params["findings"], str)
+    assert json.loads(audit_params["findings"]) == []
 
 
 @pytest.mark.anyio
@@ -200,4 +230,5 @@ async def test_apply_side_effects_records_compat_publish_audit_when_requested() 
     assert audit_params["request_id"] == "req-123"
     assert audit_params["client_ip"] == "127.0.0.1"
     assert audit_params["user_agent"] == "pytest"
-    assert audit_params["detail_json"] == {"namespace": "global", "slug": "agent-helper"}
+    assert isinstance(audit_params["detail_json"], str)
+    assert json.loads(audit_params["detail_json"]) == {"namespace": "global", "slug": "agent-helper"}

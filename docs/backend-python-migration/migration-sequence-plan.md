@@ -164,6 +164,7 @@ Still plan carefully when a group requires:
 | 30 | Publish orchestration foundation | n/a | Python service helper composes replacement cleanup, prepare/storage/finalize, side effects, and after-commit replacement storage deletion. No publish POST route ownership moved. |
 | 31 | `POST /api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only multipart route moved to Python while all publish write routes remain Java-owned. |
 | 32 | Publish CLI write direct route foundation | n/a | Python direct backend route for `POST /api/cli/v1/skills/{namespace}/publish` composes dry-run preflight and publish orchestration. Vite/proxy ownership remains Java for the write route. |
+| 33 | Publish scanner handoff foundation | n/a | Python scanner-enabled publish writes Java-compatible security audit JSONB fields and publishes Redis Stream scan task fields. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -565,6 +566,27 @@ Completed CLI write direct route foundation milestone:
 - Acceptance focus:
   direct Java/Python write comparison for stable publish response fields, live Python DB/storage
   write, and proof that proxy write traffic still reaches Java.
+
+Completed scanner handoff foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-09-publish-scanner-handoff-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-09-publish-scanner-handoff-foundation.md`
+- Scope:
+  Python scanner handoff foundation for publish orchestration.
+- Route ownership:
+  no ownership change. Publish write routes remain Java-owned through Vite/proxy.
+- Implemented behavior:
+  scanner-enabled Python publish writes JSONB-safe `security_audit` fields, generates a UUID
+  `taskId` when absent, builds Java-compatible `ScanTask` fields, and publishes them to Redis
+  Stream `skillhub:scan:requests` in upload mode.
+- Explicitly not implemented:
+  scanner consumer/result processing, retry/reclaim behavior, scanner HTTP calls, and route
+  ownership move.
+- Acceptance focus:
+  direct Python publish writes a fixture, Redis stream contains Java-compatible fields, and
+  Playwright smoke remains green.
 
 Candidate routes:
 
@@ -1085,15 +1107,15 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through direct CLI
-write route foundation, but write route ownership has not moved.
+the current pre-launch publish work. Group D publish foundations are complete through scanner
+handoff foundation, but write route ownership has not moved.
 
 Next decision point:
 
 - Finish the remaining CLI publish write parity gaps before moving
-  `POST /api/cli/v1/skills/{namespace}/publish` ownership: scanner HTTP handoff, route-level
-  same-version replacement lookup/cleanup, pending-review auto-withdraw, storage-failure cleanup
-  evidence, and repeated publish live matrix.
+  `POST /api/cli/v1/skills/{namespace}/publish` ownership: route-level same-version replacement
+  lookup/cleanup, pending-review auto-withdraw, storage-failure cleanup evidence, scanner result
+  processing boundaries, and repeated publish live matrix.
 - Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
   `POST /api/web/skills/{namespace}/publish`) first if frontend publishing becomes the priority,
   but it must reuse the same parity gates.

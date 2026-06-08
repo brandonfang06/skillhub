@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
@@ -198,6 +199,8 @@ def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
         seen["visibility"] = getattr(request, "visibility")
         seen["auto_publish"] = getattr(request, "auto_publish")
         seen["publisher_id"] = getattr(request, "publisher_id")
+        seen["scanner_enabled"] = getattr(request, "scanner_enabled")
+        seen["scan_mode"] = getattr(request, "scan_mode")
         return PublishWriteResult(
             skill_id=7,
             version_id=42,
@@ -224,6 +227,13 @@ def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
 
     app.state.publish_validate_reader = validate_reader
     app.state.publish_write_reader = write_reader
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=True,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -250,4 +260,6 @@ def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
         "visibility": "PUBLIC",
         "auto_publish": True,
         "publisher_id": "local-user",
+        "scanner_enabled": True,
+        "scan_mode": "upload",
     }

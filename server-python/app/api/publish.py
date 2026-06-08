@@ -17,6 +17,7 @@ from app.publish.dry_run import (
 )
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, extract_package, validate_package
+from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
 
@@ -131,7 +132,15 @@ async def run_publish_write(request: Request, write_input: PublishWriteInput) ->
     writer = getattr(request.app.state, "publish_write_reader", None)
     if writer is not None:
         return await resolve_publish_write_result(writer(write_input))
-    return await execute_publish_write(request.app.state.db_engine, write_input)
+    scan_task_publisher = getattr(request.app.state, "publish_scan_task_publisher", None)
+    if write_input.scanner_enabled and scan_task_publisher is None:
+        settings = getattr(request.app.state, "settings", get_settings())
+        scan_task_publisher = RedisScanTaskPublisher(settings.redis_url, settings.scan_stream_key)
+    return await execute_publish_write(
+        request.app.state.db_engine,
+        write_input,
+        scan_task_publisher=scan_task_publisher,
+    )
 
 
 def metadata_with_resolved_version(metadata: SkillMetadata, resolved_version: str) -> SkillMetadata:
@@ -219,7 +228,8 @@ async def publish_cli_skill(
         metadata=metadata_with_resolved_version(metadata, dry_run.resolved_version),
         entries=entries,
         storage_base_path=settings.storage_base_path,
-        scanner_enabled=False,
+        scanner_enabled=settings.security_scanner_enabled,
+        scan_mode=settings.security_scanner_mode,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),

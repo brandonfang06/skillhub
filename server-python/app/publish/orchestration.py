@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.replacement import (
@@ -62,7 +62,17 @@ class PublishWriteResult:
     replacement_compensation_recorded: bool
 
 
-async def execute_publish_write(engine: Any, request: PublishWriteInput) -> PublishWriteResult:
+class ScanTaskPublisher(Protocol):
+    async def publish_scan_task(self, task: Any) -> None:
+        pass
+
+
+async def execute_publish_write(
+    engine: Any,
+    request: PublishWriteInput,
+    *,
+    scan_task_publisher: ScanTaskPublisher | None = None,
+) -> PublishWriteResult:
     replacement_storage_keys: list[str] = []
     async with engine.begin() as connection:
         if request.replacement is not None:
@@ -126,6 +136,8 @@ async def execute_publish_write(engine: Any, request: PublishWriteInput) -> Publ
                 task_id=request.task_id,
             ),
         )
+        if side_effects.scan_task is not None and scan_task_publisher is not None:
+            await scan_task_publisher.publish_scan_task(side_effects.scan_task)
 
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False

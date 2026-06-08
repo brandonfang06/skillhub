@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5287,6 +5287,25 @@ function Invoke-PublishHttpValidateContractComparison {
     }
 }
 
+function Invoke-PublishScannerHandoffTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_publish_scanner_handoff.py',
+            'tests/test_publish_orchestration.py',
+            'tests/test_publish_side_effects.py',
+            'tests/test_publish_http_validate.py',
+            'tests/test_config.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-PublishCliWriteDirectContractComparison {
     param([string]$ResultFileName = 'publish-cli-write-direct-contract-result.json')
 
@@ -5339,6 +5358,90 @@ function Invoke-PublishCliWriteDirectContractComparison {
         -not $result.directWrite.stableFieldsMatch -or
         -not $result.proxyOwnership.proxyMatchesJava) {
         throw "Publish CLI write direct check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-RedisCli {
+    param([string[]]$Arguments)
+
+    $output = & docker @('compose', '-p', 'skillhub', 'exec', '-T', 'redis', 'redis-cli', '--raw') @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "redis-cli failed: $($Arguments -join ' ')"
+    }
+    return @($output)
+}
+
+function Read-RedisStreamFirstEntry {
+    param([string]$StreamKey)
+
+    $lines = @(Invoke-RedisCli -Arguments @('XRANGE', $StreamKey, '-', '+', 'COUNT', '1'))
+    if ($lines.Count -eq 0) {
+        return $null
+    }
+
+    $fields = [ordered]@{}
+    for ($index = 1; $index -lt ($lines.Count - 1); $index += 2) {
+        $fields[$lines[$index]] = $lines[$index + 1]
+    }
+
+    return [ordered]@{
+        id = $lines[0]
+        fields = $fields
+    }
+}
+
+function Invoke-PublishScannerHandoffContractComparison {
+    param([string]$ResultFileName = 'publish-scanner-handoff-contract-result.json')
+
+    $streamKey = 'skillhub:scan:requests'
+    Invoke-RedisCli -Arguments @('DEL', $streamKey) | Out-Null
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $headers = @{ 'X-Mock-User-Id' = 'local-user' }
+    $path = '/api/cli/v1/skills/global/publish'
+    $version = "1.0.$suffix"
+    $zipPath = New-PublishValidateFixtureZip -SkillName "Codex Scanner Handoff $suffix" -Version $version -FilePrefix "publish-scanner-handoff-$suffix"
+
+    Write-Host "Verifying Python scanner handoff route: POST $path"
+    $python = Invoke-MultipartPostJson "$PythonUrl$path" -FilePath $zipPath -Headers $headers
+    $entry = Read-RedisStreamFirstEntry -StreamKey $streamKey
+    if ($null -eq $entry) {
+        throw "No Redis scan task was published to $streamKey."
+    }
+
+    $fields = $entry.fields
+    $result = [ordered]@{
+        python = $python
+        redis = $entry
+        checks = [ordered]@{
+            pythonSucceeded = ($python.status -eq 200 -and $python.body.code -eq 0)
+            taskIdPresent = -not [string]::IsNullOrWhiteSpace([string]$fields.taskId)
+            versionIdPresent = -not [string]::IsNullOrWhiteSpace([string]$fields.versionId)
+            uploadModeUsesBundleKey = (
+                -not [string]::IsNullOrWhiteSpace([string]$fields.bundleKey) -and
+                [string]::IsNullOrWhiteSpace([string]$fields.skillPath)
+            )
+            publisherMatches = ($fields.publisherId -eq 'local-user')
+            createdAtMillisPresent = -not [string]::IsNullOrWhiteSpace([string]$fields.createdAtMillis)
+            scannerTypeMatches = ($fields.scannerType -eq 'skill-scanner')
+            bundleKeyMatchesJavaShape = ([string]$fields.bundleKey -match '^packages/\d+/\d+/bundle\.zip$')
+        }
+        comparedFields = @('taskId', 'versionId', 'bundleKey', 'publisherId', 'createdAtMillis', 'scannerType')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.pythonSucceeded -or
+        -not $result.checks.taskIdPresent -or
+        -not $result.checks.versionIdPresent -or
+        -not $result.checks.uploadModeUsesBundleKey -or
+        -not $result.checks.publisherMatches -or
+        -not $result.checks.createdAtMillisPresent -or
+        -not $result.checks.scannerTypeMatches -or
+        -not $result.checks.bundleKeyMatchesJavaShape) {
+        throw "Publish scanner handoff check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -5504,6 +5607,36 @@ function Invoke-HybridPublishCliWriteDirectSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishScannerHandoffSmokeVerification {
+    $previousScannerEnabled = $env:SKILLHUB_SECURITY_SCANNER_ENABLED
+    $previousScannerMode = $env:SKILLHUB_SECURITY_SCANNER_MODE
+    $previousRedisUrl = $env:SKILLHUB_REDIS_URL
+    $previousStreamKey = $env:SKILLHUB_SCAN_STREAM_KEY
+    try {
+        $env:SKILLHUB_SECURITY_SCANNER_ENABLED = 'true'
+        $env:SKILLHUB_SECURITY_SCANNER_MODE = 'upload'
+        $env:SKILLHUB_REDIS_URL = 'redis://localhost:6379'
+        $env:SKILLHUB_SCAN_STREAM_KEY = 'skillhub:scan:requests'
+        Invoke-PublishScannerHandoffTests
+        Start-Hybrid
+        Invoke-PublishScannerHandoffContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        if ($null -eq $previousScannerEnabled) { Remove-Item Env:\SKILLHUB_SECURITY_SCANNER_ENABLED -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SECURITY_SCANNER_ENABLED = $previousScannerEnabled }
+        if ($null -eq $previousScannerMode) { Remove-Item Env:\SKILLHUB_SECURITY_SCANNER_MODE -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SECURITY_SCANNER_MODE = $previousScannerMode }
+        if ($null -eq $previousRedisUrl) { Remove-Item Env:\SKILLHUB_REDIS_URL -ErrorAction SilentlyContinue } else { $env:SKILLHUB_REDIS_URL = $previousRedisUrl }
+        if ($null -eq $previousStreamKey) { Remove-Item Env:\SKILLHUB_SCAN_STREAM_KEY -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SCAN_STREAM_KEY = $previousStreamKey }
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -5536,6 +5669,7 @@ switch ($Action) {
     'verify-publish-orchestration-foundation-smoke' { Invoke-HybridPublishOrchestrationFoundationSmokeVerification }
     'verify-publish-http-validate-smoke' { Invoke-HybridPublishHttpValidateSmokeVerification }
     'verify-publish-cli-write-direct-smoke' { Invoke-HybridPublishCliWriteDirectSmokeVerification }
+    'verify-publish-scanner-handoff-smoke' { Invoke-HybridPublishScannerHandoffSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

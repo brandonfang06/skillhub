@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from uuid import uuid4
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -90,7 +91,7 @@ def build_scan_task_payload(request: PublishSideEffectInput) -> ScanTaskPayload:
         bundle_key = None
 
     return ScanTaskPayload(
-        task_id=request.task_id or "",
+        task_id=request.task_id or str(uuid4()),
         version_id=request.version_id,
         skill_path=skill_path,
         bundle_key=bundle_key,
@@ -177,7 +178,7 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
                         "verdict": "SUSPICIOUS",
                         "is_safe": False,
                         "findings_count": 0,
-                        "findings": [],
+                        "findings": json.dumps([], separators=(",", ":")),
                         "created_at": now,
                     },
                 )
@@ -230,11 +231,9 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
                 "request_id": request.request_id,
                 "client_ip": request.client_ip,
                 "user_agent": request.user_agent,
-                "detail_json": json.loads(
-                    build_compat_publish_audit_detail(
-                        namespace=request.compat_namespace or "",
-                        slug=request.compat_slug,
-                    )
+                "detail_json": build_compat_publish_audit_detail(
+                    namespace=request.compat_namespace or "",
+                    slug=request.compat_slug,
                 ),
                 "created_at": now,
             },

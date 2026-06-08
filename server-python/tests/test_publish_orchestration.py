@@ -99,6 +99,14 @@ class FakeEngine:
         return FakeTransactionContext(self.connections.pop(0), self)
 
 
+class FakeScanTaskPublisher:
+    def __init__(self) -> None:
+        self.tasks: list[Any] = []
+
+    async def publish_scan_task(self, task: Any) -> None:
+        self.tasks.append(task)
+
+
 @pytest.mark.anyio
 async def test_execute_publish_write_prepares_storage_finalizes_and_applies_side_effects(tmp_path) -> None:
     connection = FakeConnection(
@@ -132,6 +140,58 @@ async def test_execute_publish_write_prepares_storage_finalizes_and_applies_side
     assert "UPDATE skill_version" in connection.statements[5]
     assert "UPDATE skill" in connection.statements[6]
     assert "INSERT INTO review_task" in connection.statements[7]
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_publishes_scan_task_when_scanner_enabled(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+            FakeResult(scalar=801),
+            FakeResult(),
+        ]
+    )
+    publisher = FakeScanTaskPublisher()
+
+    result = await execute_publish_write(
+        FakeEngine([connection]),
+        PublishWriteInput(
+            namespace_id=10,
+            namespace_slug="global",
+            slug="agent-helper",
+            display_name="Agent Helper",
+            summary="Helps agents",
+            publisher_id="local-user",
+            visibility="PUBLIC",
+            version="1.0.0",
+            auto_publish=False,
+            metadata=SkillMetadata(
+                name="Agent Helper",
+                description="Helps agents",
+                version="1.0.0",
+                frontmatter={"name": "Agent Helper", "description": "Helps agents", "version": "1.0.0"},
+            ),
+            entries=package_entries(),
+            storage_base_path=str(tmp_path),
+            scanner_enabled=True,
+            scan_mode="upload",
+            task_id="scan-task-1",
+            now=datetime(2026, 6, 8, 18, 19, 20, tzinfo=UTC),
+        ),
+        scan_task_publisher=publisher,
+    )
+
+    assert result.side_effects.scan_task is not None
+    assert publisher.tasks == [result.side_effects.scan_task]
+    assert publisher.tasks[0].bundle_key == "packages/7/42/bundle.zip"
+    assert publisher.tasks[0].skill_path is None
 
 
 @pytest.mark.anyio

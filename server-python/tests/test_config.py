@@ -25,3 +25,17 @@ def test_storage_base_path_can_be_overridden(monkeypatch):
     settings = get_settings()
 
     assert settings.storage_base_path == "C:/tmp/skillhub-storage"
+
+
+def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")
+    monkeypatch.setenv("SKILLHUB_REDIS_URL", "redis://redis.test:6380")
+    monkeypatch.setenv("SKILLHUB_SCAN_STREAM_KEY", "custom:scan:requests")
+
+    settings = get_settings()
+
+    assert settings.security_scanner_enabled is True
+    assert settings.security_scanner_mode == "upload"
+    assert settings.redis_url == "redis://redis.test:6380"
+    assert settings.scan_stream_key == "custom:scan:requests"
