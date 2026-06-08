@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.storage import StoredPackageResult
 
@@ -184,6 +185,10 @@ async def prepare_publish_db_records(connection: Any, request: PublishDbPrepareI
         skill_id = int(existing_skill["id"])
         if str(existing_skill["status"]) == "ARCHIVED":
             raise ValueError(f"Cannot publish to archived skill: {request.slug}")
+        await auto_withdraw_pending_review_versions(
+            connection,
+            skill_id=skill_id,
+        )
     else:
         inserted_skill = (
             await connection.execute(

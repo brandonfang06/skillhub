@@ -70,6 +70,8 @@ class FakeConnection:
     async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> FakeResult:
         self.statements.append(str(statement))
         self.params.append(params or {})
+        if "status = 'PENDING_REVIEW'" in str(statement):
+            return FakeResult(rows=[])
         if self.results:
             return self.results.pop(0)
         return FakeResult()
@@ -105,6 +107,22 @@ class FakeScanTaskPublisher:
 
     async def publish_scan_task(self, task: Any) -> None:
         self.tasks.append(task)
+
+
+class AutoWithdrawFakeConnection(FakeConnection):
+    async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> FakeResult:
+        sql = str(statement)
+        self.statements.append(sql)
+        self.params.append(params or {})
+        if "SELECT id, status" in sql and "FROM skill" in sql:
+            return FakeResult(row={"id": 7, "status": "ACTIVE"})
+        if "status = 'PENDING_REVIEW'" in sql:
+            return FakeResult(rows=[{"id": 41}])
+        if "INSERT INTO skill_version" in sql:
+            return FakeResult(scalar=42)
+        if "INSERT INTO review_task" in sql:
+            return FakeResult(scalar=900)
+        return FakeResult()
 
 
 @pytest.mark.anyio
@@ -195,6 +213,22 @@ async def test_execute_publish_write_publishes_scan_task_when_scanner_enabled(tm
 
 
 @pytest.mark.anyio
+async def test_execute_publish_write_auto_withdraws_pending_review_before_new_version(tmp_path) -> None:
+    connection = AutoWithdrawFakeConnection([])
+
+    result = await execute_publish_write(FakeEngine([connection]), publish_input(str(tmp_path)))
+
+    assert result.version_id == 42
+    withdraw_select = next(index for index, statement in enumerate(connection.statements) if "status = 'PENDING_REVIEW'" in statement)
+    withdraw_delete = next(index for index, statement in enumerate(connection.statements) if "DELETE FROM review_task" in statement)
+    withdraw_update = next(index for index, statement in enumerate(connection.statements) if "status = 'UPLOADED'" in statement)
+    version_insert = next(index for index, statement in enumerate(connection.statements) if "INSERT INTO skill_version" in statement)
+    assert withdraw_select < withdraw_delete < withdraw_update < version_insert
+    assert connection.params[withdraw_update]["version_ids"] == [41]
+    assert "updated_by" not in connection.params[withdraw_update]
+
+
+@pytest.mark.anyio
 async def test_execute_publish_write_deletes_replacement_storage_after_commit(tmp_path) -> None:
     old_file = tmp_path / "skills" / "7" / "41" / "SKILL.md"
     old_bundle = tmp_path / "packages" / "7" / "41" / "bundle.zip"
@@ -244,9 +278,10 @@ async def test_execute_publish_write_deletes_replacement_storage_after_commit(tm
     assert not result.replacement_compensation_recorded
     assert not old_file.exists()
     assert not old_bundle.exists()
-    assert "UPDATE skill" in write_connection.statements[0]
-    assert "DELETE FROM skill_version" in write_connection.statements[5]
-    assert "INSERT INTO skill_version" in write_connection.statements[7]
+    update_skill_index = next(index for index, statement in enumerate(write_connection.statements) if "UPDATE skill" in statement)
+    delete_old_version_index = next(index for index, statement in enumerate(write_connection.statements) if "DELETE FROM skill_version" in statement)
+    insert_new_version_index = next(index for index, statement in enumerate(write_connection.statements) if "INSERT INTO skill_version" in statement)
+    assert update_skill_index < delete_old_version_index < insert_new_version_index
     assert cleanup_connection.statements == []
 
 

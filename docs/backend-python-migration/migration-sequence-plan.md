@@ -166,6 +166,7 @@ Still plan carefully when a group requires:
 | 32 | Publish CLI write direct route foundation | n/a | Python direct backend route for `POST /api/cli/v1/skills/{namespace}/publish` composes dry-run preflight and publish orchestration. Vite/proxy ownership remains Java for the write route. |
 | 33 | Publish scanner handoff foundation | n/a | Python scanner-enabled publish writes Java-compatible security audit JSONB fields and publishes Redis Stream scan task fields. No publish POST route ownership moved. |
 | 34 | Publish CLI replacement lookup foundation | n/a | Direct Python CLI publish route finds same-owner same-version replaceable versions and delegates cleanup to publish orchestration. No publish POST route ownership moved. |
+| 35 | Publish pending-review auto-withdraw foundation | n/a | Direct Python CLI publish withdraws earlier pending-review versions for the same skill before inserting the next publish version. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1129,15 +1130,14 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through CLI
-replacement lookup foundation, but write route ownership has not moved.
+the current pre-launch publish work. Group D publish foundations are complete through
+pending-review auto-withdraw foundation, but write route ownership has not moved.
 
 Next decision point:
 
 - Finish the remaining CLI publish write parity gaps before moving
-  `POST /api/cli/v1/skills/{namespace}/publish` ownership: pending-review auto-withdraw,
-  storage-failure cleanup evidence, scanner result processing boundaries, and repeated publish
-  Java/Python live matrix.
+  `POST /api/cli/v1/skills/{namespace}/publish` ownership: storage-failure cleanup evidence,
+  scanner result processing boundaries, and repeated publish Java/Python live matrix.
 - Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
   `POST /api/web/skills/{namespace}/publish`) first if frontend publishing becomes the priority,
   but it must reuse the same parity gates.

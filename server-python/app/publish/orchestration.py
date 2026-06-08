@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from app.publish.package import PackageEntry, SkillMetadata
+from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
@@ -76,6 +77,10 @@ async def execute_publish_write(
     replacement_storage_keys: list[str] = []
     async with engine.begin() as connection:
         if request.replacement is not None:
+            await auto_withdraw_pending_review_versions(
+                connection,
+                skill_id=request.replacement.skill_id,
+            )
             replacement_cleanup = await cleanup_replaceable_version(connection, request.replacement)
             replacement_storage_keys = replacement_cleanup.storage_keys
 

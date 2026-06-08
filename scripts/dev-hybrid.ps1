@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5324,6 +5324,24 @@ function Invoke-PublishCliReplacementLookupTests {
     }
 }
 
+function Invoke-PublishPendingAutoWithdrawTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_publish_auto_withdraw.py',
+            'tests/test_publish_orchestration.py',
+            'tests/test_publish_http_validate.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-PublishCliWriteDirectContractComparison {
     param([string]$ResultFileName = 'publish-cli-write-direct-contract-result.json')
 
@@ -5451,6 +5469,85 @@ function Invoke-PublishCliReplacementLookupContractComparison {
         -not $result.checks.oldStorageDeleted -or
         -not $result.checks.proxyStillJavaOwned) {
         throw "Publish CLI replacement lookup check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-PublishPendingAutoWithdrawContractComparison {
+    param([string]$ResultFileName = 'publish-pending-auto-withdraw-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $headers = @{ 'X-Mock-User-Id' = 'local-user' }
+    $path = '/api/cli/v1/skills/global/publish'
+    $skillName = "Codex Pending Withdraw $suffix"
+    $firstVersion = "1.0.$suffix"
+    $secondVersion = "1.1.$suffix"
+    $firstZip = New-PublishValidateFixtureZip -SkillName $skillName -Version $firstVersion -FilePrefix "publish-pending-withdraw-first-$suffix"
+    $secondZip = New-PublishValidateFixtureZip -SkillName $skillName -Version $secondVersion -FilePrefix "publish-pending-withdraw-second-$suffix"
+
+    Write-Host "Verifying direct publish pending-review auto-withdraw route: POST $path"
+    $first = Invoke-MultipartPostJson "$PythonUrl$path" -FilePath $firstZip -Headers $headers
+    $slug = $first.body.data.slug
+    $firstVersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND s.owner_id = 'local-user' AND sv.version = '$firstVersion' LIMIT 1;"
+    $firstStatusBefore = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $firstVersionId;"
+    $reviewTaskCountBefore = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $firstVersionId AND status = 'PENDING';")
+
+    $second = Invoke-MultipartPostJson "$PythonUrl$path" -FilePath $secondZip -Headers $headers
+    $firstStatusAfter = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $firstVersionId;"
+    $reviewTaskCountAfter = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $firstVersionId AND status = 'PENDING';")
+    $secondVersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND s.owner_id = 'local-user' AND sv.version = '$secondVersion' LIMIT 1;"
+    $secondStatus = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $secondVersionId;"
+    $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$path" -Method 'POST'
+    $javaProxyReferenceStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$path" -Method 'POST'
+
+    $result = [ordered]@{
+        first = $first
+        second = $second
+        db = [ordered]@{
+            slug = $slug
+            firstVersion = $firstVersion
+            secondVersion = $secondVersion
+            firstVersionId = $firstVersionId
+            secondVersionId = $secondVersionId
+            firstStatusBefore = $firstStatusBefore
+            firstStatusAfter = $firstStatusAfter
+            secondStatus = $secondStatus
+            reviewTaskCountBefore = $reviewTaskCountBefore
+            reviewTaskCountAfter = $reviewTaskCountAfter
+        }
+        proxyOwnership = [ordered]@{
+            path = $path
+            javaStatus = $javaProxyReferenceStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaProxyReferenceStatus -eq $proxyStatus)
+        }
+        checks = [ordered]@{
+            firstSucceeded = ($first.status -eq 200 -and $first.body.code -eq 0)
+            secondSucceeded = ($second.status -eq 200 -and $second.body.code -eq 0)
+            sameSlug = ($first.body.data.slug -eq $second.body.data.slug)
+            firstStartedPendingReview = ($firstStatusBefore -eq 'PENDING_REVIEW')
+            firstMovedToUploaded = ($firstStatusAfter -eq 'UPLOADED')
+            pendingReviewTaskDeleted = ($reviewTaskCountBefore -gt 0 -and $reviewTaskCountAfter -eq 0)
+            secondCreated = -not [string]::IsNullOrWhiteSpace($secondVersionId)
+            secondStillPendingReview = ($secondStatus -eq 'PENDING_REVIEW')
+            proxyStillJavaOwned = ($javaProxyReferenceStatus -eq $proxyStatus)
+        }
+        comparedFields = @('status', 'code', 'data.slug', 'db.firstStatusBefore', 'db.firstStatusAfter', 'db.reviewTaskCountAfter', 'db.secondStatus')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.firstSucceeded -or
+        -not $result.checks.secondSucceeded -or
+        -not $result.checks.sameSlug -or
+        -not $result.checks.firstStartedPendingReview -or
+        -not $result.checks.firstMovedToUploaded -or
+        -not $result.checks.pendingReviewTaskDeleted -or
+        -not $result.checks.secondCreated -or
+        -not $result.checks.secondStillPendingReview -or
+        -not $result.checks.proxyStillJavaOwned) {
+        throw "Publish pending auto-withdraw check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -5748,6 +5845,24 @@ function Invoke-HybridPublishCliReplacementLookupSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishPendingAutoWithdrawSmokeVerification {
+    try {
+        Invoke-PublishPendingAutoWithdrawTests
+        Start-Hybrid
+        Invoke-PublishPendingAutoWithdrawContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -5782,6 +5897,7 @@ switch ($Action) {
     'verify-publish-cli-write-direct-smoke' { Invoke-HybridPublishCliWriteDirectSmokeVerification }
     'verify-publish-scanner-handoff-smoke' { Invoke-HybridPublishScannerHandoffSmokeVerification }
     'verify-publish-cli-replacement-lookup-smoke' { Invoke-HybridPublishCliReplacementLookupSmokeVerification }
+    'verify-publish-pending-auto-withdraw-smoke' { Invoke-HybridPublishPendingAutoWithdrawSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
