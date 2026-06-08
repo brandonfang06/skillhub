@@ -245,6 +245,35 @@ The command writes the latest ClawHub search comparison summary to:
 .dev/clawhub-search-contract-result.json
 ```
 
+## One-Command ClawHub Resolve Verification Gate
+
+For the migrated ClawHub compatibility resolve API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-clawhub-resolve-smoke
+```
+
+Expected result:
+
+```text
+query.javaMatchesPython: true
+query.pythonMatchesProxy: true
+path.javaMatchesPython: true
+path.pythonMatchesProxy: true
+plainShape: true
+downloadRemainsJava: true
+v1SkillDetailRemainsJava: true
+6 passed
+```
+
+The command writes the latest ClawHub resolve comparison summary to:
+
+```text
+.dev/clawhub-resolve-contract-result.json
+```
+
 ## Shutdown
 
 ```powershell

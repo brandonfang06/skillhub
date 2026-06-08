@@ -100,6 +100,7 @@ Defer APIs when they require:
 | 7 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Public anonymous skill detail migrated. Authenticated owner/admin preview remains deferred. |
 | 8 | `GET /api/web/skills` | python | Public anonymous portal search migrated. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
 | 9 | `GET /api/v1/search` | python | ClawHub compatibility search. `/api/v1/skills` remains Java-owned. |
+| 10 | `GET /api/v1/resolve`, `GET /api/v1/resolve/{canonicalSlug}` | python | ClawHub compatibility resolve migrated. Download and ClawHub skill detail remain Java-owned. |
 
 ## Planned Migration Order
 
@@ -516,11 +517,23 @@ The ClawHub compatibility search milestone is complete:
 - Result:
   `docs/backend-python-migration/results/2026-06-08-clawhub-search-api.md`
 
+The ClawHub compatibility resolve milestone is complete:
+
+- Routes:
+  `GET /api/v1/resolve`, `GET /api/v1/resolve/{canonicalSlug}`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-clawhub-resolve-api.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-clawhub-resolve-api.md`
+
 The next API milestone should be selected with a new plan. Current notes:
 
-- `GET /api/v1/resolve` and `GET /api/v1/resolve/{canonicalSlug}` are possible ClawHub
-  compatibility candidates, but must account for canonical slug mapping and hash/version behavior.
+- `GET /api/v1/skills/{canonicalSlug}` is a possible ClawHub compatibility candidate, but must be
+  planned separately because it shares the `/api/v1/skills/**` namespace with Java-owned delete,
+  undelete, publish, and existing public nested SkillHub routes.
 - Do not migrate `GET /api/v1/skills` without a separate ClawHub compatibility plan and a
   method-aware routing decision; the same path also owns `POST /api/v1/skills`.
+- Do not migrate download routes until object storage and redirect/download metrics behavior have
+  a separate bridge plan.
 - Keep all mutating, auth-specific, lifecycle, and download routes Java-owned until their bridge
   designs are written.

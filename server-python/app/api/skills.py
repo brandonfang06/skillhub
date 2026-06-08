@@ -252,6 +252,13 @@ def to_clawhub_canonical_slug(namespace: str, slug: str) -> str:
     return slug if namespace == "global" else f"{namespace}--{slug}"
 
 
+def from_clawhub_canonical_slug(canonical_slug: str) -> tuple[str, str]:
+    separator_index = canonical_slug.find("--")
+    if separator_index > 0:
+        return canonical_slug[:separator_index], canonical_slug[separator_index + 2 :]
+    return "global", canonical_slug
+
+
 def build_clawhub_search_response(search_response: dict[str, object]) -> dict[str, object]:
     results = []
     for item in search_response["items"]:  # type: ignore[index]
@@ -270,6 +277,19 @@ def build_clawhub_search_response(search_response: dict[str, object]) -> dict[st
             }
         )
     return {"results": results}
+
+
+def build_clawhub_resolve_response(resolve_response: dict[str, object]) -> dict[str, object]:
+    version = resolve_response.get("version")
+    version_info = {"version": version} if version is not None else None
+    return {"match": version_info, "latestVersion": version_info}
+
+
+def clawhub_resolve_selectors(version: str | None, default_latest: bool) -> tuple[str | None, str | None]:
+    selected = "latest" if version is None and default_latest else version
+    if selected == "latest":
+        return None, "latest"
+    return selected, None
 
 
 def compute_version_fingerprint(files: list[FileRow]) -> str:
@@ -473,6 +493,37 @@ async def read_skill_resolve(
         fingerprint=fingerprints[selected_id],
         matched=matched,
     )
+
+
+async def read_clawhub_legacy_slug_coordinate(engine: AsyncEngine, slug: str) -> tuple[str, str]:
+    if "--" in slug:
+        return from_clawhub_canonical_slug(slug)
+
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT n.slug AS namespace, s.slug AS slug
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE s.slug = :slug
+                      AND n.status = 'ACTIVE'
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"slug": slug},
+            )
+        ).mappings().one_or_none()
+
+    if row is None:
+        return from_clawhub_canonical_slug(slug)
+    return str(row["namespace"]), str(row["slug"])
 
 
 async def read_skill_versions(
@@ -1084,6 +1135,78 @@ async def search_clawhub_skills(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return build_clawhub_search_response(data)
+
+
+@router.get("/api/v1/resolve")
+async def resolve_clawhub_skill_by_query(
+    request: Request,
+    slug: str,
+    version: str | None = None,
+    hash: str | None = Query(default=None, alias="hash"),
+) -> dict[str, object]:
+    try:
+        if "--" in slug:
+            namespace, skill_slug = from_clawhub_canonical_slug(slug)
+        else:
+            legacy_reader = getattr(request.app.state, "clawhub_legacy_slug_reader", None)
+            if legacy_reader is not None:
+                coordinate = legacy_reader(slug)
+                if isawaitable(coordinate):
+                    coordinate = await coordinate
+                if isinstance(coordinate, dict):
+                    namespace = str(coordinate["namespace"])
+                    skill_slug = str(coordinate["slug"])
+                else:
+                    namespace, skill_slug = coordinate
+            else:
+                db_engine = getattr(request.app.state, "db_engine", None)
+                if db_engine is None:
+                    namespace, skill_slug = from_clawhub_canonical_slug(slug)
+                else:
+                    namespace, skill_slug = await read_clawhub_legacy_slug_coordinate(db_engine, slug)
+
+        version_selector, tag_selector = clawhub_resolve_selectors(version, default_latest=False)
+        reader = getattr(request.app.state, "skill_resolve_reader", None)
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, skill_slug, version_selector, tag_selector, hash))
+        else:
+            data = await read_skill_resolve(
+                request.app.state.db_engine,
+                namespace,
+                skill_slug,
+                version_selector,
+                tag_selector,
+                hash,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_clawhub_resolve_response(data)
+
+
+@router.get("/api/v1/resolve/{canonicalSlug}")
+async def resolve_clawhub_skill_by_path(
+    request: Request,
+    canonicalSlug: str,
+    version: str | None = "latest",
+) -> dict[str, object]:
+    namespace, slug = from_clawhub_canonical_slug(canonicalSlug)
+    version_selector, tag_selector = clawhub_resolve_selectors(version, default_latest=True)
+    reader = getattr(request.app.state, "skill_resolve_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, version_selector, tag_selector, None))
+        else:
+            data = await read_skill_resolve(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                version_selector,
+                tag_selector,
+                None,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_clawhub_resolve_response(data)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}")

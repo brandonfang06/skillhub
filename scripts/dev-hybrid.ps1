@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -1580,6 +1580,103 @@ function Invoke-ClawHubSearchContractComparison {
     }
 }
 
+function Invoke-HttpStatusNoRedirect {
+    param([string]$Url)
+
+    try {
+        $request = [System.Net.HttpWebRequest]::Create($Url)
+        $request.Method = 'GET'
+        $request.AllowAutoRedirect = $false
+        $request.Timeout = 10000
+        $response = $request.GetResponse()
+        try {
+            return [int]$response.StatusCode
+        } finally {
+            $response.Close()
+        }
+    } catch [System.Net.WebException] {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            $response = $_.Exception.Response
+            try {
+                return [int]$response.StatusCode
+            } finally {
+                $response.Close()
+            }
+        }
+        throw
+    } catch {
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 10
+        return [int]$response.StatusCode
+    }
+}
+
+function Invoke-ClawHubResolveContractComparison {
+    Ensure-SearchContractFixture
+
+    $slug = 'codex-search-alpha-20260607233000'
+    $query = "?slug=$slug&version=latest"
+    $pathQuery = "?version=latest"
+    Write-Host "Comparing ClawHub resolve contract..."
+
+    $javaQuery = Invoke-RestMethod "$JavaUrl/api/v1/resolve$query"
+    $pythonQuery = Invoke-RestMethod "$PythonUrl/api/v1/resolve$query"
+    $proxyQuery = Invoke-RestMethod "$WebUrl/api/v1/resolve$query"
+
+    $javaPath = Invoke-RestMethod "$JavaUrl/api/v1/resolve/$slug$pathQuery"
+    $pythonPath = Invoke-RestMethod "$PythonUrl/api/v1/resolve/$slug$pathQuery"
+    $proxyPath = Invoke-RestMethod "$WebUrl/api/v1/resolve/$slug$pathQuery"
+
+    $javaQueryStable = ConvertTo-StablePlainJson -Response $javaQuery
+    $pythonQueryStable = ConvertTo-StablePlainJson -Response $pythonQuery
+    $proxyQueryStable = ConvertTo-StablePlainJson -Response $proxyQuery
+    $javaPathStable = ConvertTo-StablePlainJson -Response $javaPath
+    $pythonPathStable = ConvertTo-StablePlainJson -Response $pythonPath
+    $proxyPathStable = ConvertTo-StablePlainJson -Response $proxyPath
+
+    $downloadStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/download/$slug"
+    $skillDetail = Invoke-RestMethod "$WebUrl/api/v1/skills/$slug"
+    $skillDetailIsClawHub = [bool]($skillDetail.PSObject.Properties['skill'] -and $skillDetail.PSObject.Properties['latestVersion'] -and -not $skillDetail.PSObject.Properties['code'])
+
+    $result = [ordered]@{
+        slug = $slug
+        query = [ordered]@{
+            javaMatchesPython = ($javaQueryStable -eq $pythonQueryStable)
+            pythonMatchesProxy = ($pythonQueryStable -eq $proxyQueryStable)
+            matchVersion = if ($pythonQuery.match) { $pythonQuery.match.version } else { $null }
+            latestVersion = if ($pythonQuery.latestVersion) { $pythonQuery.latestVersion.version } else { $null }
+        }
+        path = [ordered]@{
+            javaMatchesPython = ($javaPathStable -eq $pythonPathStable)
+            pythonMatchesProxy = ($pythonPathStable -eq $proxyPathStable)
+            matchVersion = if ($pythonPath.match) { $pythonPath.match.version } else { $null }
+            latestVersion = if ($pythonPath.latestVersion) { $pythonPath.latestVersion.version } else { $null }
+        }
+        plainShape = [bool]($pythonQuery.PSObject.Properties['match'] -and $pythonQuery.PSObject.Properties['latestVersion'] -and -not $pythonQuery.PSObject.Properties['code'])
+        downloadRemainsJava = ($downloadStatus -eq 302)
+        v1SkillDetailRemainsJava = $skillDetailIsClawHub
+    }
+
+    $resultPath = Join-Path $DevDir 'clawhub-resolve-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.query.javaMatchesPython -or -not $result.path.javaMatchesPython) {
+        throw 'Java and Python ClawHub resolve contracts differ. See .dev/clawhub-resolve-contract-result.json.'
+    }
+    if (-not $result.query.pythonMatchesProxy -or -not $result.path.pythonMatchesProxy) {
+        throw 'Vite proxy /api/v1/resolve does not match Python. See .dev/clawhub-resolve-contract-result.json.'
+    }
+    if (-not $result.plainShape) {
+        throw 'Python /api/v1/resolve is not returning the plain ClawHub response shape.'
+    }
+    if (-not $result.downloadRemainsJava) {
+        throw 'Vite /api/v1/download no longer has Java redirect behavior. See .dev/clawhub-resolve-contract-result.json.'
+    }
+    if (-not $result.v1SkillDetailRemainsJava) {
+        throw 'Vite /api/v1/skills/{canonicalSlug} no longer has the Java ClawHub skill shape. See .dev/clawhub-resolve-contract-result.json.'
+    }
+}
+
 function Invoke-FilesContractComparison {
     Ensure-FilesContractFixture
 
@@ -1739,6 +1836,23 @@ function Invoke-HybridClawHubSearchSmokeVerification {
     }
 }
 
+function Invoke-HybridClawHubResolveSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-ClawHubResolveContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -1748,6 +1862,7 @@ switch ($Action) {
     'verify-detail-smoke' { Invoke-HybridDetailSmokeVerification }
     'verify-search-smoke' { Invoke-HybridSearchSmokeVerification }
     'verify-clawhub-search-smoke' { Invoke-HybridClawHubSearchSmokeVerification }
+    'verify-clawhub-resolve-smoke' { Invoke-HybridClawHubResolveSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

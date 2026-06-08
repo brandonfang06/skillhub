@@ -48,7 +48,7 @@ def test_makefile_defines_hybrid_e2e_targets() -> None:
 def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     script = (ROOT / "scripts" / "dev-hybrid.ps1").read_text(encoding="utf-8")
 
-    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'e2e-smoke', 'e2e')]" in script
+    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'e2e-smoke', 'e2e')]" in script
     assert "Start-ManagedProcess" in script
     assert "server-python" in script
     assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in script
@@ -75,16 +75,19 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-detail-smoke" in script
     assert "verify-search-smoke" in script
     assert "verify-clawhub-search-smoke" in script
+    assert "verify-clawhub-resolve-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
     assert "Invoke-SearchContractComparison" in script
     assert "Invoke-ClawHubSearchContractComparison" in script
+    assert "Invoke-ClawHubResolveContractComparison" in script
     assert "labels-contract-result.json" in script
     assert "files-contract-result.json" in script
     assert "detail-contract-result.json" in script
     assert "search-contract-result.json" in script
     assert "clawhub-search-contract-result.json" in script
+    assert "clawhub-resolve-contract-result.json" in script
     assert "javaMatchesPython" in script
     assert "java-storage" in script
     assert "PLAYWRIGHT_BROWSERS_PATH" in script
