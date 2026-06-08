@@ -125,6 +125,24 @@ def can_manage_lifecycle_for_row(row: dict[str, Any], current_user_id: str | Non
     )
 
 
+def can_access_skill_row(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> bool:
+    visibility = str(row["visibility"])
+    if row.get("latest_version_id") is None:
+        return current_user_id is not None and str(row["owner_id"]) == str(current_user_id)
+    if visibility == "PUBLIC":
+        return True
+    if visibility == "NAMESPACE_ONLY":
+        return current_user_id is not None and namespace_role is not None
+    if visibility == "PRIVATE":
+        return can_manage_lifecycle_for_row(row, current_user_id, namespace_role)
+    return False
+
+
+def assert_skill_row_access(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> None:
+    if not can_access_skill_row(row, current_user_id, namespace_role):
+        raise SkillResolveError("error.skill.access.denied", status_code=403)
+
+
 def to_java_instant(value: Any) -> str | None:
     if value is None:
         return None
@@ -1606,7 +1624,7 @@ async def read_skill_version_files(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1615,7 +1633,6 @@ async def read_skill_version_files(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1628,6 +1645,7 @@ async def read_skill_version_files(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(
@@ -1694,7 +1712,7 @@ async def read_skill_version_compare(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1703,7 +1721,6 @@ async def read_skill_version_compare(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1716,6 +1733,7 @@ async def read_skill_version_compare(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_rows = (
             await connection.execute(
@@ -1758,16 +1776,34 @@ async def read_skill_version_compare(
             )
         ).mappings().all()
 
-    files_by_version: dict[int, dict[str, dict[str, object]]] = {from_id: {}, to_id: {}}
+    rows_by_version: dict[int, dict[str, dict[str, object]]] = {from_id: {}, to_id: {}}
     for row in file_rows:
-        content = read_local_storage_text(storage_base_path, str(row["storage_key"]))
-        files_by_version[int(row["version_id"])][str(row["file_path"])] = {
+        rows_by_version[int(row["version_id"])][str(row["file_path"])] = {
             "file_path": str(row["file_path"]),
             "file_size": int(row["file_size"]),
             "content_type": row["content_type"],
             "sha256": str(row["sha256"]),
-            "content": content,
+            "storage_key": str(row["storage_key"]),
         }
+
+    changed_paths = {
+        path
+        for path in set(rows_by_version[from_id]) | set(rows_by_version[to_id])
+        if rows_by_version[from_id].get(path, {}).get("sha256") != rows_by_version[to_id].get(path, {}).get("sha256")
+    }
+    files_by_version: dict[int, dict[str, dict[str, object]]] = {from_id: {}, to_id: {}}
+    for version_id in (from_id, to_id):
+        for path in changed_paths:
+            row = rows_by_version[version_id].get(path)
+            if row is None:
+                continue
+            files_by_version[version_id][path] = {
+                "file_path": row["file_path"],
+                "file_size": row["file_size"],
+                "content_type": row["content_type"],
+                "sha256": row["sha256"],
+                "content": read_local_storage_text(storage_base_path, str(row["storage_key"])),
+            }
 
     return build_compare_response(
         from_version,
@@ -1789,7 +1825,7 @@ async def read_skill_tag_files(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.latest_version_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1798,7 +1834,6 @@ async def read_skill_tag_files(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1810,6 +1845,8 @@ async def read_skill_tag_files(
         if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
 
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         skill_id = skill_row["id"]
 
         if tag_name.lower() == "latest":
@@ -1891,7 +1928,7 @@ async def read_skill_version_file_content(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1900,7 +1937,6 @@ async def read_skill_version_file_content(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1913,6 +1949,7 @@ async def read_skill_version_file_content(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(
@@ -1967,7 +2004,7 @@ async def read_skill_tag_file_content(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.latest_version_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1976,7 +2013,6 @@ async def read_skill_tag_file_content(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1988,6 +2024,8 @@ async def read_skill_tag_file_content(
         if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
 
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         skill_id = skill_row["id"]
         if tag_name.lower() == "latest":
             version_id = skill_row["latest_version_id"]

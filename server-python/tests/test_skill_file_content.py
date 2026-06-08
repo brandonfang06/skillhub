@@ -1,9 +1,96 @@
+import asyncio
+
 from fastapi.testclient import TestClient
 
 import pytest
 
+from app.api import skills
 from app.api.skills import SkillResolveError, read_local_storage_bytes
 from app.main import create_app
+
+
+class _FakeMappings:
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+    def one_or_none(self) -> object:
+        return self.value
+
+
+class _FakeResult:
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+    def mappings(self) -> _FakeMappings:
+        return _FakeMappings(self.value)
+
+    def scalar_one_or_none(self) -> object:
+        return self.value
+
+
+class _VersionFileContentConnection:
+    async def execute(self, statement: object, params: dict[str, object] | None = None) -> _FakeResult:
+        sql = str(statement)
+        if "FROM skill s" in sql:
+            assert "s.visibility = 'PUBLIC'" not in sql
+            return _FakeResult(
+                {
+                    "id": 11,
+                    "owner_id": "owner-1",
+                    "namespace_id": 7,
+                    "visibility": "PRIVATE",
+                    "latest_version_id": 101,
+                }
+            )
+        if "FROM namespace_member" in sql:
+            return _FakeResult(None)
+        if "FROM skill_version" in sql:
+            return _FakeResult({"id": 101, "status": "PENDING_REVIEW"})
+        if "FROM skill_file" in sql:
+            return _FakeResult({"file_path": "SKILL.md", "storage_key": "objects/skill"})
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+
+class _TagFileContentConnection:
+    async def execute(self, statement: object, params: dict[str, object] | None = None) -> _FakeResult:
+        sql = str(statement)
+        if "FROM skill s" in sql:
+            assert "s.visibility = 'PUBLIC'" not in sql
+            return _FakeResult(
+                {
+                    "id": 11,
+                    "owner_id": "owner-1",
+                    "namespace_id": 7,
+                    "visibility": "PRIVATE",
+                    "latest_version_id": 101,
+                }
+            )
+        if "FROM namespace_member" in sql:
+            return _FakeResult(None)
+        if "FROM skill_version" in sql:
+            return _FakeResult({"id": 101})
+        if "FROM skill_file" in sql:
+            return _FakeResult({"file_path": "SKILL.md", "storage_key": "objects/skill"})
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+
+class _FakeConnectionContext:
+    def __init__(self, connection: object) -> None:
+        self.connection = connection
+
+    async def __aenter__(self) -> object:
+        return self.connection
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        return None
+
+
+class _FakeEngine:
+    def __init__(self, connection: object) -> None:
+        self.connection = connection
+
+    def connect(self) -> _FakeConnectionContext:
+        return _FakeConnectionContext(self.connection)
 
 
 def test_skill_version_file_content_route_returns_raw_bytes() -> None:
@@ -194,3 +281,39 @@ def test_read_file_content_from_row_maps_missing_storage_to_file_not_found(tmp_p
 
     with pytest.raises(SkillResolveError, match="error.skill.file.notFound"):
         read_file_content_from_row(str(tmp_path), {"file_path": "missing.md", "storage_key": "objects/missing.md"})
+
+
+def test_read_skill_version_file_content_does_not_hardcode_public_skill_visibility(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(skills, "read_file_content_from_row", lambda storage_base_path, file_row: b"preview")
+
+    result = asyncio.run(
+        skills.read_skill_version_file_content(
+            _FakeEngine(_VersionFileContentConnection()),
+            "unused",
+            "global",
+            "demo",
+            "1.1.0",
+            "SKILL.md",
+            "owner-1",
+        )
+    )
+
+    assert result == b"preview"
+
+
+def test_read_skill_tag_file_content_does_not_hardcode_public_skill_visibility(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(skills, "read_file_content_from_row", lambda storage_base_path, file_row: b"tag")
+
+    result = asyncio.run(
+        skills.read_skill_tag_file_content(
+            _FakeEngine(_TagFileContentConnection()),
+            "unused",
+            "global",
+            "demo",
+            "latest",
+            "SKILL.md",
+            "owner-1",
+        )
+    )
+
+    assert result == b"tag"
