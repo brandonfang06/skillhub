@@ -342,6 +342,22 @@ Goal:
 - Move package upload, validation, scanner handoff, storage write, and initial version creation to
   Python as one coherent workflow.
 
+First foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-upload-foundation.md`
+- Scope:
+  Python package extraction and validation helpers only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Explicitly Java-owned during this foundation:
+  - `POST /api/v1/skills`
+  - `POST /api/v1/publish`
+  - `POST /api/v1/skills/{namespace}/publish`
+  - `POST /api/web/skills/{namespace}/publish`
+  - `POST /api/cli/v1/skills/{namespace}/publish/validate`
+  - `POST /api/cli/v1/skills/{namespace}/publish`
+
 Candidate routes:
 
 - ClawHub `POST /api/v1/skills`
