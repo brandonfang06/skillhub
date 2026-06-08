@@ -260,6 +260,23 @@ Prefer small modules with clear boundaries:
 Route handlers should stay thin: bind request data, call services, return
 envelope responses.
 
+### Data Access During Migration
+
+The Java backend uses JPA/domain services/repositories. Python currently uses
+SQLAlchemy async engine with explicit SQL (`sqlalchemy.text`) for migrated
+catalog, file metadata, file content, and download read paths.
+
+This is intentional migration bridge code:
+
+- Preserve Java contract parity before redesigning internals.
+- Keep query behavior narrow and easy to compare in live gates.
+- Do not introduce SQLAlchemy ORM models for read/download migrations unless a
+  milestone plan explicitly says to do so.
+- Keep SQL in repository/helper functions, not route handlers.
+- Revisit ORM/domain modeling before publish/upload/lifecycle mutations, where
+  transaction boundaries, authorization, idempotency, and rollback behavior are
+  higher risk.
+
 ## Testing Requirements
 
 Every change needs tests before or alongside implementation.

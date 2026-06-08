@@ -13,8 +13,8 @@ dev proxy during migration. Because this is pre-launch, future milestones should
 API areas or complete workflows over long-term fine-grained Java/Python coexistence.
 
 **Tech Stack:** Spring Boot Java backend as read-only reference, FastAPI Python backend on port
-`8081`, Vite dev proxy on port `3000`, Java backend on port `8080`, PostgreSQL introduced only
-after no-DB routes are stable.
+`8081`, Vite dev proxy on port `3000`, Java backend on port `8080`, PostgreSQL through
+SQLAlchemy async engine after no-DB routes are stable.
 
 ---
 
@@ -65,6 +65,24 @@ Minimum gate for routes migrated from Java:
   storage download, or admin mutation APIs until their bridge designs are explicitly planned.
 - Pre-launch milestones may own a larger API group when the group has a written route matrix,
   tests, and live verification. Avoid unnecessary proxy fragmentation.
+
+## Python Data Access Strategy
+
+The Java backend uses JPA/domain services/repositories. During migration, the Python backend uses
+SQLAlchemy async engine with explicit SQL (`sqlalchemy.text`) for migrated catalog, file metadata,
+file content, and download read paths. This is intentional bridge code for Java contract parity and
+low blast radius; it is not an accidental rejection of ORM.
+
+Current rules:
+
+- Keep SQL inside narrow repository/helper functions instead of route handlers.
+- Do not introduce SQLAlchemy ORM models for catalog/read/download migrations unless a milestone
+  explicitly plans that refactor.
+- Prefer explicit SQL while route behavior is still being compared against Java field-by-field.
+- Cover every query behavior with Python tests and live Java/Python/Vite verification before
+  moving to the next group.
+- Revisit repository and ORM boundaries before publish/upload/lifecycle mutations, because those
+  require stronger transaction, authorization, idempotency, and domain modeling.
 
 ## Selection Criteria
 

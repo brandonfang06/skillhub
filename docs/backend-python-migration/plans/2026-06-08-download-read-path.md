@@ -13,9 +13,10 @@ while portal download routes stream zip bytes from local object storage or build
 stored file objects. Python updates the same download counters Java updates for published versions.
 Java remains the read-only live contract reference.
 
-**Tech Stack:** FastAPI on port `8081`, SQLAlchemy async PostgreSQL reads/writes, local filesystem
-object storage under `.dev/java-storage`, Python `zipfile` fallback bundle creation, Vite proxy on
-port `3000`, Java Spring Boot on port `8080`, PowerShell live contract gate, Playwright smoke.
+**Tech Stack:** FastAPI on port `8081`, SQLAlchemy async PostgreSQL reads/writes with explicit SQL
+as migration bridge code, local filesystem object storage under `.dev/java-storage`, Python
+`zipfile` fallback bundle creation, Vite proxy on port `3000`, Java Spring Boot on port `8080`,
+PowerShell live contract gate, Playwright smoke.
 
 ---
 
@@ -61,6 +62,27 @@ Behavior intentionally out of scope:
 - Do not migrate publish/upload, object storage writes, review, OAuth, token, session, or lifecycle
   mutations.
 - Do not modify `server/`.
+
+## Data Access Strategy
+
+This milestone continues the current Python migration bridge: use SQLAlchemy async engine plus
+explicit SQL (`sqlalchemy.text`) for database reads and counter updates. Do not introduce SQLAlchemy
+ORM models in this milestone.
+
+Rationale:
+
+- Java remains the live contract reference and uses JPA/domain services internally, but Python needs
+  exact response/counter parity first.
+- Download behavior is read-path ownership with limited counter updates, so explicit SQL keeps the
+  implementation narrow and easy to compare.
+- ORM/domain modeling should be revisited before publish/upload/lifecycle mutations, where
+  transaction boundaries, authorization, idempotency, and rollback behavior become central.
+
+Implementation constraints:
+
+- Keep SQL in repository/helper functions, not directly inside route handlers.
+- Keep route handlers focused on request binding and response/stream construction.
+- Cover SQL-dependent behavior with Python tests and the live Java/Python/Vite comparison gate.
 
 ## Java Reference Findings
 
