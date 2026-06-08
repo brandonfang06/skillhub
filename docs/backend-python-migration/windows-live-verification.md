@@ -924,6 +924,46 @@ This gate verifies the publish side-effect foundation boundary:
 - Replacement cleanup, storage compensation, CSRF/session behavior, and route ownership remain
   future milestone work.
 
+## One-Command Publish Replacement Cleanup Foundation Verification Gate
+
+For the publish replacement cleanup foundation milestone, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-replacement-foundation-smoke
+```
+
+Expected result:
+
+```text
+7 passed
+allProxyMatchesJava: true
+6 passed
+```
+
+The command writes the latest replacement foundation ownership summary to:
+
+```text
+.dev/publish-replacement-foundation-contract-result.json
+```
+
+This gate verifies the publish replacement cleanup foundation boundary:
+
+- Python replacement helper tests pass for published-version rejection, latest-version FK clearing,
+  pending review cleanup, file row cleanup, security audit soft delete, storage-key collection,
+  local object deletion, path escape rejection, and compensation record creation.
+- `POST /api/v1/skills` remains Java-owned through Vite.
+- `POST /api/v1/publish` remains Java-owned through Vite.
+- `POST /api/v1/skills/{namespace}/publish` remains Java-owned through Vite.
+- `POST /api/web/skills/{namespace}/publish` remains Java-owned through Vite.
+- No Python publish HTTP route is called by this gate.
+- The live gate does not mutate the database through a Python route and does not delete live
+  MinIO/S3 objects.
+- After-commit orchestration, route integration, and real DB publish replacement workflow remain
+  future milestone work.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

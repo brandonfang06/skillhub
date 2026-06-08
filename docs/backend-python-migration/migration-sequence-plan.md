@@ -138,6 +138,7 @@ Still plan carefully when a group requires:
 | 25 | Publish local storage write foundation | n/a | Python writes Java-compatible local object keys, bundle zip, and future `skill_file` metadata records. No DB writes or publish POST route ownership moved. |
 | 26 | Publish DB transaction foundation | n/a | Python transaction helper creates/reuses `skill`, inserts `skill_version` and `skill_file` rows, and updates version stats. No publish POST route ownership moved. |
 | 27 | Publish side-effect foundation | n/a | Python helper plans/writes review task, security audit, scan task payload, publish/review event intents, and compat audit log data. No publish POST route ownership moved. |
+| 28 | Publish replacement cleanup foundation | n/a | Python helper cleans replaceable non-published versions and records local storage delete compensation. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -443,6 +444,25 @@ Completed side-effect foundation milestone:
   publish HTTP route ownership, actual scanner HTTP calls, Redis stream publishing, notification
   delivery, replacement cleanup, storage compensation, CSRF/session behavior, and live Python DB
   mutation through an HTTP route.
+
+Completed replacement cleanup foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-replacement-cleanup-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-replacement-cleanup-foundation.md`
+- Scope:
+  Python replacement cleanup and local storage delete compensation helpers only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  Java-compatible rejection for replacing `PUBLISHED` versions, latest-version FK clearing,
+  pending review task deletion, file storage-key collection plus bundle key, `skill_file` deletion,
+  security audit soft delete, `skill_version` deletion, local object deletion, and
+  `skill_storage_delete_compensation` pending record creation when local deletion fails.
+- Explicitly not implemented:
+  publish HTTP route ownership, live DB mutation through a Python route, MinIO/S3 delete,
+  after-commit hook orchestration, and integration into the publish transaction helper.
 
 Candidate routes:
 
