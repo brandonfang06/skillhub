@@ -137,6 +137,7 @@ Still plan carefully when a group requires:
 | 24 | Publish transaction dry-run model | n/a | Python mirrors Java `validateOnly(...)` preflight decisions for namespace, membership, package, metadata, pre-publish warnings, slug, and version conflicts. No publish POST route ownership moved. |
 | 25 | Publish local storage write foundation | n/a | Python writes Java-compatible local object keys, bundle zip, and future `skill_file` metadata records. No DB writes or publish POST route ownership moved. |
 | 26 | Publish DB transaction foundation | n/a | Python transaction helper creates/reuses `skill`, inserts `skill_version` and `skill_file` rows, and updates version stats. No publish POST route ownership moved. |
+| 27 | Publish side-effect foundation | n/a | Python helper plans/writes review task, security audit, scan task payload, publish/review event intents, and compat audit log data. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -422,6 +423,26 @@ Completed DB transaction foundation milestone:
   publish HTTP route ownership, scanner trigger, review task creation, audit/event behavior,
   replacement cleanup, storage compensation, CSRF/session behavior, and live DB mutation through
   an HTTP route.
+
+Completed side-effect foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-side-effect-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-side-effect-foundation.md`
+- Scope:
+  Python publish side-effect helpers only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  Java-compatible review task decision for `PENDING_REVIEW`, `ReviewSubmittedEvent` intent,
+  `SkillPublishedEvent` intent for `PUBLISHED`, scanner audit row seed values, scan task payload
+  shape for upload/local modes, non-published `SCANNING` transition when scanner is enabled, and
+  ClawHub `COMPAT_PUBLISH` audit log payload.
+- Explicitly not implemented:
+  publish HTTP route ownership, actual scanner HTTP calls, Redis stream publishing, notification
+  delivery, replacement cleanup, storage compensation, CSRF/session behavior, and live Python DB
+  mutation through an HTTP route.
 
 Candidate routes:
 
