@@ -196,7 +196,10 @@ parity, owner-preview version file access, and Java-compatible published-only ta
 
 Second milestone: Download Read Path
 
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-download-read-path.md`
 - `GET /api/v1/download/{canonicalSlug}`
+- `GET /api/v1/download?slug={slug}&version={version}`
 - `GET /api/v1/skills/{namespace}/{slug}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
@@ -206,6 +209,7 @@ Do not start the download milestone until file content reads have a passing live
 Routes intentionally not grouped with file content:
 
 - `GET /api/v1/download/{canonicalSlug}`
+- `GET /api/v1/download?slug={slug}&version={version}`
 - `GET /api/v1/skills/{namespace}/{slug}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
