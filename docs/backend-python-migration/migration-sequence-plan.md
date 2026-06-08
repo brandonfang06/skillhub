@@ -111,6 +111,7 @@ Still plan carefully when a group requires:
 | 16 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Manager-only owner preview access migrated for version list and version detail. File metadata/download preview access remains deferred. |
 | 17 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Manager-only owner preview access migrated for version file metadata. Tag preview, file bytes, and downloads remain deferred. |
 | 18 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Authenticated context forwarding and Java-compatible negative owner-preview resolve coverage completed. Non-published resolve remains rejected. |
+| 19 | `GET /api/v1/skills/{namespace}/{slug}/versions/compare`, `GET /api/web/skills/{namespace}/{slug}/versions/compare` | python | Manager-only owner preview version compare migrated with Java-compatible text diff behavior. File bytes/download endpoints remain deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -229,6 +230,10 @@ Python-owned in this group:
   `GET /api/v1/skills/{namespace}/{slug}/resolve`
 - authenticated context forwarding and published-only resolve parity for
   `GET /api/web/skills/{namespace}/{slug}/resolve`
+- manager-only owner preview version compare for
+  `GET /api/v1/skills/{namespace}/{slug}/versions/compare`
+- manager-only owner preview version compare for
+  `GET /api/web/skills/{namespace}/{slug}/versions/compare`
 
 Still Java-owned in this group:
 
@@ -891,3 +896,13 @@ The owner preview resolve parity milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-owner-preview-resolve.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-owner-preview-resolve.md`
+
+The owner preview version compare milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}/versions/compare`,
+  `GET /api/web/skills/{namespace}/{slug}/versions/compare`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-owner-preview-version-compare.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-owner-preview-version-compare.md`

@@ -1,7 +1,9 @@
 from collections.abc import Awaitable
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
 from hashlib import sha256
 from inspect import isawaitable
+from pathlib import Path
 import re
 from typing import Any
 from urllib.parse import quote
@@ -28,6 +30,29 @@ LIFECYCLE_MANAGER_STATUSES = (
     "YANKED",
 )
 LIFECYCLE_LIST_PRIORITY = {status: index for index, status in enumerate(LIFECYCLE_MANAGER_STATUSES)}
+COMPARE_MAX_FILE_BYTES = 1024 * 1024
+COMPARE_MAX_LINES = 5000
+BINARY_FILE_EXTENSIONS = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".jar",
+    ".war",
+    ".class",
+    ".so",
+    ".dll",
+    ".exe",
+    ".pdf",
+)
 
 
 class SkillResolveError(ValueError):
@@ -548,6 +573,160 @@ def build_resolve_response(
             f"/versions/{quote(version, safe='')}/download"
         ),
     }
+
+
+def is_binary_compare_path(path: str) -> bool:
+    lower_path = path.lower()
+    return any(lower_path.endswith(extension) for extension in BINARY_FILE_EXTENSIONS)
+
+
+def split_compare_lines(content: str | None) -> list[str]:
+    if not content:
+        return []
+    lines = content.splitlines()
+    if content.endswith(("\n", "\r")):
+        lines.append("")
+    return lines
+
+
+def build_compare_hunks(old_content: str, new_content: str) -> list[dict[str, object]]:
+    old_lines = split_compare_lines(old_content)
+    new_lines = split_compare_lines(new_content)
+    hunks: list[dict[str, object]] = []
+    matcher = SequenceMatcher(a=old_lines, b=new_lines, autojunk=False)
+    for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+
+        lines: list[dict[str, object]] = []
+        for offset, line in enumerate(old_lines[old_start:old_end], start=old_start + 1):
+            lines.append(
+                {
+                    "type": "DELETE",
+                    "content": line,
+                    "oldLineNumber": offset,
+                    "newLineNumber": None,
+                }
+            )
+        for offset, line in enumerate(new_lines[new_start:new_end], start=new_start + 1):
+            lines.append(
+                {
+                    "type": "ADD",
+                    "content": line,
+                    "oldLineNumber": None,
+                    "newLineNumber": offset,
+                }
+            )
+
+        hunks.append(
+            {
+                "oldStart": old_start + 1,
+                "oldLines": old_end - old_start,
+                "newStart": new_start + 1,
+                "newLines": new_end - new_start,
+                "lines": lines,
+            }
+        )
+    return hunks
+
+
+def build_compare_file(
+    path: str,
+    from_file: dict[str, object] | None,
+    to_file: dict[str, object] | None,
+) -> dict[str, object] | None:
+    if from_file is not None and to_file is not None and from_file.get("sha256") == to_file.get("sha256"):
+        return None
+
+    if from_file is None:
+        change_type = "ADDED"
+        old_size = None
+        new_size = int(to_file["file_size"]) if to_file is not None else None
+        old_content = ""
+        new_content = str(to_file.get("content") or "") if to_file is not None else ""
+    elif to_file is None:
+        change_type = "REMOVED"
+        old_size = int(from_file["file_size"])
+        new_size = None
+        old_content = str(from_file.get("content") or "")
+        new_content = ""
+    else:
+        change_type = "MODIFIED"
+        old_size = int(from_file["file_size"])
+        new_size = int(to_file["file_size"])
+        old_content = str(from_file.get("content") or "")
+        new_content = str(to_file.get("content") or "")
+
+    binary = is_binary_compare_path(path)
+    old_lines = split_compare_lines(old_content)
+    new_lines = split_compare_lines(new_content)
+    truncated = (
+        (old_size is not None and old_size > COMPARE_MAX_FILE_BYTES)
+        or (new_size is not None and new_size > COMPARE_MAX_FILE_BYTES)
+        or len(old_lines) > COMPARE_MAX_LINES
+        or len(new_lines) > COMPARE_MAX_LINES
+    )
+    hunks = [] if binary or truncated else build_compare_hunks(old_content, new_content)
+    return {
+        "path": path,
+        "changeType": change_type,
+        "oldSize": old_size,
+        "newSize": new_size,
+        "binary": binary,
+        "truncated": truncated,
+        "hunks": hunks,
+    }
+
+
+def build_compare_response(
+    from_version: str,
+    to_version: str,
+    from_files: dict[str, dict[str, object]],
+    to_files: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    files = [
+        file
+        for path in sorted(set(from_files) | set(to_files))
+        if (file := build_compare_file(path, from_files.get(path), to_files.get(path))) is not None
+    ]
+    added_files = sum(1 for file in files if file["changeType"] == "ADDED")
+    removed_files = sum(1 for file in files if file["changeType"] == "REMOVED")
+    modified_files = sum(1 for file in files if file["changeType"] == "MODIFIED")
+    added_lines = sum(
+        1
+        for file in files
+        for hunk in file["hunks"]
+        for line in hunk["lines"]
+        if line["type"] == "ADD"
+    )
+    removed_lines = sum(
+        1
+        for file in files
+        for hunk in file["hunks"]
+        for line in hunk["lines"]
+        if line["type"] == "DELETE"
+    )
+    return {
+        "from": from_version,
+        "to": to_version,
+        "summary": {
+            "totalFiles": len(files),
+            "addedFiles": added_files,
+            "modifiedFiles": modified_files,
+            "removedFiles": removed_files,
+            "addedLines": added_lines,
+            "removedLines": removed_lines,
+        },
+        "files": files,
+    }
+
+
+def read_local_storage_text(storage_base_path: str, storage_key: str) -> str:
+    target = Path(storage_base_path) / storage_key
+    try:
+        return target.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise SkillResolveError("error.skill.file.notFound") from exc
 
 
 async def read_skill_resolve(
@@ -1354,6 +1533,106 @@ async def read_skill_version_files(
     ]
 
 
+async def read_skill_version_compare(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    from_version: str,
+    to_version: str,
+    current_user_id: str | None = None,
+) -> dict[str, object]:
+    if from_version == to_version:
+        raise SkillResolveError("error.skill.version.compare.same")
+
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
+        version_rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, version, status
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND version = ANY(CAST(:versions AS varchar[]))
+                    ORDER BY version ASC
+                    """
+                ),
+                {"skill_id": skill_row["id"], "versions": [from_version, to_version]},
+            )
+        ).mappings().all()
+
+        versions_by_name = {str(row["version"]): row for row in version_rows}
+        missing_version = from_version if from_version not in versions_by_name else to_version
+        if missing_version not in versions_by_name:
+            raise SkillResolveError("error.skill.version.notFound")
+
+        for selected_version in (from_version, to_version):
+            version_row = versions_by_name[selected_version]
+            if str(version_row["status"]) != "PUBLISHED" and not can_manage:
+                raise SkillResolveError("error.skill.version.notPublished")
+
+        from_id = int(versions_by_name[from_version]["id"])
+        to_id = int(versions_by_name[to_version]["id"])
+        file_rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT version_id, file_path, file_size, content_type, sha256, storage_key
+                    FROM skill_file
+                    WHERE version_id = ANY(CAST(:version_ids AS bigint[]))
+                    ORDER BY version_id ASC, file_path ASC
+                    """
+                ),
+                {"version_ids": [from_id, to_id]},
+            )
+        ).mappings().all()
+
+    files_by_version: dict[int, dict[str, dict[str, object]]] = {from_id: {}, to_id: {}}
+    for row in file_rows:
+        content = read_local_storage_text(storage_base_path, str(row["storage_key"]))
+        files_by_version[int(row["version_id"])][str(row["file_path"])] = {
+            "file_path": str(row["file_path"]),
+            "file_size": int(row["file_size"]),
+            "content_type": row["content_type"],
+            "sha256": str(row["sha256"]),
+            "content": content,
+        }
+
+    return build_compare_response(
+        from_version,
+        to_version,
+        files_by_version[from_id],
+        files_by_version[to_id],
+    )
+
+
 async def read_skill_tag_files(
     engine: AsyncEngine,
     namespace: str,
@@ -1708,6 +1987,36 @@ async def resolve_skill_version(
                 version,
                 tag,
                 hash_value,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions/compare")
+@router.get("/api/web/skills/{namespace}/{slug}/versions/compare")
+async def compare_skill_versions(
+    namespace: str,
+    slug: str,
+    request: Request,
+    from_version: str = Query(alias="from"),
+    to_version: str = Query(alias="to"),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_version_compare_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, from_version, to_version, current_user_id))
+        else:
+            data = await read_skill_version_compare(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                from_version,
+                to_version,
                 current_user_id,
             )
     except SkillResolveError as exc:

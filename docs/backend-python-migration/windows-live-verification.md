@@ -575,6 +575,46 @@ This gate verifies the portal resolve boundary:
 - ClawHub `/api/v1/resolve` routes, file bytes, downloads, non-public visibility, and lifecycle
   mutations remain outside this gate.
 
+## One-Command Owner Preview Version Compare Verification Gate
+
+For the migrated manager-only owner preview version compare route, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-compare-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+previewSummaryMatchesFixture: true
+previewFilesSorted: true
+anonymousPreviewStatusesMatch: true
+sameVersionStatusesMatch: true
+6 passed
+```
+
+The command writes the latest owner preview compare summary to:
+
+```text
+.dev/owner-preview-compare-contract-result.json
+```
+
+This gate verifies the version compare boundary:
+
+- owner and namespace `ADMIN` callers can compare published-to-`PENDING_REVIEW` versions.
+- anonymous published-to-`PENDING_REVIEW` compare is rejected with matching Java/Python/Vite status.
+- same-version compare is rejected with matching Java/Python/Vite status.
+- Python compare preserves Java text-diff behavior, including the trailing empty line produced by
+  Java `split("\\R", -1)` when local storage files end with a newline.
+- file bytes/download endpoints, ClawHub routes, non-public visibility, and lifecycle mutations
+  remain outside this gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

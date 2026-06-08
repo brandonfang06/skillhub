@@ -173,6 +173,14 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/skills/[^/]+/[^/]+/versions/compare$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/web/skills/[^/]+/[^/]+/versions/compare$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$': {
         target: 'http://localhost:8081',
         changeOrigin: true,

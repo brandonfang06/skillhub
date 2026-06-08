@@ -242,21 +242,27 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillVersions)).toBeLessThan(keys.indexOf('/api'))
   })
 
-  it('routes skill version detail aliases to Python without taking over file or compare routes', () => {
+  it('routes skill version detail and compare aliases to Python without taking over file routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionDetail = '^/api/v1/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
     const webSkillVersionDetail = '^/api/web/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
+    const v1SkillVersionCompare = '^/api/v1/skills/[^/]+/[^/]+/versions/compare$'
+    const webSkillVersionCompare = '^/api/web/skills/[^/]+/[^/]+/versions/compare$'
 
     expect(proxy[v1SkillVersionDetail]?.target).toBe('http://localhost:8081')
     expect(proxy[webSkillVersionDetail]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1SkillVersionCompare]?.target).toBe('http://localhost:8081')
+    expect(proxy[webSkillVersionCompare]?.target).toBe('http://localhost:8081')
+    expect(keys.indexOf(v1SkillVersionCompare)).toBeLessThan(keys.indexOf(v1SkillVersionDetail))
+    expect(keys.indexOf(webSkillVersionCompare)).toBeLessThan(keys.indexOf(webSkillVersionDetail))
     expect(keys.indexOf(v1SkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillVersionDetail)).toBeLessThan(keys.indexOf('/api'))
 
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/compare')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/compare')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/compare')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/compare')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
