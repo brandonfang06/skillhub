@@ -25,15 +25,36 @@ This file is the source of truth for migration order. For every milestone:
 1. Announce the selected API, API group, or workflow before changing files.
 2. Create or update a milestone-specific plan under
    `docs/backend-python-migration/plans/YYYY-MM-DD-<topic>.md`.
-3. Implement with TDD.
-4. Update `docs/backend-python-migration/route-registry.md` when ownership changes.
-5. Write a result document under `docs/backend-python-migration/results/YYYY-MM-DD-<topic>.md`.
-6. Run unit/proxy verification.
-7. Run the live verification gate before starting the next migration group.
-8. Confirm `git diff --name-only -- server` returns no paths.
-9. Commit and push to `dev`.
+3. Complete the Java parity checklist gate before code changes.
+4. Implement with TDD.
+5. Update `docs/backend-python-migration/route-registry.md` when ownership changes.
+6. Write a result document under `docs/backend-python-migration/results/YYYY-MM-DD-<topic>.md`.
+7. Run unit/proxy verification.
+8. Run the live verification gate before starting the next migration group.
+9. Confirm `git diff --name-only -- server` returns no paths.
+10. Commit and push to `dev`.
 
 If priorities change, update this file first, then continue from the revised order.
+
+## Java Parity Checklist Gate
+
+Every milestone plan must include a Java parity checklist section based on:
+
+- `docs/backend-python-migration/java-parity-checklist.md`
+
+The plan section must identify the Java controller/service/repository/domain reference files or
+state why the milestone has no Java behavioral owner. It must classify API contract,
+authorization/session behavior, database transaction atomicity, audit actor/timestamp fields,
+storage and side effects, and live verification evidence as `covered`, `not applicable`, or
+`deferred`.
+
+Every result document must record the checklist outcome, including accepted reviewer feedback,
+deferred parity gaps, tests added for accepted fixes, and whether any unresolved gap blocks route
+ownership.
+
+Do not move route ownership when parity gaps are unresolved for the route being moved. Foundation
+helper milestones may defer route-level parity only when the affected route remains Java-owned and
+the Windows live gate proves the route still reaches Java through Vite.
 
 ## Live Verification Gate
 

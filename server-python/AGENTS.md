@@ -69,6 +69,7 @@ session can find the rest of the repo documentation without searching.
 | --- | --- |
 | `docs/backend-python-migration/00-governance.md` | Migration governance, non-negotiable boundaries, and session rules. |
 | `docs/backend-python-migration/migration-sequence-plan.md` | Living migration order. Update this before changing API priorities. |
+| `docs/backend-python-migration/java-parity-checklist.md` | Required Java parity checklist for every migration milestone plan/result. |
 | `docs/backend-python-migration/route-registry.md` | Human-readable Java/Python route ownership registry. Keep in sync with Vite proxy. |
 | `docs/backend-python-migration/hybrid-local-e2e.md` | Cross-platform Java/Python/Vite local E2E workflow. |
 | `docs/backend-python-migration/windows-live-verification.md` | Windows-specific Docker Desktop, Codex sandbox, and live verification notes. |
@@ -277,6 +278,28 @@ This is intentional migration bridge code:
   transaction boundaries, authorization, idempotency, and rollback behavior are
   higher risk.
 
+### Java Parity Checklist
+
+Every migration milestone must use
+`docs/backend-python-migration/java-parity-checklist.md` before implementation
+and again in the result document.
+
+Minimum parity evidence:
+
+- Java controller/service/repository/domain reference files inspected.
+- API contract and error shape compared.
+- authorization/session behavior classified as covered, not applicable, or
+  deferred.
+- transaction boundary and rollback/compensation behavior documented.
+- audit actor fields such as `created_by`, `updated_by`, `submitted_by`, and
+  `actor_user_id` verified when the milestone writes data.
+- storage, scanner, event, and audit side effects verified or explicitly
+  deferred.
+
+Route ownership must not move while Java parity checklist items are unresolved
+for that route. If a reviewer raises parity feedback, triage it as must-fix,
+defer, or needs-evidence, then add tests for accepted fixes.
+
 ## Testing Requirements
 
 Every change needs tests before or alongside implementation.
@@ -289,6 +312,8 @@ Minimum checks per migrated endpoint or route group:
 - contract comparison against Java behavior while Java remains a useful
   reference
 - Vite proxy ownership test or config assertion when route ownership changes
+- Java parity checklist guard for behavior touched by the milestone, including
+  transaction boundary and audit actor coverage for mutations
 
 Before marking a session complete, run:
 
@@ -318,6 +343,7 @@ Each result must include:
 
 - routes changed
 - owner before/after
+- Java parity checklist outcome
 - files changed
 - tests run and exact outcome
 - known risks
