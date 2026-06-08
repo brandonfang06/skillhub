@@ -121,3 +121,91 @@ def test_build_skill_detail_response_preserves_label_order() -> None:
     ]
 
     assert build_skill_detail_response(row, labels)["labels"] == labels
+
+
+def detail_row(**overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "id": 40,
+        "slug": "viewer-skill",
+        "display_name": "Viewer Skill",
+        "owner_id": "owner-1",
+        "owner_display_name": "Owner One",
+        "summary": "Viewer summary",
+        "visibility": "PUBLIC",
+        "status": "ACTIVE",
+        "download_count": 1,
+        "star_count": 0,
+        "subscription_count": 0,
+        "rating_avg": Decimal("0.00"),
+        "rating_count": 0,
+        "hidden": False,
+        "namespace": "team-alpha",
+        "namespace_type": "TEAM",
+        "namespace_status": "ACTIVE",
+        "published_version_id": 70,
+        "published_version": "1.0.0",
+        "published_version_status": "PUBLISHED",
+        "resolution_mode": "PUBLISHED",
+        "current_user_id": None,
+        "namespace_role": None,
+        "promotion_blocked": False,
+    }
+    row.update(overrides)
+    return row
+
+
+def test_build_skill_detail_response_grants_owner_lifecycle_and_disables_report() -> None:
+    response = build_skill_detail_response(
+        detail_row(current_user_id="owner-1"),
+        [],
+    )
+
+    assert response["canManageLifecycle"] is True
+    assert response["canReport"] is False
+
+
+def test_build_skill_detail_response_grants_namespace_admin_lifecycle() -> None:
+    response = build_skill_detail_response(
+        detail_row(current_user_id="manager-1", namespace_role="ADMIN"),
+        [],
+    )
+
+    assert response["canManageLifecycle"] is True
+    assert response["canReport"] is True
+
+
+def test_build_skill_detail_response_allows_team_promotion_for_manager_when_not_blocked() -> None:
+    response = build_skill_detail_response(
+        detail_row(current_user_id="manager-1", namespace_role="OWNER"),
+        [],
+    )
+
+    assert response["canSubmitPromotion"] is True
+
+
+def test_build_skill_detail_response_disables_promotion_for_global_namespace() -> None:
+    response = build_skill_detail_response(
+        detail_row(
+            namespace="global",
+            namespace_type="GLOBAL",
+            current_user_id="owner-1",
+        ),
+        [],
+    )
+
+    assert response["canManageLifecycle"] is True
+    assert response["canSubmitPromotion"] is False
+
+
+def test_build_skill_detail_response_disables_promotion_when_request_exists() -> None:
+    response = build_skill_detail_response(
+        detail_row(
+            current_user_id="manager-1",
+            namespace_role="OWNER",
+            promotion_blocked=True,
+        ),
+        [],
+    )
+
+    assert response["canManageLifecycle"] is True
+    assert response["canSubmitPromotion"] is False

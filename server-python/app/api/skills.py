@@ -6,7 +6,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -182,6 +182,21 @@ def build_skill_detail_response(
     labels: list[dict[str, object]],
 ) -> dict[str, object]:
     published_version = to_lifecycle_version(row)
+    current_user_id = row.get("current_user_id")
+    namespace_role = row.get("namespace_role")
+    can_manage_lifecycle = current_user_id is not None and (
+        str(row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+    )
+    can_submit_promotion = (
+        can_manage_lifecycle
+        and str(row.get("namespace_type")) != "GLOBAL"
+        and str(row.get("namespace_status", "ACTIVE")) == "ACTIVE"
+        and str(row["status"]) == "ACTIVE"
+        and published_version is not None
+        and published_version["status"] == "PUBLISHED"
+        and not bool(row.get("promotion_blocked", False))
+    )
+    can_report = current_user_id is None or str(row["owner_id"]) != str(current_user_id)
     return {
         "id": int(row["id"]),
         "slug": str(row["slug"]),
@@ -199,10 +214,10 @@ def build_skill_detail_response(
         "hidden": bool(row["hidden"]),
         "namespace": str(row["namespace"]),
         "labels": labels,
-        "canManageLifecycle": False,
-        "canSubmitPromotion": False,
+        "canManageLifecycle": can_manage_lifecycle,
+        "canSubmitPromotion": can_submit_promotion,
         "canInteract": published_version is None or published_version["status"] == "PUBLISHED",
-        "canReport": True,
+        "canReport": can_report,
         "headlineVersion": published_version,
         "publishedVersion": published_version,
         "ownerPreviewVersion": None,
@@ -706,6 +721,7 @@ async def read_skill_detail(
     engine: AsyncEngine,
     namespace: str,
     slug: str,
+    current_user_id: str | None = None,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
         skill_row = (
@@ -729,6 +745,7 @@ async def read_skill_detail(
                            s.namespace_id,
                            s.latest_version_id,
                            n.slug AS namespace,
+                           n.type AS namespace_type,
                            n.status AS namespace_status
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
@@ -753,6 +770,26 @@ async def read_skill_detail(
         if str(skill_row["visibility"]) != "PUBLIC":
             raise SkillResolveError("error.skill.access.denied", status_code=403)
 
+        namespace_role = None
+        if current_user_id is not None:
+            namespace_role = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT role
+                        FROM namespace_member
+                        WHERE namespace_id = :namespace_id
+                          AND user_id = :user_id
+                        LIMIT 1
+                        """
+                    ),
+                    {
+                        "namespace_id": skill_row["namespace_id"],
+                        "user_id": current_user_id,
+                    },
+                )
+            ).scalar_one_or_none()
+
         published_version = (
             await connection.execute(
                 text(
@@ -775,6 +812,22 @@ async def read_skill_detail(
                 },
             )
         ).mappings().one_or_none()
+
+        promotion_blocked = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM promotion_request
+                        WHERE source_skill_id = :skill_id
+                          AND status IN ('PENDING', 'APPROVED')
+                    )
+                    """
+                ),
+                {"skill_id": skill_row["id"]},
+            )
+        ).scalar_one()
 
         labels = (
             await connection.execute(
@@ -801,6 +854,9 @@ async def read_skill_detail(
     row["published_version"] = published_version["version"] if published_version is not None else None
     row["published_version_status"] = published_version["status"] if published_version is not None else None
     row["resolution_mode"] = "PUBLISHED" if published_version is not None else "NONE"
+    row["current_user_id"] = current_user_id
+    row["namespace_role"] = namespace_role
+    row["promotion_blocked"] = promotion_blocked
     label_rows = [
         {
             "slug": str(label["slug"]),
@@ -1427,13 +1483,15 @@ async def get_skill_detail(
     namespace: str,
     slug: str,
     request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_detail_reader", None)
+    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug))
+            data = await _resolve_reader_result(reader(namespace, slug, current_user_id))
         else:
-            data = await read_skill_detail(request.app.state.db_engine, namespace, slug)
+            data = await read_skill_detail(request.app.state.db_engine, namespace, slug, current_user_id)
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("获取成功", data, request)

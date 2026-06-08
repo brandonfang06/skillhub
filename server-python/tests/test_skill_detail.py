@@ -35,7 +35,7 @@ def detail_response() -> dict[str, object]:
 
 def test_skill_detail_route_returns_envelope() -> None:
     app = create_app()
-    app.state.skill_detail_reader = lambda namespace, slug: detail_response()
+    app.state.skill_detail_reader = lambda namespace, slug, current_user_id=None: detail_response()
 
     client = TestClient(app)
     response = client.get(
@@ -53,7 +53,7 @@ def test_skill_detail_route_returns_envelope() -> None:
 
 def test_skill_detail_web_alias_returns_same() -> None:
     app = create_app()
-    app.state.skill_detail_reader = lambda namespace, slug: detail_response()
+    app.state.skill_detail_reader = lambda namespace, slug, current_user_id=None: detail_response()
 
     client = TestClient(app)
     response = client.get("/api/web/skills/global/demo-skill")
@@ -63,17 +63,39 @@ def test_skill_detail_web_alias_returns_same() -> None:
 
 
 def test_skill_detail_route_forwards_params_to_reader() -> None:
-    seen: list[tuple[str, str]] = []
+    seen: list[tuple[str, str, str | None]] = []
     app = create_app()
 
-    def reader(namespace: str, slug: str) -> dict[str, object]:
-        seen.append((namespace, slug))
+    def reader(namespace: str, slug: str, current_user_id: str | None = None) -> dict[str, object]:
+        seen.append((namespace, slug, current_user_id))
         return detail_response()
 
     app.state.skill_detail_reader = reader
 
     client = TestClient(app)
-    response = client.get("/api/v1/skills/team-a/demo-skill")
+    response = client.get(
+        "/api/v1/skills/team-a/demo-skill",
+        headers={"X-Mock-User-Id": " owner-1 "},
+    )
 
     assert response.status_code == 200
-    assert seen == [("team-a", "demo-skill")]
+    assert seen == [("team-a", "demo-skill", "owner-1")]
+
+
+def test_skill_detail_route_forwards_none_when_mock_user_header_missing_or_blank() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+
+    def reader(namespace: str, slug: str, current_user_id: str | None = None) -> dict[str, object]:
+        seen.append(current_user_id)
+        return detail_response()
+
+    app.state.skill_detail_reader = reader
+
+    client = TestClient(app)
+    missing_response = client.get("/api/v1/skills/team-a/demo-skill")
+    blank_response = client.get("/api/v1/skills/team-a/demo-skill", headers={"X-Mock-User-Id": "   "})
+
+    assert missing_response.status_code == 200
+    assert blank_response.status_code == 200
+    assert seen == [None, None]

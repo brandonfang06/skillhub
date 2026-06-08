@@ -68,7 +68,7 @@ def test_clawhub_skill_detail_keeps_mutation_paths_unowned() -> None:
 
 def test_nested_skillhub_detail_route_keeps_envelope_shape() -> None:
     app = create_app()
-    app.state.skill_detail_reader = lambda namespace, slug: {
+    app.state.skill_detail_reader = lambda namespace, slug, current_user_id=None: {
         "id": 31,
         "slug": slug,
         "displayName": "Demo Skill",

@@ -380,6 +380,41 @@ This gate verifies the Group C auth boundary:
 - `GET /api/v1/auth/methods` still matches Java through Vite.
 - OAuth, login, token, session bootstrap, and CLI auth routes remain Java-owned.
 
+## One-Command Authenticated Skill Detail Verification Gate
+
+For the migrated viewer-specific skill detail capability flags, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-auth-detail-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+6 passed
+```
+
+The command writes the latest authenticated detail comparison summary to:
+
+```text
+.dev/auth-detail-contract-result.json
+```
+
+This gate verifies the Group C skill-detail boundary:
+
+- anonymous public detail remains unchanged.
+- owner requests via `X-Mock-User-Id: local-user` can manage their visible public skill and cannot
+  report it.
+- namespace `ADMIN` / `OWNER` requests can manage visible public team skills.
+- non-global promotion capability is enabled only when Java enables it.
+- pending promotion requests block `canSubmitPromotion`.
+- owner preview and non-public visibility remain deferred.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -2190,6 +2190,449 @@ function Invoke-HybridAuthMeSmokeVerification {
     }
 }
 
+function Ensure-AuthDetailContractFixture {
+    $sql = @'
+DO $$
+DECLARE
+    local_user_id VARCHAR(128) := 'local-user';
+    local_admin_id VARCHAR(128) := 'local-admin';
+    global_ns_id BIGINT;
+    team_ns_id BIGINT;
+    global_skill_id BIGINT;
+    team_skill_id BIGINT;
+    blocked_skill_id BIGINT;
+    global_version_id BIGINT;
+    team_version_id BIGINT;
+    blocked_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        (local_user_id, 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        (local_admin_id, 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO global_ns_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-auth-detail-team', 'Codex Auth Detail Team', 'TEAM', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_ns_id, local_user_id, 'OWNER'),
+        (team_ns_id, local_admin_id, 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        download_count,
+        star_count,
+        subscription_count,
+        rating_avg,
+        rating_count,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        global_ns_id,
+        'codex-auth-detail-global-20260608',
+        'Codex Auth Detail Global',
+        'Global auth detail fixture',
+        local_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        0,
+        0,
+        0,
+        0.00,
+        0,
+        local_user_id,
+        local_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO global_skill_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        download_count,
+        star_count,
+        subscription_count,
+        rating_avg,
+        rating_count,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        team_ns_id,
+        'codex-auth-detail-team-20260608',
+        'Codex Auth Detail Team Skill',
+        'Team auth detail fixture',
+        local_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        0,
+        0,
+        0,
+        0.00,
+        0,
+        local_user_id,
+        local_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_skill_id;
+
+    INSERT INTO skill (
+        namespace_id,
+        slug,
+        display_name,
+        summary,
+        owner_id,
+        visibility,
+        status,
+        download_count,
+        star_count,
+        subscription_count,
+        rating_avg,
+        rating_count,
+        created_by,
+        updated_by,
+        hidden
+    )
+    VALUES (
+        team_ns_id,
+        'codex-auth-detail-blocked-20260608',
+        'Codex Auth Detail Blocked Skill',
+        'Blocked promotion auth detail fixture',
+        local_user_id,
+        'PUBLIC',
+        'ACTIVE',
+        0,
+        0,
+        0,
+        0.00,
+        0,
+        local_user_id,
+        local_user_id,
+        FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO blocked_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES
+        (
+            global_skill_id,
+            '1.0.0',
+            'PUBLISHED',
+            'global auth detail fixture',
+            jsonb_build_object('name', 'auth-detail-global', 'version', '1.0.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1,
+            100,
+            '2026-06-08T01:00:00Z'::timestamptz,
+            local_user_id,
+            '2026-06-08T01:00:00Z'::timestamptz,
+            TRUE,
+            TRUE,
+            'PUBLIC'
+        )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO global_version_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES
+        (
+            team_skill_id,
+            '1.0.0',
+            'PUBLISHED',
+            'team auth detail fixture',
+            jsonb_build_object('name', 'auth-detail-team', 'version', '1.0.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1,
+            100,
+            '2026-06-08T01:05:00Z'::timestamptz,
+            local_user_id,
+            '2026-06-08T01:05:00Z'::timestamptz,
+            TRUE,
+            TRUE,
+            'PUBLIC'
+        )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO team_version_id;
+
+    INSERT INTO skill_version (
+        skill_id,
+        version,
+        status,
+        changelog,
+        parsed_metadata_json,
+        manifest_json,
+        file_count,
+        total_size,
+        published_at,
+        created_by,
+        created_at,
+        bundle_ready,
+        download_ready,
+        requested_visibility
+    )
+    VALUES
+        (
+            blocked_skill_id,
+            '1.0.0',
+            'PUBLISHED',
+            'blocked auth detail fixture',
+            jsonb_build_object('name', 'auth-detail-blocked', 'version', '1.0.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1,
+            100,
+            '2026-06-08T01:10:00Z'::timestamptz,
+            local_user_id,
+            '2026-06-08T01:10:00Z'::timestamptz,
+            TRUE,
+            TRUE,
+            'PUBLIC'
+        )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO blocked_version_id;
+
+    UPDATE skill
+    SET latest_version_id = global_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = global_skill_id;
+
+    UPDATE skill
+    SET latest_version_id = team_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = team_skill_id;
+
+    UPDATE skill
+    SET latest_version_id = blocked_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = blocked_skill_id;
+
+    INSERT INTO promotion_request (
+        source_skill_id,
+        source_version_id,
+        target_namespace_id,
+        status,
+        submitted_by
+    )
+    VALUES (
+        blocked_skill_id,
+        blocked_version_id,
+        global_ns_id,
+        'PENDING',
+        local_user_id
+    )
+    ON CONFLICT (source_version_id) WHERE status = 'PENDING' DO UPDATE
+        SET status = 'PENDING',
+            target_namespace_id = EXCLUDED.target_namespace_id,
+            submitted_by = EXCLUDED.submitted_by,
+            submitted_at = CURRENT_TIMESTAMP;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-AuthenticatedDetailContractComparison {
+    Ensure-AuthDetailContractFixture
+
+    $cases = @(
+        [ordered]@{ name = 'anonymousGlobal'; path = '/api/v1/skills/global/codex-auth-detail-global-20260608'; headers = @{} },
+        [ordered]@{ name = 'ownerGlobal'; path = '/api/v1/skills/global/codex-auth-detail-global-20260608'; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'ownerTeam'; path = '/api/v1/skills/codex-auth-detail-team/codex-auth-detail-team-20260608'; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'namespaceAdminTeam'; path = '/api/v1/skills/codex-auth-detail-team/codex-auth-detail-team-20260608'; headers = @{ 'X-Mock-User-Id' = 'local-admin' } },
+        [ordered]@{ name = 'promotionBlockedTeam'; path = '/api/v1/skills/codex-auth-detail-team/codex-auth-detail-blocked-20260608'; headers = @{ 'X-Mock-User-Id' = 'local-admin' } }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing authenticated skill detail contract: $($case.name)"
+        $java = Invoke-RestMethod "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-RestMethod "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxyV1 = Invoke-RestMethod "$WebUrl$($case.path)" -Headers $case.headers
+        $proxyWebPath = $case.path -replace '^/api/v1/', '/api/web/'
+        $proxyWeb = Invoke-RestMethod "$WebUrl$proxyWebPath" -Headers $case.headers
+
+        $javaStable = ConvertTo-StableDetailContractJson -Response $java
+        $pythonStable = ConvertTo-StableDetailContractJson -Response $python
+        $proxyV1Stable = ConvertTo-StableDetailContractJson -Response $proxyV1
+        $proxyWebStable = ConvertTo-StableDetailContractJson -Response $proxyWeb
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            path = $case.path
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxyV1 = ($pythonStable -eq $proxyV1Stable)
+            pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+            flags = [ordered]@{
+                canManageLifecycle = $python.data.canManageLifecycle
+                canSubmitPromotion = $python.data.canSubmitPromotion
+                canInteract = $python.data.canInteract
+                canReport = $python.data.canReport
+            }
+        }
+    }
+
+    $result = [ordered]@{
+        cases = $caseResults
+        allJavaMatchesPython = -not [bool]($caseResults | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxyV1 = -not [bool]($caseResults | Where-Object { -not $_.pythonMatchesProxyV1 })
+        allPythonMatchesProxyWeb = -not [bool]($caseResults | Where-Object { -not $_.pythonMatchesProxyWeb })
+        comparedFields = @('code', 'msg', 'data')
+    }
+
+    $resultPath = Join-Path $DevDir 'auth-detail-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python authenticated detail contracts differ. See .dev/auth-detail-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyV1) {
+        throw 'Vite proxy /api/v1 authenticated detail does not match Python. See .dev/auth-detail-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyWeb) {
+        throw 'Vite proxy /api/web authenticated detail does not match Python. See .dev/auth-detail-contract-result.json.'
+    }
+}
+
+function Invoke-HybridAuthenticatedDetailSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-AuthenticatedDetailContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -2203,6 +2646,7 @@ switch ($Action) {
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
+    'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

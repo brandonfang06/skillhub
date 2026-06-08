@@ -48,7 +48,7 @@ def test_makefile_defines_hybrid_e2e_targets() -> None:
 def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     script = (ROOT / "scripts" / "dev-hybrid.ps1").read_text(encoding="utf-8")
 
-    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'e2e-smoke', 'e2e')]" in script
+    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'e2e-smoke', 'e2e')]" in script
     assert "Start-ManagedProcess" in script
     assert "server-python" in script
     assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in script
@@ -79,6 +79,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-clawhub-skill-smoke" in script
     assert "verify-clawhub-list-smoke" in script
     assert "verify-auth-me-smoke" in script
+    assert "verify-auth-detail-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
@@ -88,6 +89,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-ClawHubSkillContractComparison" in script
     assert "Invoke-ClawHubListContractComparison" in script
     assert "Invoke-AuthMeContractComparison" in script
+    assert "Invoke-AuthenticatedDetailContractComparison" in script
     assert "labels-contract-result.json" in script
     assert "files-contract-result.json" in script
     assert "detail-contract-result.json" in script
@@ -97,6 +99,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "clawhub-skill-contract-result.json" in script
     assert "clawhub-list-contract-result.json" in script
     assert "auth-me-contract-result.json" in script
+    assert "auth-detail-contract-result.json" in script
     assert "javaMatchesPython" in script
     assert "java-storage" in script
     assert "PLAYWRIGHT_BROWSERS_PATH" in script
