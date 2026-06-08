@@ -125,6 +125,14 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/download(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/v1/download/[^/]+(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/auth/me(?:\\?.*)?$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
@@ -186,6 +194,18 @@ export default defineConfig({
         changeOrigin: true,
       },
       '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/file$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/v1/skills/[^/]+/[^/]+/download$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/download$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },

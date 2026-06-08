@@ -168,7 +168,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/resolve')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
   })
 
   it('routes portal skill search and ClawHub v1 skills list to Python', () => {
@@ -186,7 +186,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills?page=0&limit=25')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
@@ -203,10 +203,10 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
   })
 
-  it('routes ClawHub resolve to Python without taking over download or skills', () => {
+  it('routes ClawHub resolve to Python without taking over skills', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const clawHubResolveQuery = '^/api/v1/resolve(?:\\?.*)?$'
@@ -221,7 +221,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/resolve/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/resolve/team-ai--demo?version=1.0.0')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
@@ -242,7 +242,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillVersions)).toBeLessThan(keys.indexOf('/api'))
   })
 
-  it('routes skill version detail and compare aliases to Python without taking over downloads', () => {
+  it('routes skill version detail and compare aliases to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionDetail = '^/api/v1/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
@@ -265,11 +265,11 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/compare')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
   })
 
-  it('routes skill files list aliases and v1 file content to Python without taking over downloads', () => {
+  it('routes skill files list aliases and v1 file content to Python while web downloads stay Java-owned', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionFiles = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/files$'
@@ -287,9 +287,9 @@ describe('Vite dev proxy route ownership', () => {
     expect(proxy[v1SkillVersionFile]?.target).toBe('http://localhost:8081')
     expect(proxy[v1SkillTagFile]?.target).toBe('http://localhost:8081')
 
-    // web file aliases do not exist in Java and download should NOT route to Python
+    // web file aliases do not exist in Java and web download aliases stay Java-owned
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
+    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBe('http://localhost:8081')
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
 
     expect(keys.indexOf(v1SkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
@@ -307,5 +307,37 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
+  })
+
+  it('routes planned v1 download paths to Python while keeping web aliases and mutations on Java', () => {
+    const proxy = config.server?.proxy as Record<string, ProxyTarget>
+    const keys = Object.keys(proxy)
+    const clawHubDownloadQuery = '^/api/v1/download(?:\\?.*)?$'
+    const clawHubDownloadPath = '^/api/v1/download/[^/]+(?:\\?.*)?$'
+    const v1LatestDownload = '^/api/v1/skills/[^/]+/[^/]+/download$'
+    const v1VersionDownload = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$'
+    const v1TagDownload = '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/download$'
+
+    expect(proxy[clawHubDownloadQuery]?.target).toBe('http://localhost:8081')
+    expect(proxy[clawHubDownloadPath]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1LatestDownload]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1VersionDownload]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1TagDownload]?.target).toBe('http://localhost:8081')
+
+    expect(keys.indexOf(clawHubDownloadQuery)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(clawHubDownloadPath)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1LatestDownload)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1VersionDownload)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1TagDownload)).toBeLessThan(keys.indexOf('/api'))
+
+    expect(matchingProxyTarget('/api/v1/download?slug=demo&version=latest')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/download/team-ai--demo?version=1.0.0')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.0.0/download')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/download')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/download')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
   })
 })

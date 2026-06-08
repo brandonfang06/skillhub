@@ -86,7 +86,7 @@ def test_clawhub_resolve_path_route_defaults_to_latest_tag() -> None:
     assert seen == [(None, "latest", None)]
 
 
-def test_download_remains_unowned_while_v1_skill_detail_is_python_owned() -> None:
+def test_clawhub_download_redirect_is_owned_without_breaking_v1_skill_detail() -> None:
     app = create_app()
     app.state.clawhub_skill_detail_reader = lambda namespace, slug: {
         "slug": slug,
@@ -99,9 +99,12 @@ def test_download_remains_unowned_while_v1_skill_detail_is_python_owned() -> Non
         "changelog": "Initial release",
     }
 
-    client = TestClient(app)
+    client = TestClient(app, follow_redirects=False)
 
-    assert client.get("/api/v1/download/demo").status_code == 404
+    download_response = client.get("/api/v1/download/demo")
+    assert download_response.status_code == 302
+    assert download_response.headers["location"] == "/api/v1/skills/global/demo/download"
+
     response = client.get("/api/v1/skills/demo")
 
     assert response.status_code == 200

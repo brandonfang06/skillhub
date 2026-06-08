@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -442,6 +442,16 @@ function Invoke-PostgresSql {
         '-c',
         $Sql
     )
+}
+
+function Invoke-PostgresScalar {
+    param([string]$Sql)
+
+    $output = & docker compose -p skillhub exec -T postgres psql -U skillhub -d skillhub -t -A -v ON_ERROR_STOP=1 -c $Sql
+    if ($LASTEXITCODE -ne 0) {
+        throw "Postgres scalar query failed with exit code ${LASTEXITCODE}: $Sql"
+    }
+    return ($output | Where-Object { $_ -and $_.Trim() -ne '' } | Select-Object -First 1).Trim()
 }
 
 function Ensure-FilesContractFixture {
@@ -3921,6 +3931,551 @@ function Invoke-HybridFileContentSmokeVerification {
     }
 }
 
+function Write-ZipFile {
+    param(
+        [string]$Path,
+        [hashtable]$Entries
+    )
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+    if (Test-Path -LiteralPath $Path) {
+        Remove-Item -Force -LiteralPath $Path
+    }
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::CreateNew)
+    try {
+        $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach ($entry in $Entries.GetEnumerator() | Sort-Object Name) {
+                $zipEntry = $zip.CreateEntry([string]$entry.Key)
+                $entryStream = $zipEntry.Open()
+                try {
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes([string]$entry.Value)
+                    $entryStream.Write($bytes, 0, $bytes.Length)
+                } finally {
+                    $entryStream.Dispose()
+                }
+            }
+        } finally {
+            $zip.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Normalize-DownloadContentType {
+    param([string]$ContentType)
+
+    if (-not $ContentType) {
+        return ''
+    }
+    $normalized = $ContentType.ToLowerInvariant()
+    if ($normalized -eq 'application/zip' -or $normalized -eq 'application/x-zip-compressed' -or $normalized -eq 'application/octet-stream') {
+        return 'application/zip'
+    }
+    return $normalized
+}
+
+function Read-ZipEntriesFromBytes {
+    param([byte[]]$Bytes)
+
+    if ($Bytes.Length -eq 0) {
+        return @()
+    }
+
+    Add-Type -AssemblyName System.IO.Compression
+    $stream = [System.IO.MemoryStream]::new($Bytes)
+    try {
+        $archive = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Read)
+        try {
+            $entries = @()
+            foreach ($entry in $archive.Entries | Sort-Object FullName) {
+                $entryStream = $entry.Open()
+                try {
+                    $buffer = [System.IO.MemoryStream]::new()
+                    try {
+                        $entryStream.CopyTo($buffer)
+                        $entries += [ordered]@{
+                            name = $entry.FullName
+                            bodyBase64 = [System.Convert]::ToBase64String($buffer.ToArray())
+                        }
+                    } finally {
+                        $buffer.Dispose()
+                    }
+                } finally {
+                    $entryStream.Dispose()
+                }
+            }
+            return $entries
+        } finally {
+            $archive.Dispose()
+        }
+    } catch {
+        return @()
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Test-DownloadContractsMatch {
+    param(
+        [object]$Left,
+        [object]$Right,
+        [bool]$CompareZipEntries = $false
+    )
+
+    if ($Left.status -ne $Right.status -or
+        $Left.location -ne $Right.location -or
+        $Left.contentType -ne $Right.contentType -or
+        $Left.contentDisposition -ne $Right.contentDisposition) {
+        return $false
+    }
+
+    if ($CompareZipEntries) {
+        return (($Left.zipEntries | ConvertTo-Json -Depth 20 -Compress) -eq ($Right.zipEntries | ConvertTo-Json -Depth 20 -Compress))
+    }
+
+    return ($Left.byteLength -eq $Right.byteLength -and $Left.bodyBase64 -eq $Right.bodyBase64)
+}
+
+function Invoke-HttpDownloadContract {
+    param(
+        [string]$Url,
+        [hashtable]$Headers = @{},
+        [bool]$AllowRedirect = $true
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $handler.AllowAutoRedirect = $AllowRedirect
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    try {
+        $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $Url)
+        foreach ($header in $Headers.GetEnumerator()) {
+            $request.Headers.Add([string]$header.Key, [string]$header.Value)
+        }
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        $contentType = ''
+        if ($response.Content.Headers.ContentType) {
+            $contentType = $response.Content.Headers.ContentType.MediaType
+        }
+        $contentDisposition = ''
+        if ($response.Content.Headers.ContentDisposition) {
+            $contentDisposition = $response.Content.Headers.ContentDisposition.ToString()
+        }
+        $location = ''
+        if ($response.Headers.Location) {
+            $location = $response.Headers.Location.ToString()
+        }
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            location = $location
+            contentType = Normalize-DownloadContentType -ContentType $contentType
+            contentDisposition = $contentDisposition
+            bodyBase64 = [System.Convert]::ToBase64String($bytes)
+            byteLength = $bytes.Length
+            zipEntries = Read-ZipEntriesFromBytes -Bytes $bytes
+        }
+    } finally {
+        $client.Dispose()
+        $handler.Dispose()
+    }
+}
+
+function Get-DownloadCounters {
+    $sql = @"
+SELECT
+  s.download_count || ',' ||
+  COALESCE((SELECT download_count FROM skill_version_stats WHERE skill_version_id = sv10.id), 0) || ',' ||
+  COALESCE((SELECT download_count FROM skill_version_stats WHERE skill_version_id = sv11.id), 0)
+FROM skill s
+JOIN namespace n ON n.id = s.namespace_id
+JOIN skill_version sv10 ON sv10.skill_id = s.id AND sv10.version = '1.0.0'
+JOIN skill_version sv11 ON sv11.skill_id = s.id AND sv11.version = '1.1.0'
+WHERE n.slug = 'codex-download-team'
+  AND s.slug = 'codex-download-20260608'
+  AND s.owner_id = 'local-user';
+"@
+    $raw = Invoke-PostgresScalar -Sql $sql
+    $parts = $raw.Split(',')
+    return [ordered]@{
+        skill = [int64]$parts[0]
+        version100 = [int64]$parts[1]
+        version110 = [int64]$parts[2]
+    }
+}
+
+function Ensure-DownloadContractFixture {
+    $fallbackObjects = @(
+        [ordered]@{ key = 'fixtures/download/1.1.0/SKILL.md'; value = "# Download fallback skill`n" },
+        [ordered]@{ key = 'fixtures/download/1.1.0/src/main.py'; value = "print('download fallback')`n" }
+    )
+    foreach ($entry in $fallbackObjects) {
+        $relativePath = $entry.key -replace '/', [System.IO.Path]::DirectorySeparatorChar
+        $targetPath = Join-Path $JavaStoragePath $relativePath
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+        [System.IO.File]::WriteAllBytes($targetPath, [System.Text.Encoding]::UTF8.GetBytes($entry.value))
+    }
+
+    $sql = @'
+DO $$
+DECLARE
+    local_user_id VARCHAR(128) := 'local-user';
+    local_admin_id VARCHAR(128) := 'local-admin';
+    team_ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    bundle_version_id BIGINT;
+    fallback_version_id BIGINT;
+    pending_version_id BIGINT;
+    missing_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        (local_user_id, 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        (local_admin_id, 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-download-team', 'Codex Download Team', 'TEAM', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            type = 'TEAM',
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_ns_id, local_user_id, 'OWNER'),
+        (team_ns_id, local_admin_id, 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, subscription_count, rating_avg, rating_count,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        team_ns_id, 'codex-download-20260608', 'Codex Download Skill',
+        'Download contract fixture', local_user_id, 'PUBLIC', 'ACTIVE',
+        0, 0, 0, 0.00, 0, local_user_id, local_user_id, FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            download_count = 0,
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'PUBLISHED', 'download bundle fixture',
+        jsonb_build_object('name', 'download-fixture', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '2026-06-08T08:00:00Z'::timestamptz, local_user_id,
+        '2026-06-08T08:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO bundle_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.1.0', 'PUBLISHED', 'download fallback fixture',
+        jsonb_build_object('name', 'download-fixture', 'version', '1.1.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md'), jsonb_build_object('path', 'src/main.py')),
+        2, 200, '2026-06-08T09:00:00Z'::timestamptz, local_user_id,
+        '2026-06-08T09:00:00Z'::timestamptz, FALSE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = FALSE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO fallback_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.2.0', 'PENDING_REVIEW', 'download pending fixture',
+        jsonb_build_object('name', 'download-fixture', 'version', '1.2.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 120, NULL, local_user_id, '2026-06-08T10:00:00Z'::timestamptz,
+        TRUE, FALSE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PENDING_REVIEW',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = NULL,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = FALSE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO pending_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '2.0.0', 'PUBLISHED', 'download missing fixture',
+        jsonb_build_object('name', 'download-fixture', 'version', '2.0.0'),
+        jsonb_build_array(),
+        0, 0, '2026-06-08T11:00:00Z'::timestamptz, local_user_id,
+        '2026-06-08T11:00:00Z'::timestamptz, FALSE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            file_count = 0,
+            total_size = 0,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = FALSE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO missing_version_id;
+
+    UPDATE skill
+    SET latest_version_id = bundle_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = fixture_skill_id;
+
+    DELETE FROM skill_file
+    WHERE version_id IN (bundle_version_id, fallback_version_id, pending_version_id, missing_version_id);
+
+    INSERT INTO skill_file (version_id, file_path, file_size, content_type, sha256, storage_key)
+    VALUES
+        (fallback_version_id, 'SKILL.md', 25, 'text/markdown', repeat('7', 64), 'fixtures/download/1.1.0/SKILL.md'),
+        (fallback_version_id, 'src/main.py', 27, 'text/x-python', repeat('8', 64), 'fixtures/download/1.1.0/src/main.py');
+
+    INSERT INTO skill_tag (skill_id, tag_name, version_id, created_by)
+    VALUES (fixture_skill_id, 'stable', bundle_version_id, local_user_id)
+    ON CONFLICT (skill_id, tag_name) DO UPDATE
+        SET version_id = EXCLUDED.version_id,
+            updated_at = CURRENT_TIMESTAMP;
+
+    DELETE FROM skill_version_stats
+    WHERE skill_id = fixture_skill_id;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+
+    $idsSql = @"
+SELECT s.id || ',' || sv10.id || ',' || sv12.id
+FROM skill s
+JOIN namespace n ON n.id = s.namespace_id
+JOIN skill_version sv10 ON sv10.skill_id = s.id AND sv10.version = '1.0.0'
+JOIN skill_version sv12 ON sv12.skill_id = s.id AND sv12.version = '1.2.0'
+WHERE n.slug = 'codex-download-team'
+  AND s.slug = 'codex-download-20260608'
+  AND s.owner_id = 'local-user';
+"@
+    $ids = (Invoke-PostgresScalar -Sql $idsSql).Split(',')
+    $skillId = $ids[0]
+    $bundleVersionId = $ids[1]
+    $pendingVersionId = $ids[2]
+
+    $bundlePath = Join-Path $JavaStoragePath "packages\$skillId\$bundleVersionId\bundle.zip"
+    Write-ZipFile -Path $bundlePath -Entries @{
+        'SKILL.md' = "# Download bundle skill`n"
+    }
+    $pendingBundlePath = Join-Path $JavaStoragePath "packages\$skillId\$pendingVersionId\bundle.zip"
+    Write-ZipFile -Path $pendingBundlePath -Entries @{
+        'SKILL.md' = "# Download pending skill`n"
+    }
+}
+
+function Invoke-DownloadContractComparison {
+    Ensure-DownloadContractFixture
+
+    $basePath = '/api/v1/skills/codex-download-team/codex-download-20260608'
+    $redirectCases = @(
+        [ordered]@{ name = 'clawhubPathLatest'; path = '/api/v1/download/codex-download-team--codex-download-20260608'; expectedLocation = "$basePath/download" },
+        [ordered]@{ name = 'clawhubPathVersion'; path = '/api/v1/download/codex-download-team--codex-download-20260608?version=1.0.0'; expectedLocation = "$basePath/versions/1.0.0/download" },
+        [ordered]@{ name = 'clawhubQueryLatest'; path = '/api/v1/download?slug=codex-download-team--codex-download-20260608&version=latest'; expectedLocation = "$basePath/download" },
+        [ordered]@{ name = 'clawhubQueryVersion'; path = '/api/v1/download?slug=codex-download-team--codex-download-20260608&version=1.0.0'; expectedLocation = "$basePath/versions/1.0.0/download" }
+    )
+
+    $redirectResults = @()
+    foreach ($case in $redirectCases) {
+        Write-Host "Comparing download redirect contract: $($case.name)"
+        $java = Invoke-HttpDownloadContract "$JavaUrl$($case.path)" -AllowRedirect $false
+        $python = Invoke-HttpDownloadContract "$PythonUrl$($case.path)" -AllowRedirect $false
+        $proxy = Invoke-HttpDownloadContract "$WebUrl$($case.path)" -AllowRedirect $false
+        $redirectResults += [ordered]@{
+            name = $case.name
+            javaMatchesPython = ($java.status -eq $python.status -and $java.location -eq $python.location)
+            pythonMatchesProxy = ($python.status -eq $proxy.status -and $python.location -eq $proxy.location)
+            expectedLocation = ($python.location -eq $case.expectedLocation)
+            java = $java
+            python = $python
+            proxy = $proxy
+        }
+    }
+
+    $beforeCounters = Get-DownloadCounters
+    $contentCases = @(
+        [ordered]@{ name = 'portalLatestBundle'; path = "$basePath/download"; headers = @{} },
+        [ordered]@{ name = 'portalExplicitBundle'; path = "$basePath/versions/1.0.0/download"; headers = @{} },
+        [ordered]@{ name = 'portalTagBundle'; path = "$basePath/tags/stable/download"; headers = @{} },
+        [ordered]@{ name = 'portalFallbackZip'; path = "$basePath/versions/1.1.0/download"; headers = @{} },
+        [ordered]@{ name = 'ownerPendingBundle'; path = "$basePath/versions/1.2.0/download"; headers = @{ 'X-Mock-User-Id' = 'local-user' } }
+    )
+
+    $contentResults = @()
+    foreach ($case in $contentCases) {
+        Write-Host "Comparing download stream contract: $($case.name)"
+        $java = Invoke-HttpDownloadContract "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-HttpDownloadContract "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxy = Invoke-HttpDownloadContract "$WebUrl$($case.path)" -Headers $case.headers
+        $compareZipEntries = $case.name -eq 'portalFallbackZip'
+        $contentResults += [ordered]@{
+            name = $case.name
+            javaMatchesPython = Test-DownloadContractsMatch -Left $java -Right $python -CompareZipEntries $compareZipEntries
+            pythonMatchesProxy = Test-DownloadContractsMatch -Left $python -Right $proxy -CompareZipEntries $compareZipEntries
+            comparedByZipEntries = $compareZipEntries
+            java = $java
+            python = $python
+            proxy = $proxy
+        }
+    }
+    $afterCounters = Get-DownloadCounters
+
+    $statusCases = @(
+        [ordered]@{ name = 'missingBundleNoFiles'; path = "$basePath/versions/2.0.0/download"; headers = @{} },
+        [ordered]@{ name = 'anonymousPendingRejected'; path = "$basePath/versions/1.2.0/download"; headers = @{} }
+    )
+    $statusResults = @()
+    foreach ($case in $statusCases) {
+        Write-Host "Comparing download rejection contract: $($case.name)"
+        $java = Invoke-HttpDownloadContract "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-HttpDownloadContract "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxy = Invoke-HttpDownloadContract "$WebUrl$($case.path)" -Headers $case.headers
+        $statusResults += [ordered]@{
+            name = $case.name
+            java = $java.status
+            python = $python.status
+            proxy = $proxy.status
+            statusesMatch = ($java.status -eq $python.status -and $python.status -eq $proxy.status)
+        }
+    }
+
+    $counterDelta = [ordered]@{
+        skill = $afterCounters.skill - $beforeCounters.skill
+        version100 = $afterCounters.version100 - $beforeCounters.version100
+        version110 = $afterCounters.version110 - $beforeCounters.version110
+    }
+    $expectedCounterDelta = [ordered]@{
+        skill = 12
+        version100 = 9
+        version110 = 3
+    }
+
+    $result = [ordered]@{
+        redirectCases = $redirectResults
+        contentCases = $contentResults
+        statusCases = $statusResults
+        beforeCounters = $beforeCounters
+        afterCounters = $afterCounters
+        counterDelta = $counterDelta
+        expectedCounterDelta = $expectedCounterDelta
+        allRedirectsJavaMatchPython = -not [bool]($redirectResults | Where-Object { -not $_.javaMatchesPython })
+        allRedirectsPythonMatchProxy = -not [bool]($redirectResults | Where-Object { -not $_.pythonMatchesProxy })
+        allRedirectLocationsExpected = -not [bool]($redirectResults | Where-Object { -not $_.expectedLocation })
+        allContentJavaMatchesPython = -not [bool]($contentResults | Where-Object { -not $_.javaMatchesPython })
+        allContentPythonMatchesProxy = -not [bool]($contentResults | Where-Object { -not $_.pythonMatchesProxy })
+        allStatusesMatch = -not [bool]($statusResults | Where-Object { -not $_.statusesMatch })
+        countersMatchExpected = (
+            $counterDelta.skill -eq $expectedCounterDelta.skill -and
+            $counterDelta.version100 -eq $expectedCounterDelta.version100 -and
+            $counterDelta.version110 -eq $expectedCounterDelta.version110
+        )
+        comparedFields = @('status', 'Location', 'Content-Type', 'Content-Disposition', 'byteLength', 'bodyBase64', 'counterDelta')
+    }
+
+    $resultPath = Join-Path $DevDir 'download-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allRedirectsJavaMatchPython -or -not $result.allRedirectsPythonMatchProxy -or -not $result.allRedirectLocationsExpected) {
+        throw 'Download redirect contract check failed. See .dev/download-contract-result.json.'
+    }
+    if (-not $result.allContentJavaMatchesPython -or -not $result.allContentPythonMatchesProxy) {
+        throw 'Download stream contract check failed. See .dev/download-contract-result.json.'
+    }
+    if (-not $result.allStatusesMatch) {
+        throw 'Download rejection status check failed. See .dev/download-contract-result.json.'
+    }
+    if (-not $result.countersMatchExpected) {
+        throw 'Download counter delta check failed. See .dev/download-contract-result.json.'
+    }
+}
+
+function Invoke-HybridDownloadSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-DownloadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Ensure-OwnerPreviewResolveContractFixture {
     $sql = @'
 DO $$
@@ -4452,6 +5007,7 @@ switch ($Action) {
     'verify-owner-preview-files-smoke' { Invoke-HybridOwnerPreviewFilesSmokeVerification }
     'verify-owner-preview-tag-files-smoke' { Invoke-HybridOwnerPreviewTagFilesSmokeVerification }
     'verify-file-content-smoke' { Invoke-HybridFileContentSmokeVerification }
+    'verify-download-smoke' { Invoke-HybridDownloadSmokeVerification }
     'verify-owner-preview-resolve-smoke' { Invoke-HybridOwnerPreviewResolveSmokeVerification }
     'verify-owner-preview-compare-smoke' { Invoke-HybridOwnerPreviewCompareSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }

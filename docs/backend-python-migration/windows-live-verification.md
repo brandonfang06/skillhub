@@ -648,9 +648,10 @@ This gate verifies the portal resolve boundary:
   Java/Python/Vite contracts.
 - anonymous, owner, and namespace `ADMIN` callers are all rejected for exact `PENDING_REVIEW`
   resolve, matching Java's published-only `resolveVersion` behavior.
-- download URLs stay metadata-only; download endpoints themselves remain Java-owned.
-- ClawHub `/api/v1/resolve` routes, file bytes, downloads, non-public visibility, and lifecycle
-  mutations remain outside this gate.
+- download URLs stay metadata-only; download endpoint behavior is verified by
+  `verify-download-smoke`.
+- ClawHub `/api/v1/resolve` routes, file bytes, non-public visibility, and lifecycle mutations
+  remain outside this gate.
 
 ## One-Command Owner Preview Version Compare Verification Gate
 
@@ -689,8 +690,50 @@ This gate verifies the version compare boundary:
 - same-version compare is rejected with matching Java/Python/Vite status.
 - Python compare preserves Java text-diff behavior, including the trailing empty line produced by
   Java `split("\\R", -1)` when local storage files end with a newline.
-- file bytes/download endpoints, ClawHub routes, non-public visibility, and lifecycle mutations
+- file bytes, download endpoints, ClawHub routes, non-public visibility, and lifecycle mutations
   remain outside this gate.
+
+## One-Command Download Read Path Verification Gate
+
+For the migrated v1 download read path, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-download-smoke
+```
+
+Expected result:
+
+```text
+allRedirectsJavaMatchPython: true
+allRedirectsPythonMatchProxy: true
+allRedirectLocationsExpected: true
+allContentJavaMatchesPython: true
+allContentPythonMatchesProxy: true
+allStatusesMatch: true
+countersMatchExpected: true
+6 passed
+```
+
+The command writes the latest download comparison summary to:
+
+```text
+.dev/download-contract-result.json
+```
+
+This gate verifies the download boundary:
+
+- ClawHub download routes return Java-compatible `302` redirects.
+- v1 portal download routes stream local bundle zip bytes with matching Java/Python/Vite headers.
+- fallback zip validates zip entry names and entry bytes rather than raw zip bytes, because Java
+  and Python can produce different valid zip container byte streams.
+- successful `PUBLISHED` downloads increment `skill.download_count` and
+  `skill_version_stats.download_count`; `UPLOADED` / `PENDING_REVIEW` downloads match Java access
+  behavior but do not increment counters.
+- missing bundle with no file rows returns matching Java/Python/Vite status.
+- `/api/web/.../download` aliases remain Java-owned/unmigrated.
 
 ## Method-Colliding Route Verification
 

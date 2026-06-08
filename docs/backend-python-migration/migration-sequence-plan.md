@@ -132,6 +132,7 @@ Still plan carefully when a group requires:
 | 19 | `GET /api/v1/skills/{namespace}/{slug}/versions/compare`, `GET /api/web/skills/{namespace}/{slug}/versions/compare` | python | Manager-only owner preview version compare migrated with Java-compatible text diff behavior. File bytes/download endpoints remain deferred. |
 | 20 | `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Authenticated context forwarding and Java-compatible negative owner-preview tag file metadata coverage completed. Non-published tag targets remain rejected. |
 | 21 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | File content read foundation migrated. Version file content supports manager-only owner preview; tag file content remains published-only. Download routes remain Java-owned. |
+| 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. Web download aliases remain Java-owned/unmigrated. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -203,7 +204,7 @@ Goal:
 - Move file content and download routes to Python through two storage/read milestones.
 - Establish file-byte read behavior before download counters and bundle/download headers.
 
-Next milestone: File Content Read Foundation
+Completed milestone: File Content Read Foundation
 
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file`
@@ -212,7 +213,7 @@ This milestone is intentionally larger than one API but smaller than the full do
 It establishes the Python local object-storage read helper, raw byte responses, content-type
 parity, owner-preview version file access, and Java-compatible published-only tag file behavior.
 
-Second milestone: Download Read Path
+Completed milestone: Download Read Path
 
 - Plan:
   `docs/backend-python-migration/plans/2026-06-08-download-read-path.md`
@@ -222,7 +223,7 @@ Second milestone: Download Read Path
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
 
-Do not start the download milestone until file content reads have a passing live gate.
+The download milestone started only after file content reads had a passing live gate.
 
 Routes intentionally not grouped with file content:
 
@@ -231,6 +232,12 @@ Routes intentionally not grouped with file content:
 - `GET /api/v1/skills/{namespace}/{slug}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
+
+Routes intentionally not migrated with download read path:
+
+- `GET /api/web/skills/{namespace}/{slug}/download`
+- `GET /api/web/skills/{namespace}/{slug}/versions/{version}/download`
+- `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/download`
 
 Bridge design required before implementation:
 
@@ -249,6 +256,15 @@ Acceptance focus:
   counters in the download milestone.
 - No schema change under Python unless explicitly planned.
 - Download metrics behavior is documented and tested.
+
+Download read path live findings:
+
+- Java and Python both allow public skill downloads for `PUBLISHED`, `UPLOADED`, and
+  `PENDING_REVIEW`; only other statuses are `error.skill.version.notDownloadable`.
+- Counters increment only for `PUBLISHED` successful portal downloads.
+- Direct bundle bytes must match exactly.
+- Fallback zip comparison validates zip entry names and entry bytes rather than raw zip bytes,
+  because Java and Python can produce different valid zip container byte streams.
 
 ### Group C. Auth And Current User Bridge
 

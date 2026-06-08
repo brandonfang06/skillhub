@@ -1,14 +1,18 @@
 from collections.abc import Awaitable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from hashlib import sha256
 from inspect import isawaitable
+from io import BytesIO
 from pathlib import Path
 import re
 from typing import Any
 from urllib.parse import quote
+from zipfile import ZipFile
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -59,6 +63,21 @@ class SkillResolveError(ValueError):
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
         self.status_code = status_code
+
+
+@dataclass(frozen=True)
+class DownloadResult:
+    content: bytes
+    content_type: str
+    filename: str
+    content_length: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.content_length is None:
+            object.__setattr__(self, "content_length", len(self.content))
+
+    def as_bytes_io(self) -> BytesIO:
+        return BytesIO(self.content)
 
 
 def has_text(value: str | None) -> bool:
@@ -749,6 +768,113 @@ def read_file_content_from_row(storage_base_path: str, file_row: dict[str, Any])
         return read_local_storage_bytes(storage_base_path, str(file_row["storage_key"]))
     except SkillResolveError as exc:
         raise SkillResolveError("error.skill.file.notFound") from exc
+
+
+def sanitize_download_filename(value: str) -> str:
+    sanitized = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "-", value)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized if sanitized != "" else "skill"
+
+
+def build_download_filename(display_name: str | None, slug: str, version: str) -> str:
+    base_name = display_name if display_name is not None and display_name.strip() != "" else slug
+    return f"{sanitize_download_filename(base_name)}-{version}.zip"
+
+
+def bundle_storage_key(skill_id: int, version_id: int) -> str:
+    return f"packages/{skill_id}/{version_id}/bundle.zip"
+
+
+def read_bundle_or_build_fallback_zip(
+    storage_base_path: str,
+    version_row: dict[str, Any],
+    file_rows: list[dict[str, Any]],
+) -> DownloadResult:
+    skill_id = int(version_row["skill_id"])
+    version_id = int(version_row["version_id"])
+    filename = build_download_filename(
+        version_row.get("display_name"),
+        str(version_row["slug"]),
+        str(version_row["version"]),
+    )
+    storage_key = bundle_storage_key(skill_id, version_id)
+    bundle_path = (Path(storage_base_path).resolve() / storage_key).resolve()
+    try:
+        bundle_path.relative_to(Path(storage_base_path).resolve())
+    except ValueError as exc:
+        raise SkillResolveError("error.skill.bundle.notFound") from exc
+
+    if bundle_path.exists():
+        content = read_local_storage_bytes(storage_base_path, storage_key)
+        content_type = version_row.get("content_type") or "application/zip"
+        content_length = version_row.get("content_length")
+        return DownloadResult(
+            content=content,
+            content_type=str(content_type),
+            filename=filename,
+            content_length=int(content_length) if content_length is not None else len(content),
+        )
+
+    available_files = []
+    for file_row in sorted(file_rows, key=lambda row: str(row["file_path"])):
+        try:
+            content = read_file_content_from_row(storage_base_path, file_row)
+        except SkillResolveError:
+            continue
+        available_files.append((str(file_row["file_path"]), content))
+
+    if not available_files:
+        raise SkillResolveError("error.skill.bundle.notFound")
+
+    buffer = BytesIO()
+    with ZipFile(buffer, "w") as zip_file:
+        for file_path, content in available_files:
+            zip_file.writestr(file_path, content)
+
+    content = buffer.getvalue()
+    return DownloadResult(
+        content=content,
+        content_type="application/zip",
+        filename=filename,
+        content_length=len(content),
+    )
+
+
+def assert_download_access(version_row: dict[str, Any], can_manage: bool) -> None:
+    status = str(version_row["status"])
+    if status in {"PUBLISHED", "UPLOADED", "PENDING_REVIEW"}:
+        return
+    raise SkillResolveError("error.skill.version.notDownloadable")
+
+
+def build_download_response(result: DownloadResult) -> Response:
+    return Response(
+        content=result.content,
+        media_type=result.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{result.filename}"',
+            "Content-Length": str(result.content_length),
+        },
+    )
+
+
+async def increment_published_download_counters(connection: Any, skill_id: int, version_id: int) -> None:
+    await connection.execute(
+        text("UPDATE skill SET download_count = download_count + 1 WHERE id = :skill_id"),
+        {"skill_id": skill_id},
+    )
+    await connection.execute(
+        text(
+            """
+            INSERT INTO skill_version_stats (skill_version_id, skill_id, download_count, updated_at)
+            VALUES (:version_id, :skill_id, 1, CURRENT_TIMESTAMP)
+            ON CONFLICT (skill_version_id)
+            DO UPDATE SET download_count = skill_version_stats.download_count + 1,
+                          updated_at = CURRENT_TIMESTAMP
+            """
+        ),
+        {"version_id": version_id, "skill_id": skill_id},
+    )
 
 
 async def read_skill_resolve(
@@ -1926,10 +2052,239 @@ async def read_skill_tag_file_content(
     return read_file_content_from_row(storage_base_path, dict(file_row))
 
 
+async def read_skill_download_version(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    version: str,
+    current_user_id: str | None = None,
+) -> DownloadResult:
+    async with engine.begin() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id, s.slug, s.display_name
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, version, status
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND version = :version
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_row["id"], "version": version},
+            )
+        ).mappings().one_or_none()
+
+        if version_row is None:
+            raise SkillResolveError("error.skill.version.notFound")
+        assert_download_access(dict(version_row), can_manage)
+
+        file_rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT file_path, storage_key
+                    FROM skill_file
+                    WHERE version_id = :version_id
+                    ORDER BY file_path ASC
+                    """
+                ),
+                {"version_id": version_row["id"]},
+            )
+        ).mappings().all()
+
+        row = {
+            "skill_id": int(skill_row["id"]),
+            "version_id": int(version_row["id"]),
+            "version": str(version_row["version"]),
+            "status": str(version_row["status"]),
+            "display_name": skill_row["display_name"],
+            "slug": str(skill_row["slug"]),
+            "content_type": "application/zip",
+            "content_length": None,
+        }
+        result = read_bundle_or_build_fallback_zip(storage_base_path, row, [dict(file_row) for file_row in file_rows])
+
+        if str(version_row["status"]) == "PUBLISHED":
+            await increment_published_download_counters(connection, int(skill_row["id"]), int(version_row["id"]))
+
+    return result
+
+
+async def read_skill_download_latest(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    current_user_id: str | None = None,
+) -> DownloadResult:
+    async with engine.connect() as connection:
+        version = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT sv.version
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    JOIN skill_version sv ON sv.id = s.latest_version_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).scalar_one_or_none()
+
+    if version is None:
+        raise SkillResolveError("error.skill.version.latest.unavailable")
+    return await read_skill_download_version(engine, storage_base_path, namespace, slug, str(version), current_user_id)
+
+
+async def read_skill_download_tag(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    tag_name: str,
+    current_user_id: str | None = None,
+) -> DownloadResult:
+    async with engine.connect() as connection:
+        version = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT sv.version
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    JOIN skill_tag st ON st.skill_id = s.id
+                    JOIN skill_version sv ON sv.id = st.version_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                      AND st.tag_name = :tag_name
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug, "tag_name": tag_name},
+            )
+        ).scalar_one_or_none()
+
+    if version is None:
+        raise SkillResolveError("error.skill.tag.notFound")
+    return await read_skill_download_version(engine, storage_base_path, namespace, slug, str(version), current_user_id)
+
+
 async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
     return result
+
+
+async def resolve_clawhub_download_coordinate(
+    request: Request,
+    slug: str,
+    current_user_id: str | None,
+) -> tuple[str, str]:
+    reader = getattr(request.app.state, "clawhub_download_coordinate_reader", None)
+    if reader is not None:
+        coordinate = reader(slug, current_user_id)
+        coordinate = await _resolve_reader_result(coordinate)
+    else:
+        legacy_reader = getattr(request.app.state, "clawhub_legacy_slug_reader", None)
+        if legacy_reader is not None:
+            coordinate = legacy_reader(slug)
+            coordinate = await _resolve_reader_result(coordinate)
+        elif "--" in slug:
+            coordinate = from_clawhub_canonical_slug(slug)
+        else:
+            db_engine = getattr(request.app.state, "db_engine", None)
+            coordinate = (
+                from_clawhub_canonical_slug(slug)
+                if db_engine is None
+                else await read_clawhub_legacy_slug_coordinate(db_engine, slug)
+            )
+
+    if isinstance(coordinate, dict):
+        return str(coordinate["namespace"]), str(coordinate["slug"])
+    namespace, skill_slug = coordinate
+    return str(namespace), str(skill_slug)
+
+
+def build_download_redirect(namespace: str, slug: str, version: str | None) -> RedirectResponse:
+    namespace_path = quote(namespace, safe="")
+    slug_path = quote(slug, safe="")
+    if version is None or version == "latest":
+        location = f"/api/v1/skills/{namespace_path}/{slug_path}/download"
+    else:
+        location = (
+            f"/api/v1/skills/{namespace_path}/{slug_path}/versions/"
+            f"{quote(version, safe='')}/download"
+        )
+    return RedirectResponse(location, status_code=302)
+
+
+@router.get("/api/v1/download")
+async def download_clawhub_skill_by_query(
+    request: Request,
+    slug: str,
+    version: str | None = "latest",
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> RedirectResponse:
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        namespace, skill_slug = await resolve_clawhub_download_coordinate(request, slug, current_user_id)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_redirect(namespace, skill_slug, version)
+
+
+@router.get("/api/v1/download/{canonicalSlug}")
+async def download_clawhub_skill_by_path(
+    canonicalSlug: str,
+    version: str | None = "latest",
+) -> RedirectResponse:
+    namespace, slug = from_clawhub_canonical_slug(canonicalSlug)
+    return build_download_redirect(namespace, slug, version)
 
 
 @router.get("/api/web/skills")
@@ -2377,3 +2732,82 @@ async def get_skill_tag_file_content(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return Response(content=content, media_type="application/octet-stream")
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/download")
+async def download_skill_latest(
+    namespace: str,
+    slug: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    reader = getattr(request.app.state, "skill_download_latest_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(reader(namespace, slug, current_user_id))
+        else:
+            result = await read_skill_download_latest(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_response(result)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/download")
+async def download_skill_version(
+    namespace: str,
+    slug: str,
+    version: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    reader = getattr(request.app.state, "skill_download_version_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
+        else:
+            result = await read_skill_download_version(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                version,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_response(result)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download")
+async def download_skill_tag(
+    namespace: str,
+    slug: str,
+    tagName: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    reader = getattr(request.app.state, "skill_download_tag_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(reader(namespace, slug, tagName, current_user_id))
+        else:
+            result = await read_skill_download_tag(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                tagName,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_response(result)
