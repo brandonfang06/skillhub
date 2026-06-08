@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5002,6 +5002,8 @@ function Invoke-PublishFoundationPackageTests {
 }
 
 function Invoke-PublishFoundationContractComparison {
+    param([string]$ResultFileName = 'publish-foundation-contract-result.json')
+
     $cases = @(
         [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
         [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' },
@@ -5032,12 +5034,12 @@ function Invoke-PublishFoundationContractComparison {
         comparedFields = @('status')
     }
 
-    $resultPath = Join-Path $DevDir 'publish-foundation-contract-result.json'
+    $resultPath = Join-Path $DevDir $ResultFileName
     $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
     $result | ConvertTo-Json -Depth 50
 
     if (-not $result.allProxyMatchesJava) {
-        throw 'Publish foundation ownership check failed. See .dev/publish-foundation-contract-result.json.'
+        throw "Publish ownership check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -5046,6 +5048,34 @@ function Invoke-HybridPublishFoundationSmokeVerification {
         Invoke-PublishFoundationPackageTests
         Start-Hybrid
         Invoke-PublishFoundationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-PublishDryRunTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_publish_dry_run.py', '-q')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-HybridPublishDryRunSmokeVerification {
+    try {
+        Invoke-PublishDryRunTests
+        Start-Hybrid
+        Invoke-PublishFoundationContractComparison -ResultFileName 'publish-dry-run-contract-result.json'
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -5082,6 +5112,7 @@ switch ($Action) {
     'verify-owner-preview-resolve-smoke' { Invoke-HybridOwnerPreviewResolveSmokeVerification }
     'verify-owner-preview-compare-smoke' { Invoke-HybridOwnerPreviewCompareSmokeVerification }
     'verify-publish-foundation-smoke' { Invoke-HybridPublishFoundationSmokeVerification }
+    'verify-publish-dry-run-smoke' { Invoke-HybridPublishDryRunSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

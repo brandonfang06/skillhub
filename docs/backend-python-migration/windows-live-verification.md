@@ -772,6 +772,42 @@ This gate verifies the publish foundation boundary:
 - No Python publish route, DB write, storage write, scanner trigger, or publish transaction is
   enabled by this foundation gate.
 
+## One-Command Publish Dry-Run Model Verification Gate
+
+For the publish dry-run model milestone, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-dry-run-smoke
+```
+
+Expected result:
+
+```text
+18 passed
+allProxyMatchesJava: true
+6 passed
+```
+
+The command writes the latest dry-run ownership summary to:
+
+```text
+.dev/publish-dry-run-contract-result.json
+```
+
+This gate verifies the publish dry-run boundary:
+
+- Python dry-run model tests pass for namespace, membership, package, metadata, warning, slug, and
+  version conflict decisions.
+- `POST /api/v1/skills` remains Java-owned through Vite.
+- `POST /api/v1/publish` remains Java-owned through Vite.
+- `POST /api/v1/skills/{namespace}/publish` remains Java-owned through Vite.
+- `POST /api/web/skills/{namespace}/publish` remains Java-owned through Vite.
+- No Python publish route, DB write, storage write, scanner trigger, review task, audit log, or
+  event is enabled by this dry-run gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

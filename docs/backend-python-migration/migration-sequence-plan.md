@@ -134,6 +134,7 @@ Still plan carefully when a group requires:
 | 21 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | File content read foundation migrated. Version file content supports manager-only owner preview; tag file content remains published-only. Download routes remain Java-owned. |
 | 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. Web download aliases remain Java-owned/unmigrated. |
 | 23 | Publish upload foundation | n/a | Python package extraction/validation helpers added. No publish POST route ownership moved; Vite detail routes are GET-only so publish POST paths remain Java-owned. |
+| 24 | Publish transaction dry-run model | n/a | Python mirrors Java `validateOnly(...)` preflight decisions for namespace, membership, package, metadata, pre-publish warnings, slug, and version conflicts. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -364,6 +365,24 @@ Completed foundation milestone:
   - `POST /api/web/skills/{namespace}/publish`
   - `POST /api/cli/v1/skills/{namespace}/publish/validate`
   - `POST /api/cli/v1/skills/{namespace}/publish`
+
+Completed dry-run model milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-dry-run-model.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-dry-run-model.md`
+- Scope:
+  Python dry-run preflight model only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented checks:
+  namespace existence/status, namespace membership with `SUPER_ADMIN` bypass, package validation,
+  metadata slug/version resolution, Java-compatible basic credential warning scan, own archived
+  skill, own published version conflict, and other-owner published name conflict.
+- Explicitly not implemented:
+  DB writes, object storage writes, review task creation, scanner trigger, audit/event behavior,
+  and publish HTTP route ownership.
 
 Candidate routes:
 
