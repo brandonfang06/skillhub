@@ -494,6 +494,45 @@ This gate verifies the Group C owner-preview version boundary:
 - file metadata, file bytes, downloads, non-public visibility, and lifecycle mutations remain
   outside this gate.
 
+## One-Command Owner Preview File Metadata Verification Gate
+
+For the migrated manager-only owner preview version file metadata access, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-files-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+anonymousPublishedFilesSorted: true
+ownerPendingFilesSorted: true
+anonymousPendingStatusesMatch: true
+6 passed
+```
+
+The command writes the latest owner preview files comparison summary to:
+
+```text
+.dev/owner-preview-files-contract-result.json
+```
+
+This gate verifies the Group C owner-preview file metadata boundary:
+
+- anonymous published version file metadata stays public.
+- owner requests via `X-Mock-User-Id: local-user` can read `PENDING_REVIEW` version file metadata.
+- namespace `ADMIN` requests can read the same `PENDING_REVIEW` version file metadata.
+- anonymous `PENDING_REVIEW` file metadata is rejected with the same HTTP status through Java,
+  Python, and both Vite proxy aliases.
+- tag owner preview, file bytes, downloads, non-public visibility, and lifecycle mutations remain
+  outside this gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

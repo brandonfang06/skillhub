@@ -43,9 +43,9 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/versions` | python | Frontend alias for public published version list with manager-only owner preview lifecycle versions. Files metadata is Python-owned; compare and downloads remain Java-owned. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | python | Public published version detail with manager-only non-published owner preview access. Files metadata is Python-owned; compare, downloads, and DELETE remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend alias for public published version detail with manager-only non-published owner preview access. Files metadata is Python-owned; compare, downloads, and DELETE remain Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/files` | python | Public anonymous skill version files metadata list. Content and downloads remain Java-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Frontend alias for public anonymous skill version files metadata list. Content and downloads remain Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill tag files metadata list. Content and downloads remain Java-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Frontend alias for public anonymous skill tag files metadata list. Content and downloads remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/files` | python | Public published version files metadata list with manager-only owner preview access for non-published versions. Content and downloads remain Java-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Frontend alias for public published version files metadata list with manager-only owner preview access for non-published versions. Content and downloads remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill tag files metadata list. Tag owner preview, content, and downloads remain Java-owned/deferred. |
+| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Frontend alias for public anonymous skill tag files metadata list. Tag owner preview, content, and downloads remain Java-owned/deferred. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

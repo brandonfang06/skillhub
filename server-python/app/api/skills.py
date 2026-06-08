@@ -1275,13 +1275,14 @@ async def read_skill_version_files(
     namespace: str,
     slug: str,
     version: str,
+    current_user_id: str | None = None,
 ) -> list[dict[str, object]]:
     async with engine.connect() as connection:
-        skill_id = (
+        skill_row = (
             await connection.execute(
                 text(
                     """
-                    SELECT s.id
+                    SELECT s.id, s.owner_id, s.namespace_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1297,29 +1298,32 @@ async def read_skill_version_files(
                 ),
                 {"namespace": namespace, "slug": slug},
             )
-        ).scalar_one_or_none()
+        ).mappings().one_or_none()
 
-        if skill_id is None:
+        if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
 
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(
                 text(
                     """
-                    SELECT id
+                    SELECT id, status
                     FROM skill_version
                     WHERE skill_id = :skill_id
                       AND version = :version
-                      AND status = 'PUBLISHED'
                     LIMIT 1
                     """
                 ),
-                {"skill_id": skill_id, "version": version},
+                {"skill_id": skill_row["id"], "version": version},
             )
         ).mappings().one_or_none()
 
         if version_row is None:
             raise SkillResolveError("error.skill.version.notFound")
+        if str(version_row["status"]) != "PUBLISHED" and not can_manage:
+            raise SkillResolveError("error.skill.version.notPublished")
 
         version_id = version_row["id"]
 
@@ -1757,13 +1761,21 @@ async def list_skill_version_files(
     slug: str,
     version: str,
     request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_files_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug, version))
+            data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
         else:
-            data = await read_skill_version_files(request.app.state.db_engine, namespace, slug, version)
+            data = await read_skill_version_files(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                version,
+                current_user_id,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
