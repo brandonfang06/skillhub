@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -1620,6 +1620,9 @@ function Invoke-HttpStatusNoRedirect {
         $request.Method = $Method
         $request.AllowAutoRedirect = $false
         $request.Timeout = 10000
+        if ($Method -in @('POST', 'PUT', 'PATCH')) {
+            $request.ContentLength = 0
+        }
         $response = $request.GetResponse()
         try {
             return [int]$response.StatusCode
@@ -4988,6 +4991,74 @@ function Invoke-HybridOwnerPreviewCompareSmokeVerification {
     }
 }
 
+function Invoke-PublishFoundationPackageTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_publish_package.py', '-q')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-PublishFoundationContractComparison {
+    $cases = @(
+        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
+        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' },
+        [ordered]@{ name = 'portalV1NamespacePublish'; path = '/api/v1/skills/global/publish'; method = 'POST' },
+        [ordered]@{ name = 'portalWebNamespacePublish'; path = '/api/web/skills/global/publish'; method = 'POST' }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Checking publish route ownership: $($case.method) $($case.path)"
+        $javaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$($case.path)" -Method $case.method
+        $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$($case.path)" -Method $case.method
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            method = $case.method
+            path = $case.path
+            javaStatus = $javaStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaStatus -eq $proxyStatus)
+        }
+    }
+
+    $result = [ordered]@{
+        cases = $caseResults
+        allProxyMatchesJava = -not [bool]($caseResults | Where-Object { -not $_.proxyMatchesJava })
+        pythonPublishRoutesRemainUnowned = $true
+        comparedFields = @('status')
+    }
+
+    $resultPath = Join-Path $DevDir 'publish-foundation-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allProxyMatchesJava) {
+        throw 'Publish foundation ownership check failed. See .dev/publish-foundation-contract-result.json.'
+    }
+}
+
+function Invoke-HybridPublishFoundationSmokeVerification {
+    try {
+        Invoke-PublishFoundationPackageTests
+        Start-Hybrid
+        Invoke-PublishFoundationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -5010,6 +5081,7 @@ switch ($Action) {
     'verify-download-smoke' { Invoke-HybridDownloadSmokeVerification }
     'verify-owner-preview-resolve-smoke' { Invoke-HybridOwnerPreviewResolveSmokeVerification }
     'verify-owner-preview-compare-smoke' { Invoke-HybridOwnerPreviewCompareSmokeVerification }
+    'verify-publish-foundation-smoke' { Invoke-HybridPublishFoundationSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

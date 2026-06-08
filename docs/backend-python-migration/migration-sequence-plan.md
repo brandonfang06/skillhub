@@ -133,6 +133,7 @@ Still plan carefully when a group requires:
 | 20 | `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Authenticated context forwarding and Java-compatible negative owner-preview tag file metadata coverage completed. Non-published tag targets remain rejected. |
 | 21 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | File content read foundation migrated. Version file content supports manager-only owner preview; tag file content remains published-only. Download routes remain Java-owned. |
 | 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. Web download aliases remain Java-owned/unmigrated. |
+| 23 | Publish upload foundation | n/a | Python package extraction/validation helpers added. No publish POST route ownership moved; Vite detail routes are GET-only so publish POST paths remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -342,14 +343,20 @@ Goal:
 - Move package upload, validation, scanner handoff, storage write, and initial version creation to
   Python as one coherent workflow.
 
-First foundation milestone:
+Completed foundation milestone:
 
 - Plan:
   `docs/backend-python-migration/plans/2026-06-08-publish-upload-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-upload-foundation.md`
 - Scope:
   Python package extraction and validation helpers only.
 - Route ownership:
   no publish POST route ownership changes.
+- Proxy boundary:
+  two-segment skill detail routes are method-aware GET-only so
+  `POST /api/v1/skills/{namespace}/publish` and `POST /api/web/skills/{namespace}/publish` fall
+  through to Java.
 - Explicitly Java-owned during this foundation:
   - `POST /api/v1/skills`
   - `POST /api/v1/publish`

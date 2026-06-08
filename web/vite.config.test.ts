@@ -150,17 +150,16 @@ describe('Vite dev proxy route ownership', () => {
 
   it('routes public skill detail aliases to Python without taking over search or nested routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
-    const keys = Object.keys(proxy)
     const v1SkillDetail = '^/api/v1/skills/[^/]+/(?!undelete(?:\\?.*)?$)[^/]+$'
     const webSkillDetail = '^/api/web/skills/[^/]+/[^/]+$'
 
-    expect(proxy[v1SkillDetail]?.target).toBe('http://localhost:8081')
-    expect(proxy[webSkillDetail]?.target).toBe('http://localhost:8081')
-    expect(keys.indexOf(v1SkillDetail)).toBeLessThan(keys.indexOf('/api'))
-    expect(keys.indexOf(webSkillDetail)).toBeLessThan(keys.indexOf('/api'))
+    expect(proxy[v1SkillDetail]?.target).toBeUndefined()
+    expect(proxy[webSkillDetail]?.target).toBeUndefined()
 
-    expect(matchingProxyTarget('/api/v1/skills/global/demo')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/demo')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/global/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
@@ -187,7 +186,17 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/v1/skills?page=0&limit=25')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
+  })
+
+  it('keeps publish upload routes Java-owned during the foundation milestone', () => {
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/publish')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/publish')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/global/publish')).toBe('http://localhost:8080')
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
   it('routes ClawHub search to Python without taking over other ClawHub routes', () => {

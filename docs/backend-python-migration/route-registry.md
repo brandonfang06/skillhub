@@ -33,6 +33,7 @@ deferred routes are still visible.
 | GET | `/api/v1/auth/me` | python | Current local mock-user bridge for frontend auth context. Login, OAuth, token, and CLI auth remain Java-owned. |
 | GET | `/api/v1/skills` | python | ClawHub compatibility list. GET-only method-aware proxy; root publish `POST /api/v1/skills` remains Java-owned. |
 | POST | `/api/v1/skills` | java | ClawHub compatibility publish remains Java-owned until publish/upload vertical slice is planned. |
+| POST | `/api/v1/publish` | java | Legacy ClawHub compatibility publish remains Java-owned during publish foundation. |
 | GET | `/api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail. GET-only method-aware proxy; publish, delete, and undelete remain Java-owned. |
 | GET | `/api/web/skills` | python | Public portal skill search. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
 | GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. Label mutations remain Java-owned. |
@@ -59,5 +60,9 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/download` | java | Web download alias is not migrated; no Java evidence required moving it in this milestone. |
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/download` | java | Web download alias is not migrated; v1 portal download is Python-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | java | Web download alias is not migrated; v1 tag download is Python-owned. |
+| POST | `/api/v1/skills/{namespace}/publish` | java | Portal publish upload remains Java-owned; Python has package helper foundation only. |
+| POST | `/api/web/skills/{namespace}/publish` | java | Frontend publish upload alias remains Java-owned; Vite must not route this shape to Python detail GET. |
+| POST | `/api/cli/v1/skills/{namespace}/publish/validate` | java | CLI publish validation remains Java-owned. |
+| POST | `/api/cli/v1/skills/{namespace}/publish` | java | CLI publish remains Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
