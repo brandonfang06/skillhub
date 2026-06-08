@@ -274,6 +274,29 @@ The command writes the latest ClawHub resolve comparison summary to:
 .dev/clawhub-resolve-contract-result.json
 ```
 
+## Method-Colliding Route Verification
+
+Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,
+path-only Vite proxy entries are not allowed because they can accidentally proxy Java-owned
+mutations to Python.
+
+Required checks for method-colliding migrations:
+
+- Verify the Python-owned method reaches Python.
+- Verify Java-owned methods on the same path still reach Java.
+- Add Vite config tests using `resolveMethodAwareProxyTarget`.
+- Add live gate checks for both method groups before commit.
+
+Method-aware infrastructure is available, but active rules should be enabled only inside the API
+milestone that implements the matching Python route.
+
+Future rule requiring live verification:
+
+```text
+GET /api/v1/skills/{canonicalSlug} -> Python
+POST/DELETE /api/v1/skills/{canonicalSlug} -> Java fallback
+```
+
 ## Shutdown
 
 ```powershell

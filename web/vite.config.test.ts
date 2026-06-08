@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import config from './vite.config'
+import config, {
+  type MethodAwareProxyRule,
+  resolveMethodAwareProxyTarget,
+} from './vite.config'
 
 type ProxyTarget = {
   target?: string
@@ -24,6 +27,30 @@ function matchingProxyTarget(pathname: string): string | undefined {
 }
 
 describe('Vite dev proxy route ownership', () => {
+  it('resolves method-aware GET-only proxy targets without taking over mutations', () => {
+    const rules: MethodAwareProxyRule[] = [
+      {
+        methods: ['GET'],
+        pattern: /^\/api\/v1\/skills\/[^/?]+(?:\?.*)?$/,
+        target: 'http://localhost:8081',
+      },
+    ]
+
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/demo', rules)).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/team-ai--demo?view=compat', rules)).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/demo', rules)).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo', rules)).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/global/demo', rules)).toBeUndefined()
+  })
+
+  it('keeps method-aware proxy inactive until a milestone enables rules', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/demo')).toBeUndefined()
+  })
+
   it('routes Python-owned health before the Java API fallback', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

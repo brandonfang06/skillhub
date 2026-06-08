@@ -1,11 +1,75 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import http from 'node:http'
+import https from 'node:https'
 import path from 'path'
 
 const LEGACY_BROWSER_TARGETS = ['chrome83', 'edge83', 'firefox78', 'safari14']
 
+export type MethodAwareProxyRule = {
+  methods: string[]
+  pattern: RegExp
+  target: string
+}
+
+export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = []
+
+export function resolveMethodAwareProxyTarget(
+  method: string | undefined,
+  pathname: string | undefined,
+  rules: MethodAwareProxyRule[] = METHOD_AWARE_PROXY_RULES,
+): string | undefined {
+  if (!method || !pathname) {
+    return undefined
+  }
+
+  const normalizedMethod = method.toUpperCase()
+  return rules.find((rule) => rule.methods.includes(normalizedMethod) && rule.pattern.test(pathname))?.target
+}
+
+function methodAwareProxyPlugin(rules: MethodAwareProxyRule[] = METHOD_AWARE_PROXY_RULES): Plugin {
+  return {
+    name: 'skillhub-method-aware-proxy',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const target = resolveMethodAwareProxyTarget(req.method, req.url, rules)
+        if (!target || !req.url) {
+          next()
+          return
+        }
+
+        const targetUrl = new URL(req.url, target)
+        const transport = targetUrl.protocol === 'https:' ? https : http
+        const proxyRequest = transport.request(
+          targetUrl,
+          {
+            method: req.method,
+            headers: {
+              ...req.headers,
+              host: targetUrl.host,
+            },
+          },
+          (proxyResponse) => {
+            res.writeHead(proxyResponse.statusCode ?? 502, proxyResponse.headers)
+            proxyResponse.pipe(res)
+          },
+        )
+
+        proxyRequest.on('error', () => {
+          if (!res.headersSent) {
+            res.writeHead(502)
+          }
+          res.end()
+        })
+
+        req.pipe(proxyRequest)
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [methodAwareProxyPlugin(), react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
