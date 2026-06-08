@@ -26,6 +26,10 @@ function matchingProxyTarget(pathname: string): string | undefined {
   return undefined
 }
 
+function matchingDevProxyTarget(method: string, pathname: string): string | undefined {
+  return resolveMethodAwareProxyTarget(method, pathname) ?? matchingProxyTarget(pathname)
+}
+
 describe('Vite dev proxy route ownership', () => {
   it('resolves method-aware GET-only proxy targets without taking over mutations', () => {
     const rules: MethodAwareProxyRule[] = [
@@ -47,8 +51,17 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/global/demo', rules)).toBeUndefined()
   })
 
-  it('keeps method-aware proxy inactive until a milestone enables rules', () => {
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/demo')).toBeUndefined()
+  it('routes ClawHub skill detail GET to Python without taking over mutations', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/team-ai--demo?view=compat')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/demo')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/demo/undelete')).toBe('http://localhost:8080')
   })
 
   it('routes Python-owned health before the Java API fallback', () => {
@@ -116,7 +129,7 @@ describe('Vite dev proxy route ownership', () => {
   it('routes public skill detail aliases to Python without taking over search or nested routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
-    const v1SkillDetail = '^/api/v1/skills/[^/]+/[^/]+$'
+    const v1SkillDetail = '^/api/v1/skills/[^/]+/(?!undelete(?:\\?.*)?$)[^/]+$'
     const webSkillDetail = '^/api/web/skills/[^/]+/[^/]+$'
 
     expect(proxy[v1SkillDetail]?.target).toBe('http://localhost:8081')
@@ -128,6 +141,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/demo/undelete')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/resolve')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions')).toBe('http://localhost:8081')
@@ -184,7 +198,8 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/skills/demo')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8080')
   })
 
   it('routes skill versions list aliases to Python without taking over all skill routes', () => {

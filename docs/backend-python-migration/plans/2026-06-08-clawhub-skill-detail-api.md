@@ -8,30 +8,26 @@ FastAPI while keeping ClawHub list, publish, delete, undelete, download, and nes
 Java-owned.
 
 **Architecture:** Python will expose plain ClawHub skill detail JSON for one-segment canonical slug
-requests only. The implementation reuses the existing anonymous public `read_skill_detail` reader,
-adds ClawHub response mapping, and uses exact Vite regex routing so `/api/v1/skills`,
+requests only. The implementation uses a ClawHub-specific DB reader for the detail fields that the
+plain compatibility contract needs, adds ClawHub response mapping, and uses method-aware Vite
+routing so `/api/v1/skills`,
 `/api/v1/skills/{namespace}/{slug}`, and deeper paths keep their existing owners.
 
 **Tech Stack:** FastAPI, SQLAlchemy async engine, asyncpg, pytest, Vitest, Vite dev proxy, Windows
 hybrid Java/Python/DB/Vite live contract comparison.
 
-**Status:** Blocked before implementation. This route shares the same path with Java-owned
-`DELETE /api/v1/skills/{canonicalSlug}`. Current Vite proxy ownership is path-based, so a plain
-regex proxy would also route DELETE to Python. Complete
-`docs/backend-python-migration/plans/2026-06-08-method-aware-vite-proxy.md` before implementing
-this API.
+**Status:** Active. The previous blocker was method-aware Vite routing for GET/DELETE path
+collisions. That prerequisite is complete in
+`docs/backend-python-migration/results/2026-06-08-method-aware-vite-proxy.md`.
 
-## Blocker
+## Method Boundary
 
-Do not implement this API until method-aware Vite proxy routing exists and is verified.
-
-Reason:
+This API must use method-aware Vite routing.
 
 - `GET /api/v1/skills/{canonicalSlug}` should be Python-owned.
 - `DELETE /api/v1/skills/{canonicalSlug}` must remain Java-owned.
-- Vite `server.proxy` entries match path, not HTTP method.
-- A regex-only proxy would violate the migration boundary by sending Java-owned DELETE requests to
-  Python.
+- `POST /api/v1/skills/{canonicalSlug}/undelete` must remain Java-owned.
+- A path-only regex proxy is forbidden for this route.
 
 ---
 
@@ -121,7 +117,7 @@ Java `latestVersion` object fields:
 
 ## Tasks
 
-- [ ] **Step 1: Write failing ClawHub skill detail mapping tests**
+- [x] **Step 1: Write failing ClawHub skill detail mapping tests**
 
 Create `server-python/tests/test_clawhub_skill_detail_repository.py` covering:
 
@@ -132,7 +128,7 @@ Create `server-python/tests/test_clawhub_skill_detail_repository.py` covering:
 - `latestVersion.changelog` uses empty string when absent.
 - no portal `ApiResponse` fields.
 
-- [ ] **Step 2: Run repository tests and confirm RED**
+- [x] **Step 2: Run repository tests and confirm RED**
 
 ```powershell
 cd server-python
@@ -142,12 +138,12 @@ uv run pytest tests/test_clawhub_skill_detail_repository.py -v
 
 Expected: FAIL because `build_clawhub_skill_detail_response` does not exist.
 
-- [ ] **Step 3: Implement ClawHub response mapper**
+- [x] **Step 3: Implement ClawHub response mapper**
 
 Add `build_clawhub_skill_detail_response(detail_response)` in
 `server-python/app/api/skills.py`.
 
-- [ ] **Step 4: Write failing route tests**
+- [x] **Step 4: Write failing route tests**
 
 Create `server-python/tests/test_clawhub_skill_detail.py` covering:
 
@@ -157,7 +153,7 @@ Create `server-python/tests/test_clawhub_skill_detail.py` covering:
 - `/api/v1/skills/global/demo` continues to use the existing nested SkillHub route shape.
 - `/api/v1/skills/demo/undelete` remains unowned by Python.
 
-- [ ] **Step 5: Run route tests and confirm RED**
+- [x] **Step 5: Run route tests and confirm RED**
 
 ```powershell
 cd server-python
@@ -167,17 +163,17 @@ uv run pytest tests/test_clawhub_skill_detail.py -v
 
 Expected: FAIL for `/api/v1/skills/demo` because the ClawHub route does not exist yet.
 
-- [ ] **Step 6: Implement route**
+- [x] **Step 6: Implement route**
 
 Add `GET /api/v1/skills/{canonicalSlug}` route before the nested
 `/api/v1/skills/{namespace}/{slug}` route. It should:
 
 - Parse canonical slug with `from_clawhub_canonical_slug`.
 - Use injected `app.state.clawhub_skill_detail_reader` in tests when present.
-- Otherwise call `read_skill_detail`.
+- Otherwise call `read_clawhub_skill_detail`.
 - Return plain ClawHub response, not envelope.
 
-- [ ] **Step 7: Run focused Python tests**
+- [x] **Step 7: Run focused Python tests**
 
 ```powershell
 cd server-python
@@ -187,7 +183,7 @@ uv run pytest tests/test_clawhub_skill_detail.py tests/test_clawhub_skill_detail
 
 Expected: PASS.
 
-- [ ] **Step 8: Add Vite proxy tests and route ownership**
+- [x] **Step 8: Add Vite proxy tests and route ownership**
 
 Proxy only exact one-segment `GET /api/v1/skills/{canonicalSlug}` to Python. Keep:
 
@@ -198,7 +194,7 @@ Proxy only exact one-segment `GET /api/v1/skills/{canonicalSlug}` to Python. Kee
 
 on their existing owners.
 
-- [ ] **Step 9: Add Windows live gate**
+- [x] **Step 9: Add Windows live gate**
 
 Add `verify-clawhub-skill-smoke` to `scripts/dev-hybrid.ps1`. It should reuse deterministic search
 fixtures and compare Java/Python/Vite for:
@@ -213,7 +209,7 @@ It must confirm:
 - Playwright smoke passes.
 - The hybrid stack is stopped after verification.
 
-- [ ] **Step 10: Final verification**
+- [x] **Step 10: Final verification**
 
 ```powershell
 cd server-python
@@ -227,7 +223,7 @@ git diff --check
 git diff --name-only -- server
 ```
 
-- [ ] **Step 11: Write result document**
+- [x] **Step 11: Write result document**
 
 Create `docs/backend-python-migration/results/2026-06-08-clawhub-skill-detail-api.md`.
 

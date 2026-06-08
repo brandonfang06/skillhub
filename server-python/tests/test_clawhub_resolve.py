@@ -86,10 +86,23 @@ def test_clawhub_resolve_path_route_defaults_to_latest_tag() -> None:
     assert seen == [(None, "latest", None)]
 
 
-def test_download_and_v1_skill_detail_remain_unowned_by_python_router() -> None:
+def test_download_remains_unowned_while_v1_skill_detail_is_python_owned() -> None:
     app = create_app()
+    app.state.clawhub_skill_detail_reader = lambda namespace, slug: {
+        "slug": slug,
+        "displayName": "Demo Skill",
+        "summary": "Demo summary",
+        "namespace": namespace,
+        "publishedVersion": {"id": 41, "version": "1.2.0", "status": "PUBLISHED"},
+        "publishedAt": "2026-06-08T01:02:03Z",
+        "updatedAt": "2026-06-08T02:03:04Z",
+        "changelog": "Initial release",
+    }
 
     client = TestClient(app)
 
     assert client.get("/api/v1/download/demo").status_code == 404
-    assert client.get("/api/v1/skills/demo").status_code == 404
+    response = client.get("/api/v1/skills/demo")
+
+    assert response.status_code == 200
+    assert response.json()["skill"]["slug"] == "demo"

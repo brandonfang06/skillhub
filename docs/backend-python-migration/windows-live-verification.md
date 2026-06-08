@@ -274,6 +274,43 @@ The command writes the latest ClawHub resolve comparison summary to:
 .dev/clawhub-resolve-contract-result.json
 ```
 
+## One-Command ClawHub Skill Detail Verification Gate
+
+For the migrated ClawHub compatibility skill detail API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-clawhub-skill-smoke
+```
+
+Expected result:
+
+```text
+javaMatchesPython: true
+pythonMatchesProxy: true
+plainShape: true
+v1SkillsListRemainsJava: true
+downloadRemainsJava: true
+deleteRemainsJava: true
+undeleteRemainsJava: true
+6 passed
+```
+
+The command writes the latest ClawHub skill detail comparison summary to:
+
+```text
+.dev/clawhub-skill-contract-result.json
+```
+
+This gate intentionally verifies the method boundary:
+
+- `GET /api/v1/skills/{canonicalSlug}` reaches Python.
+- `DELETE /api/v1/skills/{canonicalSlug}` still follows Java status behavior through Vite.
+- `POST /api/v1/skills/{canonicalSlug}/undelete` still follows Java status behavior through Vite.
+- `GET /api/v1/skills` remains the Java ClawHub list route.
+- `GET /api/v1/download/{canonicalSlug}` remains the Java redirect route.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,
@@ -290,7 +327,7 @@ Required checks for method-colliding migrations:
 Method-aware infrastructure is available, but active rules should be enabled only inside the API
 milestone that implements the matching Python route.
 
-Future rule requiring live verification:
+Active rule requiring live verification:
 
 ```text
 GET /api/v1/skills/{canonicalSlug} -> Python

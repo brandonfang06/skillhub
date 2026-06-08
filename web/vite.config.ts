@@ -12,7 +12,13 @@ export type MethodAwareProxyRule = {
   target: string
 }
 
-export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = []
+export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+]
 
 export function resolveMethodAwareProxyTarget(
   method: string | undefined,
@@ -134,7 +140,7 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
-      '^/api/v1/skills/[^/]+/[^/]+$': {
+      '^/api/v1/skills/[^/]+/(?!undelete(?:\\?.*)?$)[^/]+$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },

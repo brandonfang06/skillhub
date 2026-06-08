@@ -285,6 +285,42 @@ def build_clawhub_resolve_response(resolve_response: dict[str, object]) -> dict[
     return {"match": version_info, "latestVersion": version_info}
 
 
+def build_clawhub_skill_detail_response(detail_response: dict[str, object]) -> dict[str, object]:
+    namespace = str(detail_response["namespace"])
+    slug = str(detail_response["slug"])
+    published_version = detail_response.get("publishedVersion")
+    latest_version = None
+    if published_version is not None:
+        latest_version = {
+            "version": published_version["version"],  # type: ignore[index]
+            "createdAt": to_epoch_millis(detail_response.get("publishedAt")) or 0,
+            "changelog": detail_response.get("changelog") or "",
+            "license": None,
+        }
+    return {
+        "skill": {
+            "slug": to_clawhub_canonical_slug(namespace, slug),
+            "displayName": detail_response["displayName"],
+            "summary": detail_response.get("summary"),
+            "tags": {},
+            "stats": {},
+            "createdAt": to_epoch_millis(detail_response.get("createdAt")) or 0,
+            "updatedAt": to_epoch_millis(detail_response.get("updatedAt")) or 0,
+        },
+        "latestVersion": latest_version,
+        "owner": None,
+        "moderation": {
+            "isSuspicious": False,
+            "isMalwareBlocked": False,
+            "verdict": "clean",
+            "reasonCodes": [],
+            "updatedAt": None,
+            "engineVersion": None,
+            "summary": None,
+        },
+    }
+
+
 def clawhub_resolve_selectors(version: str | None, default_latest: bool) -> tuple[str | None, str | None]:
     selected = "latest" if version is None and default_latest else version
     if selected == "latest":
@@ -732,6 +768,88 @@ async def read_skill_detail(
         for label in labels
     ]
     return build_skill_detail_response(row, label_rows)
+
+
+async def read_clawhub_skill_detail(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+) -> dict[str, object]:
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id,
+                           s.slug,
+                           s.display_name,
+                           s.summary,
+                           s.visibility,
+                           s.status,
+                           s.hidden,
+                           s.created_at,
+                           s.updated_at,
+                           s.latest_version_id,
+                           n.slug AS namespace,
+                           n.status AS namespace_status,
+                           pv.id AS published_version_id,
+                           pv.version AS published_version,
+                           pv.status AS published_version_status,
+                           pv.published_at,
+                           pv.changelog
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    LEFT JOIN LATERAL (
+                        SELECT sv.id, sv.version, sv.status, sv.published_at, sv.changelog
+                        FROM skill_version sv
+                        WHERE sv.skill_id = s.id
+                          AND sv.status = 'PUBLISHED'
+                        ORDER BY
+                          CASE WHEN sv.id = s.latest_version_id THEN 0 ELSE 1 END,
+                          sv.published_at DESC NULLS LAST,
+                          sv.created_at DESC NULLS LAST,
+                          sv.id DESC
+                        LIMIT 1
+                    ) pv ON TRUE
+                    WHERE n.slug = :namespace
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+    if row is None:
+        raise SkillResolveError("error.skill.notFound")
+    if str(row["namespace_status"]) == "ARCHIVED":
+        raise SkillResolveError("error.namespace.archived", status_code=403)
+    if str(row["visibility"]) != "PUBLIC":
+        raise SkillResolveError("error.skill.access.denied", status_code=403)
+
+    published_version = None
+    if row["published_version_id"] is not None:
+        published_version = {
+            "id": int(row["published_version_id"]),
+            "version": str(row["published_version"]),
+            "status": str(row["published_version_status"]),
+        }
+
+    return {
+        "slug": str(row["slug"]),
+        "displayName": row["display_name"],
+        "summary": row["summary"],
+        "namespace": str(row["namespace"]),
+        "publishedVersion": published_version,
+        "createdAt": to_java_instant(row["created_at"]),
+        "publishedAt": to_java_instant(row["published_at"]),
+        "updatedAt": to_java_instant(row["updated_at"]),
+        "changelog": row["changelog"],
+    }
 
 
 async def read_skill_search(
@@ -1207,6 +1325,20 @@ async def resolve_clawhub_skill_by_path(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return build_clawhub_resolve_response(data)
+
+
+@router.get("/api/v1/skills/{canonicalSlug}")
+async def get_clawhub_skill_detail(request: Request, canonicalSlug: str) -> dict[str, object]:
+    namespace, slug = from_clawhub_canonical_slug(canonicalSlug)
+    reader = getattr(request.app.state, "clawhub_skill_detail_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug))
+        else:
+            data = await read_clawhub_skill_detail(request.app.state.db_engine, namespace, slug)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_clawhub_skill_detail_response(data)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}")
