@@ -135,6 +135,7 @@ Still plan carefully when a group requires:
 | 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. Web download aliases remain Java-owned/unmigrated. |
 | 23 | Publish upload foundation | n/a | Python package extraction/validation helpers added. No publish POST route ownership moved; Vite detail routes are GET-only so publish POST paths remain Java-owned. |
 | 24 | Publish transaction dry-run model | n/a | Python mirrors Java `validateOnly(...)` preflight decisions for namespace, membership, package, metadata, pre-publish warnings, slug, and version conflicts. No publish POST route ownership moved. |
+| 25 | Publish local storage write foundation | n/a | Python writes Java-compatible local object keys, bundle zip, and future `skill_file` metadata records. No DB writes or publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -383,6 +384,23 @@ Completed dry-run model milestone:
 - Explicitly not implemented:
   DB writes, object storage writes, review task creation, scanner trigger, audit/event behavior,
   and publish HTTP route ownership.
+
+Completed local storage write foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-local-storage-write-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-local-storage-write-foundation.md`
+- Scope:
+  Python local object-storage write helpers only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  Java-compatible file object keys, bundle object key, SHA-256 metadata, file count/total size
+  stats, bundle zip bytes, local path safety checks, and future `skill_file` row metadata.
+- Explicitly not implemented:
+  `skill`, `skill_version`, or `skill_file` DB writes, scanner trigger, review task creation,
+  audit/event behavior, replacement cleanup, and publish HTTP route ownership.
 
 Candidate routes:
 
