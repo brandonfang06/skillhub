@@ -583,21 +583,32 @@ Bridge design required before implementation:
 
 Goal:
 
-- Standardize data access and schema management in Python to improve long-term maintainability for internal developers after Java deprecation.
-- Replace all raw SQL queries (`sqlalchemy.text`) in repositories with structured SQLAlchemy ORM models.
+- Standardize Python data access after all endpoint groups have moved off Java.
+- Replace raw SQL queries (`sqlalchemy.text`) in repositories with structured SQLAlchemy ORM models without changing database ownership in the same step.
+- After the ORM swap is stable, transfer database schema migration ownership from Java Flyway to Python Alembic or an equivalent Python-native migration tool.
 
 Target Areas:
 
+Phase H1 - ORM data-access refactor:
+
 - Define full SQLAlchemy ORM models mapping to all database tables (`skill`, `skill_version`, `skill_file`, `review_task`, `security_audit`, `label_definition`, `label_translation`, `user_account`, etc.).
-- Convert all repositories (`app/repositories/`) to use SQLAlchemy ORM queries and session-based Unit of Work transactions.
-- Set up Alembic (or other Python-native schema migration tools) and perform schema baselining to take over database migration ownership from Java Flyway.
-- Clean up and remove Java Flyway migrations, configuration files, and references once Java backend deprecation is finalized.
+- Convert repositories (`app/repositories/`) from `sqlalchemy.text` queries to SQLAlchemy ORM queries.
+- Introduce session-based Unit of Work transaction boundaries where repository operations currently rely on ad hoc engine usage.
+- Keep Java Flyway as the schema source of truth during this phase. Do not require Alembic for the ORM conversion itself.
+
+Phase H2 - Python schema migration takeover:
+
+- Set up Alembic or another Python-native schema migration tool only after the ORM repositories are stable.
+- Baseline the existing Flyway-created database schema so the Python migration tool starts from the current production schema instead of trying to recreate it.
+- From the baseline revision forward, write new schema changes in the Python migration tool.
+- Clean up and remove Java Flyway migrations, configuration files, and references only after Java backend deprecation is finalized and the Python migration pipeline is verified in local, staging, and CI.
 
 Bridge design required before implementation:
 
-- Alembic migration pipeline setup and local DB setup/teardown integration.
-- Strict regression verification: ensuring all automated integration/E2E tests remain green after ORM swap.
-- Performance benchmark check: verify that ORM lazy-loading/eager-loading configs do not introduce N+1 query patterns.
+- H1 regression plan: ensure all automated integration/E2E tests remain green after the ORM repository swap.
+- H1 performance benchmark check: verify that ORM relationship loading does not introduce N+1 query patterns.
+- H2 migration plan: document the Flyway-to-Alembic baseline process, including how existing databases are stamped and how new databases are initialized.
+- H2 environment integration: wire the Python migration command into local DB setup/teardown, staging, and CI before Flyway references are removed.
 
 ## Historical Endpoint Milestones
 
