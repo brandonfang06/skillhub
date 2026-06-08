@@ -1,16 +1,51 @@
 # server-python AGENTS.md
 
-This directory contains the FastAPI backend that gradually replaces selected
-Java `server/` endpoints during the Java/Python coexistence period.
+This directory contains the FastAPI backend that replaces the Java `server/`
+backend before SkillHub goes live for the organization.
+
+The project is still pre-launch. That means migration does not need to optimize
+for a long production coexistence window. Prefer faster, coherent Python
+ownership when it is easier to verify and maintain, while still using Java as a
+read-only contract reference until Python has taken over the relevant surface.
 
 ## Mission
 
-- Implement Python-owned API routes with the same external contract as the
-  existing Java backend.
-- Keep Java `server/` and Python `server-python/` running side by side during
-  migration.
-- Preserve frontend behavior: migrated routes go to `localhost:8081`;
-  non-migrated routes stay on Java `localhost:8080`.
+- Make `server-python/` the future primary backend for internal organizational
+  use.
+- Use Java `server/` as a read-only reference implementation, not as a backend
+  that must remain production-compatible forever.
+- Preserve external contracts that the frontend, CLI compatibility layer, and
+  tests rely on unless a written migration plan explicitly changes the contract.
+- During migration, Java may still run on `localhost:8080` and Python on
+  `localhost:8081` for comparison, but long-term dual-backend operation is not
+  the goal.
+
+## Pre-Launch Migration Strategy
+
+Because the service is not live yet, agents may migrate more boldly than the
+original one-route-at-a-time coexistence strategy.
+
+Preferred approach:
+
+- Migrate by cohesive API area or workflow when that reduces duplicated
+  Java/Python boundary work.
+- It is acceptable for Python to take ownership of a broader route group once
+  tests and live verification cover the group.
+- Prefer finishing a full Python-owned vertical slice over preserving many
+  tiny Java/Python splits that create proxy complexity.
+- When a frontend workflow can be made to use Python consistently, prefer that
+  over keeping adjacent reads split across Java and Python.
+- Keep Java available as a comparison oracle until the migrated group has
+  passing tests and documented results.
+
+Still required:
+
+- Announce the planned migration scope before implementation.
+- Write/update a plan before code changes.
+- Run Python tests, Vite proxy tests when relevant, and live Java/Python
+  comparison while Java reference behavior is still useful.
+- Record result documents before commit/push.
+- Keep `server/` strictly read-only.
 
 ## Documentation Index
 
@@ -134,14 +169,15 @@ Current completed migration result examples:
 
 ## Hard Boundaries
 
-- Do not migrate an endpoint unless it is listed in
-  `docs/backend-python-migration/route-registry.md`.
+- Do not migrate an endpoint or route group unless it is listed or planned in
+  `docs/backend-python-migration/route-registry.md` and a milestone plan.
 - Do not change database schema from Python during coexistence. Java Flyway
   remains the schema owner.
 - Do not implement auth/session/OAuth/API-token behavior unless a written
   migration plan explicitly covers it.
-- Do not migrate mutating endpoints until Python has equivalent `X-Request-Id`
-  idempotency behavior.
+- Mutating endpoints may be migrated before production only when their
+  idempotency, authorization assumptions, and rollback behavior are written in
+  the plan and covered by tests.
 - Do not edit generated frontend API types manually.
 
 ## Python Tooling
@@ -173,7 +209,7 @@ Record every dependency change in the session result document.
 
 ## API Contract Rules
 
-- JSON responses must use the SkillHub envelope:
+- SkillHub web/API responses must use the SkillHub envelope:
 
 ```json
 {
@@ -185,6 +221,8 @@ Record every dependency change in the session result document.
 }
 ```
 
+- ClawHub compatibility routes intentionally return plain ClawHub JSON. Do not
+  wrap those routes in the SkillHub envelope.
 - Reuse incoming `X-Request-Id`; generate one when missing.
 - Return `X-Request-Id` in response headers.
 - Preserve Java status codes, response shapes, pagination fields, and
@@ -201,6 +239,10 @@ Every endpoint migration must update:
 - the related session result under `docs/backend-python-migration/results/`
 
 A route must have exactly one active owner: `java` or `python`.
+
+Pre-launch route ownership may move in larger groups. If a group migration
+changes many routes at once, update the registry as a group and include a
+verification matrix in the result document.
 
 ## Architecture
 
@@ -222,12 +264,13 @@ envelope responses.
 
 Every change needs tests before or alongside implementation.
 
-Minimum checks per migrated endpoint:
+Minimum checks per migrated endpoint or route group:
 
 - Python route test with `pytest`
 - response envelope test
 - request id propagation test
-- contract comparison against Java behavior when practical
+- contract comparison against Java behavior while Java remains a useful
+  reference
 - Vite proxy ownership test or config assertion when route ownership changes
 
 Before marking a session complete, run:
