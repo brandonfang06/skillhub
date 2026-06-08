@@ -35,8 +35,8 @@ deferred routes are still visible.
 | GET | `/api/web/skills` | python | Public portal skill search. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
 | GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. Label mutations remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/labels` | python | Frontend alias for public anonymous skill labels list. Label mutations remain Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}` | python | Public skill detail with local mock-user viewer capability flags. Owner preview, mutations, and downloads remain deferred. |
-| GET | `/api/web/skills/{namespace}/{slug}` | python | Frontend alias for public skill detail with local mock-user viewer capability flags. Owner preview, mutations, and downloads remain deferred. |
+| GET | `/api/v1/skills/{namespace}/{slug}` | python | Public skill detail with local mock-user viewer capability flags and manager-only owner preview projection. Non-public visibility, mutations, and downloads remain deferred. |
+| GET | `/api/web/skills/{namespace}/{slug}` | python | Frontend alias for public skill detail with local mock-user viewer capability flags and manager-only owner preview projection. Non-public visibility, mutations, and downloads remain deferred. |
 | GET | `/api/v1/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution. Download remains Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/resolve` | python | Frontend alias for public anonymous version selector resolution. Download remains Java-owned. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions` | python | Public anonymous published version list. Version detail and files are Python-owned; compare and downloads remain Java-owned. |

@@ -145,6 +145,10 @@ def detail_row(**overrides: object) -> dict[str, object]:
         "published_version_id": 70,
         "published_version": "1.0.0",
         "published_version_status": "PUBLISHED",
+        "owner_preview_version_id": None,
+        "owner_preview_version": None,
+        "owner_preview_version_status": None,
+        "owner_preview_review_comment": None,
         "resolution_mode": "PUBLISHED",
         "current_user_id": None,
         "namespace_role": None,
@@ -209,3 +213,63 @@ def test_build_skill_detail_response_disables_promotion_when_request_exists() ->
 
     assert response["canManageLifecycle"] is True
     assert response["canSubmitPromotion"] is False
+
+
+def test_build_skill_detail_response_uses_preview_as_headline_without_published_version() -> None:
+    response = build_skill_detail_response(
+        detail_row(
+            published_version_id=None,
+            published_version=None,
+            published_version_status=None,
+            owner_preview_version_id=71,
+            owner_preview_version="1.1.0",
+            owner_preview_version_status="PENDING_REVIEW",
+            resolution_mode="OWNER_PREVIEW",
+            current_user_id="owner-1",
+        ),
+        [],
+    )
+
+    preview = {"id": 71, "version": "1.1.0", "status": "PENDING_REVIEW"}
+    assert response["headlineVersion"] == preview
+    assert response["publishedVersion"] is None
+    assert response["ownerPreviewVersion"] == preview
+    assert response["ownerPreviewReviewComment"] is None
+    assert response["resolutionMode"] == "OWNER_PREVIEW"
+    assert response["canInteract"] is False
+
+
+def test_build_skill_detail_response_keeps_published_headline_with_rejected_owner_preview() -> None:
+    response = build_skill_detail_response(
+        detail_row(
+            owner_preview_version_id=72,
+            owner_preview_version="1.1.0",
+            owner_preview_version_status="REJECTED",
+            owner_preview_review_comment="metadata missing",
+            current_user_id="owner-1",
+        ),
+        [],
+    )
+
+    assert response["headlineVersion"] == {"id": 70, "version": "1.0.0", "status": "PUBLISHED"}
+    assert response["publishedVersion"] == {"id": 70, "version": "1.0.0", "status": "PUBLISHED"}
+    assert response["ownerPreviewVersion"] == {"id": 72, "version": "1.1.0", "status": "REJECTED"}
+    assert response["ownerPreviewReviewComment"] == "metadata missing"
+    assert response["resolutionMode"] == "PUBLISHED"
+    assert response["canInteract"] is True
+
+
+def test_build_skill_detail_response_hides_owner_preview_from_anonymous_viewer() -> None:
+    response = build_skill_detail_response(
+        detail_row(
+            owner_preview_version_id=None,
+            owner_preview_version=None,
+            owner_preview_version_status=None,
+            owner_preview_review_comment=None,
+        ),
+        [],
+    )
+
+    assert response["ownerPreviewVersion"] is None
+    assert response["ownerPreviewReviewComment"] is None
+    assert response["headlineVersion"] == {"id": 70, "version": "1.0.0", "status": "PUBLISHED"}

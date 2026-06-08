@@ -106,7 +106,8 @@ Still plan carefully when a group requires:
 | 11 | `GET /api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail migrated with method-aware GET-only routing. List, publish, delete, undelete, and download remain Java-owned. |
 | 12 | `GET /api/v1/skills` | python | ClawHub compatibility list migrated with method-aware GET-only routing. Root publish, delete, undelete, and download remain Java-owned. |
 | 13 | `GET /api/v1/auth/me` | python | First Group C current-user bridge using local `X-Mock-User-Id`. Login, OAuth, API tokens, session bootstrap, and CLI auth remain Java-owned. |
-| 14 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Viewer-specific public skill detail capability flags migrated for local mock users. Owner preview and non-public visibility remain deferred. |
+| 14 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Viewer-specific public skill detail capability flags migrated for local mock users. |
+| 15 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Manager-only owner preview projection migrated for public skill detail. Non-public visibility remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -209,6 +210,8 @@ Python-owned in this group:
 - `GET /api/v1/auth/me`
 - viewer-specific capability flags for `GET /api/v1/skills/{namespace}/{slug}`
 - viewer-specific capability flags for `GET /api/web/skills/{namespace}/{slug}`
+- manager-only owner preview projection for `GET /api/v1/skills/{namespace}/{slug}`
+- manager-only owner preview projection for `GET /api/web/skills/{namespace}/{slug}`
 
 Still Java-owned in this group:
 
@@ -228,6 +231,8 @@ Next candidate routes:
 - Local session-aware request context if internal development needs cookie-based web login before
   publish/upload migration.
 - Viewer-specific list/search capability flags if the frontend needs them before publish/upload.
+- Owner-preview access for version detail, version list, file metadata, resolve, or download routes
+  if the frontend needs those before publish/upload.
 
 Bridge design required before implementation:
 
@@ -828,3 +833,12 @@ The authenticated skill detail capabilities milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-authenticated-skill-detail-capabilities.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-authenticated-skill-detail-capabilities.md`
+
+The skill detail owner preview milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-skill-detail-owner-preview.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-skill-detail-owner-preview.md`

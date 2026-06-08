@@ -167,13 +167,19 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
     }
 
 
-def to_lifecycle_version(row: dict[str, Any]) -> dict[str, object] | None:
-    if row["published_version_id"] is None:
+def to_lifecycle_version(
+    row: dict[str, Any],
+    *,
+    id_key: str = "published_version_id",
+    version_key: str = "published_version",
+    status_key: str = "published_version_status",
+) -> dict[str, object] | None:
+    if row.get(id_key) is None:
         return None
     return {
-        "id": int(row["published_version_id"]),
-        "version": str(row["published_version"]),
-        "status": str(row["published_version_status"]),
+        "id": int(row[id_key]),
+        "version": str(row[version_key]),
+        "status": str(row[status_key]),
     }
 
 
@@ -182,6 +188,19 @@ def build_skill_detail_response(
     labels: list[dict[str, object]],
 ) -> dict[str, object]:
     published_version = to_lifecycle_version(row)
+    owner_preview_version = to_lifecycle_version(
+        row,
+        id_key="owner_preview_version_id",
+        version_key="owner_preview_version",
+        status_key="owner_preview_version_status",
+    )
+    headline_version = published_version if published_version is not None else owner_preview_version
+    if headline_version is None:
+        resolution_mode = "NONE"
+    elif published_version is not None:
+        resolution_mode = "PUBLISHED"
+    else:
+        resolution_mode = "OWNER_PREVIEW"
     current_user_id = row.get("current_user_id")
     namespace_role = row.get("namespace_role")
     can_manage_lifecycle = current_user_id is not None and (
@@ -216,13 +235,13 @@ def build_skill_detail_response(
         "labels": labels,
         "canManageLifecycle": can_manage_lifecycle,
         "canSubmitPromotion": can_submit_promotion,
-        "canInteract": published_version is None or published_version["status"] == "PUBLISHED",
+        "canInteract": headline_version is None or headline_version["status"] == "PUBLISHED",
         "canReport": can_report,
-        "headlineVersion": published_version,
+        "headlineVersion": headline_version,
         "publishedVersion": published_version,
-        "ownerPreviewVersion": None,
-        "ownerPreviewReviewComment": None,
-        "resolutionMode": str(row["resolution_mode"]),
+        "ownerPreviewVersion": owner_preview_version,
+        "ownerPreviewReviewComment": row.get("owner_preview_review_comment"),
+        "resolutionMode": resolution_mode,
     }
 
 
@@ -794,7 +813,7 @@ async def read_skill_detail(
             await connection.execute(
                 text(
                     """
-                    SELECT id, version, status
+                    SELECT id, version, status, created_at
                     FROM skill_version
                     WHERE skill_id = :skill_id
                       AND status = 'PUBLISHED'
@@ -812,6 +831,73 @@ async def read_skill_detail(
                 },
             )
         ).mappings().one_or_none()
+
+        can_manage_lifecycle = current_user_id is not None and (
+            str(skill_row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+        )
+        owner_preview_version = None
+        owner_preview_review_comment = None
+        if can_manage_lifecycle:
+            if published_version is None:
+                preview_where_sql = ""
+                preview_params: dict[str, Any] = {"skill_id": skill_row["id"]}
+            elif published_version["created_at"] is None:
+                preview_where_sql = "AND sv.created_at IS NULL AND sv.id > :published_version_id"
+                preview_params = {
+                    "skill_id": skill_row["id"],
+                    "published_version_id": published_version["id"],
+                }
+            else:
+                preview_where_sql = """
+                          AND (
+                              sv.created_at IS NULL
+                              OR (
+                                  sv.created_at IS NOT NULL
+                                  AND (
+                                      sv.created_at > :published_created_at
+                                      OR (sv.created_at = :published_created_at AND sv.id > :published_version_id)
+                                  )
+                              )
+                          )
+                """
+                preview_params = {
+                    "skill_id": skill_row["id"],
+                    "published_version_id": published_version["id"],
+                    "published_created_at": published_version["created_at"],
+                }
+            owner_preview_version = (
+                await connection.execute(
+                    text(
+                        f"""
+                        SELECT sv.id, sv.version, sv.status, sv.created_at
+                        FROM skill_version sv
+                        WHERE sv.skill_id = :skill_id
+                          AND sv.status NOT IN ('PUBLISHED', 'YANKED')
+                          {preview_where_sql}
+                        ORDER BY sv.created_at DESC NULLS FIRST, sv.id DESC
+                        LIMIT 1
+                        """
+                    ),
+                    preview_params,
+                )
+            ).mappings().one_or_none()
+
+            if owner_preview_version is not None and str(owner_preview_version["status"]) == "REJECTED":
+                owner_preview_review_comment = (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT review_comment
+                            FROM review_task
+                            WHERE skill_version_id = :skill_version_id
+                              AND status = 'REJECTED'
+                            ORDER BY reviewed_at DESC NULLS LAST, id DESC
+                            LIMIT 1
+                            """
+                        ),
+                        {"skill_version_id": owner_preview_version["id"]},
+                    )
+                ).scalar_one_or_none()
 
         promotion_blocked = (
             await connection.execute(
@@ -853,7 +939,10 @@ async def read_skill_detail(
     row["published_version_id"] = published_version["id"] if published_version is not None else None
     row["published_version"] = published_version["version"] if published_version is not None else None
     row["published_version_status"] = published_version["status"] if published_version is not None else None
-    row["resolution_mode"] = "PUBLISHED" if published_version is not None else "NONE"
+    row["owner_preview_version_id"] = owner_preview_version["id"] if owner_preview_version is not None else None
+    row["owner_preview_version"] = owner_preview_version["version"] if owner_preview_version is not None else None
+    row["owner_preview_version_status"] = owner_preview_version["status"] if owner_preview_version is not None else None
+    row["owner_preview_review_comment"] = owner_preview_review_comment
     row["current_user_id"] = current_user_id
     row["namespace_role"] = namespace_role
     row["promotion_blocked"] = promotion_blocked

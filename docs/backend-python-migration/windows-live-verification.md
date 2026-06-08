@@ -415,6 +415,47 @@ This gate verifies the Group C skill-detail boundary:
 - pending promotion requests block `canSubmitPromotion`.
 - owner preview and non-public visibility remain deferred.
 
+## One-Command Owner Preview Skill Detail Verification Gate
+
+For the migrated manager-only owner preview projection on public skill detail, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-detail-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+anonymousHidesPreview: true
+ownerSeesRejectedPreview: true
+ownerSeesReviewComment: true
+namespaceAdminSeesRejectedPreview: true
+publishedHeadlineKept: true
+6 passed
+```
+
+The command writes the latest owner preview detail comparison summary to:
+
+```text
+.dev/owner-preview-detail-contract-result.json
+```
+
+This gate verifies the Group C owner-preview boundary:
+
+- anonymous public detail does not expose `ownerPreviewVersion`.
+- owner requests via `X-Mock-User-Id: local-user` expose newer rejected owner preview and review
+  comment.
+- namespace `ADMIN` requests expose the same owner preview projection.
+- published public skills keep `headlineVersion` / `publishedVersion` as the published version and
+  keep `resolutionMode: PUBLISHED`.
+- version detail, version list, file metadata, resolve, downloads, non-public visibility, and
+  lifecycle mutations remain outside this gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,
