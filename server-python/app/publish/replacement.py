@@ -17,6 +17,7 @@ class ReplaceableVersion:
     version_id: int
     version: str
     status: str
+    publisher_id: str
     latest_version_id: int | None = None
     now: datetime | None = None
 
@@ -57,11 +58,12 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
                 """
                 UPDATE skill
                 SET latest_version_id = NULL,
+                    updated_by = :publisher_id,
                     updated_at = :updated_at
                 WHERE id = :skill_id
                 """
             ),
-            {"skill_id": version.skill_id, "updated_at": now},
+            {"skill_id": version.skill_id, "publisher_id": version.publisher_id, "updated_at": now},
         )
 
     await connection.execute(

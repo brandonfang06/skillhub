@@ -85,6 +85,7 @@ class FakeTransactionContext:
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        self.engine.exit_exc_types.append(exc_type)
         return None
 
 
@@ -92,6 +93,7 @@ class FakeEngine:
     def __init__(self, connections: list[FakeConnection]) -> None:
         self.connections = connections
         self.entered_connections: list[FakeConnection] = []
+        self.exit_exc_types: list[Any] = []
 
     def begin(self) -> FakeTransactionContext:
         return FakeTransactionContext(self.connections.pop(0), self)
@@ -170,6 +172,7 @@ async def test_execute_publish_write_deletes_replacement_storage_after_commit(tm
                 version_id=41,
                 version="1.0.0",
                 status="UPLOADED",
+                publisher_id="local-user",
                 latest_version_id=41,
                 now=datetime(2026, 6, 8, 18, 19, 20, tzinfo=UTC),
             )
@@ -185,3 +188,42 @@ async def test_execute_publish_write_deletes_replacement_storage_after_commit(tm
     assert "DELETE FROM skill_version" in write_connection.statements[5]
     assert "INSERT INTO skill_version" in write_connection.statements[7]
     assert cleanup_connection.statements == []
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_aborts_finalize_when_storage_write_fails(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+        ]
+    )
+    engine = FakeEngine([connection])
+    request = publish_input(str(tmp_path))
+    request = PublishWriteInput(
+        namespace_id=request.namespace_id,
+        namespace_slug=request.namespace_slug,
+        slug=request.slug,
+        display_name=request.display_name,
+        summary=request.summary,
+        publisher_id=request.publisher_id,
+        visibility=request.visibility,
+        version=request.version,
+        auto_publish=request.auto_publish,
+        metadata=request.metadata,
+        entries=[PackageEntry("../outside.txt", b"escape", "text/plain")],
+        storage_base_path=request.storage_base_path,
+        scanner_enabled=request.scanner_enabled,
+        now=request.now,
+    )
+
+    with pytest.raises(ValueError, match="Parent directory paths are not allowed"):
+        await execute_publish_write(engine, request)
+
+    assert engine.exit_exc_types == [ValueError]
+    assert len(engine.entered_connections) == 1
+    assert "INSERT INTO skill_version" in connection.statements[2]
+    assert not any("INSERT INTO skill_file" in statement for statement in connection.statements)
+    assert not any("UPDATE skill_version" in statement for statement in connection.statements)
+    assert not any("INSERT INTO review_task" in statement for statement in connection.statements)

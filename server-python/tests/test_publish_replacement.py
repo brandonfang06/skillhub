@@ -50,6 +50,7 @@ def replaceable_version(*, status: str = "UPLOADED", latest_version_id: int | No
         version_id=42,
         version="1.0.0",
         status=status,
+        publisher_id="local-user",
         latest_version_id=latest_version_id,
         now=datetime(2026, 6, 8, 16, 17, 18, tzinfo=UTC),
     )
@@ -74,6 +75,7 @@ async def test_cleanup_clears_latest_version_before_delete() -> None:
     assert "UPDATE skill" in connection.statements[0]
     assert "latest_version_id = NULL" in connection.statements[0]
     assert connection.params[0]["skill_id"] == 7
+    assert connection.params[0]["publisher_id"] == "local-user"
     assert "DELETE FROM skill_version" in connection.statements[-1]
 
 

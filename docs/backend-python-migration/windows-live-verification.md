@@ -1016,7 +1016,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 v
 Expected result:
 
 ```text
-2 passed
+3 passed
 allProxyMatchesJava: true
 6 passed
 ```

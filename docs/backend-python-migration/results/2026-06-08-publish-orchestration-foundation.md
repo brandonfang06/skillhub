@@ -50,7 +50,7 @@ Focused checks:
 
 ```text
 uv run pytest tests/test_publish_orchestration.py -q
-2 passed in 0.28s
+3 passed in 0.32s
 ```
 
 ```text
@@ -77,9 +77,16 @@ exit 0
 
 ```text
 scripts\dev-hybrid.ps1 verify-publish-orchestration-foundation-smoke
-2 passed
+3 passed
 allProxyMatchesJava: true
 6 passed
+```
+
+Post-review verification:
+
+```text
+uv run pytest tests/test_publish_replacement.py tests/test_publish_orchestration.py -q
+10 passed in 0.32s
 ```
 
 Post-gate port cleanup check:
