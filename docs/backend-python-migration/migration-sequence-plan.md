@@ -110,6 +110,7 @@ Still plan carefully when a group requires:
 | 15 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Manager-only owner preview projection migrated for public skill detail. Non-public visibility remains deferred. |
 | 16 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Manager-only owner preview access migrated for version list and version detail. File metadata/download preview access remains deferred. |
 | 17 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Manager-only owner preview access migrated for version file metadata. Tag preview, file bytes, and downloads remain deferred. |
+| 18 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Authenticated context forwarding and Java-compatible negative owner-preview resolve coverage completed. Non-published resolve remains rejected. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -224,6 +225,10 @@ Python-owned in this group:
   `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/files`
 - manager-only owner preview version file metadata access for
   `GET /api/web/skills/{namespace}/{slug}/versions/{version}/files`
+- authenticated context forwarding and published-only resolve parity for
+  `GET /api/v1/skills/{namespace}/{slug}/resolve`
+- authenticated context forwarding and published-only resolve parity for
+  `GET /api/web/skills/{namespace}/{slug}/resolve`
 
 Still Java-owned in this group:
 
@@ -243,8 +248,8 @@ Next candidate routes:
 - Local session-aware request context if internal development needs cookie-based web login before
   publish/upload migration.
 - Viewer-specific list/search capability flags if the frontend needs them before publish/upload.
-- Owner-preview access for resolve, tag file metadata, or download routes if the frontend needs
-  those before publish/upload.
+- Owner-preview access for tag file metadata or download routes if the frontend needs those before
+  publish/upload. Portal resolve was checked and remains Java-compatible published-only behavior.
 
 Bridge design required before implementation:
 
@@ -876,3 +881,13 @@ The owner preview file metadata milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-owner-preview-file-metadata.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-owner-preview-file-metadata.md`
+
+The owner preview resolve parity milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}/resolve`,
+  `GET /api/web/skills/{namespace}/{slug}/resolve`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-owner-preview-resolve.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-owner-preview-resolve.md`

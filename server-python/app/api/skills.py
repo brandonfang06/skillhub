@@ -557,6 +557,7 @@ async def read_skill_resolve(
     version: str | None,
     tag: str | None,
     hash_value: str | None,
+    current_user_id: str | None = None,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
         skill_row = (
@@ -1692,13 +1693,23 @@ async def resolve_skill_version(
     version: str | None = None,
     tag: str | None = None,
     hash_value: str | None = Query(default=None, alias="hash"),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_resolve_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug, version, tag, hash_value))
+            data = await _resolve_reader_result(reader(namespace, slug, version, tag, hash_value, current_user_id))
         else:
-            data = await read_skill_resolve(request.app.state.db_engine, namespace, slug, version, tag, hash_value)
+            data = await read_skill_resolve(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                version,
+                tag,
+                hash_value,
+                current_user_id,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)

@@ -533,6 +533,48 @@ This gate verifies the Group C owner-preview file metadata boundary:
 - tag owner preview, file bytes, downloads, non-public visibility, and lifecycle mutations remain
   outside this gate.
 
+## One-Command Owner Preview Resolve Verification Gate
+
+For portal resolve authenticated parity and the Java-compatible negative owner-preview resolve
+boundary, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-resolve-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+publishedVersionResolved: true
+publishedDownloadUrlKept: true
+anonymousPendingStatusesMatch: true
+ownerPendingStatusesMatch: true
+namespaceAdminPendingStatusesMatch: true
+6 passed
+```
+
+The command writes the latest owner preview resolve comparison summary to:
+
+```text
+.dev/owner-preview-resolve-contract-result.json
+```
+
+This gate verifies the portal resolve boundary:
+
+- anonymous, owner, and namespace `ADMIN` callers resolve published exact versions with matching
+  Java/Python/Vite contracts.
+- anonymous, owner, and namespace `ADMIN` callers are all rejected for exact `PENDING_REVIEW`
+  resolve, matching Java's published-only `resolveVersion` behavior.
+- download URLs stay metadata-only; download endpoints themselves remain Java-owned.
+- ClawHub `/api/v1/resolve` routes, file bytes, downloads, non-public visibility, and lifecycle
+  mutations remain outside this gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,
