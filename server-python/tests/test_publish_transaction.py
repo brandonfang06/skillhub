@@ -10,10 +10,14 @@ from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.storage import SkillFileWriteRecord, StoredPackageResult
 from app.publish.transaction import (
     PublishDbTransactionInput,
+    PublishDbFinalizeInput,
+    PublishDbPrepareInput,
     build_manifest_json,
     build_parsed_metadata_json,
     create_publish_db_records,
     determine_initial_version_status,
+    finalize_publish_db_records,
+    prepare_publish_db_records,
 )
 
 
@@ -73,6 +77,23 @@ def transaction_input(*, auto_publish: bool = False, visibility: str = "PUBLIC")
         entries=package_entries(),
         stored_package=storage_result(),
         now=datetime(2026, 6, 8, 12, 30, 45, tzinfo=UTC),
+    )
+
+
+def prepare_input(*, auto_publish: bool = False, visibility: str = "PUBLIC") -> PublishDbPrepareInput:
+    base = transaction_input(auto_publish=auto_publish, visibility=visibility)
+    return PublishDbPrepareInput(
+        namespace_id=base.namespace_id,
+        slug=base.slug,
+        display_name=base.display_name,
+        summary=base.summary,
+        publisher_id=base.publisher_id,
+        visibility=base.visibility,
+        version=base.version,
+        auto_publish=base.auto_publish,
+        metadata=base.metadata,
+        entries=base.entries,
+        now=base.now,
     )
 
 
@@ -184,6 +205,58 @@ async def test_create_publish_db_records_inserts_new_skill_version_files_and_upd
     assert connection.params[5]["download_ready"] is True
     assert "UPDATE skill" in connection.statements[6]
     assert connection.params[6]["latest_version_id"] == 42
+
+
+@pytest.mark.anyio
+async def test_prepare_publish_db_records_creates_version_without_file_rows() -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+        ]
+    )
+
+    result = await prepare_publish_db_records(connection, prepare_input(auto_publish=True))
+
+    assert result.skill_id == 7
+    assert result.version_id == 42
+    assert result.version_status == "PUBLISHED"
+    assert result.latest_version_updated is True
+    assert "SELECT id, status" in connection.statements[0]
+    assert "INSERT INTO skill" in connection.statements[1]
+    assert "INSERT INTO skill_version" in connection.statements[2]
+    assert not any("INSERT INTO skill_file" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_finalize_publish_db_records_inserts_files_stats_and_skill_metadata() -> None:
+    connection = FakeConnection([FakeResult(), FakeResult(), FakeResult(), FakeResult()])
+
+    await finalize_publish_db_records(
+        connection,
+        PublishDbFinalizeInput(
+            skill_id=7,
+            version_id=42,
+            display_name="Agent Helper",
+            summary="Helps agents",
+            publisher_id="local-user",
+            visibility="PUBLIC",
+            latest_version_updated=True,
+            stored_package=storage_result(),
+            now=datetime(2026, 6, 8, 12, 30, 45, tzinfo=UTC),
+        ),
+    )
+
+    assert "INSERT INTO skill_file" in connection.statements[0]
+    assert connection.params[0]["file_path"] == "SKILL.md"
+    assert "INSERT INTO skill_file" in connection.statements[1]
+    assert connection.params[1]["file_path"] == "src/main.py"
+    assert "UPDATE skill_version" in connection.statements[2]
+    assert connection.params[2]["file_count"] == 2
+    assert connection.params[2]["total_size"] == 19
+    assert "UPDATE skill" in connection.statements[3]
+    assert connection.params[3]["latest_version_id"] == 42
 
 
 @pytest.mark.anyio

@@ -139,6 +139,7 @@ Still plan carefully when a group requires:
 | 26 | Publish DB transaction foundation | n/a | Python transaction helper creates/reuses `skill`, inserts `skill_version` and `skill_file` rows, and updates version stats. No publish POST route ownership moved. |
 | 27 | Publish side-effect foundation | n/a | Python helper plans/writes review task, security audit, scan task payload, publish/review event intents, and compat audit log data. No publish POST route ownership moved. |
 | 28 | Publish replacement cleanup foundation | n/a | Python helper cleans replaceable non-published versions and records local storage delete compensation. No publish POST route ownership moved. |
+| 29 | Publish transaction split foundation | n/a | Python DB helper supports prepare/finalize phases so storage can be written after skill/version IDs are allocated. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -464,6 +465,27 @@ Completed replacement cleanup foundation milestone:
   publish HTTP route ownership, live DB mutation through a Python route, MinIO/S3 delete,
   after-commit hook orchestration, and integration into the publish transaction helper.
 
+Completed transaction split foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-transaction-split-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-transaction-split-foundation.md`
+- Scope:
+  Python DB transaction helper split only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  `prepare_publish_db_records(...)` creates or reuses `skill`, inserts `skill_version`, and
+  returns `skill_id` / `version_id` before storage writes; `finalize_publish_db_records(...)`
+  inserts `skill_file` rows, updates version stats/readiness flags, and updates skill metadata or
+  `latest_version_id`; the existing `create_publish_db_records(...)` wrapper preserves the prior
+  one-call transaction behavior for tests and future callers.
+- Explicitly not implemented:
+  publish HTTP route ownership, storage write orchestration, scanner trigger, side-effect
+  orchestration, replacement cleanup orchestration, CSRF/session behavior, and live DB mutation
+  through a Python route.
+
 Candidate routes:
 
 - ClawHub `POST /api/v1/skills`
@@ -556,6 +578,26 @@ Bridge design required before implementation:
 - Internal identity provider decision.
 - Token hashing/secret handling.
 - Audit and recovery behavior.
+
+### Group H. Post-Migration ORM Refactoring and Schema Takeover
+
+Goal:
+
+- Standardize data access and schema management in Python to improve long-term maintainability for internal developers after Java deprecation.
+- Replace all raw SQL queries (`sqlalchemy.text`) in repositories with structured SQLAlchemy ORM models.
+
+Target Areas:
+
+- Define full SQLAlchemy ORM models mapping to all database tables (`skill`, `skill_version`, `skill_file`, `review_task`, `security_audit`, `label_definition`, `label_translation`, `user_account`, etc.).
+- Convert all repositories (`app/repositories/`) to use SQLAlchemy ORM queries and session-based Unit of Work transactions.
+- Set up Alembic (or other Python-native schema migration tools) and perform schema baselining to take over database migration ownership from Java Flyway.
+- Clean up and remove Java Flyway migrations, configuration files, and references once Java backend deprecation is finalized.
+
+Bridge design required before implementation:
+
+- Alembic migration pipeline setup and local DB setup/teardown integration.
+- Strict regression verification: ensuring all automated integration/E2E tests remain green after ORM swap.
+- Performance benchmark check: verify that ORM lazy-loading/eager-loading configs do not introduce N+1 query patterns.
 
 ## Historical Endpoint Milestones
 

@@ -964,6 +964,44 @@ This gate verifies the publish replacement cleanup foundation boundary:
 - After-commit orchestration, route integration, and real DB publish replacement workflow remain
   future milestone work.
 
+## One-Command Publish Transaction Split Verification Gate
+
+For the publish transaction split foundation milestone, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-transaction-split-smoke
+```
+
+Expected result:
+
+```text
+9 passed
+allProxyMatchesJava: true
+6 passed
+```
+
+The command writes the latest transaction split ownership summary to:
+
+```text
+.dev/publish-transaction-split-contract-result.json
+```
+
+This gate verifies the publish transaction split foundation boundary:
+
+- Python transaction helper tests pass for prepare/finalize split behavior and the existing
+  one-call wrapper compatibility.
+- `POST /api/v1/skills` remains Java-owned through Vite.
+- `POST /api/v1/publish` remains Java-owned through Vite.
+- `POST /api/v1/skills/{namespace}/publish` remains Java-owned through Vite.
+- `POST /api/web/skills/{namespace}/publish` remains Java-owned through Vite.
+- No Python publish HTTP route is called by this gate.
+- The live gate does not mutate the database through a Python route; storage write orchestration,
+  scanner trigger, side-effect orchestration, and replacement cleanup orchestration remain future
+  milestone work.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,
