@@ -17,6 +17,18 @@ router = APIRouter()
 VersionRow = dict[str, Any]
 FileRow = dict[str, Any]
 
+LIFECYCLE_MANAGER_STATUSES = (
+    "PUBLISHED",
+    "REJECTED",
+    "PENDING_REVIEW",
+    "UPLOADED",
+    "DRAFT",
+    "SCANNING",
+    "SCAN_FAILED",
+    "YANKED",
+)
+LIFECYCLE_LIST_PRIORITY = {status: index for index, status in enumerate(LIFECYCLE_MANAGER_STATUSES)}
+
 
 class SkillResolveError(ValueError):
     def __init__(self, message: str, status_code: int = 400) -> None:
@@ -26,6 +38,47 @@ class SkillResolveError(ValueError):
 
 def has_text(value: str | None) -> bool:
     return value is not None and value.strip() != ""
+
+
+def normalized_current_user_id(mock_user_id: str | None) -> str | None:
+    return mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
+
+
+def lifecycle_visible_statuses(can_manage: bool) -> tuple[str, ...]:
+    return LIFECYCLE_MANAGER_STATUSES if can_manage else ("PUBLISHED",)
+
+
+def lifecycle_list_priority(status: str) -> int:
+    return LIFECYCLE_LIST_PRIORITY.get(status, len(LIFECYCLE_LIST_PRIORITY))
+
+
+async def read_namespace_role(
+    connection: Any,
+    namespace_id: int,
+    current_user_id: str | None,
+) -> str | None:
+    if current_user_id is None:
+        return None
+    return (
+        await connection.execute(
+            text(
+                """
+                SELECT role
+                FROM namespace_member
+                WHERE namespace_id = :namespace_id
+                  AND user_id = :user_id
+                LIMIT 1
+                """
+            ),
+            {"namespace_id": namespace_id, "user_id": current_user_id},
+        )
+    ).scalar_one_or_none()
+
+
+def can_manage_lifecycle_for_row(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> bool:
+    return current_user_id is not None and (
+        str(row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+    )
 
 
 def to_java_instant(value: Any) -> str | None:
@@ -644,14 +697,15 @@ async def read_skill_versions(
     slug: str,
     page: int,
     size: int,
+    current_user_id: str | None = None,
 ) -> dict[str, object]:
     page, size = normalize_page_request(page, size)
     async with engine.connect() as connection:
-        skill_id = (
+        skill_row = (
             await connection.execute(
                 text(
                     """
-                    SELECT s.id
+                    SELECT s.id, s.owner_id, s.namespace_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -667,23 +721,41 @@ async def read_skill_versions(
                 ),
                 {"namespace": namespace, "slug": slug},
             )
-        ).scalar_one_or_none()
+        ).mappings().one_or_none()
 
-        if skill_id is None:
+        if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
 
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
+        visible_statuses = lifecycle_visible_statuses(can_manage)
+        status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
         rows = (
             await connection.execute(
                 text(
-                    """
+                    f"""
                     SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready
                     FROM skill_version
                     WHERE skill_id = :skill_id
-                      AND status = 'PUBLISHED'
-                    ORDER BY created_at DESC
+                      AND status IN ({status_literals})
+                    ORDER BY
+                      CASE status
+                        WHEN 'PUBLISHED' THEN 0
+                        WHEN 'REJECTED' THEN 1
+                        WHEN 'PENDING_REVIEW' THEN 2
+                        WHEN 'UPLOADED' THEN 3
+                        WHEN 'DRAFT' THEN 4
+                        WHEN 'SCANNING' THEN 5
+                        WHEN 'SCAN_FAILED' THEN 6
+                        WHEN 'YANKED' THEN 7
+                        ELSE 8
+                      END,
+                      published_at DESC NULLS LAST,
+                      created_at DESC NULLS LAST,
+                      id DESC
                     """
                 ),
-                {"skill_id": skill_id},
+                {"skill_id": skill_row["id"]},
             )
         ).mappings().all()
 
@@ -696,8 +768,36 @@ async def read_skill_version_detail(
     namespace: str,
     slug: str,
     version: str,
+    current_user_id: str | None = None,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         row = (
             await connection.execute(
                 text(
@@ -712,27 +812,20 @@ async def read_skill_version_detail(
                            sv.parsed_metadata_json::text AS parsed_metadata_json,
                            sv.manifest_json::text AS manifest_json
                     FROM skill_version sv
-                    JOIN skill s ON s.id = sv.skill_id
-                    JOIN namespace n ON n.id = s.namespace_id
-                    WHERE n.slug = :namespace
-                      AND n.status = 'ACTIVE'
-                      AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
-                      AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
+                    WHERE sv.skill_id = :skill_id
                       AND sv.version = :version
-                      AND sv.status = 'PUBLISHED'
                     ORDER BY sv.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug, "version": version},
+                {"skill_id": skill_row["id"], "version": version},
             )
         ).mappings().one_or_none()
 
     if row is None:
         raise SkillResolveError("error.skill.version.notFound")
+    if str(row["status"]) != "PUBLISHED" and not can_manage:
+        raise SkillResolveError("error.skill.version.notPublished")
     return build_version_detail_response(dict(row))
 
 
@@ -1614,13 +1707,21 @@ async def get_skill_version_detail(
     slug: str,
     version: str,
     request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_detail_reader", None)
+    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug, version))
+            data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
         else:
-            data = await read_skill_version_detail(request.app.state.db_engine, namespace, slug, version)
+            data = await read_skill_version_detail(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                version,
+                current_user_id,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
@@ -1634,14 +1735,16 @@ async def list_skill_versions(
     request: Request,
     page: int = 0,
     size: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_versions_reader", None)
     page, size = normalize_page_request(page, size)
+    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(namespace, slug, page, size))
+            data = await _resolve_reader_result(reader(namespace, slug, page, size, current_user_id))
         else:
-            data = await read_skill_versions(request.app.state.db_engine, namespace, slug, page, size)
+            data = await read_skill_versions(request.app.state.db_engine, namespace, slug, page, size, current_user_id)
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)

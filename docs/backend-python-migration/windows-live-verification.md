@@ -456,6 +456,44 @@ This gate verifies the Group C owner-preview boundary:
 - version detail, version list, file metadata, resolve, downloads, non-public visibility, and
   lifecycle mutations remain outside this gate.
 
+## One-Command Owner Preview Version Verification Gate
+
+For the migrated manager-only owner preview version list and version detail access, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-owner-preview-version-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allPythonMatchesProxyWeb: true
+anonymousListPublishedOnly: true
+ownerListIncludesPreviewStates: true
+anonymousPendingDetailStatusesMatch: true
+6 passed
+```
+
+The command writes the latest owner preview version comparison summary to:
+
+```text
+.dev/owner-preview-version-contract-result.json
+```
+
+This gate verifies the Group C owner-preview version boundary:
+
+- anonymous version list only returns `PUBLISHED`.
+- owner and namespace `ADMIN` version lists include manager-visible lifecycle versions.
+- owner and namespace `ADMIN` version detail can read `PENDING_REVIEW`.
+- anonymous `PENDING_REVIEW` detail is rejected with the same HTTP status through Java, Python, and
+  both Vite proxy aliases.
+- file metadata, file bytes, downloads, non-public visibility, and lifecycle mutations remain
+  outside this gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

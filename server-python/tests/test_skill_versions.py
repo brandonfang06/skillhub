@@ -25,7 +25,7 @@ def version_page(page: int, size: int) -> dict[str, object]:
 
 def test_skill_versions_v1_route_returns_page_envelope() -> None:
     app = create_app()
-    app.state.skill_versions_reader = lambda namespace, slug, page, size: version_page(page, size)
+    app.state.skill_versions_reader = lambda namespace, slug, page, size, current_user_id: version_page(page, size)
 
     client = TestClient(app)
     response = client.get(
@@ -44,7 +44,7 @@ def test_skill_versions_v1_route_returns_page_envelope() -> None:
 
 def test_skill_versions_web_alias_returns_same_contract() -> None:
     app = create_app()
-    app.state.skill_versions_reader = lambda namespace, slug, page, size: version_page(page, size)
+    app.state.skill_versions_reader = lambda namespace, slug, page, size, current_user_id: version_page(page, size)
 
     client = TestClient(app)
     response = client.get("/api/web/skills/global/demo/versions")
@@ -53,20 +53,53 @@ def test_skill_versions_web_alias_returns_same_contract() -> None:
     assert response.json()["data"] == version_page(0, 20)
 
 
-def test_skill_versions_route_forwards_page_and_size_to_reader() -> None:
-    seen: list[tuple[int, int]] = []
+def test_skill_versions_route_forwards_page_size_and_current_user_to_reader() -> None:
+    seen: list[tuple[int, int, str | None]] = []
     app = create_app()
 
-    def reader(namespace: str, slug: str, page: int, size: int) -> dict[str, object]:
-        seen.append((page, size))
+    def reader(
+        namespace: str,
+        slug: str,
+        page: int,
+        size: int,
+        current_user_id: str | None,
+    ) -> dict[str, object]:
+        seen.append((page, size, current_user_id))
         return version_page(page, size)
 
     app.state.skill_versions_reader = reader
 
     client = TestClient(app)
-    response = client.get("/api/v1/skills/global/demo/versions", params={"page": 2, "size": 5})
+    response = client.get(
+        "/api/v1/skills/global/demo/versions",
+        params={"page": 2, "size": 5},
+        headers={"X-Mock-User-Id": " owner-1 "},
+    )
 
     assert response.status_code == 200
-    assert seen == [(2, 5)]
+    assert seen == [(2, 5, "owner-1")]
     assert response.json()["data"]["page"] == 2
     assert response.json()["data"]["size"] == 5
+
+
+def test_skill_versions_route_forwards_missing_current_user_as_none() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+
+    def reader(
+        namespace: str,
+        slug: str,
+        page: int,
+        size: int,
+        current_user_id: str | None,
+    ) -> dict[str, object]:
+        seen.append(current_user_id)
+        return version_page(page, size)
+
+    app.state.skill_versions_reader = reader
+
+    client = TestClient(app)
+    response = client.get("/api/v1/skills/global/demo/versions", headers={"X-Mock-User-Id": "   "})
+
+    assert response.status_code == 200
+    assert seen == [None]

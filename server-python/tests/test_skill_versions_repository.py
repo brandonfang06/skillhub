@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 
 from app.api.skills import (
     build_versions_page_response,
+    lifecycle_list_priority,
+    lifecycle_visible_statuses,
     normalize_page_request,
     paginate_rows,
 )
@@ -72,3 +74,44 @@ def test_build_versions_page_response_marks_non_published_not_downloadable() -> 
     ]
 
     assert build_versions_page_response(rows, total=1, page=0, size=20)["items"][0]["downloadAvailable"] is False
+
+
+def test_lifecycle_visible_statuses_are_published_only_for_public_viewer() -> None:
+    assert lifecycle_visible_statuses(can_manage=False) == ("PUBLISHED",)
+
+
+def test_lifecycle_visible_statuses_include_manager_preview_states() -> None:
+    assert lifecycle_visible_statuses(can_manage=True) == (
+        "PUBLISHED",
+        "REJECTED",
+        "PENDING_REVIEW",
+        "UPLOADED",
+        "DRAFT",
+        "SCANNING",
+        "SCAN_FAILED",
+        "YANKED",
+    )
+
+
+def test_lifecycle_list_priority_matches_java_order() -> None:
+    statuses = [
+        "YANKED",
+        "SCAN_FAILED",
+        "SCANNING",
+        "DRAFT",
+        "UPLOADED",
+        "PENDING_REVIEW",
+        "REJECTED",
+        "PUBLISHED",
+    ]
+
+    assert sorted(statuses, key=lifecycle_list_priority) == [
+        "PUBLISHED",
+        "REJECTED",
+        "PENDING_REVIEW",
+        "UPLOADED",
+        "DRAFT",
+        "SCANNING",
+        "SCAN_FAILED",
+        "YANKED",
+    ]

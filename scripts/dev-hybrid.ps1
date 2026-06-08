@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -2873,6 +2873,264 @@ function Invoke-HybridOwnerPreviewDetailSmokeVerification {
     }
 }
 
+function Ensure-OwnerPreviewVersionContractFixture {
+    $sql = @'
+DO $$
+DECLARE
+    local_user_id VARCHAR(128) := 'local-user';
+    local_admin_id VARCHAR(128) := 'local-admin';
+    team_ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    published_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        (local_user_id, 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        (local_admin_id, 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-owner-version-team', 'Codex Owner Version Team', 'TEAM', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            type = 'TEAM',
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_ns_id, local_user_id, 'OWNER'),
+        (team_ns_id, local_admin_id, 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, subscription_count, rating_avg, rating_count,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        team_ns_id, 'codex-owner-version-20260608', 'Codex Owner Version Skill',
+        'Owner preview version fixture', local_user_id, 'PUBLIC', 'ACTIVE',
+        0, 0, 0, 0.00, 0, local_user_id, local_user_id, FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'PUBLISHED', 'owner version published fixture',
+        jsonb_build_object('name', 'owner-version', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '2026-06-08T03:00:00Z'::timestamptz, local_user_id,
+        '2026-06-08T03:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO published_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES
+        (
+            fixture_skill_id, '1.1.0', 'PENDING_REVIEW', 'owner version pending fixture',
+            jsonb_build_object('name', 'owner-version', 'version', '1.1.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            2, 110, NULL, local_user_id, '2026-06-08T03:20:00Z'::timestamptz,
+            TRUE, FALSE, 'PUBLIC'
+        ),
+        (
+            fixture_skill_id, '1.2.0', 'REJECTED', 'owner version rejected fixture',
+            jsonb_build_object('name', 'owner-version', 'version', '1.2.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            3, 120, NULL, local_user_id, '2026-06-08T03:30:00Z'::timestamptz,
+            TRUE, FALSE, 'PUBLIC'
+        )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = EXCLUDED.status,
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = EXCLUDED.bundle_ready,
+            download_ready = EXCLUDED.download_ready,
+            requested_visibility = EXCLUDED.requested_visibility;
+
+    UPDATE skill
+    SET latest_version_id = published_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = fixture_skill_id;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-OwnerPreviewVersionContractComparison {
+    Ensure-OwnerPreviewVersionContractFixture
+
+    $basePath = '/api/v1/skills/codex-owner-version-team/codex-owner-version-20260608'
+    $listCases = @(
+        [ordered]@{ name = 'anonymousList'; path = "$basePath/versions"; headers = @{} },
+        [ordered]@{ name = 'ownerList'; path = "$basePath/versions"; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'namespaceAdminList'; path = "$basePath/versions"; headers = @{ 'X-Mock-User-Id' = 'local-admin' } }
+    )
+
+    $listResults = @()
+    foreach ($case in $listCases) {
+        Write-Host "Comparing owner preview version list contract: $($case.name)"
+        $java = Invoke-RestMethod "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-RestMethod "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxyV1 = Invoke-RestMethod "$WebUrl$($case.path)" -Headers $case.headers
+        $proxyWebPath = $case.path -replace '^/api/v1/', '/api/web/'
+        $proxyWeb = Invoke-RestMethod "$WebUrl$proxyWebPath" -Headers $case.headers
+
+        $javaStable = ConvertTo-StableDetailContractJson -Response $java
+        $pythonStable = ConvertTo-StableDetailContractJson -Response $python
+        $proxyV1Stable = ConvertTo-StableDetailContractJson -Response $proxyV1
+        $proxyWebStable = ConvertTo-StableDetailContractJson -Response $proxyWeb
+
+        $listResults += [ordered]@{
+            name = $case.name
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxyV1 = ($pythonStable -eq $proxyV1Stable)
+            pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+            statuses = @($python.data.items | ForEach-Object { $_.status })
+        }
+    }
+
+    $detailPath = "$basePath/versions/1.1.0"
+    $detailCases = @(
+        [ordered]@{ name = 'ownerPendingDetail'; path = $detailPath; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'namespaceAdminPendingDetail'; path = $detailPath; headers = @{ 'X-Mock-User-Id' = 'local-admin' } }
+    )
+
+    $detailResults = @()
+    foreach ($case in $detailCases) {
+        Write-Host "Comparing owner preview version detail contract: $($case.name)"
+        $java = Invoke-RestMethod "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-RestMethod "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxyV1 = Invoke-RestMethod "$WebUrl$($case.path)" -Headers $case.headers
+        $proxyWebPath = $case.path -replace '^/api/v1/', '/api/web/'
+        $proxyWeb = Invoke-RestMethod "$WebUrl$proxyWebPath" -Headers $case.headers
+
+        $javaStable = ConvertTo-StableDetailContractJson -Response $java
+        $pythonStable = ConvertTo-StableDetailContractJson -Response $python
+        $proxyV1Stable = ConvertTo-StableDetailContractJson -Response $proxyV1
+        $proxyWebStable = ConvertTo-StableDetailContractJson -Response $proxyWeb
+
+        $detailResults += [ordered]@{
+            name = $case.name
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxyV1 = ($pythonStable -eq $proxyV1Stable)
+            pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+            status = $python.data.status
+            version = $python.data.version
+        }
+    }
+
+    $anonymousPendingStatus = [ordered]@{
+        java = Invoke-HttpStatusWithHeaders "$JavaUrl$detailPath"
+        python = Invoke-HttpStatusWithHeaders "$PythonUrl$detailPath"
+        proxyV1 = Invoke-HttpStatusWithHeaders "$WebUrl$detailPath"
+        proxyWeb = Invoke-HttpStatusWithHeaders "$WebUrl$($detailPath -replace '^/api/v1/', '/api/web/')"
+    }
+
+    $anonymousList = $listResults | Where-Object { $_.name -eq 'anonymousList' } | Select-Object -First 1
+    $ownerList = $listResults | Where-Object { $_.name -eq 'ownerList' } | Select-Object -First 1
+    $shape = [ordered]@{
+        anonymousListPublishedOnly = (@($anonymousList.statuses) -join ',') -eq 'PUBLISHED'
+        ownerListIncludesPreviewStates = (@($ownerList.statuses) -join ',') -eq 'PUBLISHED,REJECTED,PENDING_REVIEW'
+        anonymousPendingDetailStatusesMatch = (
+            $anonymousPendingStatus.java -eq $anonymousPendingStatus.python -and
+            $anonymousPendingStatus.python -eq $anonymousPendingStatus.proxyV1 -and
+            $anonymousPendingStatus.python -eq $anonymousPendingStatus.proxyWeb
+        )
+    }
+
+    $allCases = @($listResults) + @($detailResults)
+    $result = [ordered]@{
+        listCases = $listResults
+        detailCases = $detailResults
+        anonymousPendingDetailStatus = $anonymousPendingStatus
+        allJavaMatchesPython = -not [bool]($allCases | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxyV1 = -not [bool]($allCases | Where-Object { -not $_.pythonMatchesProxyV1 })
+        allPythonMatchesProxyWeb = -not [bool]($allCases | Where-Object { -not $_.pythonMatchesProxyWeb })
+        shape = $shape
+        comparedFields = @('code', 'msg', 'data')
+    }
+
+    $resultPath = Join-Path $DevDir 'owner-preview-version-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python owner preview version contracts differ. See .dev/owner-preview-version-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyV1) {
+        throw 'Vite proxy /api/v1 owner preview version does not match Python. See .dev/owner-preview-version-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyWeb) {
+        throw 'Vite proxy /api/web owner preview version does not match Python. See .dev/owner-preview-version-contract-result.json.'
+    }
+    if (-not $result.shape.anonymousListPublishedOnly -or
+        -not $result.shape.ownerListIncludesPreviewStates -or
+        -not $result.shape.anonymousPendingDetailStatusesMatch) {
+        throw 'Owner preview version shape check failed. See .dev/owner-preview-version-contract-result.json.'
+    }
+}
+
+function Invoke-HybridOwnerPreviewVersionSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-OwnerPreviewVersionContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -2888,6 +3146,7 @@ switch ($Action) {
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }
+    'verify-owner-preview-version-smoke' { Invoke-HybridOwnerPreviewVersionSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

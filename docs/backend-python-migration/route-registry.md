@@ -39,10 +39,10 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}` | python | Frontend alias for public skill detail with local mock-user viewer capability flags and manager-only owner preview projection. Non-public visibility, mutations, and downloads remain deferred. |
 | GET | `/api/v1/skills/{namespace}/{slug}/resolve` | python | Public anonymous version selector resolution. Download remains Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/resolve` | python | Frontend alias for public anonymous version selector resolution. Download remains Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}/versions` | python | Public anonymous published version list. Version detail and files are Python-owned; compare and downloads remain Java-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/versions` | python | Frontend alias for public anonymous published version list. Version detail and files are Python-owned; compare and downloads remain Java-owned. |
-| GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | python | Public anonymous published version detail. Files is Python-owned; compare, downloads, and DELETE remain Java-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend alias for public anonymous published version detail. Files is Python-owned; compare, downloads, and DELETE remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/versions` | python | Public published version list with manager-only owner preview lifecycle versions. Files metadata is Python-owned; compare and downloads remain Java-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/versions` | python | Frontend alias for public published version list with manager-only owner preview lifecycle versions. Files metadata is Python-owned; compare and downloads remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | python | Public published version detail with manager-only non-published owner preview access. Files metadata is Python-owned; compare, downloads, and DELETE remain Java-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend alias for public published version detail with manager-only non-published owner preview access. Files metadata is Python-owned; compare, downloads, and DELETE remain Java-owned. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/files` | python | Public anonymous skill version files metadata list. Content and downloads remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Frontend alias for public anonymous skill version files metadata list. Content and downloads remain Java-owned. |
 | GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public anonymous skill tag files metadata list. Content and downloads remain Java-owned. |

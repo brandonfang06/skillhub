@@ -108,6 +108,7 @@ Still plan carefully when a group requires:
 | 13 | `GET /api/v1/auth/me` | python | First Group C current-user bridge using local `X-Mock-User-Id`. Login, OAuth, API tokens, session bootstrap, and CLI auth remain Java-owned. |
 | 14 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Viewer-specific public skill detail capability flags migrated for local mock users. |
 | 15 | `GET /api/v1/skills/{namespace}/{slug}`, `GET /api/web/skills/{namespace}/{slug}` | python | Manager-only owner preview projection migrated for public skill detail. Non-public visibility remains deferred. |
+| 16 | `GET /api/v1/skills/{namespace}/{slug}/versions`, `GET /api/web/skills/{namespace}/{slug}/versions`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Manager-only owner preview access migrated for version list and version detail. File metadata/download preview access remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -212,6 +213,12 @@ Python-owned in this group:
 - viewer-specific capability flags for `GET /api/web/skills/{namespace}/{slug}`
 - manager-only owner preview projection for `GET /api/v1/skills/{namespace}/{slug}`
 - manager-only owner preview projection for `GET /api/web/skills/{namespace}/{slug}`
+- manager-only owner preview version list access for `GET /api/v1/skills/{namespace}/{slug}/versions`
+- manager-only owner preview version list access for `GET /api/web/skills/{namespace}/{slug}/versions`
+- manager-only owner preview version detail access for
+  `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`
+- manager-only owner preview version detail access for
+  `GET /api/web/skills/{namespace}/{slug}/versions/{version}`
 
 Still Java-owned in this group:
 
@@ -231,8 +238,8 @@ Next candidate routes:
 - Local session-aware request context if internal development needs cookie-based web login before
   publish/upload migration.
 - Viewer-specific list/search capability flags if the frontend needs them before publish/upload.
-- Owner-preview access for version detail, version list, file metadata, resolve, or download routes
-  if the frontend needs those before publish/upload.
+- Owner-preview access for file metadata, resolve, or download routes if the frontend needs those
+  before publish/upload.
 
 Bridge design required before implementation:
 
@@ -842,3 +849,15 @@ The skill detail owner preview milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-skill-detail-owner-preview.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-skill-detail-owner-preview.md`
+
+The owner preview version read milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}/versions`,
+  `GET /api/web/skills/{namespace}/{slug}/versions`,
+  `GET /api/v1/skills/{namespace}/{slug}/versions/{version}`,
+  `GET /api/web/skills/{namespace}/{slug}/versions/{version}`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-owner-preview-version-read.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-owner-preview-version-read.md`
