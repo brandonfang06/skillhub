@@ -1002,6 +1002,43 @@ This gate verifies the publish transaction split foundation boundary:
   scanner trigger, side-effect orchestration, and replacement cleanup orchestration remain future
   milestone work.
 
+## One-Command Publish Orchestration Foundation Verification Gate
+
+For the publish orchestration foundation milestone, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-orchestration-foundation-smoke
+```
+
+Expected result:
+
+```text
+2 passed
+allProxyMatchesJava: true
+6 passed
+```
+
+The command writes the latest orchestration foundation ownership summary to:
+
+```text
+.dev/publish-orchestration-foundation-contract-result.json
+```
+
+This gate verifies the publish orchestration foundation boundary:
+
+- Python orchestration tests pass for prepare/storage/finalize/side-effect sequencing and
+  after-commit replacement storage deletion.
+- `POST /api/v1/skills` remains Java-owned through Vite.
+- `POST /api/v1/publish` remains Java-owned through Vite.
+- `POST /api/v1/skills/{namespace}/publish` remains Java-owned through Vite.
+- `POST /api/web/skills/{namespace}/publish` remains Java-owned through Vite.
+- No Python publish HTTP route is called by this gate.
+- The live gate does not mutate the database through a Python route; HTTP request parsing, scanner
+  delivery, CSRF/session behavior, and route ownership remain future milestone work.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

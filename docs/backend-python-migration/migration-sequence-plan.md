@@ -140,6 +140,7 @@ Still plan carefully when a group requires:
 | 27 | Publish side-effect foundation | n/a | Python helper plans/writes review task, security audit, scan task payload, publish/review event intents, and compat audit log data. No publish POST route ownership moved. |
 | 28 | Publish replacement cleanup foundation | n/a | Python helper cleans replaceable non-published versions and records local storage delete compensation. No publish POST route ownership moved. |
 | 29 | Publish transaction split foundation | n/a | Python DB helper supports prepare/finalize phases so storage can be written after skill/version IDs are allocated. No publish POST route ownership moved. |
+| 30 | Publish orchestration foundation | n/a | Python service helper composes replacement cleanup, prepare/storage/finalize, side effects, and after-commit replacement storage deletion. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -485,6 +486,24 @@ Completed transaction split foundation milestone:
   publish HTTP route ownership, storage write orchestration, scanner trigger, side-effect
   orchestration, replacement cleanup orchestration, CSRF/session behavior, and live DB mutation
   through a Python route.
+
+Completed orchestration foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-orchestration-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-orchestration-foundation.md`
+- Scope:
+  Python publish service orchestration helper only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  `execute_publish_write(...)` optionally cleans replaceable non-published versions, prepares DB
+  records, writes local storage objects after IDs are allocated, finalizes file rows/stats, applies
+  side effects, commits, then deletes old replacement storage with compensation support.
+- Explicitly not implemented:
+  publish HTTP route ownership, multipart request parsing, dry-run HTTP route, scanner HTTP call,
+  Redis stream delivery, CSRF/session behavior, and live DB mutation through a Python route.
 
 Candidate routes:
 
