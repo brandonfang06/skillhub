@@ -322,3 +322,36 @@ async def test_execute_publish_write_aborts_finalize_when_storage_write_fails(tm
     assert not any("INSERT INTO skill_file" in statement for statement in connection.statements)
     assert not any("UPDATE skill_version" in statement for statement in connection.statements)
     assert not any("INSERT INTO review_task" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_rolls_back_transaction_when_storage_writer_fails(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+        ]
+    )
+    engine = FakeEngine([connection])
+
+    def failing_storage_writer(*args: object, **kwargs: object) -> object:
+        raise OSError("simulated storage failure")
+
+    monkeypatch.setattr(
+        "app.publish.orchestration.write_local_package_objects",
+        failing_storage_writer,
+    )
+
+    with pytest.raises(OSError, match="simulated storage failure"):
+        await execute_publish_write(engine, publish_input(str(tmp_path)))
+
+    assert engine.exit_exc_types == [OSError]
+    assert "INSERT INTO skill_version" in connection.statements[2]
+    assert not any("INSERT INTO skill_file" in statement for statement in connection.statements)
+    assert not any("UPDATE skill_version" in statement for statement in connection.statements)
+    assert not any("INSERT INTO review_task" in statement for statement in connection.statements)
+    assert not any("INSERT INTO security_audit" in statement for statement in connection.statements)

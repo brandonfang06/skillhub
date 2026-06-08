@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5200,9 +5200,17 @@ function Invoke-MultipartPostJson {
     try {
         $response = $client.PostAsync($Url, $content).GetAwaiter().GetResult()
         $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $parsedBody = $null
+        if ($body) {
+            try {
+                $parsedBody = $body | ConvertFrom-Json
+            } catch {
+                $parsedBody = $body
+            }
+        }
         return [ordered]@{
             status = [int]$response.StatusCode
-            body = if ($body) { $body | ConvertFrom-Json } else { $null }
+            body = $parsedBody
         }
     } finally {
         $content.Dispose()
@@ -5332,6 +5340,23 @@ function Invoke-PublishPendingAutoWithdrawTests {
             'run',
             'pytest',
             'tests/test_publish_auto_withdraw.py',
+            'tests/test_publish_orchestration.py',
+            'tests/test_publish_http_validate.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-PublishStorageFailureCleanupTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
             'tests/test_publish_orchestration.py',
             'tests/test_publish_http_validate.py',
             'tests/test_hybrid_makefile.py',
@@ -5548,6 +5573,71 @@ function Invoke-PublishPendingAutoWithdrawContractComparison {
         -not $result.checks.secondStillPendingReview -or
         -not $result.checks.proxyStillJavaOwned) {
         throw "Publish pending auto-withdraw check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-PublishStorageFailureCleanupContractComparison {
+    param([string]$ResultFileName = 'publish-storage-failure-cleanup-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $headers = @{ 'X-Mock-User-Id' = 'local-user' }
+    $path = '/api/cli/v1/skills/global/publish'
+    $version = "1.0.$suffix"
+    $skillName = "Codex Storage Failure $suffix"
+    $zipPath = New-PublishValidateFixtureZip -SkillName $skillName -Version $version -FilePrefix "publish-storage-failure-$suffix"
+    $expectedSlug = "codex-storage-failure-$suffix"
+
+    Write-Host "Verifying Python publish storage failure rollback route: POST $path"
+    $python = Invoke-MultipartPostJson "$PythonUrl$path" -FilePath $zipPath -Headers $headers
+
+    $skillCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$expectedSlug' AND s.owner_id = 'local-user';")
+    $versionCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$expectedSlug' AND s.owner_id = 'local-user';")
+    $fileCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM skill_file sf JOIN skill_version sv ON sv.id = sf.version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$expectedSlug' AND s.owner_id = 'local-user';")
+    $reviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$expectedSlug' AND s.owner_id = 'local-user';")
+    $securityAuditCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM security_audit sa JOIN skill_version sv ON sv.id = sa.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$expectedSlug' AND s.owner_id = 'local-user';")
+    $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$path" -Method 'POST'
+    $javaProxyReferenceStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$path" -Method 'POST'
+
+    $result = [ordered]@{
+        python = $python
+        expectedSlug = $expectedSlug
+        db = [ordered]@{
+            skillCount = $skillCount
+            versionCount = $versionCount
+            fileCount = $fileCount
+            reviewTaskCount = $reviewTaskCount
+            securityAuditCount = $securityAuditCount
+        }
+        proxyOwnership = [ordered]@{
+            path = $path
+            javaStatus = $javaProxyReferenceStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaProxyReferenceStatus -eq $proxyStatus)
+        }
+        checks = [ordered]@{
+            pythonFailed = ($python.status -ge 500)
+            skillRolledBack = ($skillCount -eq 0)
+            versionRolledBack = ($versionCount -eq 0)
+            filesRolledBack = ($fileCount -eq 0)
+            reviewTasksRolledBack = ($reviewTaskCount -eq 0)
+            securityAuditsRolledBack = ($securityAuditCount -eq 0)
+            proxyStillJavaOwned = ($javaProxyReferenceStatus -eq $proxyStatus)
+        }
+        comparedFields = @('status', 'db.skillCount', 'db.versionCount', 'db.fileCount', 'db.reviewTaskCount', 'db.securityAuditCount')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.pythonFailed -or
+        -not $result.checks.skillRolledBack -or
+        -not $result.checks.versionRolledBack -or
+        -not $result.checks.filesRolledBack -or
+        -not $result.checks.reviewTasksRolledBack -or
+        -not $result.checks.securityAuditsRolledBack -or
+        -not $result.checks.proxyStillJavaOwned) {
+        throw "Publish storage failure rollback check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -5863,6 +5953,34 @@ function Invoke-HybridPublishPendingAutoWithdrawSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishStorageFailureCleanupSmokeVerification {
+    $previousStorageBasePath = $env:SKILLHUB_STORAGE_BASE_PATH
+    $blockedStoragePath = Join-Path $DevDir 'python-storage-blocker'
+    try {
+        Ensure-DevDir
+        if (Test-Path -LiteralPath $blockedStoragePath) {
+            Remove-Item -LiteralPath $blockedStoragePath -Recurse -Force
+        }
+        Set-Content -LiteralPath $blockedStoragePath -Value 'not-a-directory'
+        $env:SKILLHUB_STORAGE_BASE_PATH = $blockedStoragePath
+
+        Invoke-PublishStorageFailureCleanupTests
+        Start-Hybrid
+        Invoke-PublishStorageFailureCleanupContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        if ($null -eq $previousStorageBasePath) { Remove-Item Env:\SKILLHUB_STORAGE_BASE_PATH -ErrorAction SilentlyContinue } else { $env:SKILLHUB_STORAGE_BASE_PATH = $previousStorageBasePath }
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -5898,6 +6016,7 @@ switch ($Action) {
     'verify-publish-scanner-handoff-smoke' { Invoke-HybridPublishScannerHandoffSmokeVerification }
     'verify-publish-cli-replacement-lookup-smoke' { Invoke-HybridPublishCliReplacementLookupSmokeVerification }
     'verify-publish-pending-auto-withdraw-smoke' { Invoke-HybridPublishPendingAutoWithdrawSmokeVerification }
+    'verify-publish-storage-failure-cleanup-smoke' { Invoke-HybridPublishStorageFailureCleanupSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
