@@ -47,6 +47,59 @@ def bundle_storage_key(skill_id: int, version_id: int) -> str:
     return f"packages/{skill_id}/{version_id}/bundle.zip"
 
 
+async def find_replaceable_version(
+    connection: Any,
+    *,
+    namespace_id: int,
+    namespace: str,
+    slug: str,
+    version: str,
+    publisher_id: str,
+    now: datetime | None = None,
+) -> ReplaceableVersion | None:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id AS skill_id,
+                       s.latest_version_id AS latest_version_id,
+                       sv.id AS version_id,
+                       sv.version AS version,
+                       sv.status AS status
+                FROM skill s
+                JOIN skill_version sv ON sv.skill_id = s.id
+                WHERE s.namespace_id = :namespace_id
+                  AND s.slug = :slug
+                  AND s.owner_id = :publisher_id
+                  AND sv.version = :version
+                LIMIT 1
+                """
+            ),
+            {
+                "namespace_id": namespace_id,
+                "slug": slug,
+                "version": version,
+                "publisher_id": publisher_id,
+            },
+        )
+    ).mappings().one_or_none()
+
+    if row is None:
+        return None
+
+    return ReplaceableVersion(
+        skill_id=int(row["skill_id"]),
+        namespace=namespace,
+        slug=slug,
+        version_id=int(row["version_id"]),
+        version=str(row["version"]),
+        status=str(row["status"]),
+        publisher_id=publisher_id,
+        latest_version_id=int(row["latest_version_id"]) if row.get("latest_version_id") is not None else None,
+        now=now,
+    )
+
+
 async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersion) -> ReplacementCleanupResult:
     if version.status == "PUBLISHED":
         raise ValueError(f"Version already published: {version.version}")

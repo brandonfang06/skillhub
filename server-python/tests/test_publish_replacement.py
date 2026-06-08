@@ -8,6 +8,7 @@ import pytest
 
 from app.publish.replacement import (
     ReplaceableVersion,
+    find_replaceable_version,
     StorageDeleteCompensationInput,
     cleanup_replaceable_version,
     delete_local_storage_objects,
@@ -19,12 +20,16 @@ from app.publish.replacement import (
 @dataclass
 class FakeResult:
     rows: list[dict[str, Any]] | None = None
+    row: dict[str, Any] | None = None
 
     def mappings(self) -> "FakeResult":
         return self
 
     def all(self) -> list[dict[str, Any]]:
         return self.rows or []
+
+    def one_or_none(self) -> dict[str, Any] | None:
+        return self.row
 
 
 class FakeConnection:
@@ -37,7 +42,7 @@ class FakeConnection:
         sql = str(statement)
         self.statements.append(sql)
         self.params.append(params or {})
-        if "SELECT storage_key" in sql and self.results:
+        if self.results and ("SELECT storage_key" in sql or "FROM skill s" in sql):
             return self.results.pop(0)
         return FakeResult()
 
@@ -174,3 +179,68 @@ async def test_failed_local_delete_records_compensation(tmp_path) -> None:
     assert result.compensation_recorded is True
     assert "INSERT INTO skill_storage_delete_compensation" in connection.statements[0]
     assert "Object key escapes storage base" in str(connection.params[0]["last_error"])
+
+
+@pytest.mark.anyio
+async def test_find_replaceable_version_maps_existing_non_published_version() -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(
+                row={
+                    "skill_id": 7,
+                    "namespace": "global",
+                    "slug": "agent-helper",
+                    "version_id": 41,
+                    "version": "1.0.0",
+                    "status": "UPLOADED",
+                    "latest_version_id": 41,
+                }
+            )
+        ]
+    )
+
+    result = await find_replaceable_version(
+        connection,
+        namespace_id=10,
+        namespace="global",
+        slug="agent-helper",
+        version="1.0.0",
+        publisher_id="local-user",
+        now=datetime(2026, 6, 9, 8, 1, 2, tzinfo=UTC),
+    )
+
+    assert result == ReplaceableVersion(
+        skill_id=7,
+        namespace="global",
+        slug="agent-helper",
+        version_id=41,
+        version="1.0.0",
+        status="UPLOADED",
+        publisher_id="local-user",
+        latest_version_id=41,
+        now=datetime(2026, 6, 9, 8, 1, 2, tzinfo=UTC),
+    )
+    assert "FROM skill s" in connection.statements[0]
+    assert "JOIN skill_version sv" in connection.statements[0]
+    assert connection.params[0] == {
+        "namespace_id": 10,
+        "slug": "agent-helper",
+        "version": "1.0.0",
+        "publisher_id": "local-user",
+    }
+
+
+@pytest.mark.anyio
+async def test_find_replaceable_version_returns_none_without_match() -> None:
+    connection = FakeConnection([FakeResult(row=None)])
+
+    result = await find_replaceable_version(
+        connection,
+        namespace_id=10,
+        namespace="global",
+        slug="agent-helper",
+        version="1.0.0",
+        publisher_id="local-user",
+    )
+
+    assert result is None

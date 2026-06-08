@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.publish.orchestration import PublishWriteResult
+from app.publish.replacement import ReplaceableVersion
 from app.publish.dry_run import PublishDryRunResult
 from app.publish.package import PackageEntry
 from app.publish.side_effects import PublishSideEffectResult
@@ -119,6 +120,110 @@ def test_cli_publish_validate_returns_java_compatible_dry_run_envelope() -> None
         "visibility": "PRIVATE",
         "platform_roles": ["SUPER_ADMIN"],
     }
+
+
+def test_cli_publish_write_attaches_replaceable_version_before_write() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def replacement_reader(
+        namespace_id: int,
+        namespace: str,
+        slug: str,
+        version: str,
+        publisher_id: str,
+    ) -> ReplaceableVersion:
+        seen["replacement_args"] = {
+            "namespace_id": namespace_id,
+            "namespace": namespace,
+            "slug": slug,
+            "version": version,
+            "publisher_id": publisher_id,
+        }
+        return ReplaceableVersion(
+            skill_id=7,
+            namespace=namespace,
+            slug=slug,
+            version_id=41,
+            version=version,
+            status="UPLOADED",
+            publisher_id=publisher_id,
+            latest_version_id=41,
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        replacement = getattr(request, "replacement")
+        seen["replacement"] = replacement
+        return PublishWriteResult(
+            skill_id=7,
+            version_id=42,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/7/42/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=["skills/7/41/SKILL.md", "packages/7/41/bundle.zip"],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_replacement_reader = replacement_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        data={"visibility": "PUBLIC"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert seen["replacement_args"] == {
+        "namespace_id": 10,
+        "namespace": "global",
+        "slug": "agent-helper",
+        "version": "1.0.0",
+        "publisher_id": "local-user",
+    }
+    assert isinstance(seen["replacement"], ReplaceableVersion)
+    assert seen["replacement"].version_id == 41
 
 
 def test_cli_publish_write_requires_mock_user() -> None:

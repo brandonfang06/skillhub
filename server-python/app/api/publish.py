@@ -17,6 +17,7 @@ from app.publish.dry_run import (
 )
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, extract_package, validate_package
+from app.publish.replacement import ReplaceableVersion, find_replaceable_version
 from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
@@ -128,6 +129,40 @@ async def resolve_publish_write_result(result: PublishWriteResult | Awaitable[Pu
     return result
 
 
+async def resolve_replaceable_version(
+    result: ReplaceableVersion | None | Awaitable[ReplaceableVersion | None],
+) -> ReplaceableVersion | None:
+    if isawaitable(result):
+        return await result
+    return result
+
+
+async def find_publish_replacement(
+    request: Request,
+    namespace_id: int,
+    namespace: str,
+    slug: str,
+    version: str,
+    publisher_id: str,
+) -> ReplaceableVersion | None:
+    reader = getattr(request.app.state, "publish_replacement_reader", None)
+    if reader is not None:
+        return await resolve_replaceable_version(reader(namespace_id, namespace, slug, version, publisher_id))
+
+    if getattr(request.app.state, "publish_write_reader", None) is not None:
+        return None
+
+    async with request.app.state.db_engine.connect() as connection:
+        return await find_replaceable_version(
+            connection,
+            namespace_id=namespace_id,
+            namespace=namespace,
+            slug=slug,
+            version=version,
+            publisher_id=publisher_id,
+        )
+
+
 async def run_publish_write(request: Request, write_input: PublishWriteInput) -> PublishWriteResult:
     writer = getattr(request.app.state, "publish_write_reader", None)
     if writer is not None:
@@ -215,6 +250,14 @@ async def publish_cli_skill(
 
     namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_roles)
     settings = getattr(request.app.state, "settings", get_settings())
+    replacement = await find_publish_replacement(
+        request,
+        namespace_id,
+        namespace,
+        dry_run.resolved_slug,
+        dry_run.resolved_version,
+        publisher_id,
+    )
     write_input = PublishWriteInput(
         namespace_id=namespace_id,
         namespace_slug=namespace,
@@ -233,6 +276,7 @@ async def publish_cli_skill(
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
+        replacement=replacement,
     )
     await run_publish_write(request, write_input)
 
