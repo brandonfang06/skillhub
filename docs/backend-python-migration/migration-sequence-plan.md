@@ -181,29 +181,49 @@ Acceptance focus:
 
 Goal:
 
-- Move public file content and download routes to Python as one storage/read workflow.
+- Move file content and download routes to Python through two storage/read milestones.
+- Establish file-byte read behavior before download counters and bundle/download headers.
 
-Candidate routes:
+Next milestone: File Content Read Foundation
+
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`
+- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file`
+
+This milestone is intentionally larger than one API but smaller than the full download workflow.
+It establishes the Python local object-storage read helper, raw byte responses, content-type
+parity, owner-preview version file access, and Java-compatible published-only tag file behavior.
+
+Second milestone: Download Read Path
 
 - `GET /api/v1/download/{canonicalSlug}`
 - `GET /api/v1/skills/{namespace}/{slug}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
 - `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
-- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`
-- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file`
+
+Do not start the download milestone until file content reads have a passing live gate.
+
+Routes intentionally not grouped with file content:
+
+- `GET /api/v1/download/{canonicalSlug}`
+- `GET /api/v1/skills/{namespace}/{slug}/download`
+- `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`
+- `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`
 
 Bridge design required before implementation:
 
-- Object storage abstraction for Python: local file, MinIO/S3-compatible behavior.
-- Redirect vs stream behavior and headers.
-- Download counter behavior.
+- Object storage abstraction for Python: local file first, MinIO/S3-compatible behavior later.
+- Redirect vs stream behavior and headers for download routes.
+- Download counter behavior for download routes.
 - Rate-limit assumptions.
 - Missing object fallback behavior.
 - Live fixture including stored file bytes.
 
 Acceptance focus:
 
-- Java/Python/Vite contract comparison for headers, status, redirects, and file bytes.
+- Java/Python/Vite contract comparison for status, content type, and file bytes in the file
+  content milestone.
+- Java/Python/Vite contract comparison for headers, status, redirects or streamed bytes, and
+  counters in the download milestone.
 - No schema change under Python unless explicitly planned.
 - Download metrics behavior is documented and tested.
 
