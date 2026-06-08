@@ -572,6 +572,44 @@ This gate verifies the tag file metadata boundary:
 - route handlers forward local mock-user context, but Python does not broaden Java semantics.
 - file bytes, downloads, non-public visibility, and lifecycle mutations remain outside this gate.
 
+## One-Command File Content Read Verification Gate
+
+For portal single-file content read parity, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-file-content-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxyV1: true
+allStatusesMatch: true
+allExpectedRejections: true
+6 passed
+```
+
+The command writes the latest file content comparison summary to:
+
+```text
+.dev/file-content-contract-result.json
+```
+
+This gate verifies the file content read boundary:
+
+- Java, Python, and Vite `/api/v1` match status, content type, byte length, and body bytes.
+- anonymous callers can read published version and tag file content.
+- owner and namespace `ADMIN` callers can read `PENDING_REVIEW` version file content.
+- anonymous callers are rejected for `PENDING_REVIEW` version file content.
+- owner and namespace `ADMIN` callers are still rejected for `PENDING_REVIEW` tag file content,
+  matching Java's published-only tag selector behavior.
+- download routes, counters, bundle objects, non-public visibility, and lifecycle mutations remain
+  outside this gate.
+
 ## One-Command Owner Preview Resolve Verification Gate
 
 For portal resolve authenticated parity and the Java-compatible negative owner-preview resolve

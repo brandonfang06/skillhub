@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -3645,6 +3645,282 @@ function Invoke-HybridOwnerPreviewTagFilesSmokeVerification {
     }
 }
 
+function Invoke-HttpContentContract {
+    param(
+        [string]$Url,
+        [hashtable]$Headers = @{}
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $client = [System.Net.Http.HttpClient]::new()
+    try {
+        $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $Url)
+        foreach ($header in $Headers.GetEnumerator()) {
+            $request.Headers.Add([string]$header.Key, [string]$header.Value)
+        }
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        $contentType = ''
+        if ($response.Content.Headers.ContentType) {
+            $contentType = $response.Content.Headers.ContentType.MediaType
+        }
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            contentType = $contentType
+            bodyBase64 = [System.Convert]::ToBase64String($bytes)
+            byteLength = $bytes.Length
+        }
+    } finally {
+        $client.Dispose()
+    }
+}
+
+function Ensure-FileContentContractFixture {
+    $objects = @(
+        [ordered]@{ key = 'fixtures/file-content/1.0.0/README.md'; bytes = [System.Text.Encoding]::UTF8.GetBytes("# Published file content`n") },
+        [ordered]@{ key = 'fixtures/file-content/1.0.0/bin.dat'; bytes = [byte[]](0, 1, 2, 3, 255) },
+        [ordered]@{ key = 'fixtures/file-content/1.1.0/SKILL.md'; bytes = [System.Text.Encoding]::UTF8.GetBytes("# Pending file content`n") },
+        [ordered]@{ key = 'fixtures/file-content/1.1.0/src/pending.py'; bytes = [System.Text.Encoding]::UTF8.GetBytes("print('pending file content')`n") }
+    )
+
+    foreach ($entry in $objects) {
+        $relativePath = $entry.key -replace '/', [System.IO.Path]::DirectorySeparatorChar
+        $targetPath = Join-Path $JavaStoragePath $relativePath
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+        [System.IO.File]::WriteAllBytes($targetPath, $entry.bytes)
+    }
+
+    $sql = @'
+DO $$
+DECLARE
+    local_user_id VARCHAR(128) := 'local-user';
+    local_admin_id VARCHAR(128) := 'local-admin';
+    team_ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    published_version_id BIGINT;
+    pending_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        (local_user_id, 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        (local_admin_id, 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-file-content-team', 'Codex File Content Team', 'TEAM', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            type = 'TEAM',
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_ns_id, local_user_id, 'OWNER'),
+        (team_ns_id, local_admin_id, 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, subscription_count, rating_avg, rating_count,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        team_ns_id, 'codex-file-content-20260608', 'Codex File Content Skill',
+        'File content contract fixture', local_user_id, 'PUBLIC', 'ACTIVE',
+        0, 0, 0, 0.00, 0, local_user_id, local_user_id, FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'PUBLISHED', 'file content published fixture',
+        jsonb_build_object('name', 'file-content', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'README.md'), jsonb_build_object('path', 'bin.dat')),
+        2, 30, '2026-06-08T06:00:00Z'::timestamptz, local_user_id,
+        '2026-06-08T06:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = EXCLUDED.published_at,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO published_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.1.0', 'PENDING_REVIEW', 'file content pending fixture',
+        jsonb_build_object('name', 'file-content', 'version', '1.1.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md'), jsonb_build_object('path', 'src/pending.py')),
+        2, 50, NULL, local_user_id, '2026-06-08T06:20:00Z'::timestamptz,
+        TRUE, FALSE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PENDING_REVIEW',
+            changelog = EXCLUDED.changelog,
+            parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+            manifest_json = EXCLUDED.manifest_json,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size,
+            published_at = NULL,
+            created_at = EXCLUDED.created_at,
+            bundle_ready = TRUE,
+            download_ready = FALSE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO pending_version_id;
+
+    UPDATE skill
+    SET latest_version_id = published_version_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = fixture_skill_id;
+
+    DELETE FROM skill_file
+    WHERE version_id IN (published_version_id, pending_version_id);
+
+    INSERT INTO skill_file (version_id, file_path, file_size, content_type, sha256, storage_key)
+    VALUES
+        (published_version_id, 'README.md', 25, 'text/markdown', repeat('a', 64), 'fixtures/file-content/1.0.0/README.md'),
+        (published_version_id, 'bin.dat', 5, 'application/octet-stream', repeat('b', 64), 'fixtures/file-content/1.0.0/bin.dat'),
+        (pending_version_id, 'SKILL.md', 23, 'text/markdown', repeat('c', 64), 'fixtures/file-content/1.1.0/SKILL.md'),
+        (pending_version_id, 'src/pending.py', 30, 'text/x-python', repeat('d', 64), 'fixtures/file-content/1.1.0/src/pending.py');
+
+    INSERT INTO skill_tag (skill_id, tag_name, version_id, created_by)
+    VALUES
+        (fixture_skill_id, 'stable', published_version_id, local_user_id),
+        (fixture_skill_id, 'preview', pending_version_id, local_user_id)
+    ON CONFLICT (skill_id, tag_name) DO UPDATE
+        SET version_id = EXCLUDED.version_id,
+            updated_at = CURRENT_TIMESTAMP;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-FileContentContractComparison {
+    Ensure-FileContentContractFixture
+
+    $basePath = '/api/v1/skills/codex-file-content-team/codex-file-content-20260608'
+    $contentCases = @(
+        [ordered]@{ name = 'anonymousPublishedVersionText'; path = "$basePath/versions/1.0.0/file?path=README.md"; headers = @{} },
+        [ordered]@{ name = 'anonymousPublishedVersionBinary'; path = "$basePath/versions/1.0.0/file?path=bin.dat"; headers = @{} },
+        [ordered]@{ name = 'ownerPendingVersionText'; path = "$basePath/versions/1.1.0/file?path=SKILL.md"; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'namespaceAdminPendingVersionText'; path = "$basePath/versions/1.1.0/file?path=SKILL.md"; headers = @{ 'X-Mock-User-Id' = 'local-admin' } },
+        [ordered]@{ name = 'anonymousPublishedTagText'; path = "$basePath/tags/stable/file?path=README.md"; headers = @{} },
+        [ordered]@{ name = 'ownerPublishedTagText'; path = "$basePath/tags/stable/file?path=README.md"; headers = @{ 'X-Mock-User-Id' = 'local-user' } }
+    )
+    $statusCases = @(
+        [ordered]@{ name = 'anonymousPendingVersionStatus'; path = "$basePath/versions/1.1.0/file?path=SKILL.md"; headers = @{} },
+        [ordered]@{ name = 'ownerPendingTagStatus'; path = "$basePath/tags/preview/file?path=SKILL.md"; headers = @{ 'X-Mock-User-Id' = 'local-user' } },
+        [ordered]@{ name = 'namespaceAdminPendingTagStatus'; path = "$basePath/tags/preview/file?path=SKILL.md"; headers = @{ 'X-Mock-User-Id' = 'local-admin' } },
+        [ordered]@{ name = 'missingFileStatus'; path = "$basePath/versions/1.0.0/file?path=missing.md"; headers = @{} }
+    )
+
+    $contentResults = @()
+    foreach ($case in $contentCases) {
+        Write-Host "Comparing file content contract: $($case.name)"
+        $java = Invoke-HttpContentContract "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-HttpContentContract "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxyV1 = Invoke-HttpContentContract "$WebUrl$($case.path)" -Headers $case.headers
+
+        $contentResults += [ordered]@{
+            name = $case.name
+            javaMatchesPython = (($java | ConvertTo-Json -Depth 10) -eq ($python | ConvertTo-Json -Depth 10))
+            pythonMatchesProxyV1 = (($python | ConvertTo-Json -Depth 10) -eq ($proxyV1 | ConvertTo-Json -Depth 10))
+            java = $java
+            python = $python
+            proxyV1 = $proxyV1
+        }
+    }
+
+    $statusResults = @()
+    foreach ($case in $statusCases) {
+        Write-Host "Comparing file content rejection contract: $($case.name)"
+        $java = Invoke-HttpContentContract "$JavaUrl$($case.path)" -Headers $case.headers
+        $python = Invoke-HttpContentContract "$PythonUrl$($case.path)" -Headers $case.headers
+        $proxyV1 = Invoke-HttpContentContract "$WebUrl$($case.path)" -Headers $case.headers
+        $statusResults += [ordered]@{
+            name = $case.name
+            java = $java.status
+            python = $python.status
+            proxyV1 = $proxyV1.status
+            statusesMatch = ($java.status -eq $python.status -and $python.status -eq $proxyV1.status)
+        }
+    }
+
+    $result = [ordered]@{
+        contentCases = $contentResults
+        statusCases = $statusResults
+        allJavaMatchesPython = -not [bool]($contentResults | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxyV1 = -not [bool]($contentResults | Where-Object { -not $_.pythonMatchesProxyV1 })
+        allStatusesMatch = -not [bool]($statusResults | Where-Object { -not $_.statusesMatch })
+        allExpectedRejections = -not [bool]($statusResults | Where-Object { $_.java -ne 400 })
+        comparedFields = @('status', 'contentType', 'bodyBase64', 'byteLength')
+    }
+
+    $resultPath = Join-Path $DevDir 'file-content-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python file content contracts differ. See .dev/file-content-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxyV1) {
+        throw 'Vite proxy /api/v1 file content does not match Python. See .dev/file-content-contract-result.json.'
+    }
+    if (-not $result.allStatusesMatch -or -not $result.allExpectedRejections) {
+        throw 'File content rejection status check failed. See .dev/file-content-contract-result.json.'
+    }
+}
+
+function Invoke-HybridFileContentSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-FileContentContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Ensure-OwnerPreviewResolveContractFixture {
     $sql = @'
 DO $$
@@ -4175,6 +4451,7 @@ switch ($Action) {
     'verify-owner-preview-version-smoke' { Invoke-HybridOwnerPreviewVersionSmokeVerification }
     'verify-owner-preview-files-smoke' { Invoke-HybridOwnerPreviewFilesSmokeVerification }
     'verify-owner-preview-tag-files-smoke' { Invoke-HybridOwnerPreviewTagFilesSmokeVerification }
+    'verify-file-content-smoke' { Invoke-HybridFileContentSmokeVerification }
     'verify-owner-preview-resolve-smoke' { Invoke-HybridOwnerPreviewResolveSmokeVerification }
     'verify-owner-preview-compare-smoke' { Invoke-HybridOwnerPreviewCompareSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }

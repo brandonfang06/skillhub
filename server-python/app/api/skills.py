@@ -8,7 +8,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -721,11 +721,33 @@ def build_compare_response(
     }
 
 
-def read_local_storage_text(storage_base_path: str, storage_key: str) -> str:
-    target = Path(storage_base_path) / storage_key
+def read_local_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
+    base = Path(storage_base_path).resolve()
+    target = (base / storage_key).resolve()
     try:
-        return target.read_text(encoding="utf-8")
+        target.relative_to(base)
+    except ValueError as exc:
+        raise SkillResolveError("error.skill.file.notFound") from exc
+
+    try:
+        return target.read_bytes()
     except FileNotFoundError as exc:
+        raise SkillResolveError("error.skill.file.notFound") from exc
+
+
+def read_local_storage_text(storage_base_path: str, storage_key: str) -> str:
+    return read_local_storage_bytes(storage_base_path, storage_key).decode("utf-8")
+
+
+def assert_version_file_content_access(version_row: dict[str, Any], can_manage: bool) -> None:
+    if str(version_row["status"]) != "PUBLISHED" and not can_manage:
+        raise SkillResolveError("error.skill.version.notPublished")
+
+
+def read_file_content_from_row(storage_base_path: str, file_row: dict[str, Any]) -> bytes:
+    try:
+        return read_local_storage_bytes(storage_base_path, str(file_row["storage_key"]))
+    except SkillResolveError as exc:
         raise SkillResolveError("error.skill.file.notFound") from exc
 
 
@@ -1733,8 +1755,178 @@ async def read_skill_tag_files(
     ]
 
 
+async def read_skill_version_file_content(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    version: str,
+    file_path: str,
+    current_user_id: str | None = None,
+) -> bytes:
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
 
-async def _resolve_reader_result(result: dict[str, object] | Awaitable[dict[str, object]]) -> dict[str, object]:
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, status
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND version = :version
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_row["id"], "version": version},
+            )
+        ).mappings().one_or_none()
+
+        if version_row is None:
+            raise SkillResolveError("error.skill.version.notFound")
+        assert_version_file_content_access(dict(version_row), can_manage)
+
+        file_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT file_path, storage_key
+                    FROM skill_file
+                    WHERE version_id = :version_id
+                      AND file_path = :file_path
+                    LIMIT 1
+                    """
+                ),
+                {"version_id": version_row["id"], "file_path": file_path},
+            )
+        ).mappings().one_or_none()
+
+    if file_row is None:
+        raise SkillResolveError("error.skill.file.notFound")
+    return read_file_content_from_row(storage_base_path, dict(file_row))
+
+
+async def read_skill_tag_file_content(
+    engine: AsyncEngine,
+    storage_base_path: str,
+    namespace: str,
+    slug: str,
+    tag_name: str,
+    file_path: str,
+    current_user_id: str | None = None,
+) -> bytes:
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.latest_version_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND s.status = 'ACTIVE'
+                      AND s.latest_version_id IS NOT NULL
+                      AND s.hidden = false
+                      AND s.visibility = 'PUBLIC'
+                    ORDER BY s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        skill_id = skill_row["id"]
+        if tag_name.lower() == "latest":
+            version_id = skill_row["latest_version_id"]
+        else:
+            version_id = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT version_id
+                        FROM skill_tag
+                        WHERE skill_id = :skill_id
+                          AND tag_name = :tag_name
+                        LIMIT 1
+                        """
+                    ),
+                    {"skill_id": skill_id, "tag_name": tag_name},
+                )
+            ).scalar_one_or_none()
+
+            if version_id is None:
+                raise SkillResolveError("error.skill.tag.notFound")
+
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM skill_version
+                    WHERE id = :version_id
+                      AND status = 'PUBLISHED'
+                    LIMIT 1
+                    """
+                ),
+                {"version_id": version_id},
+            )
+        ).mappings().one_or_none()
+
+        if version_row is None:
+            raise SkillResolveError("error.skill.tag.version.notFound")
+
+        file_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT file_path, storage_key
+                    FROM skill_file
+                    WHERE version_id = :version_id
+                      AND file_path = :file_path
+                    LIMIT 1
+                    """
+                ),
+                {"version_id": version_row["id"], "file_path": file_path},
+            )
+        ).mappings().one_or_none()
+
+    if file_row is None:
+        raise SkillResolveError("error.skill.file.notFound")
+    return read_file_content_from_row(storage_base_path, dict(file_row))
+
+
+async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
     return result
@@ -2127,3 +2319,61 @@ async def list_skill_tag_files(
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/file")
+async def get_skill_version_file_content(
+    namespace: str,
+    slug: str,
+    version: str,
+    request: Request,
+    path: str = Query(...),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    reader = getattr(request.app.state, "skill_version_file_content_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            content = await _resolve_reader_result(reader(namespace, slug, version, path, current_user_id))
+        else:
+            content = await read_skill_version_file_content(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                version,
+                path,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return Response(content=content, media_type="application/octet-stream")
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file")
+async def get_skill_tag_file_content(
+    namespace: str,
+    slug: str,
+    tagName: str,
+    request: Request,
+    path: str = Query(...),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    reader = getattr(request.app.state, "skill_tag_file_content_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            content = await _resolve_reader_result(reader(namespace, slug, tagName, path, current_user_id))
+        else:
+            content = await read_skill_tag_file_content(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                tagName,
+                path,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return Response(content=content, media_type="application/octet-stream")

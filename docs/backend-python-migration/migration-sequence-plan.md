@@ -113,6 +113,7 @@ Still plan carefully when a group requires:
 | 18 | `GET /api/v1/skills/{namespace}/{slug}/resolve`, `GET /api/web/skills/{namespace}/{slug}/resolve` | python | Authenticated context forwarding and Java-compatible negative owner-preview resolve coverage completed. Non-published resolve remains rejected. |
 | 19 | `GET /api/v1/skills/{namespace}/{slug}/versions/compare`, `GET /api/web/skills/{namespace}/{slug}/versions/compare` | python | Manager-only owner preview version compare migrated with Java-compatible text diff behavior. File bytes/download endpoints remain deferred. |
 | 20 | `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Authenticated context forwarding and Java-compatible negative owner-preview tag file metadata coverage completed. Non-published tag targets remain rejected. |
+| 21 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | File content read foundation migrated. Version file content supports manager-only owner preview; tag file content remains published-only. Download routes remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -941,3 +942,13 @@ The owner preview tag files parity milestone is complete:
   `docs/backend-python-migration/plans/2026-06-08-owner-preview-tag-files.md`
 - Result:
   `docs/backend-python-migration/results/2026-06-08-owner-preview-tag-files.md`
+
+The file content read foundation milestone is complete:
+
+- Routes:
+  `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`,
+  `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-file-content-read-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-file-content-read-foundation.md`

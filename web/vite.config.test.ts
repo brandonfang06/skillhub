@@ -242,7 +242,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillVersions)).toBeLessThan(keys.indexOf('/api'))
   })
 
-  it('routes skill version detail and compare aliases to Python without taking over file routes', () => {
+  it('routes skill version detail and compare aliases to Python without taking over downloads', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionDetail = '^/api/v1/skills/[^/]+/[^/]+/versions/(?!compare$)[^/]+$'
@@ -263,27 +263,31 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/compare')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/compare')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
   })
 
-  it('routes skill files list aliases to Python without taking over file content or download routes', () => {
+  it('routes skill files list aliases and v1 file content to Python without taking over downloads', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionFiles = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/files$'
     const webSkillVersionFiles = '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/files$'
     const v1SkillTagFiles = '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/files$'
     const webSkillTagFiles = '^/api/web/skills/[^/]+/[^/]+/tags/[^/]+/files$'
+    const v1SkillVersionFile = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/file$'
+    const v1SkillTagFile = '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/file$'
 
     expect(proxy[v1SkillVersionFiles]?.target).toBe('http://localhost:8081')
     expect(proxy[webSkillVersionFiles]?.target).toBe('http://localhost:8081')
     expect(proxy[v1SkillTagFiles]?.target).toBe('http://localhost:8081')
     expect(proxy[webSkillTagFiles]?.target).toBe('http://localhost:8081')
 
-    // file and download should NOT route to Python
-    expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
+    expect(proxy[v1SkillVersionFile]?.target).toBe('http://localhost:8081')
+    expect(proxy[v1SkillTagFile]?.target).toBe('http://localhost:8081')
+
+    // web file aliases do not exist in Java and download should NOT route to Python
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
     expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
@@ -292,12 +296,16 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf(webSkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(v1SkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillTagFiles)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1SkillVersionFile)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(v1SkillTagFile)).toBeLessThan(keys.indexOf('/api'))
 
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/files')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/files')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/files')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/files')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/file')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
   })
 })
