@@ -50,13 +50,19 @@ def test_clawhub_skill_detail_route_parses_canonical_slug() -> None:
     assert response.json()["skill"]["slug"] == "team-ai--demo"
 
 
-def test_clawhub_skill_detail_does_not_take_over_root_or_mutation_paths() -> None:
+def test_clawhub_skill_detail_keeps_mutation_paths_unowned() -> None:
     app = create_app()
+    app.state.clawhub_skills_list_reader = lambda **kwargs: {
+        "items": [],
+        "total": 0,
+        "page": 0,
+        "size": 25,
+    }
     app.state.clawhub_skill_detail_reader = lambda namespace, slug: portal_detail_response(namespace, slug)
 
     client = TestClient(app)
 
-    assert client.get("/api/v1/skills").status_code == 404
+    assert client.get("/api/v1/skills").status_code == 200
     assert client.post("/api/v1/skills/demo/undelete").status_code == 405
 
 

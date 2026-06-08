@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -1748,6 +1748,85 @@ function Invoke-ClawHubSkillContractComparison {
     }
 }
 
+function Invoke-ClawHubListContractComparison {
+    Ensure-SearchContractFixture
+
+    $cases = @(
+        [ordered]@{ name = 'newest'; query = '?page=0&limit=5&sort=newest' },
+        [ordered]@{ name = 'downloads'; query = '?page=0&limit=5&sort=downloads' },
+        [ordered]@{ name = 'rating'; query = '?page=0&limit=5&sort=rating' }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        $query = $case.query
+        Write-Host "Comparing ClawHub skills list contract: $($case.name)"
+        $java = Invoke-RestMethod "$JavaUrl/api/v1/skills$query"
+        $python = Invoke-RestMethod "$PythonUrl/api/v1/skills$query"
+        $proxy = Invoke-RestMethod "$WebUrl/api/v1/skills$query"
+
+        $javaStable = ConvertTo-StablePlainJson -Response $java
+        $pythonStable = ConvertTo-StablePlainJson -Response $python
+        $proxyStable = ConvertTo-StablePlainJson -Response $proxy
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            query = $query
+            javaMatchesPython = ($javaStable -eq $pythonStable)
+            pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+            plainShape = [bool]($python.PSObject.Properties['items'] -and -not $python.PSObject.Properties['code'])
+            itemCount = @($python.items).Count
+            nextCursor = $python.nextCursor
+            firstSlug = if (@($python.items).Count -gt 0) { $python.items[0].slug } else { $null }
+        }
+    }
+
+    $slug = 'codex-search-alpha-20260607233000'
+    $postJavaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills" 'POST'
+    $postProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills" 'POST'
+    $deleteJavaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$slug" 'DELETE'
+    $deleteProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$slug" 'DELETE'
+    $downloadStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/download/$slug"
+
+    $result = [ordered]@{
+        cases = $caseResults
+        allJavaMatchesPython = -not [bool]($caseResults | Where-Object { -not $_.javaMatchesPython })
+        allPythonMatchesProxy = -not [bool]($caseResults | Where-Object { -not $_.pythonMatchesProxy })
+        plainShape = -not [bool]($caseResults | Where-Object { -not $_.plainShape })
+        rootPostRemainsJava = ($postJavaStatus -eq $postProxyStatus)
+        deleteRemainsJava = ($deleteJavaStatus -eq $deleteProxyStatus)
+        downloadRemainsJava = ($downloadStatus -eq 302)
+        javaMutationStatuses = [ordered]@{
+            post = $postJavaStatus
+            delete = $deleteJavaStatus
+        }
+        proxyMutationStatuses = [ordered]@{
+            post = $postProxyStatus
+            delete = $deleteProxyStatus
+        }
+    }
+
+    $resultPath = Join-Path $DevDir 'clawhub-list-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.allJavaMatchesPython) {
+        throw 'Java and Python ClawHub list contracts differ. See .dev/clawhub-list-contract-result.json.'
+    }
+    if (-not $result.allPythonMatchesProxy) {
+        throw 'Vite proxy /api/v1/skills does not match Python. See .dev/clawhub-list-contract-result.json.'
+    }
+    if (-not $result.rootPostRemainsJava -or -not $result.deleteRemainsJava) {
+        throw 'ClawHub mutation routes no longer match Java status behavior. See .dev/clawhub-list-contract-result.json.'
+    }
+    if (-not $result.plainShape) {
+        throw 'Python /api/v1/skills is not returning the plain ClawHub list response shape.'
+    }
+    if (-not $result.downloadRemainsJava) {
+        throw 'Vite /api/v1/download no longer has Java redirect behavior. See .dev/clawhub-list-contract-result.json.'
+    }
+}
+
 function Invoke-FilesContractComparison {
     Ensure-FilesContractFixture
 
@@ -1941,6 +2020,23 @@ function Invoke-HybridClawHubSkillSmokeVerification {
     }
 }
 
+function Invoke-HybridClawHubListSmokeVerification {
+    try {
+        Start-Hybrid
+        Invoke-ClawHubListContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -1952,6 +2048,7 @@ switch ($Action) {
     'verify-clawhub-search-smoke' { Invoke-HybridClawHubSearchSmokeVerification }
     'verify-clawhub-resolve-smoke' { Invoke-HybridClawHubResolveSmokeVerification }
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
+    'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

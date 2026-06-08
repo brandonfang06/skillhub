@@ -279,6 +279,48 @@ def build_clawhub_search_response(search_response: dict[str, object]) -> dict[st
     return {"results": results}
 
 
+def build_clawhub_skills_list_response(search_response: dict[str, object]) -> dict[str, object]:
+    items = []
+    for item in search_response["items"]:  # type: ignore[index]
+        summary = dict(item)  # type: ignore[arg-type]
+        updated_at = to_epoch_millis(summary.get("updatedAt")) or 0
+        published_version = summary.get("publishedVersion")
+        latest_version = None
+        if published_version is not None:
+            latest_version = {
+                "version": published_version["version"],  # type: ignore[index]
+                "createdAt": updated_at,
+                "changelog": "",
+                "license": None,
+            }
+
+        stats: dict[str, object] = {}
+        if summary.get("downloadCount") is not None:
+            stats["downloads"] = summary["downloadCount"]
+        if summary.get("starCount") is not None:
+            stats["stars"] = summary["starCount"]
+
+        items.append(
+            {
+                "slug": to_clawhub_canonical_slug(str(summary["namespace"]), str(summary["slug"])),
+                "displayName": summary["displayName"],
+                "summary": summary.get("summary"),
+                "tags": {},
+                "stats": stats,
+                "createdAt": 0,
+                "updatedAt": updated_at,
+                "latestVersion": latest_version,
+            }
+        )
+
+    page = int(search_response["page"])
+    size = int(search_response["size"])
+    total = int(search_response["total"])
+    current_offset = page * size
+    next_cursor = str(page + 1) if current_offset + len(items) < total else None
+    return {"items": items, "nextCursor": next_cursor}
+
+
 def build_clawhub_resolve_response(resolve_response: dict[str, object]) -> dict[str, object]:
     version = resolve_response.get("version")
     version_info = {"version": version} if version is not None else None
@@ -1325,6 +1367,44 @@ async def resolve_clawhub_skill_by_path(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return build_clawhub_resolve_response(data)
+
+
+@router.get("/api/v1/skills")
+async def list_clawhub_skills(
+    request: Request,
+    page: str | None = None,
+    limit: str | None = None,
+    sort: str | None = None,
+) -> dict[str, object]:
+    normalized_page = parse_non_negative_int(page, 0)
+    normalized_limit = parse_positive_int(limit, 25)
+    normalized_sort = normalize_search_sort(sort)
+    reader = getattr(request.app.state, "clawhub_skills_list_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(
+                reader(
+                    keyword="",
+                    namespace=None,
+                    labels=[],
+                    sort=normalized_sort,
+                    page=normalized_page,
+                    size=normalized_limit,
+                )
+            )
+        else:
+            data = await read_skill_search(
+                request.app.state.db_engine,
+                keyword="",
+                namespace=None,
+                labels=[],
+                sort=normalized_sort,
+                page=normalized_page,
+                size=normalized_limit,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_clawhub_skills_list_response(data)
 
 
 @router.get("/api/v1/skills/{canonicalSlug}")

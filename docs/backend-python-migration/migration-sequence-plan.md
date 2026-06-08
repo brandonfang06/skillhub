@@ -104,6 +104,7 @@ Still plan carefully when a group requires:
 | 10 | `GET /api/v1/resolve`, `GET /api/v1/resolve/{canonicalSlug}` | python | ClawHub compatibility resolve migrated. Download and ClawHub skill detail remained Java-owned during this milestone. |
 | 10.5 | Method-aware Vite proxy infrastructure | n/a | Enables future GET-only migration on paths that share Java-owned mutating methods. |
 | 11 | `GET /api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail migrated with method-aware GET-only routing. List, publish, delete, undelete, and download remain Java-owned. |
+| 12 | `GET /api/v1/skills` | python | ClawHub compatibility list migrated with method-aware GET-only routing. Root publish, delete, undelete, and download remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -127,6 +128,7 @@ Already Python-owned in this group:
 - `GET /api/web/labels`
 - `GET /api/v1/labels`
 - `GET /api/v1/search`
+- `GET /api/v1/skills`
 - `GET /api/v1/resolve`
 - `GET /api/v1/resolve/{canonicalSlug}`
 - `GET /api/v1/skills/{canonicalSlug}`
@@ -147,7 +149,7 @@ Already Python-owned in this group:
 
 Remaining candidate in this group:
 
-- `GET /api/v1/skills` ClawHub list.
+- None after the ClawHub list milestone completes and its result is committed.
 
 Keep Java-owned in this group:
 
@@ -714,22 +716,17 @@ When this plan changes:
 
 ## Current Next Step
 
-The old endpoint-by-endpoint phase is complete enough to change strategy. The next milestone should
-start Group A from the revised pre-launch order:
+Group A public catalog read ownership is complete after the ClawHub list milestone.
 
-- Candidate:
-  `GET /api/v1/skills` ClawHub list.
-- Goal:
-  finish the remaining public/ClawHub read ownership that is adjacent to routes already migrated.
-- Required boundary:
-  `POST /api/v1/skills`, `DELETE /api/v1/skills/{canonicalSlug}`,
-  `POST /api/v1/skills/{canonicalSlug}/undelete`, and download/file-content routes remain
-  Java-owned until their group plans are written.
-- Plan file to create before implementation:
-  `docs/backend-python-migration/plans/YYYY-MM-DD-clawhub-skills-list-api.md`
-- Live gate:
-  compare Java/Python/Vite for ClawHub list shape and verify root `POST /api/v1/skills` still
-  reaches Java.
+Next milestone choice should be one of:
+
+- Group B file content and download read path, if the priority is install/download parity and
+  object storage handling.
+- Group C auth and current user bridge, if the priority is protected frontend workflows and later
+  mutations.
+
+Do not start Group D publish/upload until Group B storage/download and Group C auth assumptions are
+planned or explicitly scoped.
 
 Recently completed context:
 
@@ -783,10 +780,11 @@ The ClawHub skill detail milestone is complete:
 - Result:
   `docs/backend-python-migration/results/2026-06-08-clawhub-skill-detail-api.md`
 
-Next action is Group A planning, not another arbitrary endpoint pick:
+The ClawHub skills list milestone is complete:
 
-- Write the ClawHub list plan for `GET /api/v1/skills`.
-- Keep `POST /api/v1/skills`, delete/undelete, downloads, auth, lifecycle, and admin mutations
-  Java-owned until their group plans are written.
-- After Group A is complete, choose between Group B file/download read path and Group C auth/current
-  user bridge based on which unblocks the most internal workflows.
+- Route:
+  `GET /api/v1/skills`
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-clawhub-skills-list-api.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-clawhub-skills-list-api.md`

@@ -28,7 +28,9 @@ deferred routes are still visible.
 | GET | `/api/v1/search` | python | ClawHub compatibility search. Plain ClawHub response, not `ApiResponse`. |
 | GET | `/api/v1/resolve` | python | ClawHub compatibility resolve by query slug. Plain ClawHub response, not `ApiResponse`. |
 | GET | `/api/v1/resolve/{canonicalSlug}` | python | ClawHub compatibility resolve by canonical slug. Download remains Java-owned. |
-| GET | `/api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail. GET-only method-aware proxy; list, publish, delete, undelete, and download remain Java-owned. |
+| GET | `/api/v1/skills` | python | ClawHub compatibility list. GET-only method-aware proxy; root publish `POST /api/v1/skills` remains Java-owned. |
+| POST | `/api/v1/skills` | java | ClawHub compatibility publish remains Java-owned until publish/upload vertical slice is planned. |
+| GET | `/api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail. GET-only method-aware proxy; publish, delete, undelete, and download remain Java-owned. |
 | GET | `/api/web/skills` | python | Public portal skill search. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
 | GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. Label mutations remain Java-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/labels` | python | Frontend alias for public anonymous skill labels list. Label mutations remain Java-owned. |

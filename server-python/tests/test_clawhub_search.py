@@ -82,10 +82,12 @@ def test_clawhub_search_blank_q_uses_newest_sort() -> None:
     assert seen[0]["sort"] == "newest"
 
 
-def test_v1_skills_root_still_remains_unowned_by_python_router() -> None:
+def test_v1_skills_root_is_now_owned_by_clawhub_list_router() -> None:
     app = create_app()
+    app.state.clawhub_skills_list_reader = lambda **kwargs: portal_search_response()
 
     client = TestClient(app)
     response = client.get("/api/v1/skills")
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert set(response.json().keys()) == {"items", "nextCursor"}

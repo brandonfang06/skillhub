@@ -95,10 +95,13 @@ def test_skill_search_route_uses_java_style_invalid_page_defaults() -> None:
     assert seen[0]["size"] == 20
 
 
-def test_v1_skills_root_remains_unowned_by_python_router() -> None:
+def test_v1_skills_root_uses_clawhub_list_shape() -> None:
     app = create_app()
+    app.state.clawhub_skills_list_reader = lambda **kwargs: search_response()
 
     client = TestClient(app)
     response = client.get("/api/v1/skills")
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert set(response.json().keys()) == {"items", "nextCursor"}
+    assert "data" not in response.json()

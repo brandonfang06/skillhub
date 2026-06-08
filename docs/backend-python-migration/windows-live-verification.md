@@ -308,7 +308,42 @@ This gate intentionally verifies the method boundary:
 - `GET /api/v1/skills/{canonicalSlug}` reaches Python.
 - `DELETE /api/v1/skills/{canonicalSlug}` still follows Java status behavior through Vite.
 - `POST /api/v1/skills/{canonicalSlug}/undelete` still follows Java status behavior through Vite.
-- `GET /api/v1/skills` remains the Java ClawHub list route.
+- `GET /api/v1/skills` is verified by the separate ClawHub skills list gate below.
+- `GET /api/v1/download/{canonicalSlug}` remains the Java redirect route.
+
+## One-Command ClawHub Skills List Verification Gate
+
+For the migrated ClawHub compatibility skills list API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-clawhub-list-smoke
+```
+
+Expected result:
+
+```text
+allJavaMatchesPython: true
+allPythonMatchesProxy: true
+plainShape: true
+rootPostRemainsJava: true
+deleteRemainsJava: true
+downloadRemainsJava: true
+6 passed
+```
+
+The command writes the latest ClawHub list comparison summary to:
+
+```text
+.dev/clawhub-list-contract-result.json
+```
+
+This gate verifies the Group A method boundary:
+
+- `GET /api/v1/skills` reaches Python.
+- `POST /api/v1/skills` still follows Java status behavior through Vite.
+- `DELETE /api/v1/skills/{canonicalSlug}` still follows Java status behavior through Vite.
 - `GET /api/v1/download/{canonicalSlug}` remains the Java redirect route.
 
 ## Method-Colliding Route Verification
@@ -332,6 +367,8 @@ Active rule requiring live verification:
 ```text
 GET /api/v1/skills/{canonicalSlug} -> Python
 POST/DELETE /api/v1/skills/{canonicalSlug} -> Java fallback
+GET /api/v1/skills -> Python
+POST /api/v1/skills -> Java fallback
 ```
 
 ## Shutdown
