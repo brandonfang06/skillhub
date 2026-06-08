@@ -844,6 +844,46 @@ This gate verifies the publish storage foundation boundary:
 - No Python publish route, DB write, scanner trigger, review task, audit log, or event is enabled
   by this storage foundation gate.
 
+## One-Command Publish DB Foundation Verification Gate
+
+For the publish DB transaction foundation milestone, use:
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-db-foundation-smoke
+```
+
+Expected result:
+
+```text
+7 passed
+allProxyMatchesJava: true
+6 passed
+```
+
+The command writes the latest DB foundation ownership summary to:
+
+```text
+.dev/publish-db-foundation-contract-result.json
+```
+
+This gate verifies the publish DB transaction foundation boundary:
+
+- Python DB helper tests pass for initial status selection, manifest/metadata JSON, skill
+  create/reuse, archived-skill rejection, version/file inserts, stats updates, and
+  `latest_version_id` update rules.
+- `POST /api/v1/skills` remains Java-owned through Vite.
+- `POST /api/v1/publish` remains Java-owned through Vite.
+- `POST /api/v1/skills/{namespace}/publish` remains Java-owned through Vite.
+- `POST /api/web/skills/{namespace}/publish` remains Java-owned through Vite.
+- No Python publish HTTP route is called by this gate.
+- The live gate does not mutate the database through Python; DB mutation coverage stays inside
+  focused fake-engine transaction tests until route ownership is explicitly planned.
+- No scanner trigger, review task, audit log, event, replacement cleanup, or storage compensation
+  is enabled by this DB foundation gate.
+
 ## Method-Colliding Route Verification
 
 Some ClawHub compatibility routes use the same path with different HTTP methods. For these routes,

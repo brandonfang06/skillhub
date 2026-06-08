@@ -48,7 +48,7 @@ def test_makefile_defines_hybrid_e2e_targets() -> None:
 def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     script = (ROOT / "scripts" / "dev-hybrid.ps1").read_text(encoding="utf-8")
 
-    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'e2e-smoke', 'e2e')]" in script
+    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-owner-preview-tag-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'e2e-smoke', 'e2e')]" in script
     assert "Start-ManagedProcess" in script
     assert "server-python" in script
     assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in script
@@ -91,6 +91,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-publish-foundation-smoke" in script
     assert "verify-publish-dry-run-smoke" in script
     assert "verify-publish-storage-foundation-smoke" in script
+    assert "verify-publish-db-foundation-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
@@ -112,6 +113,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-PublishFoundationContractComparison" in script
     assert "Invoke-PublishDryRunTests" in script
     assert "Invoke-PublishStorageFoundationTests" in script
+    assert "Invoke-PublishDbFoundationTests" in script
     assert "labels-contract-result.json" in script
     assert "files-contract-result.json" in script
     assert "detail-contract-result.json" in script
@@ -133,9 +135,11 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "publish-foundation-contract-result.json" in script
     assert "publish-dry-run-contract-result.json" in script
     assert "publish-storage-foundation-contract-result.json" in script
+    assert "publish-db-foundation-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
+    assert "tests/test_publish_transaction.py" in script
     assert "javaMatchesPython" in script
     assert "java-storage" in script
     assert "PLAYWRIGHT_BROWSERS_PATH" in script

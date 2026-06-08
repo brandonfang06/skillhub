@@ -136,6 +136,7 @@ Still plan carefully when a group requires:
 | 23 | Publish upload foundation | n/a | Python package extraction/validation helpers added. No publish POST route ownership moved; Vite detail routes are GET-only so publish POST paths remain Java-owned. |
 | 24 | Publish transaction dry-run model | n/a | Python mirrors Java `validateOnly(...)` preflight decisions for namespace, membership, package, metadata, pre-publish warnings, slug, and version conflicts. No publish POST route ownership moved. |
 | 25 | Publish local storage write foundation | n/a | Python writes Java-compatible local object keys, bundle zip, and future `skill_file` metadata records. No DB writes or publish POST route ownership moved. |
+| 26 | Publish DB transaction foundation | n/a | Python transaction helper creates/reuses `skill`, inserts `skill_version` and `skill_file` rows, and updates version stats. No publish POST route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -401,6 +402,26 @@ Completed local storage write foundation milestone:
 - Explicitly not implemented:
   `skill`, `skill_version`, or `skill_file` DB writes, scanner trigger, review task creation,
   audit/event behavior, replacement cleanup, and publish HTTP route ownership.
+
+Completed DB transaction foundation milestone:
+
+- Plan:
+  `docs/backend-python-migration/plans/2026-06-08-publish-db-transaction-foundation.md`
+- Result:
+  `docs/backend-python-migration/results/2026-06-08-publish-db-transaction-foundation.md`
+- Scope:
+  Python DB transaction helper only.
+- Route ownership:
+  no publish POST route ownership changes.
+- Implemented behavior:
+  Java-compatible initial version status selection, parsed metadata JSON, manifest JSON, create or
+  reuse `skill`, archived-skill rejection, `skill_version` insert, `skill_file` inserts, version
+  file stats update, bundle/download readiness flags, and `latest_version_id` update only for
+  `PUBLISHED` or `UPLOADED` versions.
+- Explicitly not implemented:
+  publish HTTP route ownership, scanner trigger, review task creation, audit/event behavior,
+  replacement cleanup, storage compensation, CSRF/session behavior, and live DB mutation through
+  an HTTP route.
 
 Candidate routes:
 
