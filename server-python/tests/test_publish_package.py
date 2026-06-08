@@ -8,9 +8,11 @@ import pytest
 from app.publish.package import (
     PackageEntry,
     PackageLimits,
+    content_signature_matches,
     determine_content_type,
     extract_package,
     extract_package_with_warnings,
+    is_allowed_extension,
     normalize_entry_path,
     parse_skill_metadata,
     strip_single_root_directory,
@@ -177,3 +179,44 @@ def test_validate_package_uses_java_compatible_metadata_error_wording(content: b
 
     assert not result.valid
     assert f"Invalid SKILL.md frontmatter: {message}" in result.errors
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/readme.doc",
+        "docs/readme.docx",
+        "sheets/data.xls",
+        "sheets/data.xlsx",
+        "slides/deck.ppt",
+        "slides/deck.pptx",
+        "schema/model.xsd",
+        "schema/transform.xsl",
+        "schema/entities.dtd",
+        "config/app.ini",
+        "config/app.cfg",
+        "config/.env",
+        "src/tool.rb",
+        "src/tool.go",
+        "src/tool.rs",
+        "src/Tool.java",
+        "src/tool.kt",
+        "src/tool.lua",
+        "db/query.sql",
+        "stats/model.r",
+        "scripts/run.bat",
+    ],
+)
+def test_allowed_extensions_match_java_skill_package_policy(path: str) -> None:
+    assert is_allowed_extension(path)
+
+
+@pytest.mark.parametrize("path", ["README.markdown", "src/App.tsx", "src/App.jsx", "style/app.scss"])
+def test_python_only_extensions_are_not_allowed_when_java_rejects_them(path: str) -> None:
+    assert not is_allowed_extension(path)
+
+
+@pytest.mark.parametrize("path", ["schema/model.xsd", "schema/transform.xsl", "schema/entities.dtd"])
+def test_xml_schema_extensions_are_text_signature_checked(path: str) -> None:
+    assert content_signature_matches(path, b"<schema></schema>")
+    assert not content_signature_matches(path, b"\xff")

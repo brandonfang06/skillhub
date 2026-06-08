@@ -11,6 +11,7 @@ from app.publish.dry_run import (
     PublishDryRunInput,
     PublishDryRunRepository,
     PublishNamespaceContext,
+    slugify,
     validate_publish_dry_run,
 )
 from app.publish.package import PackageEntry
@@ -186,6 +187,11 @@ async def test_missing_version_auto_generates_java_timestamp_version() -> None:
     assert result.valid
     assert result.resolved_slug == "agent-helper"
     assert result.resolved_version == "20260608123045"
+
+
+def test_slugify_preserves_java_symbol_characters() -> None:
+    assert slugify("A ♥ Skill") == "a-♥-skill"
+    assert slugify("🚀 Rocket") == "🚀-rocket"
 
 
 @pytest.mark.anyio

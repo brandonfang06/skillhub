@@ -55,13 +55,29 @@ CONTENT_TYPES_BY_EXTENSION = {
     ".css": "text/css",
     ".csv": "text/csv",
     ".xml": "application/xml",
+    ".xsd": "application/xml",
+    ".xsl": "application/xml",
+    ".dtd": "application/xml-dtd",
+    ".ini": "text/plain",
+    ".cfg": "text/plain",
+    ".env": "text/plain",
     ".js": "text/javascript",
     ".cjs": "text/javascript",
     ".mjs": "text/javascript",
     ".ts": "text/typescript",
+    ".rb": "text/plain",
+    ".go": "text/plain",
+    ".rs": "text/plain",
+    ".java": "text/plain",
+    ".kt": "text/plain",
+    ".lua": "text/plain",
+    ".sql": "text/plain",
+    ".r": "text/plain",
     ".sh": "text/x-shellscript",
     ".bash": "text/x-shellscript",
     ".zsh": "text/x-shellscript",
+    ".bat": "text/plain",
+    ".ps1": "text/plain",
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
@@ -71,71 +87,116 @@ CONTENT_TYPES_BY_EXTENSION = {
     ".ico": "image/x-icon",
     ".pdf": "application/pdf",
     ".toml": "application/toml",
+    ".doc": "application/msword",
+    ".xls": "application/vnd.ms-excel",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 ALLOWED_EXTENSIONS = {
     ".md",
-    ".markdown",
     ".txt",
     ".json",
     ".yaml",
     ".yml",
-    ".toml",
-    ".js",
-    ".mjs",
-    ".cjs",
-    ".ts",
-    ".tsx",
-    ".jsx",
-    ".py",
-    ".sh",
-    ".bash",
-    ".zsh",
-    ".ps1",
     ".html",
     ".css",
-    ".scss",
     ".csv",
-    ".xml",
+    ".pdf",
+    ".js",
+    ".cjs",
+    ".mjs",
+    ".ts",
+    ".py",
+    ".sh",
+    ".rb",
+    ".go",
+    ".rs",
+    ".java",
+    ".kt",
+    ".lua",
+    ".sql",
+    ".r",
+    ".bat",
+    ".ps1",
+    ".zsh",
+    ".bash",
     ".png",
     ".jpg",
     ".jpeg",
-    ".gif",
     ".svg",
+    ".gif",
     ".webp",
     ".ico",
-    ".pdf",
+    ".toml",
+    ".xml",
+    ".xsd",
+    ".xsl",
+    ".dtd",
+    ".ini",
+    ".cfg",
+    ".env",
+    ".doc",
+    ".xls",
+    ".ppt",
+    ".docx",
+    ".xlsx",
+    ".pptx",
 }
 
 TEXT_LIKE_EXTENSIONS = {
     ".md",
-    ".markdown",
     ".txt",
     ".json",
     ".yaml",
     ".yml",
-    ".toml",
     ".js",
-    ".mjs",
     ".cjs",
+    ".mjs",
     ".ts",
-    ".tsx",
-    ".jsx",
     ".py",
     ".sh",
-    ".bash",
-    ".zsh",
-    ".ps1",
     ".html",
     ".css",
-    ".scss",
     ".csv",
+    ".toml",
     ".xml",
+    ".xsd",
+    ".xsl",
+    ".dtd",
+    ".ini",
+    ".cfg",
+    ".env",
+    ".rb",
+    ".go",
+    ".rs",
+    ".java",
+    ".kt",
+    ".lua",
+    ".sql",
+    ".r",
+    ".bat",
+    ".ps1",
+    ".zsh",
+    ".bash",
 }
 
 
+def package_extension(path: str) -> str:
+    posix_path = PurePosixPath(path)
+    suffix = posix_path.suffix.lower()
+    if suffix:
+        return suffix
+    name = posix_path.name.lower()
+    if name.startswith(".") and name.count(".") == 1:
+        return name
+    return ""
+
+
 def determine_content_type(path: str) -> str:
-    return CONTENT_TYPES_BY_EXTENSION.get(PurePosixPath(path).suffix.lower(), "application/octet-stream")
+    return CONTENT_TYPES_BY_EXTENSION.get(package_extension(path), "application/octet-stream")
 
 
 def normalize_entry_path(raw_path: str) -> str:
@@ -345,7 +406,7 @@ def validate_package(entries: list[PackageEntry], limits: PackageLimits | None =
 
 
 def is_allowed_extension(path: str) -> bool:
-    return PurePosixPath(path).suffix.lower() in ALLOWED_EXTENSIONS
+    return package_extension(path) in ALLOWED_EXTENSIONS
 
 
 def is_valid_utf8_text(content: bytes) -> bool:
@@ -359,7 +420,7 @@ def is_valid_utf8_text(content: bytes) -> bool:
 
 
 def content_signature_matches(path: str, content: bytes) -> bool:
-    extension = PurePosixPath(path).suffix.lower()
+    extension = package_extension(path)
     if extension in TEXT_LIKE_EXTENSIONS:
         return is_valid_utf8_text(content)
     if extension == ".png":

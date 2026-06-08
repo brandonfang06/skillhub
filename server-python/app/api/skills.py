@@ -900,7 +900,6 @@ async def read_skill_resolve(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1005,7 +1004,6 @@ async def read_clawhub_legacy_slug_coordinate(engine: AsyncEngine, slug: str) ->
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1042,7 +1040,6 @@ async def read_skill_versions(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -1112,7 +1109,6 @@ async def read_skill_version_detail(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -2074,7 +2070,6 @@ async def read_skill_download_version(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -2161,7 +2156,6 @@ async def read_skill_download_latest(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
@@ -2199,7 +2193,6 @@ async def read_skill_download_tag(
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                      AND s.visibility = 'PUBLIC'
                       AND st.tag_name = :tag_name
                     ORDER BY s.id ASC
                     LIMIT 1

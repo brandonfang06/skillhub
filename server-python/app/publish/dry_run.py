@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
@@ -24,7 +25,6 @@ RESERVED_SLUGS = {
     "assets",
     "health",
 }
-SLUG_PATTERN = re.compile(r"^[^\W_][^\W_]*(?:-[^\W_]+)*$", re.UNICODE)
 SECRET_RULES = (
     (re.compile(r"(AKIA[0-9A-Z]{16})"), 1, "cloud access key"),
     (re.compile(r"(ghp_[A-Za-z0-9]{20,})"), 1, "GitHub token"),
@@ -333,12 +333,23 @@ def auto_version(now: datetime | None) -> str:
 def slugify(raw: str | None) -> str:
     if raw is None:
         raise ValueError("error.slug.blank")
-    slug = re.sub(r"[^\w]+", "-", raw.strip().lower(), flags=re.UNICODE)
-    slug = re.sub(r"^-+", "", slug)
-    slug = re.sub(r"-+$", "", slug)
-    slug = re.sub(r"-{2,}", "-", slug)
+    parts: list[str] = []
+    previous_dash = False
+    for char in raw.strip().lower():
+        if is_java_slug_character(char):
+            parts.append(char)
+            previous_dash = False
+        elif not previous_dash:
+            parts.append("-")
+            previous_dash = True
+    slug = "".join(parts).strip("-")
     validate_slug(slug)
     return slug
+
+
+def is_java_slug_character(char: str) -> bool:
+    category = unicodedata.category(char)
+    return category[0] in {"L", "N"} or category == "So"
 
 
 def validate_slug(slug: str) -> None:
@@ -348,7 +359,11 @@ def validate_slug(slug: str) -> None:
         raise ValueError("error.slug.length")
     if re.search(r"[A-Z]", slug):
         raise ValueError("error.slug.pattern")
-    if not SLUG_PATTERN.match(slug):
+    if (
+        not is_java_slug_character(slug[0])
+        or not is_java_slug_character(slug[-1])
+        or any(char != "-" and not is_java_slug_character(char) for char in slug)
+    ):
         raise ValueError("error.slug.pattern")
     if "--" in slug:
         raise ValueError("error.slug.doubleHyphen")

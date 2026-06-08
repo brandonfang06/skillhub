@@ -1,3 +1,6 @@
+import inspect
+from dataclasses import dataclass
+from typing import Any
 from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
@@ -10,6 +13,9 @@ from app.api.skills import (
     assert_download_access,
     build_download_filename,
     build_download_response,
+    read_skill_download_latest,
+    read_skill_download_tag,
+    read_skill_download_version,
     read_bundle_or_build_fallback_zip,
     sanitize_download_filename,
 )
@@ -251,3 +257,106 @@ def test_build_download_response_sets_java_compatible_headers() -> None:
     assert response.headers["content-type"] == "application/zip"
     assert response.headers["content-length"] == "3"
     assert response.headers["content-disposition"] == 'attachment; filename="A.zip"'
+
+
+@dataclass
+class FakeDbResult:
+    row: dict[str, Any] | None = None
+    rows: list[dict[str, Any]] | None = None
+    scalar: Any = None
+
+    def mappings(self) -> "FakeDbResult":
+        return self
+
+    def one_or_none(self) -> dict[str, Any] | None:
+        return self.row
+
+    def all(self) -> list[dict[str, Any]]:
+        return self.rows or []
+
+    def scalar_one_or_none(self) -> Any:
+        return self.scalar
+
+
+class FakeDownloadConnection:
+    def __init__(self, results: list[FakeDbResult]) -> None:
+        self.results = results
+        self.statements: list[str] = []
+        self.params: list[dict[str, Any]] = []
+
+    async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> FakeDbResult:
+        self.statements.append(str(statement))
+        self.params.append(params or {})
+        return self.results.pop(0)
+
+
+class FakeDownloadContext:
+    def __init__(self, connection: FakeDownloadConnection) -> None:
+        self.connection = connection
+
+    async def __aenter__(self) -> FakeDownloadConnection:
+        return self.connection
+
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        return None
+
+
+class FakeDownloadEngine:
+    def __init__(self, connection: FakeDownloadConnection) -> None:
+        self.connection = connection
+
+    def begin(self) -> FakeDownloadContext:
+        return FakeDownloadContext(self.connection)
+
+    def connect(self) -> FakeDownloadContext:
+        return FakeDownloadContext(self.connection)
+
+
+@pytest.mark.anyio
+async def test_download_version_allows_private_skill_for_namespace_manager(tmp_path) -> None:
+    file_path = tmp_path / "skills" / "7" / "42" / "SKILL.md"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_bytes(b"# private\n")
+    connection = FakeDownloadConnection(
+        [
+            FakeDbResult(
+                row={
+                    "id": 7,
+                    "owner_id": "owner-user",
+                    "namespace_id": 10,
+                    "slug": "private-demo",
+                    "display_name": "Private Demo",
+                }
+            ),
+            FakeDbResult(scalar="ADMIN"),
+            FakeDbResult(row={"id": 42, "version": "1.0.0", "status": "UPLOADED"}),
+            FakeDbResult(rows=[{"file_path": "SKILL.md", "storage_key": "skills/7/42/SKILL.md"}]),
+        ]
+    )
+
+    result = await read_skill_download_version(
+        FakeDownloadEngine(connection),
+        str(tmp_path),
+        "team-ai",
+        "private-demo",
+        "1.0.0",
+        "local-admin",
+    )
+
+    assert result.filename == "Private Demo-1.0.0.zip"
+    with ZipFile(result.as_bytes_io()) as archive:
+        assert archive.namelist() == ["SKILL.md"]
+        assert archive.read("SKILL.md") == b"# private\n"
+    assert "s.visibility = 'PUBLIC'" not in connection.statements[0]
+
+
+def test_download_resolution_queries_do_not_hardcode_public_visibility() -> None:
+    source = "\n".join(
+        [
+            inspect.getsource(read_skill_download_version),
+            inspect.getsource(read_skill_download_latest),
+            inspect.getsource(read_skill_download_tag),
+        ]
+    )
+
+    assert "s.visibility = 'PUBLIC'" not in source
