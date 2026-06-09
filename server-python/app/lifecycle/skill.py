@@ -17,6 +17,8 @@ from app.publish.replacement import (
 LIFECYCLE_NAMESPACE_ROLES = {"OWNER", "ADMIN"}
 DELETABLE_VERSION_STATUSES = {"DRAFT", "REJECTED", "SCAN_FAILED", "UPLOADED"}
 CONFIRM_PUBLISH_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
+SUBMIT_REVIEW_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
+SUBMIT_REVIEW_VISIBILITIES = {"PUBLIC", "NAMESPACE_ONLY"}
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,19 @@ class SkillConfirmPublishInput:
     namespace: str
     slug: str
     version: str
+    user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class SkillSubmitReviewInput:
+    namespace: str
+    slug: str
+    version: str
+    target_visibility: str
     user_id: str
     request_id: str | None = None
     client_ip: str | None = None
@@ -295,6 +310,24 @@ async def _read_version_count(connection: Any, skill_id: int) -> int:
         )
     ).mappings().one_or_none()
     return int(row["version_count"]) if row is not None else 0
+
+
+async def _read_pending_review_task_count(connection: Any, version_id: int) -> int:
+    result = await connection.execute(
+        text(
+            """
+            SELECT COUNT(*) AS pending_count
+            FROM review_task
+            WHERE skill_version_id = :version_id
+              AND status = 'PENDING'
+            """
+        ),
+        {"version_id": version_id},
+    )
+    if hasattr(result, "scalar_one"):
+        return int(result.scalar_one())
+    row = result.mappings().one_or_none()
+    return int(row["pending_count"]) if row is not None else 0
 
 
 async def _read_storage_keys(connection: Any, version_id: int, skill_id: int) -> list[str]:
@@ -577,6 +610,79 @@ async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublis
         )
 
     return {"skillId": skill_id, "versionId": version_id, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}
+
+
+async def submit_skill_version_for_review(engine: Any, request: SkillSubmitReviewInput) -> dict[str, Any]:
+    if request.target_visibility not in SUBMIT_REVIEW_VISIBILITIES:
+        raise SkillLifecycleError("error.skill.review.visibility.invalid")
+
+    timestamp = _now(request.now)
+    async with engine.begin() as connection:
+        skill = await _read_skill_context(connection, request.namespace, request.slug)
+        namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
+        _assert_can_manage(skill, request.user_id, namespace_role)
+
+        skill_id = int(skill["skill_id"])
+        namespace_id = int(skill["namespace_id"])
+        version = await _read_version(connection, skill_id, request.version)
+        version_id = int(version["version_id"])
+        version_name = str(version["version"])
+        if str(version["status"]) not in SUBMIT_REVIEW_VERSION_STATUSES:
+            raise SkillLifecycleError("error.skill.version.submit.notUploaded")
+
+        if await _read_pending_review_task_count(connection, version_id) > 0:
+            raise SkillLifecycleError("review.submit.duplicate")
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_version
+                SET status = :status,
+                    requested_visibility = :requested_visibility
+                WHERE id = :version_id
+                """
+            ),
+            {
+                "status": "PENDING_REVIEW",
+                "requested_visibility": request.target_visibility,
+                "version_id": version_id,
+            },
+        )
+        await connection.execute(
+            text(
+                """
+                INSERT INTO review_task (
+                    skill_version_id, namespace_id, status, version, submitted_by, submitted_at
+                )
+                VALUES (
+                    :version_id, :namespace_id, 'PENDING', 1, :submitted_by, :submitted_at
+                )
+                """
+            ),
+            {
+                "version_id": version_id,
+                "namespace_id": namespace_id,
+                "submitted_by": request.user_id,
+                "submitted_at": timestamp,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="SUBMIT_REVIEW",
+            target_type="SKILL_VERSION",
+            target_id=version_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps(
+                {"version": version_name, "targetVisibility": request.target_visibility},
+                separators=(",", ":"),
+            ),
+            created_at=timestamp,
+        )
+
+    return {"skillId": skill_id, "versionId": version_id, "action": "SUBMIT_REVIEW", "status": "PENDING_REVIEW"}
 
 
 async def cleanup_deleted_version_storage(engine: Any, storage_base_path: str, result: SkillVersionDeleteResult) -> None:

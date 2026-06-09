@@ -258,7 +258,10 @@ describe('Vite dev proxy route ownership', () => {
     ).toBeUndefined()
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review'),
-    ).toBeUndefined()
+    ).toBe('http://localhost:8081')
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/submit-review'),
+    ).toBe('http://localhost:8081')
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/confirm-publish'),
     ).toBe('http://localhost:8081')
@@ -295,7 +298,10 @@ describe('Vite dev proxy route ownership', () => {
     ).toBe('http://localhost:8081')
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review'),
-    ).toBeUndefined()
+    ).toBe('http://localhost:8081')
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/submit-review'),
+    ).toBe('http://localhost:8081')
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/confirm-publish'),
     ).toBe('http://localhost:8081')
@@ -319,6 +325,12 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/web/skills/team-a/agent-helper/confirm-publish')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/team-a/agent-helper/submit-review')).toBe(
       'http://localhost:8081',
     )
   })

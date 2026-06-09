@@ -12,12 +12,14 @@ from app.lifecycle.skill import (
     SkillArchiveInput,
     SkillConfirmPublishInput,
     SkillLifecycleError,
+    SkillSubmitReviewInput,
     SkillVersionDeleteInput,
     SkillVersionWithdrawReviewInput,
     archive_skill as archive_skill_workflow,
     cleanup_deleted_version_storage,
     confirm_publish_skill_version,
     delete_skill_version,
+    submit_skill_version_for_review,
     unarchive_skill as unarchive_skill_workflow,
     withdraw_skill_version_review,
 )
@@ -32,6 +34,11 @@ class SkillArchiveRequest(BaseModel):
 
 class SkillConfirmPublishRequest(BaseModel):
     version: str
+
+
+class SkillSubmitReviewRequest(BaseModel):
+    version: str
+    targetVisibility: str
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -195,6 +202,36 @@ async def confirm_publish_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def submit_review_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillSubmitReviewRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    submit_input = SkillSubmitReviewInput(
+        namespace=namespace,
+        slug=slug,
+        version=body.version,
+        target_visibility=body.targetVisibility,
+        user_id=user_id,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_submit_review_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(submit_input)
+            if writer is not None
+            else submit_skill_version_for_review(request.app.state.db_engine, submit_input)
+        )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")
 async def archive_skill_v1(
     request: Request,
@@ -301,3 +338,25 @@ async def confirm_publish_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await confirm_publish_route_data(request, namespace, slug, body, x_mock_user_id)
+
+
+@router.post("/api/v1/skills/{namespace}/{slug}/submit-review")
+async def submit_review_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillSubmitReviewRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await submit_review_route_data(request, namespace, slug, body, x_mock_user_id)
+
+
+@router.post("/api/web/skills/{namespace}/{slug}/submit-review")
+async def submit_review_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillSubmitReviewRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await submit_review_route_data(request, namespace, slug, body, x_mock_user_id)

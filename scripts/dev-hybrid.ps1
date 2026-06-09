@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -11092,6 +11092,213 @@ function Invoke-HybridSkillConfirmPublishSmokeVerification {
     }
 }
 
+function Invoke-SkillSubmitReviewTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_lifecycle_submit_review.py', 'tests/test_skill_lifecycle_confirm_publish.py', 'tests/test_skill_lifecycle_withdraw_review.py', 'tests/test_skill_lifecycle_delete_version.py', 'tests/test_skill_lifecycle_archive.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SkillSubmitReviewPostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$Version,
+        [string]$TargetVisibility
+    )
+
+    $body = @{ version = $Version; targetVisibility = $TargetVisibility } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body
+}
+
+function Invoke-SkillSubmitReviewUnauthenticatedStatus {
+    param(
+        [string]$Url,
+        [string]$Version,
+        [string]$TargetVisibility
+    )
+
+    $body = @{ version = $Version; targetVisibility = $TargetVisibility } | ConvertTo-Json -Compress
+    try {
+        Invoke-RestMethod -Uri $Url -Method Post -ContentType 'application/json' -Body $body | Out-Null
+        return 200
+    } catch [System.Net.WebException] {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableSkillSubmitReviewContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionIdPresent = ($null -ne $Response.data.versionId)
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-SkillSubmitReviewContractComparison {
+    param([string]$ResultFileName = 'skill-submit-review-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-submit-review-$suffix"
+    $ownerId = "codex-submit-owner-$suffix"
+    $slugs = @(
+        "java-submit-$suffix",
+        "python-submit-$suffix",
+        "proxy-submit-$suffix",
+        "proxy-web-submit-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Submit Review', 'Submit review contract', '$ownerId', 'NAMESPACE_ONLY', 'ACTIVE', '$ownerId', '$ownerId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$ownerId', 'Codex Submit Owner', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Submit Review', 'TEAM', 'ACTIVE', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.1.0', 'UPLOADED',
+            jsonb_build_object('name', 'Submit Review', 'description', 'Submit review contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 120, '$ownerId', '2026-06-09T09:00:00Z'::timestamptz,
+            TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO version_id;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-SubmitVersionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.version = '1.1.0' LIMIT 1;"
+    }
+    function Get-SubmitDbState([string]$Slug, [string]$VersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.status || '|' || sv.requested_visibility || '|' || (SELECT COUNT(*) > 0 FROM review_task rt WHERE rt.skill_version_id = sv.id AND rt.status = 'PENDING' AND rt.submitted_by = '$ownerId') || '|' || COALESCE((SELECT rt.submitted_by FROM review_task rt WHERE rt.skill_version_id = sv.id AND rt.status = 'PENDING' ORDER BY rt.submitted_at DESC LIMIT 1), '') FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.id = $VersionId;"
+    }
+    function Get-SubmitAudit([string]$VersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL_VERSION' AND target_id = $VersionId AND action = 'SUBMIT_REVIEW' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $versionIds = @{}
+    foreach ($slug in $slugs) {
+        $versionIds[$slug] = Get-SubmitVersionId $slug
+    }
+
+    $java = Invoke-SkillSubmitReviewPostJson "$JavaUrl/api/v1/skills/$namespace/$($slugs[0])/submit-review" $ownerId '1.1.0' 'PUBLIC'
+    $python = Invoke-SkillSubmitReviewPostJson "$PythonUrl/api/v1/skills/$namespace/$($slugs[1])/submit-review" $ownerId '1.1.0' 'PUBLIC'
+    $proxy = Invoke-SkillSubmitReviewPostJson "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" $ownerId '1.1.0' 'PUBLIC'
+    $proxyWeb = Invoke-SkillSubmitReviewPostJson "$WebUrl/api/web/skills/$namespace/$($slugs[3])/submit-review" $ownerId '1.1.0' 'PUBLIC'
+
+    $rereleaseJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
+    $rereleaseProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
+    $confirmPublishPython = Invoke-SkillConfirmPublishUnauthenticatedStatus "$PythonUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" '1.1.0'
+    $confirmPublishProxy = Invoke-SkillConfirmPublishUnauthenticatedStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" '1.1.0'
+    $unauthenticatedSubmitStatus = Invoke-SkillSubmitReviewUnauthenticatedStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" '1.1.0' 'PUBLIC'
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableSkillSubmitReviewContractJson -Response $java
+        python = ConvertTo-StableSkillSubmitReviewContractJson -Response $python
+        proxy = ConvertTo-StableSkillSubmitReviewContractJson -Response $proxy
+        proxyWeb = ConvertTo-StableSkillSubmitReviewContractJson -Response $proxyWeb
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
+            dbState = ((Get-SubmitDbState $slugs[0] $versionIds[$slugs[0]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[1] $versionIds[$slugs[1]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[2] $versionIds[$slugs[2]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[3] $versionIds[$slugs[3]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId")
+            audit = ((Get-SubmitAudit $versionIds[$slugs[0]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[0]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[1]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[1]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[2]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[2]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[3]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[3]])|$ownerId|*")
+            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            confirmPublishBoundaryStillPythonOwned = ($confirmPublishPython -eq 401 -and $confirmPublishProxy -eq 401)
+            unauthenticatedSubmitRejected = ($unauthenticatedSubmitStatus -eq 401)
+        }
+        routeBoundaries = [ordered]@{
+            rereleaseJava = $rereleaseJava
+            rereleaseProxy = $rereleaseProxy
+            confirmPublishPython = $confirmPublishPython
+            confirmPublishProxy = $confirmPublishProxy
+            unauthenticatedSubmitStatus = $unauthenticatedSubmitStatus
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill submit-review contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillSubmitReviewSmokeVerification {
+    try {
+        Invoke-SkillSubmitReviewTests
+        Start-Hybrid
+        Invoke-SkillSubmitReviewContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -11151,6 +11358,7 @@ switch ($Action) {
     'verify-skill-version-delete-smoke' { Invoke-HybridSkillVersionDeleteSmokeVerification }
     'verify-skill-version-withdraw-review-smoke' { Invoke-HybridSkillVersionWithdrawReviewSmokeVerification }
     'verify-skill-confirm-publish-smoke' { Invoke-HybridSkillConfirmPublishSmokeVerification }
+    'verify-skill-submit-review-smoke' { Invoke-HybridSkillSubmitReviewSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
