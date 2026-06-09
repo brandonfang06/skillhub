@@ -289,6 +289,23 @@ describe('Vite dev proxy route ownership', () => {
     )
   })
 
+  it('routes skill star viewer-state actions to Python without taking over unstar', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/101/star')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/skills/101/star')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/skills/101/star')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/star')).toBeUndefined()
+
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/rating')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/subscription')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/stars')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('PUT', '/api/v1/skills/101/rating')).toBe('http://localhost:8080')
+  })
+
   it('routes skill version delete lifecycle action to Python only', () => {
     expect(
       resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.1.0'),

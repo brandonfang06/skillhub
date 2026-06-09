@@ -115,5 +115,11 @@ deferred routes are still visible.
 | POST | `/api/v1/admin/skills/{skillId}/hide` | python | Platform-admin skill hide moved to Python. `SUPER_ADMIN` only; sets the hidden overlay, preserves `skill.status`, updates audit fields, and writes `HIDE_SKILL` audit with optional reason detail. |
 | POST | `/api/v1/admin/skills/{skillId}/unhide` | python | Platform-admin skill unhide moved to Python. `SUPER_ADMIN` only; clears the hidden overlay, preserves `skill.status`, updates audit fields, and writes `UNHIDE_SKILL` audit. |
 | POST | `/api/v1/admin/skills/versions/{versionId}/yank` | python | Admin version yank moved to Python. `SKILL_ADMIN` or `SUPER_ADMIN` can yank only `PUBLISHED` versions, recalculate the skill latest pointer when needed, disable downloads, and write `YANK_SKILL_VERSION` audit. |
+| GET | `/api/v1/skills/{skillId}/star` | python | Authenticated viewer star-state read moved to Python. Anonymous requests are rejected to match live Java security. |
+| GET | `/api/web/skills/{skillId}/star` | python | Frontend alias for authenticated viewer star-state read. |
+| PUT | `/api/v1/skills/{skillId}/star` | python | Authenticated idempotent star action moved to Python. Inserts `skill_star` when missing and refreshes `skill.star_count`. |
+| PUT | `/api/web/skills/{skillId}/star` | python | Frontend alias for authenticated idempotent star action. |
+| DELETE | `/api/v1/skills/{skillId}/star` | java | Unstar remains Java-owned/deferred. Live Java v1 security currently returns 403 for a normal local mock user through the broader `DELETE /api/v1/skills/*/*` policy. |
+| DELETE | `/api/web/skills/{skillId}/star` | java | Web unstar remains Java-owned through the Vite fallback and should move later with the broader social/security cleanup. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -12014,6 +12014,238 @@ function Invoke-HybridAdminVersionYankSmokeVerification {
     }
 }
 
+function Invoke-SkillStarTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_star.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SkillStarRequest {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    return Invoke-RestMethod -Uri $Url -Method $Method -Headers $headers
+}
+
+function Invoke-SkillStarStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    try {
+        Invoke-RestMethod -Uri $Url -Method $Method -Headers $headers | Out-Null
+        return 200
+    } catch [System.Net.WebException] {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableSkillStarMutationJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        dataIsNull = ($null -eq $Response.data)
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableSkillStarReadJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [bool]$Response.data
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-SkillStarContractComparison {
+    param([string]$ResultFileName = 'skill-star-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-star-$suffix"
+    $userId = "codex-star-user-$suffix"
+    $slugs = @(
+        "java-star-$suffix",
+        "python-star-$suffix",
+        "proxy-star-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Skill Star', 'Skill star contract', '$userId', 'PUBLIC', 'ACTIVE', '$userId', '$userId', 0)" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES ('$userId', 'Codex Star User', 'star-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Star', 'TEAM', 'ACTIVE', '$userId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by, star_count)
+    VALUES
+        $valuesSql;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-StarSkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-StarDbState([string]$SkillId) {
+        return Invoke-PostgresScalar -Sql "SELECT (EXISTS (SELECT 1 FROM skill_star WHERE skill_id = $SkillId AND user_id = '$userId')) || '|' || star_count FROM skill WHERE id = $SkillId;"
+    }
+
+    $skillIds = @{}
+    foreach ($slug in $slugs) {
+        $skillIds[$slug] = Get-StarSkillId $slug
+    }
+
+    $javaAnonymousStatus = Invoke-SkillStarStatus 'Get' "$JavaUrl/api/v1/skills/$($skillIds[$slugs[0]])/star"
+    $pythonAnonymousStatus = Invoke-SkillStarStatus 'Get' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/star"
+    $proxyAnonymousStatus = Invoke-SkillStarStatus 'Get' "$WebUrl/api/web/skills/$($skillIds[$slugs[2]])/star"
+
+    $javaStar = Invoke-SkillStarRequest 'Put' "$JavaUrl/api/v1/skills/$($skillIds[$slugs[0]])/star" $userId
+    $pythonStar = Invoke-SkillStarRequest 'Put' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/star" $userId
+    $proxyStar = Invoke-SkillStarRequest 'Put' "$WebUrl/api/web/skills/$($skillIds[$slugs[2]])/star" $userId
+    Invoke-SkillStarRequest 'Put' "$WebUrl/api/web/skills/$($skillIds[$slugs[2]])/star" $userId | Out-Null
+
+    Start-Sleep -Milliseconds 500
+
+    $javaCheckStarred = Invoke-SkillStarRequest 'Get' "$JavaUrl/api/v1/skills/$($skillIds[$slugs[0]])/star" $userId
+    $pythonCheckStarred = Invoke-SkillStarRequest 'Get' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/star" $userId
+    $proxyCheckStarred = Invoke-SkillStarRequest 'Get' "$WebUrl/api/web/skills/$($skillIds[$slugs[2]])/star" $userId
+
+    $javaStarState = Get-StarDbState $skillIds[$slugs[0]]
+    $pythonStarState = Get-StarDbState $skillIds[$slugs[1]]
+    $proxyStarState = Get-StarDbState $skillIds[$slugs[2]]
+
+    $javaV1UnstarStatus = Invoke-SkillStarStatus 'Delete' "$JavaUrl/api/v1/skills/$($skillIds[$slugs[0]])/star" $userId
+    $pythonV1UnstarStatus = Invoke-SkillStarStatus 'Delete' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/star" $userId
+    $proxyWebUnstarStatus = Invoke-SkillStarStatus 'Delete' "$WebUrl/api/web/skills/$($skillIds[$slugs[2]])/star" $userId
+
+    Start-Sleep -Milliseconds 500
+
+    $javaAfterRejectedUnstarState = Get-StarDbState $skillIds[$slugs[0]]
+    $pythonAfterRejectedUnstarState = Get-StarDbState $skillIds[$slugs[1]]
+    $proxyAfterJavaOwnedUnstarState = Get-StarDbState $skillIds[$slugs[2]]
+
+    $pythonRatingPutStatus = Invoke-SkillStarStatus 'Put' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/rating" $userId
+    $pythonSubscriptionPutStatus = Invoke-SkillStarStatus 'Put' "$PythonUrl/api/v1/skills/$($skillIds[$slugs[1]])/subscription" $userId
+    $proxyRatingPutStatus = Invoke-SkillStarStatus 'Put' "$WebUrl/api/v1/skills/$($skillIds[$slugs[2]])/rating" $userId
+    $proxySubscriptionPutStatus = Invoke-SkillStarStatus 'Put' "$WebUrl/api/v1/skills/$($skillIds[$slugs[2]])/subscription" $userId
+
+    $stableStar = [ordered]@{
+        java = ConvertTo-StableSkillStarMutationJson -Response $javaStar
+        python = ConvertTo-StableSkillStarMutationJson -Response $pythonStar
+        proxy = ConvertTo-StableSkillStarMutationJson -Response $proxyStar
+    }
+    $stableCheck = [ordered]@{
+        java = ConvertTo-StableSkillStarReadJson -Response $javaCheckStarred
+        python = ConvertTo-StableSkillStarReadJson -Response $pythonCheckStarred
+        proxy = ConvertTo-StableSkillStarReadJson -Response $proxyCheckStarred
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            unauthenticatedReadRejected = ($javaAnonymousStatus -eq 401 -and $pythonAnonymousStatus -eq 401 -and $proxyAnonymousStatus -eq 401)
+            starResponsesMatch = ($stableStar.java -eq $stableStar.python -and $stableStar.python -eq $stableStar.proxy)
+            authenticatedReadMatches = ($stableCheck.java -eq $stableCheck.python -and $stableCheck.python -eq $stableCheck.proxy)
+            starDbState = ($javaStarState -eq 'true|1' -and $pythonStarState -eq 'true|1' -and $proxyStarState -eq 'true|1')
+            javaV1UnstarStillJavaBlocked = ($javaV1UnstarStatus -eq 403 -and $javaAfterRejectedUnstarState -eq 'true|1')
+            pythonV1UnstarNotOwned = ($pythonV1UnstarStatus -eq 405 -and $pythonAfterRejectedUnstarState -eq 'true|1')
+            proxyWebUnstarStillJavaOwned = ($proxyWebUnstarStatus -eq 200 -and $proxyAfterJavaOwnedUnstarState -eq 'false|0')
+            ratingPutNotPythonOwned = ($pythonRatingPutStatus -ne 200)
+            subscriptionPutNotPythonOwned = ($pythonSubscriptionPutStatus -ne 200)
+        }
+        routeBoundaries = [ordered]@{
+            javaAnonymousStatus = $javaAnonymousStatus
+            pythonAnonymousStatus = $pythonAnonymousStatus
+            proxyAnonymousStatus = $proxyAnonymousStatus
+            javaV1UnstarStatus = $javaV1UnstarStatus
+            pythonV1UnstarStatus = $pythonV1UnstarStatus
+            proxyWebUnstarStatus = $proxyWebUnstarStatus
+            pythonRatingPutStatus = $pythonRatingPutStatus
+            pythonSubscriptionPutStatus = $pythonSubscriptionPutStatus
+            proxyRatingPutStatus = $proxyRatingPutStatus
+            proxySubscriptionPutStatus = $proxySubscriptionPutStatus
+        }
+        stableStar = $stableStar
+        stableCheck = $stableCheck
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill star contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillStarSmokeVerification {
+    try {
+        Invoke-SkillStarTests
+        Start-Hybrid
+        Invoke-SkillStarContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -12077,6 +12309,7 @@ switch ($Action) {
     'verify-skill-rerelease-smoke' { Invoke-HybridSkillRereleaseSmokeVerification }
     'verify-admin-skill-hide-unhide-smoke' { Invoke-HybridAdminSkillHideUnhideSmokeVerification }
     'verify-admin-version-yank-smoke' { Invoke-HybridAdminVersionYankSmokeVerification }
+    'verify-skill-star-smoke' { Invoke-HybridSkillStarSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
