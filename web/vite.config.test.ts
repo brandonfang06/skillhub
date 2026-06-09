@@ -101,6 +101,24 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes review approve POST to Python without taking over other review routes', () => {
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/reviews/701/approve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/reject')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/withdraw')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/approve')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/reject')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/withdraw')).toBe('http://localhost:8080')
+  })
+
   it('routes ClawHub well-known discovery to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

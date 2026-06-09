@@ -1182,6 +1182,29 @@ This gate verifies:
 - Staged bundle files are cleaned after daemon processing.
 - Playwright smoke E2E passes.
 
+### Review Approve Write Ownership Smoke
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+$env:COREPACK_HOME=(Join-Path (Get-Location) '.dev\corepack')
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-approve-smoke
+```
+
+This gate verifies:
+
+- Python owns `POST /api/v1/reviews/{id}/approve` and
+  `POST /api/web/reviews/{id}/approve` through the Vite proxy.
+- Java, direct Python, Vite `/api/v1`, and Vite `/api/web` review approve calls match stable
+  response fields for a seeded pending review task.
+- PostgreSQL state matches Java parity after approval: review task `APPROVED`, version
+  `PUBLISHED`, `published_at` set, `skill.latest_version_id` updated, requested visibility
+  applied, metadata copied to skill display fields, and `updated_by` set to the reviewer.
+- Python records a `REVIEW_APPROVE` audit log entry for the approved task.
+- Reject and detail review routes remain Java-owned boundaries during this milestone.
+- Playwright smoke E2E passes.
+
 ## Shutdown
 
 ```powershell

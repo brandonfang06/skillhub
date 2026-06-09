@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -7592,6 +7592,267 @@ function Invoke-HybridPublishScanDaemonSupervisorSmokeVerification {
     }
 }
 
+function Invoke-ReviewApproveTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_review_approve.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-ReviewApprovePostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$Comment
+    )
+
+    $body = @{ comment = $Comment } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body
+}
+
+function ConvertTo-StableReviewTaskContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            namespace = $Response.data.namespace
+            version = $Response.data.version
+            status = $Response.data.status
+            submittedBy = $Response.data.submittedBy
+            reviewedBy = $Response.data.reviewedBy
+            reviewComment = $Response.data.reviewComment
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-ReviewApproveContractComparison {
+    param([string]$ResultFileName = 'review-approve-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-review-approve-$suffix"
+    $reviewerId = "codex-reviewer-$suffix"
+    $submitterId = "codex-review-submitter-$suffix"
+    $comment = "approve-$suffix"
+    $javaSlug = "java-approve-$suffix"
+    $pythonSlug = "python-approve-$suffix"
+    $proxySlug = "proxy-approve-$suffix"
+    $proxyWebSlug = "proxy-web-approve-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    java_skill_id BIGINT;
+    python_skill_id BIGINT;
+    proxy_skill_id BIGINT;
+    proxy_web_skill_id BIGINT;
+    java_version_id BIGINT;
+    python_version_id BIGINT;
+    proxy_version_id BIGINT;
+    proxy_web_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$reviewerId', 'Codex Review Approver', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$submitterId', 'Codex Review Submitter', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Review Approve', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$reviewerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$submitterId', 'MEMBER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES (ns_id, '$javaSlug', 'Draft Java Approve', 'Before approve', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')
+    RETURNING id INTO java_skill_id;
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES (ns_id, '$pythonSlug', 'Draft Python Approve', 'Before approve', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')
+    RETURNING id INTO python_skill_id;
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES (ns_id, '$proxySlug', 'Draft Proxy Approve', 'Before approve', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')
+    RETURNING id INTO proxy_skill_id;
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES (ns_id, '$proxyWebSlug', 'Draft Proxy Web Approve', 'Before approve', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')
+    RETURNING id INTO proxy_web_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        java_skill_id, '1.0.0', 'PENDING_REVIEW',
+        jsonb_build_object('name', 'Approved Skill', 'description', 'Approved by review'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+    )
+    RETURNING id INTO java_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        python_skill_id, '1.0.0', 'PENDING_REVIEW',
+        jsonb_build_object('name', 'Approved Skill', 'description', 'Approved by review'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+    )
+    RETURNING id INTO python_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        proxy_skill_id, '1.0.0', 'PENDING_REVIEW',
+        jsonb_build_object('name', 'Approved Skill', 'description', 'Approved by review'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+    )
+    RETURNING id INTO proxy_version_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        proxy_web_skill_id, '1.0.0', 'PENDING_REVIEW',
+        jsonb_build_object('name', 'Approved Skill', 'description', 'Approved by review'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+    )
+    RETURNING id INTO proxy_web_version_id;
+
+    INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+    VALUES
+        (java_version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP),
+        (python_version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP),
+        (proxy_version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP),
+        (proxy_web_version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP);
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $javaReviewTaskId = Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$javaSlug' LIMIT 1;"
+    $pythonReviewTaskId = Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$pythonSlug' LIMIT 1;"
+    $proxyReviewTaskId = Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$proxySlug' LIMIT 1;"
+    $proxyWebReviewTaskId = Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$proxyWebSlug' LIMIT 1;"
+
+    $java = Invoke-ReviewApprovePostJson "$JavaUrl/api/v1/reviews/$javaReviewTaskId/approve" $reviewerId $comment
+    $python = Invoke-ReviewApprovePostJson "$PythonUrl/api/v1/reviews/$pythonReviewTaskId/approve" $reviewerId $comment
+    $proxyV1 = Invoke-ReviewApprovePostJson "$WebUrl/api/v1/reviews/$proxyReviewTaskId/approve" $reviewerId $comment
+    $proxyWeb = Invoke-ReviewApprovePostJson "$WebUrl/api/web/reviews/$proxyWebReviewTaskId/approve" $reviewerId $comment
+
+    $javaStable = ConvertTo-StableReviewTaskContractJson -Response $java
+    $pythonStable = ConvertTo-StableReviewTaskContractJson -Response $python
+    $proxyStable = ConvertTo-StableReviewTaskContractJson -Response $proxyV1
+    $proxyWebStable = ConvertTo-StableReviewTaskContractJson -Response $proxyWeb
+
+    $javaDb = Invoke-PostgresScalar -Sql "SELECT rt.status || '|' || sv.status || '|' || (sv.published_at IS NOT NULL) || '|' || (s.latest_version_id = sv.id) || '|' || s.visibility || '|' || s.display_name || '|' || s.summary || '|' || COALESCE(s.updated_by, '') FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id WHERE rt.id = $javaReviewTaskId;"
+    $pythonDb = Invoke-PostgresScalar -Sql "SELECT rt.status || '|' || sv.status || '|' || (sv.published_at IS NOT NULL) || '|' || (s.latest_version_id = sv.id) || '|' || s.visibility || '|' || s.display_name || '|' || s.summary || '|' || COALESCE(s.updated_by, '') FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id WHERE rt.id = $pythonReviewTaskId;"
+    $proxyDb = Invoke-PostgresScalar -Sql "SELECT rt.status || '|' || sv.status || '|' || (sv.published_at IS NOT NULL) || '|' || (s.latest_version_id = sv.id) || '|' || s.visibility || '|' || s.display_name || '|' || s.summary || '|' || COALESCE(s.updated_by, '') FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id WHERE rt.id = $proxyReviewTaskId;"
+    $proxyWebDb = Invoke-PostgresScalar -Sql "SELECT rt.status || '|' || sv.status || '|' || (sv.published_at IS NOT NULL) || '|' || (s.latest_version_id = sv.id) || '|' || s.visibility || '|' || s.display_name || '|' || s.summary || '|' || COALESCE(s.updated_by, '') FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id WHERE rt.id = $proxyWebReviewTaskId;"
+    $pythonAudit = Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'REVIEW_TASK' AND target_id = $pythonReviewTaskId AND action = 'REVIEW_APPROVE' ORDER BY created_at DESC LIMIT 1;"
+    $rejectProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyReviewTaskId/reject" -Method 'POST'
+    $detailProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyReviewTaskId" -Method 'GET'
+
+    $expectedDbSuffix = "APPROVED|PUBLISHED|true|true|NAMESPACE_ONLY|Approved Skill|Approved by review|$reviewerId"
+    $result = [ordered]@{
+        namespace = $namespace
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+        pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+        javaDb = $javaDb
+        pythonDb = $pythonDb
+        proxyDb = $proxyDb
+        proxyWebDb = $proxyWebDb
+        pythonAudit = $pythonAudit
+        javaOwnedBoundaries = [ordered]@{
+            rejectStatus = $rejectProxyStatus
+            detailStatus = $detailProxyStatus
+        }
+        checks = [ordered]@{
+            javaDbApproved = ($javaDb -eq $expectedDbSuffix)
+            pythonDbApproved = ($pythonDb -eq $expectedDbSuffix)
+            proxyDbApproved = ($proxyDb -eq $expectedDbSuffix)
+            proxyWebDbApproved = ($proxyWebDb -eq $expectedDbSuffix)
+            auditRecorded = ($pythonAudit -match '^REVIEW_APPROVE\|REVIEW_TASK\|')
+            rejectRemainsJavaOwned = ($rejectProxyStatus -ne 404)
+            detailRemainsJavaOwned = ($detailProxyStatus -ne 404)
+        }
+        stable = [ordered]@{
+            java = $javaStable
+            python = $pythonStable
+            proxy = $proxyStable
+            proxyWeb = $proxyWebStable
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.javaMatchesPython -or -not $result.pythonMatchesProxy -or -not $result.pythonMatchesProxyWeb) {
+        throw "Review approve response contract check failed. See .dev/$ResultFileName."
+    }
+    if (-not $result.checks.javaDbApproved -or -not $result.checks.pythonDbApproved -or -not $result.checks.proxyDbApproved -or -not $result.checks.proxyWebDbApproved -or -not $result.checks.auditRecorded) {
+        throw "Review approve database/audit check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-HybridReviewApproveSmokeVerification {
+    try {
+        Invoke-ReviewApproveTests
+        Start-Hybrid
+        Invoke-ReviewApproveContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -7636,6 +7897,7 @@ switch ($Action) {
     'verify-publish-scan-consumer-runtime-smoke' { Invoke-HybridPublishScanConsumerRuntimeSmokeVerification }
     'verify-publish-scanner-http-client-smoke' { Invoke-HybridPublishScannerHttpClientSmokeVerification }
     'verify-publish-scan-daemon-supervisor-smoke' { Invoke-HybridPublishScanDaemonSupervisorSmokeVerification }
+    'verify-review-approve-smoke' { Invoke-HybridReviewApproveSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

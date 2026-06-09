@@ -176,6 +176,7 @@ Still plan carefully when a group requires:
 | 42 | Publish scan consumer runtime | n/a | Python can create Redis consumer groups, consume never-delivered scan tasks, ACK success/invalid/retry/final-failure messages, republish retries up to Java's max retry count, and reclaim pending messages for one-pass processing. Daemon lifecycle and scanner HTTP client remain deferred. |
 | 43 | Publish scanner HTTP client | n/a | Python scan consumer can call the real scanner service in upload/local modes, map Java-compatible scanner responses into scanner result input, and pass live Redis consumer verification with the scanner container. Daemon lifecycle remains deferred. |
 | 44 | Publish scan daemon/supervisor integration | n/a | Python FastAPI can optionally start a background scan consumer daemon, ensure its Redis consumer group exists before polling, consume scanner tasks through the real scanner container, update audit/version status, ACK messages, and shut down with the hybrid stack. No route ownership moved. |
+| 45 | `POST /api/v1/reviews/{id}/approve`, `POST /api/web/reviews/{id}/approve` | python | Review approval write ownership moved to Python. The route publishes the reviewed version, updates `skill.latest_version_id`, visibility, metadata, and `updated_by`, records `REVIEW_APPROVE` audit, and passed Java/Python/Vite v1/web live comparison. Reject, withdraw, submit, list, detail, review-file, and review-download routes remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1139,7 +1140,7 @@ When this plan changes:
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
 the current pre-launch publish work. Group D publish foundations are complete through root,
-legacy, CLI, and portal publish write ownership plus scanner result application:
+legacy, CLI, and portal publish write ownership plus scanner result application and daemon runtime:
 
 - `POST /api/cli/v1/skills/{namespace}/publish`
 - `POST /api/v1/skills/{namespace}/publish`
@@ -1150,15 +1151,22 @@ legacy, CLI, and portal publish write ownership plus scanner result application:
 - Java-compatible Redis scan task field parsing and one-task Python worker boundary
 - Redis consumer group runtime with one-pass consume/reclaim, ACK, and retry republish semantics
 - scanner HTTP client for real scanner service upload/local mode response mapping
+- FastAPI-managed background scan daemon/supervisor lifecycle
 
-Next decision point:
+Group E has started with review approval write ownership:
 
-- Plan Python scan worker daemon/supervisor integration if the next priority is running the
-  consumer continuously outside explicit fixtures.
-- Plan lifecycle/governance mutations if the next priority is enabling review/approval and
-  post-publish state transitions in Python.
+- Completed: `POST /api/v1/reviews/{id}/approve` and
+  `POST /api/web/reviews/{id}/approve`.
+- Still Java-owned: submit review, reject, withdraw, list/detail, review file/download, promotion
+  review APIs, and post-publish lifecycle/governance actions.
 
-Either choice must include route-specific live gates and must keep `server/` read-only.
+Recommended next choice:
+
+- Continue Group E with a cohesive review lifecycle milestone, likely reject/withdraw together if
+  Java parity shows they share state, permission, and audit boundaries. Keep submit/list/detail
+  separate unless the plan proves the live gate remains small enough.
+
+Every next choice must include route-specific live gates and must keep `server/` read-only.
 
 Recently completed context:
 
