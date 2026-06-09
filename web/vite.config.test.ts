@@ -297,8 +297,6 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('PUT', '/api/web/skills/101/star')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/star')).toBeUndefined()
 
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/stars')).toBeUndefined()
-
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8080')
   })
@@ -319,25 +317,32 @@ describe('Vite dev proxy route ownership', () => {
     )
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBeUndefined()
 
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/subscriptions')).toBeUndefined()
-
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/subscription')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBe('http://localhost:8080')
   })
 
-  it('routes skill rating viewer-state actions to Python while social lists stay Java-owned', () => {
+  it('routes skill rating viewer-state actions to Python', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/rating')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/rating')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/skills/101/rating')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('PUT', '/api/web/skills/101/rating')).toBe('http://localhost:8081')
 
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/stars')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/subscriptions')).toBeUndefined()
-
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/rating')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('PUT', '/api/web/skills/101/rating')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('GET', '/api/v1/me/stars')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('GET', '/api/v1/me/subscriptions')).toBe('http://localhost:8080')
+  })
+
+  it('routes my social lists to Python while my skills stays Java-owned', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/stars')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/stars')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/subscriptions')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/subscriptions')).toBe('http://localhost:8081')
+
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/stars')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/skills')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/me/stars?page=0&size=12')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/me/subscriptions')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8080')
   })
 
   it('routes skill version delete lifecycle action to Python only', () => {

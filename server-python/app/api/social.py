@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
+from app.social.lists import SocialListKind, list_my_social_skills
 from app.social.rating import SkillRatingError, SkillRatingInput, check_skill_rating, rate_skill
 from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill
 from app.social.subscription import SkillSubscriptionError, SkillSubscriptionInput, check_skill_subscription, subscribe_skill
@@ -145,6 +146,74 @@ async def check_skill_rating_route_data(request: Request, skill_id: int, mock_us
     except SkillRatingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+def _parse_non_negative_int(value: int, default: int) -> int:
+    return value if value >= 0 else default
+
+
+def _parse_positive_int(value: int, default: int) -> int:
+    return value if value > 0 else default
+
+
+async def list_my_social_skills_route_data(
+    request: Request,
+    *,
+    kind: SocialListKind,
+    mock_user_id: str | None,
+    page: int,
+    size: int,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    normalized_page = _parse_non_negative_int(page, 0)
+    normalized_size = _parse_positive_int(size, 12)
+    reader = getattr(request.app.state, "my_social_list_reader", None)
+    data = await _resolve_result(
+        reader(kind, user_id, normalized_page, normalized_size)
+        if reader is not None
+        else list_my_social_skills(
+            request.app.state.db_engine,
+            kind=kind,
+            user_id=user_id,
+            page=normalized_page,
+            size=normalized_size,
+        )
+    )
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/me/stars")
+@router.get("/api/web/me/stars")
+async def list_my_stars_route(
+    request: Request,
+    page: int = 0,
+    size: int = 12,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_my_social_skills_route_data(
+        request,
+        kind="stars",
+        mock_user_id=x_mock_user_id,
+        page=page,
+        size=size,
+    )
+
+
+@router.get("/api/v1/me/subscriptions")
+@router.get("/api/web/me/subscriptions")
+async def list_my_subscriptions_route(
+    request: Request,
+    page: int = 0,
+    size: int = 12,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_my_social_skills_route_data(
+        request,
+        kind="subscriptions",
+        mock_user_id=x_mock_user_id,
+        page=page,
+        size=size,
+    )
 
 
 @router.put("/api/v1/skills/{skill_id}/star")

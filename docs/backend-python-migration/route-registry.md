@@ -131,5 +131,11 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{skillId}/rating` | python | Frontend alias for authenticated viewer rating-state read. |
 | PUT | `/api/v1/skills/{skillId}/rating` | python | Authenticated rating create/update moved to Python. Validates score 1..5, upserts `skill_rating`, and refreshes `skill.rating_avg` / `skill.rating_count`. |
 | PUT | `/api/web/skills/{skillId}/rating` | python | Frontend alias for authenticated rating create/update. |
+| GET | `/api/v1/me/stars` | python | Current user's starred skill list moved to Python. Requires auth, defaults to `page=0&size=12`, preserves Java page envelope and summary shape. |
+| GET | `/api/web/me/stars` | python | Frontend alias for current user's starred skill list. |
+| GET | `/api/v1/me/subscriptions` | python | Current user's subscribed skill list moved to Python. Requires auth, defaults to `page=0&size=12`, preserves Java page envelope and summary shape. |
+| GET | `/api/web/me/subscriptions` | python | Frontend alias for current user's subscribed skill list. |
+| GET | `/api/v1/me/skills` | java | Current user's owned skill list remains Java-owned until the broader dashboard/my-skills milestone. |
+| GET | `/api/web/me/skills` | java | Frontend alias for owned skill list remains Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

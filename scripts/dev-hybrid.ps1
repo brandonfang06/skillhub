@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -12726,6 +12726,256 @@ function Invoke-HybridSkillRatingSmokeVerification {
     }
 }
 
+function Invoke-MySocialListsTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_my_social_lists.py', 'tests/test_skill_star.py', 'tests/test_skill_subscription.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableMySocialListJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in @($Response.data.items)) {
+        $items += [ordered]@{
+            id = [int]$item.id
+            slug = $item.slug
+            displayName = $item.displayName
+            summary = $item.summary
+            visibility = $item.visibility
+            status = $item.status
+            downloadCount = [int]$item.downloadCount
+            starCount = [int]$item.starCount
+            ratingAvg = [double]$item.ratingAvg
+            ratingCount = [int]$item.ratingCount
+            namespace = $item.namespace
+            updatedAt = $item.updatedAt
+            canSubmitPromotion = [bool]$item.canSubmitPromotion
+            headlineVersion = $item.headlineVersion
+            publishedVersion = $item.publishedVersion
+            ownerPreviewVersion = $item.ownerPreviewVersion
+            resolutionMode = $item.resolutionMode
+        }
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            items = $items
+            total = [int]$Response.data.total
+            page = [int]$Response.data.page
+            size = [int]$Response.data.size
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-MySocialListsContractComparison {
+    param([string]$ResultFileName = 'my-social-lists-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-social-list-$suffix"
+    $userId = "codex-social-list-user-$suffix"
+    $slug = "social-list-skill-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES ('$userId', 'Codex Social List User', 'social-list-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Social List', 'GLOBAL', 'ACTIVE', '$userId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    SELECT id INTO fixture_skill_id
+    FROM skill
+    WHERE namespace_id = ns_id AND slug = '$slug'
+    LIMIT 1;
+
+    IF fixture_skill_id IS NULL THEN
+        INSERT INTO skill (
+            namespace_id, slug, display_name, summary, owner_id, visibility, status,
+            download_count, star_count, subscription_count, rating_avg, rating_count,
+            created_by, updated_by, updated_at
+        )
+        VALUES (
+            ns_id, '$slug', 'Social List Skill', 'Social list contract fixture', '$userId',
+            'PUBLIC', 'ACTIVE', 7, 1, 1, 4.50, 2, '$userId', '$userId',
+            '2026-06-10T08:00:00Z'::timestamptz
+        )
+        RETURNING id INTO fixture_skill_id;
+    ELSE
+        UPDATE skill
+        SET display_name = 'Social List Skill',
+            summary = 'Social list contract fixture',
+            owner_id = '$userId',
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            download_count = 7,
+            star_count = 1,
+            subscription_count = 1,
+            rating_avg = 4.50,
+            rating_count = 2,
+            updated_by = '$userId',
+            updated_at = '2026-06-10T08:00:00Z'::timestamptz
+        WHERE id = fixture_skill_id;
+    END IF;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'PUBLISHED', 'social list fixture',
+        jsonb_build_object('name', 'Social List Skill', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 32, '2026-06-10T08:05:00Z'::timestamptz, '$userId',
+        '2026-06-10T08:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+    SET status = 'PUBLISHED',
+        changelog = EXCLUDED.changelog,
+        parsed_metadata_json = EXCLUDED.parsed_metadata_json,
+        manifest_json = EXCLUDED.manifest_json,
+        file_count = EXCLUDED.file_count,
+        total_size = EXCLUDED.total_size,
+        published_at = EXCLUDED.published_at,
+        created_at = EXCLUDED.created_at,
+        bundle_ready = TRUE,
+        download_ready = TRUE,
+        requested_visibility = 'PUBLIC'
+    RETURNING id INTO version_id;
+
+    UPDATE skill
+    SET latest_version_id = version_id
+    WHERE id = fixture_skill_id;
+
+    INSERT INTO skill_star (skill_id, user_id, created_at)
+    VALUES (fixture_skill_id, '$userId', '2026-06-10T08:10:00Z'::timestamptz)
+    ON CONFLICT (skill_id, user_id) DO UPDATE
+    SET created_at = EXCLUDED.created_at;
+
+    INSERT INTO skill_subscription (skill_id, user_id, created_at)
+    VALUES (fixture_skill_id, '$userId', '2026-06-10T08:11:00Z'::timestamptz)
+    ON CONFLICT (skill_id, user_id) DO UPDATE
+    SET created_at = EXCLUDED.created_at;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $headers = @{ 'X-Mock-User-Id' = $userId }
+    $starsPath = '/api/v1/me/stars?page=0&size=12'
+    $starsWebPath = '/api/web/me/stars?page=0&size=12'
+    $subscriptionsPath = '/api/v1/me/subscriptions?page=0&size=12'
+    $subscriptionsWebPath = '/api/web/me/subscriptions?page=0&size=12'
+
+    $javaStars = Invoke-RestMethod "$JavaUrl$starsPath" -Headers $headers
+    $pythonStars = Invoke-RestMethod "$PythonUrl$starsPath" -Headers $headers
+    $proxyStars = Invoke-RestMethod "$WebUrl$starsWebPath" -Headers $headers
+    $javaSubscriptions = Invoke-RestMethod "$JavaUrl$subscriptionsPath" -Headers $headers
+    $pythonSubscriptions = Invoke-RestMethod "$PythonUrl$subscriptionsPath" -Headers $headers
+    $proxySubscriptions = Invoke-RestMethod "$WebUrl$subscriptionsWebPath" -Headers $headers
+
+    $starsStable = [ordered]@{
+        java = ConvertTo-StableMySocialListJson -Response $javaStars
+        python = ConvertTo-StableMySocialListJson -Response $pythonStars
+        proxy = ConvertTo-StableMySocialListJson -Response $proxyStars
+    }
+    $subscriptionsStable = [ordered]@{
+        java = ConvertTo-StableMySocialListJson -Response $javaSubscriptions
+        python = ConvertTo-StableMySocialListJson -Response $pythonSubscriptions
+        proxy = ConvertTo-StableMySocialListJson -Response $proxySubscriptions
+    }
+
+    $javaAnonymousStarsStatus = Invoke-SkillRatingStatus 'Get' "$JavaUrl$starsPath"
+    $pythonAnonymousStarsStatus = Invoke-SkillRatingStatus 'Get' "$PythonUrl$starsPath"
+    $proxyAnonymousStarsStatus = Invoke-SkillRatingStatus 'Get' "$WebUrl$starsWebPath"
+    $javaAnonymousSubscriptionsStatus = Invoke-SkillRatingStatus 'Get' "$JavaUrl$subscriptionsPath"
+    $pythonAnonymousSubscriptionsStatus = Invoke-SkillRatingStatus 'Get' "$PythonUrl$subscriptionsPath"
+    $proxyAnonymousSubscriptionsStatus = Invoke-SkillRatingStatus 'Get' "$WebUrl$subscriptionsWebPath"
+    $proxyMySkillsStatus = Invoke-SkillRatingStatus 'Get' "$WebUrl/api/v1/me/skills" $userId
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            starsMatch = ($starsStable.java -eq $starsStable.python -and $starsStable.python -eq $starsStable.proxy)
+            subscriptionsMatch = ($subscriptionsStable.java -eq $subscriptionsStable.python -and $subscriptionsStable.python -eq $subscriptionsStable.proxy)
+            starsContainFixture = ($javaStars.data.total -eq 1 -and $javaStars.data.items[0].slug -eq $slug -and $javaStars.data.items[0].publishedVersion.version -eq '1.0.0')
+            subscriptionsContainFixture = ($javaSubscriptions.data.total -eq 1 -and $javaSubscriptions.data.items[0].slug -eq $slug -and $javaSubscriptions.data.items[0].publishedVersion.version -eq '1.0.0')
+            anonymousStarsRejected = ($javaAnonymousStarsStatus -eq 401 -and $pythonAnonymousStarsStatus -eq 401 -and $proxyAnonymousStarsStatus -eq 401)
+            anonymousSubscriptionsRejected = ($javaAnonymousSubscriptionsStatus -eq 401 -and $pythonAnonymousSubscriptionsStatus -eq 401 -and $proxyAnonymousSubscriptionsStatus -eq 401)
+            mySkillsStillJavaOwned = ($proxyMySkillsStatus -ne 405)
+        }
+        routeBoundaries = [ordered]@{
+            javaAnonymousStarsStatus = $javaAnonymousStarsStatus
+            pythonAnonymousStarsStatus = $pythonAnonymousStarsStatus
+            proxyAnonymousStarsStatus = $proxyAnonymousStarsStatus
+            javaAnonymousSubscriptionsStatus = $javaAnonymousSubscriptionsStatus
+            pythonAnonymousSubscriptionsStatus = $pythonAnonymousSubscriptionsStatus
+            proxyAnonymousSubscriptionsStatus = $proxyAnonymousSubscriptionsStatus
+            proxyMySkillsStatus = $proxyMySkillsStatus
+        }
+        starsStable = $starsStable
+        subscriptionsStable = $subscriptionsStable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "My social lists contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridMySocialListsSmokeVerification {
+    try {
+        Invoke-MySocialListsTests
+        Start-Hybrid
+        Invoke-MySocialListsContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -12792,6 +13042,7 @@ switch ($Action) {
     'verify-skill-star-smoke' { Invoke-HybridSkillStarSmokeVerification }
     'verify-skill-subscription-smoke' { Invoke-HybridSkillSubscriptionSmokeVerification }
     'verify-skill-rating-smoke' { Invoke-HybridSkillRatingSmokeVerification }
+    'verify-my-social-lists-smoke' { Invoke-HybridMySocialListsSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
