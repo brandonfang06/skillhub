@@ -10822,10 +10822,10 @@ END `$`$;
 
     $rereleaseJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
     $rereleaseProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
-    $submitReviewJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" -Method 'POST'
-    $submitReviewProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" -Method 'POST'
-    $confirmPublishJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" -Method 'POST'
-    $confirmPublishProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" -Method 'POST'
+    $submitReviewPython = Invoke-SkillSubmitReviewUnauthenticatedStatus "$PythonUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" '1.1.0' 'PUBLIC'
+    $submitReviewProxy = Invoke-SkillSubmitReviewUnauthenticatedStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" '1.1.0' 'PUBLIC'
+    $confirmPublishPython = Invoke-SkillConfirmPublishUnauthenticatedStatus "$PythonUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" '1.1.0'
+    $confirmPublishProxy = Invoke-SkillConfirmPublishUnauthenticatedStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/confirm-publish" '1.1.0'
     $unauthenticatedWithdrawStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/withdraw-review" -Method 'POST'
 
     $stable = [ordered]@{
@@ -10842,16 +10842,16 @@ END `$`$;
             dbState = ((Get-WithdrawDbState $slugs[1] $versionIds[$slugs[1]]) -eq "UPLOADED|$submitterId|true" -and (Get-WithdrawDbState $slugs[2] $versionIds[$slugs[2]]) -eq "UPLOADED|$submitterId|true" -and (Get-WithdrawDbState $slugs[3] $versionIds[$slugs[3]]) -eq "UPLOADED|$submitterId|true")
             audit = ((Get-WithdrawAudit $versionIds[$slugs[1]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[1]])|$submitterId|*" -and (Get-WithdrawAudit $versionIds[$slugs[2]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[2]])|$submitterId|*" -and (Get-WithdrawAudit $versionIds[$slugs[3]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[3]])|$submitterId|*")
             rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
-            submitReviewBoundaryJavaOwned = ($submitReviewJava -eq $submitReviewProxy)
-            confirmPublishBoundaryJavaOwned = ($confirmPublishJava -eq $confirmPublishProxy)
+            submitReviewBoundaryStillPythonOwned = ($submitReviewPython -eq 401 -and $submitReviewProxy -eq 401)
+            confirmPublishBoundaryStillPythonOwned = ($confirmPublishPython -eq 401 -and $confirmPublishProxy -eq 401)
             unauthenticatedWithdrawRejected = ($unauthenticatedWithdrawStatus -eq 401)
         }
         routeBoundaries = [ordered]@{
             rereleaseJava = $rereleaseJava
             rereleaseProxy = $rereleaseProxy
-            submitReviewJava = $submitReviewJava
+            submitReviewPython = $submitReviewPython
             submitReviewProxy = $submitReviewProxy
-            confirmPublishJava = $confirmPublishJava
+            confirmPublishPython = $confirmPublishPython
             confirmPublishProxy = $confirmPublishProxy
             unauthenticatedWithdrawStatus = $unauthenticatedWithdrawStatus
         }

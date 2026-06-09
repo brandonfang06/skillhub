@@ -124,6 +124,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-skill-version-withdraw-review-smoke" in script
     assert "verify-skill-confirm-publish-smoke" in script
     assert "verify-skill-submit-review-smoke" in script
+    assert "submitReviewBoundaryStillPythonOwned" in script
+    assert "confirmPublishBoundaryStillPythonOwned" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script

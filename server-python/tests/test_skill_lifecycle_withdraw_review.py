@@ -170,6 +170,30 @@ async def test_withdraw_skill_version_review_requires_pending_task() -> None:
     assert not any("UPDATE skill_version" in statement for statement in connection.statements)
 
 
+@pytest.mark.anyio
+async def test_withdraw_skill_version_review_rejects_frozen_namespace_like_java() -> None:
+    connection = FakeWithdrawReviewConnection(namespace_status="FROZEN")
+
+    with pytest.raises(SkillLifecycleError, match="error.namespace.frozen") as exc_info:
+        await withdraw_skill_version_review(FakeEngine(connection), withdraw_input())
+
+    assert exc_info.value.status_code == 400
+    assert not any("DELETE FROM review_task" in statement for statement in connection.statements)
+    assert not any("UPDATE skill_version" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_withdraw_skill_version_review_rejects_archived_namespace_like_java() -> None:
+    connection = FakeWithdrawReviewConnection(namespace_status="ARCHIVED")
+
+    with pytest.raises(SkillLifecycleError, match="error.namespace.archived") as exc_info:
+        await withdraw_skill_version_review(FakeEngine(connection), withdraw_input())
+
+    assert exc_info.value.status_code == 400
+    assert not any("DELETE FROM review_task" in statement for statement in connection.statements)
+    assert not any("UPDATE skill_version" in statement for statement in connection.statements)
+
+
 def test_withdraw_skill_version_review_routes_return_java_envelopes() -> None:
     app = create_app()
     seen: list[SkillVersionWithdrawReviewInput] = []

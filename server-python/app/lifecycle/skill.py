@@ -166,6 +166,14 @@ def _assert_can_manage(skill: dict[str, Any], user_id: str, namespace_role: str 
     raise SkillLifecycleError("error.skill.lifecycle.noPermission", status_code=403)
 
 
+def _assert_namespace_active(namespace_status: object) -> None:
+    status = str(namespace_status)
+    if status == "FROZEN":
+        raise SkillLifecycleError("error.namespace.frozen")
+    if status == "ARCHIVED":
+        raise SkillLifecycleError("error.namespace.archived")
+
+
 async def _write_audit(
     connection: Any,
     *,
@@ -491,8 +499,7 @@ async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdr
     timestamp = _now(request.now)
     async with engine.begin() as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
-        if str(skill.get("namespace_status")) != "ACTIVE":
-            raise SkillLifecycleError("error.namespace.archived", status_code=403)
+        _assert_namespace_active(skill.get("namespace_status"))
 
         skill_id = int(skill["skill_id"])
         version = await _read_version(connection, skill_id, request.version)
