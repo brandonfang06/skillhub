@@ -1157,6 +1157,31 @@ This gate verifies:
 - Staged bundle files are cleaned after consumer processing.
 - Long-running daemon lifecycle remains out of scope for this gate.
 
+### Publish Scan Daemon/Supervisor Smoke
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+$env:COREPACK_HOME=(Join-Path (Get-Location) '.dev\corepack')
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-scan-daemon-supervisor-smoke
+```
+
+This gate verifies:
+
+- Python FastAPI starts with `SKILLHUB_SCAN_CONSUMER_ENABLED=true`.
+- The background scan daemon creates the configured Redis consumer group before polling.
+- The gate does not delete the daemon stream after startup; deleting the stream also deletes the
+  consumer group and causes Redis `NOGROUP`.
+- Python consumes a Redis scan task without manually invoking the fixture consumer.
+- The daemon uses the real scanner container at `http://localhost:8000`.
+- PostgreSQL `skill_version` moves out of `SCANNING`.
+- Latest active `security_audit` stores scanner-generated scan id, verdict, safety flag, findings
+  count, severity, and scanned timestamp.
+- Redis `XPENDING` reports zero pending messages after `XACK`.
+- Staged bundle files are cleaned after daemon processing.
+- Playwright smoke E2E passes.
+
 ## Shutdown
 
 ```powershell

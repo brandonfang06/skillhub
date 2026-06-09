@@ -175,6 +175,7 @@ Still plan carefully when a group requires:
 | 41 | Publish scan task worker boundary | n/a | Python can parse Java-compatible Redis scan task fields, stage local bundle objects, call a scanner abstraction, apply scan results, clean staged files, and mark still-`SCANNING` versions `SCAN_FAILED` on processing failure. Long-running consumer/retry/reclaim remains deferred. |
 | 42 | Publish scan consumer runtime | n/a | Python can create Redis consumer groups, consume never-delivered scan tasks, ACK success/invalid/retry/final-failure messages, republish retries up to Java's max retry count, and reclaim pending messages for one-pass processing. Daemon lifecycle and scanner HTTP client remain deferred. |
 | 43 | Publish scanner HTTP client | n/a | Python scan consumer can call the real scanner service in upload/local modes, map Java-compatible scanner responses into scanner result input, and pass live Redis consumer verification with the scanner container. Daemon lifecycle remains deferred. |
+| 44 | Publish scan daemon/supervisor integration | n/a | Python FastAPI can optionally start a background scan consumer daemon, ensure its Redis consumer group exists before polling, consume scanner tasks through the real scanner container, update audit/version status, ACK messages, and shut down with the hybrid stack. No route ownership moved. |
 
 ## Revised Pre-Launch Milestone Order
 
