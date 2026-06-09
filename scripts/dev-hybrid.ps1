@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5614,6 +5614,26 @@ function Invoke-PublishScanConsumerRuntimeTests {
     }
 }
 
+function Invoke-PublishScannerHttpClientTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_publish_scanner_client.py',
+            'tests/test_publish_scan_consumer.py',
+            'tests/test_publish_scan_worker.py',
+            'tests/test_publish_scanner_result.py',
+            'tests/test_config.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-PublishCliWriteDirectContractComparison {
     param([string]$ResultFileName = 'publish-cli-write-direct-contract-result.json')
 
@@ -6191,7 +6211,8 @@ function Invoke-ApplyScanResultFixture {
         [string]$FindingsCount,
         [string]$MaxSeverity,
         [string]$FindingsJson,
-        [string]$Duration
+        [string]$Duration,
+        [string]$ScannerSource = 'fixture'
     )
 
     Push-Location (Join-Path $Root 'server-python')
@@ -6219,7 +6240,9 @@ function Invoke-ApplyScanResultFixture {
             '--findings-file',
             $findingsFile,
             '--duration',
-            $Duration
+            $Duration,
+            '--scanner-source',
+            $ScannerSource
         )
         if ($LASTEXITCODE -ne 0) {
             throw "Scanner result fixture apply failed with exit code ${LASTEXITCODE}"
@@ -6370,7 +6393,8 @@ function Invoke-ProcessScanTaskWorkerFixture {
         [string]$FindingsCount,
         [string]$MaxSeverity,
         [string]$FindingsJson,
-        [string]$Duration
+        [string]$Duration,
+        [string]$ScannerSource = 'fixture'
     )
 
     Push-Location (Join-Path $Root 'server-python')
@@ -6400,7 +6424,9 @@ function Invoke-ProcessScanTaskWorkerFixture {
             '--findings-file',
             $findingsFile,
             '--duration',
-            $Duration
+            $Duration,
+            '--scanner-source',
+            $ScannerSource
         )
         if ($LASTEXITCODE -ne 0) {
             throw "Scan task worker fixture failed with exit code ${LASTEXITCODE}"
@@ -6557,7 +6583,8 @@ function Invoke-ConsumeScanTaskFixture {
         [string]$FindingsCount,
         [string]$MaxSeverity,
         [string]$FindingsJson,
-        [string]$Duration
+        [string]$Duration,
+        [string]$ScannerSource = 'fixture'
     )
 
     Push-Location (Join-Path $Root 'server-python')
@@ -6591,7 +6618,9 @@ function Invoke-ConsumeScanTaskFixture {
             '--findings-file',
             $findingsFile,
             '--duration',
-            $Duration
+            $Duration,
+            '--scanner-source',
+            $ScannerSource
         )
         if ($LASTEXITCODE -ne 0) {
             throw "Scan consumer fixture failed with exit code ${LASTEXITCODE}"
@@ -6738,6 +6767,149 @@ END `$`$;
         -not $result.checks.streamHasNoPending -or
         -not $result.checks.stagedBundleCleaned) {
         throw "Publish scan consumer runtime check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-PublishScannerHttpClientContractComparison {
+    param([string]$ResultFileName = 'publish-scanner-http-client-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $slug = "codex-scanner-http-$suffix"
+    $streamKey = "skillhub:scan:requests:http:$suffix"
+    $groupName = "skillhub-scan-workers-http-$suffix"
+    $consumerName = "scanner-python-http-$suffix"
+    Invoke-RedisCli -Arguments @('DEL', $streamKey) | Out-Null
+
+    $sql = @"
+DO `$`$
+DECLARE
+    fixture_user_id VARCHAR(128) := 'codex-scanner-http-user';
+    ns_id BIGINT;
+    fixture_skill_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES (fixture_user_id, 'Codex Scanner Http User', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, rating_avg, rating_count, created_by, updated_by, hidden
+    )
+    VALUES (
+        ns_id, '$slug', 'Codex scanner http fixture', 'Fixture for scanner HTTP client',
+        fixture_user_id, 'PUBLIC', 'ACTIVE', 0, 0, 0.00, 0, fixture_user_id, fixture_user_id, FALSE
+    )
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'SCANNING',
+        jsonb_build_object('name', 'scanner-http', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        2, 100, fixture_user_id, CURRENT_TIMESTAMP, TRUE, TRUE, 'PUBLIC'
+    );
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
+    $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+
+    $bundleKey = "packages/$skillId/$versionId/bundle.zip"
+    $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bundlePath) | Out-Null
+    $zipPath = New-PublishValidateFixtureZip -SkillName "Codex Scanner Http $suffix" -Version '1.0.0' -FilePrefix "publish-scanner-http-$suffix"
+    Copy-Item -LiteralPath $zipPath -Destination $bundlePath -Force
+
+    Invoke-RedisCli -Arguments @(
+        'XADD',
+        $streamKey,
+        '*',
+        'taskId',
+        "scanner-http-$suffix",
+        'versionId',
+        $versionId,
+        'bundleKey',
+        $bundleKey,
+        'scannerType',
+        'skill-scanner'
+    ) | Out-Null
+
+    $scanTempDir = Join-Path $DevDir 'python-scanner-http-temp'
+    $consumer = Invoke-ConsumeScanTaskFixture `
+        -StorageBasePath $JavaStoragePath `
+        -ScanTempDir $scanTempDir `
+        -StreamKey $streamKey `
+        -GroupName $groupName `
+        -ConsumerName $consumerName `
+        -ScanId "unused-fixture-$suffix" `
+        -Verdict 'SAFE' `
+        -FindingsCount '0' `
+        -MaxSeverity 'LOW' `
+        -FindingsJson '[]' `
+        -Duration '1.0' `
+        -ScannerSource 'http'
+
+    $status = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $versionId;"
+    $audit = Invoke-PostgresScalar -Sql "SELECT scan_id || '|' || verdict || '|' || is_safe || '|' || findings_count || '|' || COALESCE(max_severity, '') || '|' || (scanned_at IS NOT NULL) FROM security_audit WHERE skill_version_id = $versionId AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1;"
+    $scanId = Invoke-PostgresScalar -Sql "SELECT scan_id FROM security_audit WHERE skill_version_id = $versionId AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1;"
+    $pending = @(Invoke-RedisCli -Arguments @('XPENDING', $streamKey, $groupName))
+    $tempFiles = @(Get-ChildItem -LiteralPath $scanTempDir -File -ErrorAction SilentlyContinue)
+
+    $result = [ordered]@{
+        consumer = $consumer
+        redis = [ordered]@{
+            streamKey = $streamKey
+            groupName = $groupName
+            pending = $pending
+        }
+        db = [ordered]@{
+            slug = $slug
+            skillId = $skillId
+            versionId = $versionId
+            status = $status
+            audit = $audit
+            scanId = $scanId
+            bundleKey = $bundleKey
+            stagedFileCountAfterConsumer = $tempFiles.Count
+        }
+        checks = [ordered]@{
+            consumerUsedHttpScanner = ($consumer.scannerSource -eq 'http' -and $consumer.processed -eq 1 -and $consumer.acknowledged -eq 1 -and $consumer.retried -eq 0 -and $consumer.failed -eq 0)
+            scannerReturnedRealScanId = (-not [string]::IsNullOrWhiteSpace([string]$scanId) -and $scanId -notlike 'unused-fixture-*')
+            versionLeftScanning = ($status -ne 'SCANNING')
+            auditUpdated = ($audit -match '\|true\|\d+\|.*\|true$')
+            streamHasNoPending = ($pending.Count -ge 1 -and $pending[0] -eq '0')
+            stagedBundleCleaned = ($tempFiles.Count -eq 0)
+        }
+        comparedFields = @('consumer.scannerSource', 'consumer.processed', 'audit.scan_id', 'version.status', 'redis.pending')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.consumerUsedHttpScanner -or
+        -not $result.checks.scannerReturnedRealScanId -or
+        -not $result.checks.versionLeftScanning -or
+        -not $result.checks.auditUpdated -or
+        -not $result.checks.streamHasNoPending -or
+        -not $result.checks.stagedBundleCleaned) {
+        throw "Publish scanner HTTP client check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -7189,6 +7361,33 @@ function Invoke-HybridPublishScanConsumerRuntimeSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishScannerHttpClientSmokeVerification {
+    $previousScannerMode = $env:SKILLHUB_SECURITY_SCANNER_MODE
+    $previousScannerBaseUrl = $env:SKILLHUB_SECURITY_SCANNER_BASE_URL
+    $previousScannerScanPath = $env:SKILLHUB_SECURITY_SCANNER_SCAN_PATH
+    try {
+        $env:SKILLHUB_SECURITY_SCANNER_MODE = 'upload'
+        $env:SKILLHUB_SECURITY_SCANNER_BASE_URL = 'http://localhost:8000'
+        $env:SKILLHUB_SECURITY_SCANNER_SCAN_PATH = '/scan-upload'
+        Invoke-PublishScannerHttpClientTests
+        Start-Hybrid
+        Invoke-PublishScannerHttpClientContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        if ($null -eq $previousScannerMode) { Remove-Item Env:\SKILLHUB_SECURITY_SCANNER_MODE -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SECURITY_SCANNER_MODE = $previousScannerMode }
+        if ($null -eq $previousScannerBaseUrl) { Remove-Item Env:\SKILLHUB_SECURITY_SCANNER_BASE_URL -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SECURITY_SCANNER_BASE_URL = $previousScannerBaseUrl }
+        if ($null -eq $previousScannerScanPath) { Remove-Item Env:\SKILLHUB_SECURITY_SCANNER_SCAN_PATH -ErrorAction SilentlyContinue } else { $env:SKILLHUB_SECURITY_SCANNER_SCAN_PATH = $previousScannerScanPath }
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -7231,6 +7430,7 @@ switch ($Action) {
     'verify-publish-scanner-result-processing-smoke' { Invoke-HybridPublishScannerResultProcessingSmokeVerification }
     'verify-publish-scan-task-worker-boundary-smoke' { Invoke-HybridPublishScanTaskWorkerBoundarySmokeVerification }
     'verify-publish-scan-consumer-runtime-smoke' { Invoke-HybridPublishScanConsumerRuntimeSmokeVerification }
+    'verify-publish-scanner-http-client-smoke' { Invoke-HybridPublishScannerHttpClientSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

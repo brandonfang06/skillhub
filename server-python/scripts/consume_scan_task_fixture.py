@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.publish.scan_consumer import DEFAULT_SCAN_GROUP_NAME, RedisStreamClient, ScanConsumerRuntime
 from app.publish.scan_worker import StaticScannerClient
+from app.publish.scanner_client import ScannerHttpClient
 from app.publish.scanner_result import SecurityScanResultInput
 
 
@@ -27,23 +28,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duration", required=True, type=float)
     parser.add_argument("--count", default=10, type=int)
     parser.add_argument("--block-ms", default=2000, type=int)
+    parser.add_argument("--scanner-source", choices=("fixture", "http"), default="fixture")
     return parser.parse_args()
 
 
 async def main() -> None:
     args = parse_args()
-    findings = json.loads(Path(args.findings_file).read_text(encoding="utf-8"))
-    scanner = StaticScannerClient(
-        SecurityScanResultInput(
-            scan_id=args.scan_id,
-            verdict=args.verdict,
-            findings_count=args.findings_count,
-            max_severity=args.max_severity,
-            findings=findings,
-            scan_duration_seconds=args.duration,
+    settings = get_settings()
+    if args.scanner_source == "http":
+        scanner = ScannerHttpClient(
+            base_url=settings.scanner_base_url,
+            mode=settings.security_scanner_mode,
+            scan_path=settings.scanner_scan_path,
+            connect_timeout_ms=settings.scanner_connect_timeout_ms,
+            read_timeout_ms=settings.scanner_read_timeout_ms,
         )
-    )
-    redis = RedisStreamClient(get_settings().redis_url)
+    else:
+        findings = json.loads(Path(args.findings_file).read_text(encoding="utf-8"))
+        scanner = StaticScannerClient(
+            SecurityScanResultInput(
+                scan_id=args.scan_id,
+                verdict=args.verdict,
+                findings_count=args.findings_count,
+                max_severity=args.max_severity,
+                findings=findings,
+                scan_duration_seconds=args.duration,
+            )
+        )
+    redis = RedisStreamClient(settings.redis_url)
     runtime = ScanConsumerRuntime(
         redis,
         stream_key=args.stream_key,
@@ -52,7 +64,7 @@ async def main() -> None:
         storage_base_path=args.storage_base_path,
         scan_temp_dir=args.scan_temp_dir,
     )
-    engine = create_database_engine(get_settings())
+    engine = create_database_engine(settings)
     try:
         async with engine.begin() as connection:
             result = await runtime.consume_once(connection, scanner, count=args.count, block_ms=args.block_ms)
@@ -67,7 +79,8 @@ async def main() -> None:
                 "retried": result.retried,
                 "failed": result.failed,
                 "invalid": result.invalid,
-                "scannerSeenTasks": len(scanner.seen_tasks),
+                "scannerSeenTasks": len(scanner.seen_tasks) if isinstance(scanner, StaticScannerClient) else None,
+                "scannerSource": args.scanner_source,
             },
             sort_keys=True,
         )

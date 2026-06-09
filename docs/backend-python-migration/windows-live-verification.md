@@ -1137,6 +1137,26 @@ This gate verifies:
 - Staged bundle files are cleaned after consumer processing.
 - Long-running daemon lifecycle and scanner HTTP calls remain out of scope for this gate.
 
+### Publish Scanner HTTP Client Gate
+
+Run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-scanner-http-client-smoke
+```
+
+This gate verifies:
+
+- Python consumes a Redis scan task with `scannerSource=http`.
+- The consumer uses the real scanner container at `http://localhost:8000`.
+- Upload mode sends a staged zip bundle to `/scan-upload`.
+- Scanner response fields are normalized into the existing scanner result writer.
+- PostgreSQL `skill_version` status and latest active `security_audit` are updated with a real
+  scanner-generated scan id.
+- Redis `XPENDING` reports zero pending messages after `XACK`.
+- Staged bundle files are cleaned after consumer processing.
+- Long-running daemon lifecycle remains out of scope for this gate.
+
 ## Shutdown
 
 ```powershell

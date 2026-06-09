@@ -174,6 +174,7 @@ Still plan carefully when a group requires:
 | 40 | Publish scanner result processing foundation | n/a | Python can apply normalized scanner results to the latest active security audit and Java-compatible `SCANNING` status transitions. Redis consumer/worker remains deferred. |
 | 41 | Publish scan task worker boundary | n/a | Python can parse Java-compatible Redis scan task fields, stage local bundle objects, call a scanner abstraction, apply scan results, clean staged files, and mark still-`SCANNING` versions `SCAN_FAILED` on processing failure. Long-running consumer/retry/reclaim remains deferred. |
 | 42 | Publish scan consumer runtime | n/a | Python can create Redis consumer groups, consume never-delivered scan tasks, ACK success/invalid/retry/final-failure messages, republish retries up to Java's max retry count, and reclaim pending messages for one-pass processing. Daemon lifecycle and scanner HTTP client remain deferred. |
+| 43 | Publish scanner HTTP client | n/a | Python scan consumer can call the real scanner service in upload/local modes, map Java-compatible scanner responses into scanner result input, and pass live Redis consumer verification with the scanner container. Daemon lifecycle remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1147,11 +1148,10 @@ legacy, CLI, and portal publish write ownership plus scanner result application:
 - normalized scanner result -> `security_audit` update and `SCANNING` status transition
 - Java-compatible Redis scan task field parsing and one-task Python worker boundary
 - Redis consumer group runtime with one-pass consume/reclaim, ACK, and retry republish semantics
+- scanner HTTP client for real scanner service upload/local mode response mapping
 
 Next decision point:
 
-- Plan Python scanner HTTP client if the next priority is replacing the deterministic scanner
-  abstraction with the real scanner service contract.
 - Plan Python scan worker daemon/supervisor integration if the next priority is running the
   consumer continuously outside explicit fixtures.
 - Plan lifecycle/governance mutations if the next priority is enabling review/approval and
