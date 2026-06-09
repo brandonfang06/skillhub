@@ -121,6 +121,36 @@ Ignore volatile fields such as `timestamp` and `requestId`.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 e2e-smoke
 ```
 
+## One-Command Promotion Submit/Reject Verification Gate
+
+For the migrated promotion submit and reject APIs, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-promotion-submit-reject-smoke
+```
+
+Expected result:
+
+```text
+submitResponsesMatch: true
+rejectResponsesMatch: true
+submitDbState: true
+rejectDbState: true
+submitAudit: true
+rejectAudit: true
+rejectNotification: true
+approveRemainsJavaOwned: true
+6 passed
+```
+
+The command writes the latest promotion write comparison summary to:
+
+```text
+.dev/promotion-submit-reject-contract-result.json
+```
+
 ## One-Command Labels Verification Gate
 
 For the migrated public labels API, prefer the one-command gate because it keeps Java, Python, Vite,

@@ -117,6 +117,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-review-file-smoke" in script
     assert "verify-review-download-smoke" in script
     assert "verify-promotion-read-smoke" in script
+    assert "verify-promotion-submit-reject-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
@@ -187,6 +188,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-ReviewDownloadContractComparison" in script
     assert "Invoke-PromotionReadTests" in script
     assert "Invoke-PromotionReadContractComparison" in script
+    assert "Invoke-PromotionSubmitRejectTests" in script
+    assert "Invoke-PromotionSubmitRejectContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
     assert "consume_scan_task_fixture.py" in script
@@ -240,6 +243,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "review-file-contract-result.json" in script
     assert "review-download-contract-result.json" in script
     assert "promotion-read-contract-result.json" in script
+    assert "promotion-submit-reject-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
@@ -261,6 +265,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_review_file_content.py" in script
     assert "tests/test_review_download.py" in script
     assert "tests/test_promotion_read.py" in script
+    assert "tests/test_promotion_write.py" in script
     assert "SKILLHUB_SCAN_CONSUMER_ENABLED" in script
     assert "tests/test_publish_side_effects.py" in script
     assert "tests/test_publish_replacement.py" in script

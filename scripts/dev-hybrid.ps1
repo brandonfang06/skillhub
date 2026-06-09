@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -9707,6 +9707,284 @@ function Invoke-HybridPromotionReadSmokeVerification {
     }
 }
 
+function Invoke-PromotionSubmitRejectTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_promotion_write.py', 'tests/test_promotion_read.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-PromotionSubmitPostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$SourceSkillId,
+        [string]$SourceVersionId,
+        [string]$TargetNamespaceId
+    )
+
+    $body = @{
+        sourceSkillId = [int64]$SourceSkillId
+        sourceVersionId = [int64]$SourceVersionId
+        targetNamespaceId = [int64]$TargetNamespaceId
+    } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body
+}
+
+function ConvertTo-StablePromotionWriteContractJson {
+    param(
+        [object]$Response,
+        [string]$SlugPrefix
+    )
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            sourceNamespace = $Response.data.sourceNamespace
+            sourceSkillSlug = ($(if ($Response.data.sourceSkillSlug -match "^$SlugPrefix") { 'promotion-write-fixture' } else { $Response.data.sourceSkillSlug }))
+            sourceVersion = $Response.data.sourceVersion
+            targetNamespace = $Response.data.targetNamespace
+            targetSkillId = $Response.data.targetSkillId
+            status = $Response.data.status
+            submittedBy = $Response.data.submittedBy
+            submittedByName = $Response.data.submittedByName
+            reviewedBy = $Response.data.reviewedBy
+            reviewedByName = $Response.data.reviewedByName
+            reviewComment = $Response.data.reviewComment
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-PromotionSubmitRejectContractComparison {
+    param([string]$ResultFileName = 'promotion-submit-reject-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $sourceNamespace = "codex-promotion-write-$suffix"
+    $submitterId = "codex-promotion-write-submitter-$suffix"
+    $reviewerId = "codex-promotion-write-admin-$suffix"
+    $comment = "reject-$suffix"
+    $submitSlugs = @(
+        "java-promotion-submit-$suffix",
+        "python-promotion-submit-$suffix",
+        "proxy-promotion-submit-$suffix",
+        "proxy-web-promotion-submit-$suffix"
+    )
+    $rejectSlugs = @(
+        "java-promotion-reject-$suffix",
+        "python-promotion-reject-$suffix",
+        "proxy-promotion-reject-$suffix",
+        "proxy-web-promotion-reject-$suffix"
+    )
+    $allSlugs = @($submitSlugs + $rejectSlugs)
+    $valuesSql = ($allSlugs | ForEach-Object { "(source_ns_id, '$($_)', 'Promotion Write', 'Promotion write contract', '$submitterId', 'NAMESPACE_ONLY', 'ACTIVE', '$submitterId', '$submitterId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    source_ns_id BIGINT;
+    target_ns_id BIGINT;
+    skill_admin_role_id BIGINT;
+    skill_row RECORD;
+    source_version_id BIGINT;
+BEGIN
+    INSERT INTO role (code, name, description, is_system)
+    VALUES ('SKILL_ADMIN', 'Skill Admin', 'Skill review administrator', TRUE)
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+    RETURNING id INTO skill_admin_role_id;
+
+    INSERT INTO user_account (id, display_name, status)
+    VALUES
+        ('$submitterId', 'Codex Promotion Submitter', 'ACTIVE'),
+        ('$reviewerId', 'Codex Promotion Admin', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES ('$reviewerId', skill_admin_role_id)
+    ON CONFLICT (user_id, role_id) DO NOTHING;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$sourceNamespace', 'Codex Promotion Write Source', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO source_ns_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO target_ns_id;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at, bundle_ready,
+            download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PUBLISHED',
+            jsonb_build_object('name', 'Promotion Write', 'description', 'Promotion write contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 80, '2026-06-09T09:00:00Z'::timestamptz, '$submitterId',
+            '2026-06-09T08:00:00Z'::timestamptz, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO source_version_id;
+
+        UPDATE skill SET latest_version_id = source_version_id WHERE id = skill_row.id;
+
+        IF skill_row.slug LIKE '%promotion-reject-%' THEN
+            INSERT INTO promotion_request (
+                source_skill_id, source_version_id, target_namespace_id, status, version,
+                submitted_by, submitted_at
+            )
+            VALUES (
+                skill_row.id, source_version_id, target_ns_id, 'PENDING', 1,
+                '$submitterId', CURRENT_TIMESTAMP - INTERVAL '1 minute'
+            );
+        END IF;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $targetNamespaceId = Invoke-PostgresScalar -Sql "SELECT id FROM namespace WHERE slug = 'global' LIMIT 1;"
+
+    function Get-SkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$sourceNamespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-VersionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$sourceNamespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-PromotionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT pr.id FROM promotion_request pr JOIN skill s ON s.id = pr.source_skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$sourceNamespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    $javaSubmit = Invoke-PromotionSubmitPostJson "$JavaUrl/api/v1/promotions" $submitterId (Get-SkillId $submitSlugs[0]) (Get-VersionId $submitSlugs[0]) $targetNamespaceId
+    $pythonSubmit = Invoke-PromotionSubmitPostJson "$PythonUrl/api/v1/promotions" $submitterId (Get-SkillId $submitSlugs[1]) (Get-VersionId $submitSlugs[1]) $targetNamespaceId
+    $proxySubmit = Invoke-PromotionSubmitPostJson "$WebUrl/api/v1/promotions" $submitterId (Get-SkillId $submitSlugs[2]) (Get-VersionId $submitSlugs[2]) $targetNamespaceId
+    $proxyWebSubmit = Invoke-PromotionSubmitPostJson "$WebUrl/api/web/promotions" $submitterId (Get-SkillId $submitSlugs[3]) (Get-VersionId $submitSlugs[3]) $targetNamespaceId
+
+    $javaRejectId = Get-PromotionId $rejectSlugs[0]
+    $pythonRejectId = Get-PromotionId $rejectSlugs[1]
+    $proxyRejectId = Get-PromotionId $rejectSlugs[2]
+    $proxyWebRejectId = Get-PromotionId $rejectSlugs[3]
+
+    $javaReject = Invoke-ReviewApprovePostJson "$JavaUrl/api/v1/promotions/$javaRejectId/reject" $reviewerId $comment
+    $pythonReject = Invoke-ReviewApprovePostJson "$PythonUrl/api/v1/promotions/$pythonRejectId/reject" $reviewerId $comment
+    $proxyReject = Invoke-ReviewApprovePostJson "$WebUrl/api/v1/promotions/$proxyRejectId/reject" $reviewerId $comment
+    $proxyWebReject = Invoke-ReviewApprovePostJson "$WebUrl/api/web/promotions/$proxyWebRejectId/reject" $reviewerId $comment
+
+    function Get-PromotionDbState([string]$PromotionId) {
+        return Invoke-PostgresScalar -Sql "SELECT status || '|' || submitted_by || '|' || COALESCE(reviewed_by, '') || '|' || COALESCE(review_comment, '') FROM promotion_request WHERE id = $PromotionId;"
+    }
+    function Get-PromotionAudit([string]$PromotionId, [string]$Action) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'PROMOTION_REQUEST' AND target_id = $PromotionId AND action = '$Action' ORDER BY created_at DESC LIMIT 1;"
+    }
+    function Get-PromotionNotification([string]$PromotionId) {
+        return Invoke-PostgresScalar -Sql "SELECT user_id || '|' || category || '|' || entity_type || '|' || entity_id || '|' || title || '|' || body_json::text FROM user_notification WHERE entity_type = 'PROMOTION_REQUEST' AND entity_id = '$PromotionId' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $pythonSubmitId = [string]$pythonSubmit.data.id
+    $proxySubmitId = [string]$proxySubmit.data.id
+    $pythonRejectIdString = [string]$pythonRejectId
+    $proxyRejectIdString = [string]$proxyRejectId
+    $proxyWebRejectIdString = [string]$proxyWebRejectId
+
+    $approveProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/promotions/$proxyRejectId/approve" -Method 'POST'
+    $unauthenticatedSubmitStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/promotions" -Method 'POST'
+    $unauthenticatedRejectStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/promotions/$proxyRejectId/reject" -Method 'POST'
+
+    $stable = [ordered]@{
+        submit = [ordered]@{
+            java = ConvertTo-StablePromotionWriteContractJson -Response $javaSubmit -SlugPrefix '(java|python|proxy|proxy-web)-promotion-submit-'
+            python = ConvertTo-StablePromotionWriteContractJson -Response $pythonSubmit -SlugPrefix '(java|python|proxy|proxy-web)-promotion-submit-'
+            proxy = ConvertTo-StablePromotionWriteContractJson -Response $proxySubmit -SlugPrefix '(java|python|proxy|proxy-web)-promotion-submit-'
+            proxyWeb = ConvertTo-StablePromotionWriteContractJson -Response $proxyWebSubmit -SlugPrefix '(java|python|proxy|proxy-web)-promotion-submit-'
+        }
+        reject = [ordered]@{
+            java = ConvertTo-StablePromotionWriteContractJson -Response $javaReject -SlugPrefix '(java|python|proxy|proxy-web)-promotion-reject-'
+            python = ConvertTo-StablePromotionWriteContractJson -Response $pythonReject -SlugPrefix '(java|python|proxy|proxy-web)-promotion-reject-'
+            proxy = ConvertTo-StablePromotionWriteContractJson -Response $proxyReject -SlugPrefix '(java|python|proxy|proxy-web)-promotion-reject-'
+            proxyWeb = ConvertTo-StablePromotionWriteContractJson -Response $proxyWebReject -SlugPrefix '(java|python|proxy|proxy-web)-promotion-reject-'
+        }
+    }
+
+    $result = [ordered]@{
+        namespace = $sourceNamespace
+        checks = [ordered]@{
+            submitResponsesMatch = ($stable.submit.java -eq $stable.submit.python -and $stable.submit.python -eq $stable.submit.proxy -and $stable.submit.python -eq $stable.submit.proxyWeb)
+            rejectResponsesMatch = ($stable.reject.java -eq $stable.reject.python -and $stable.reject.python -eq $stable.reject.proxy -and $stable.reject.python -eq $stable.reject.proxyWeb)
+            submitDbState = ((Get-PromotionDbState $pythonSubmitId) -eq "PENDING|$submitterId||" -and (Get-PromotionDbState ([string]$proxySubmit.data.id)) -eq "PENDING|$submitterId||" -and (Get-PromotionDbState ([string]$proxyWebSubmit.data.id)) -eq "PENDING|$submitterId||")
+            rejectDbState = ((Get-PromotionDbState $pythonRejectIdString) -eq "REJECTED|$submitterId|$reviewerId|$comment" -and (Get-PromotionDbState $proxyRejectIdString) -eq "REJECTED|$submitterId|$reviewerId|$comment" -and (Get-PromotionDbState $proxyWebRejectIdString) -eq "REJECTED|$submitterId|$reviewerId|$comment")
+            submitAudit = ((Get-PromotionAudit $pythonSubmitId 'PROMOTION_SUBMIT') -like "PROMOTION_SUBMIT|PROMOTION_REQUEST|$pythonSubmitId|$submitterId|*" -and (Get-PromotionAudit $proxySubmitId 'PROMOTION_SUBMIT') -like "PROMOTION_SUBMIT|PROMOTION_REQUEST|$proxySubmitId|$submitterId|*")
+            rejectAudit = ((Get-PromotionAudit $pythonRejectIdString 'PROMOTION_REJECT') -like "PROMOTION_REJECT|PROMOTION_REQUEST|$pythonRejectIdString|$reviewerId|*" -and (Get-PromotionAudit $proxyRejectIdString 'PROMOTION_REJECT') -like "PROMOTION_REJECT|PROMOTION_REQUEST|$proxyRejectIdString|$reviewerId|*")
+            rejectNotification = ((Get-PromotionNotification $pythonRejectIdString) -like "$submitterId|PROMOTION|PROMOTION_REQUEST|$pythonRejectIdString|Promotion rejected|*" -and (Get-PromotionNotification $proxyRejectIdString) -like "$submitterId|PROMOTION|PROMOTION_REQUEST|$proxyRejectIdString|Promotion rejected|*")
+            approveRemainsJavaOwned = ($approveProxyStatus -ne 404)
+            unauthenticatedSubmitRejected = ($unauthenticatedSubmitStatus -eq 401)
+            unauthenticatedRejectRejected = ($unauthenticatedRejectStatus -eq 401)
+        }
+        routeBoundaries = [ordered]@{
+            approveProxyStatus = $approveProxyStatus
+            unauthenticatedSubmitStatus = $unauthenticatedSubmitStatus
+            unauthenticatedRejectStatus = $unauthenticatedRejectStatus
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Promotion submit/reject contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridPromotionSubmitRejectSmokeVerification {
+    try {
+        Invoke-PromotionSubmitRejectTests
+        Start-Hybrid
+        Invoke-PromotionSubmitRejectContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -9760,6 +10038,7 @@ switch ($Action) {
     'verify-review-file-smoke' { Invoke-HybridReviewFileSmokeVerification }
     'verify-review-download-smoke' { Invoke-HybridReviewDownloadSmokeVerification }
     'verify-promotion-read-smoke' { Invoke-HybridPromotionReadSmokeVerification }
+    'verify-promotion-submit-reject-smoke' { Invoke-HybridPromotionSubmitRejectSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

@@ -163,6 +163,26 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     pattern: /^\/api\/web\/promotions\/(?!pending(?:\?.*)?$)[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/promotions(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/promotions(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/promotions\/[^/?]+\/reject(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/promotions\/[^/?]+\/reject(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
 ]
 
 export function resolveMethodAwareProxyTarget(

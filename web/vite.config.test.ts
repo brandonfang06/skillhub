@@ -184,7 +184,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/web/reviews/701/download')).toBe('http://localhost:8081')
   })
 
-  it('routes promotion read APIs to Python while keeping promotion writes on Java', () => {
+  it('routes promotion read, submit, and reject APIs to Python while keeping approve on Java', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/promotions')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/promotions?status=APPROVED')).toBe(
       'http://localhost:8081',
@@ -202,15 +202,27 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
 
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/promotions')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/web/promotions')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/promotions')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/promotions')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/promotions/301/approve')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/web/promotions/301/reject')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/promotions/301/reject')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/promotions/301/reject')).toBe(
+      'http://localhost:8081',
+    )
 
     expect(matchingDevProxyTarget('GET', '/api/v1/promotions')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/promotions/pending')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/promotions/301')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/promotions')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/promotions')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/web/promotions')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/promotions/301/reject')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/promotions/301/reject')).toBe(
+      'http://localhost:8081',
+    )
     expect(matchingDevProxyTarget('POST', '/api/web/promotions/301/approve')).toBe(
       'http://localhost:8080',
     )
