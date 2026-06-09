@@ -9,6 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill
+from app.social.subscription import SkillSubscriptionError, SkillSubscriptionInput, check_skill_subscription, subscribe_skill
 
 
 router = APIRouter()
@@ -43,6 +44,10 @@ def _star_input(skill_id: int, user_id: str) -> SkillStarInput:
     return SkillStarInput(skill_id=skill_id, user_id=user_id)
 
 
+def _subscription_input(skill_id: int, user_id: str) -> SkillSubscriptionInput:
+    return SkillSubscriptionInput(skill_id=skill_id, user_id=user_id)
+
+
 async def star_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     writer = getattr(request.app.state, "skill_star_writer", None)
@@ -71,6 +76,34 @@ async def check_skill_star_route_data(request: Request, skill_id: int, mock_user
     return ok("\u83b7\u53d6\u6210\u529f", bool(data), request)
 
 
+async def subscribe_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    writer = getattr(request.app.state, "skill_subscription_writer", None)
+    try:
+        await _resolve_result(
+            writer(_subscription_input(skill_id, user_id))
+            if writer is not None
+            else subscribe_skill(request.app.state.db_engine, _subscription_input(skill_id, user_id))
+        )
+    except SkillSubscriptionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", None, request)
+
+
+async def check_skill_subscription_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _read_optional_user_id(request, mock_user_id)
+    reader = getattr(request.app.state, "skill_subscription_reader", None)
+    try:
+        data = await _resolve_result(
+            reader(skill_id, user_id)
+            if reader is not None
+            else check_skill_subscription(request.app.state.db_engine, skill_id, user_id)
+        )
+    except SkillSubscriptionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", bool(data), request)
+
+
 @router.put("/api/v1/skills/{skill_id}/star")
 @router.put("/api/web/skills/{skill_id}/star")
 async def star_skill_route(
@@ -89,3 +122,23 @@ async def check_skill_star_route(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await check_skill_star_route_data(request, skill_id, x_mock_user_id)
+
+
+@router.put("/api/v1/skills/{skill_id}/subscription")
+@router.put("/api/web/skills/{skill_id}/subscription")
+async def subscribe_skill_route(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await subscribe_skill_route_data(request, skill_id, x_mock_user_id)
+
+
+@router.get("/api/v1/skills/{skill_id}/subscription")
+@router.get("/api/web/skills/{skill_id}/subscription")
+async def check_skill_subscription_route(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await check_skill_subscription_route_data(request, skill_id, x_mock_user_id)

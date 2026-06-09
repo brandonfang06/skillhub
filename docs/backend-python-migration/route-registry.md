@@ -121,5 +121,11 @@ deferred routes are still visible.
 | PUT | `/api/web/skills/{skillId}/star` | python | Frontend alias for authenticated idempotent star action. |
 | DELETE | `/api/v1/skills/{skillId}/star` | java | Unstar remains Java-owned/deferred. Live Java v1 security currently returns 403 for a normal local mock user through the broader `DELETE /api/v1/skills/*/*` policy. |
 | DELETE | `/api/web/skills/{skillId}/star` | java | Web unstar remains Java-owned through the Vite fallback and should move later with the broader social/security cleanup. |
+| GET | `/api/v1/skills/{skillId}/subscription` | python | Viewer subscription-state read moved to Python. Anonymous reads return Java-compatible `false`; authenticated reads validate skill existence and check `skill_subscription`. |
+| GET | `/api/web/skills/{skillId}/subscription` | python | Frontend alias for viewer subscription-state read. |
+| PUT | `/api/v1/skills/{skillId}/subscription` | python | Authenticated idempotent subscribe action moved to Python. Inserts `skill_subscription` when missing and increments `skill.subscription_count` once. |
+| PUT | `/api/web/skills/{skillId}/subscription` | python | Frontend alias for authenticated idempotent subscribe action. |
+| DELETE | `/api/v1/skills/{skillId}/subscription` | java | Unsubscribe remains Java-owned/deferred. Live Java v1 security currently returns 403 for a normal local mock user through the broader `DELETE /api/v1/skills/*/*` policy. |
+| DELETE | `/api/web/skills/{skillId}/subscription` | java | Web unsubscribe remains Java-owned through the Vite fallback and should move later with the broader social/security cleanup. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
