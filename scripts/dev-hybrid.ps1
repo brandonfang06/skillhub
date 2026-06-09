@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -6343,7 +6343,7 @@ END `$`$;
     $publicVersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
     $privateVersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.1.0' LIMIT 1;"
 
-    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($publicVersionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP), ($privateVersionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($publicVersionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP), ($privateVersionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
 
     $publicApply = Invoke-ApplyScanResultFixture `
         -VersionId $publicVersionId `
@@ -6518,7 +6518,7 @@ END `$`$;
 
     $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
     $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
-    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
 
     $bundleKey = "packages/$skillId/$versionId/bundle.zip"
     $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
@@ -6714,7 +6714,7 @@ END `$`$;
 
     $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
     $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
-    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
 
     $bundleKey = "packages/$skillId/$versionId/bundle.zip"
     $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
@@ -6853,7 +6853,7 @@ END `$`$;
 
     $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
     $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
-    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
 
     $bundleKey = "packages/$skillId/$versionId/bundle.zip"
     $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
@@ -6994,7 +6994,7 @@ END `$`$;
 
     $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
     $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
-    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
 
     $bundleKey = "packages/$skillId/$versionId/bundle.zip"
     $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
@@ -10445,6 +10445,253 @@ function Invoke-HybridSkillLifecycleArchiveSmokeVerification {
     }
 }
 
+function Invoke-SkillVersionDeleteTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_lifecycle_delete_version.py', 'tests/test_skill_lifecycle_archive.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SkillVersionDeleteJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Delete -Headers @{ 'X-Mock-User-Id' = $UserId }
+}
+
+function ConvertTo-StableSkillVersionDeleteContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionIdPresent = ($null -ne $Response.data.versionId)
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Write-SkillVersionDeleteStorageFiles {
+    param(
+        [string]$SkillId,
+        [string]$VersionId
+    )
+
+    $skillFile = Join-Path $JavaStoragePath "skills\$SkillId\$VersionId\SKILL.md"
+    $bundleFile = Join-Path $JavaStoragePath "packages\$SkillId\$VersionId\bundle.zip"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $skillFile) | Out-Null
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bundleFile) | Out-Null
+    Set-Content -LiteralPath $skillFile -Value "# delete fixture" -Encoding UTF8
+    [System.IO.File]::WriteAllBytes($bundleFile, [System.Text.Encoding]::UTF8.GetBytes("delete bundle"))
+}
+
+function Test-SkillVersionDeleteStorageMissing {
+    param(
+        [string]$SkillId,
+        [string]$VersionId
+    )
+
+    $skillFile = Join-Path $JavaStoragePath "skills\$SkillId\$VersionId\SKILL.md"
+    $bundleFile = Join-Path $JavaStoragePath "packages\$SkillId\$VersionId\bundle.zip"
+    return ((-not (Test-Path -LiteralPath $skillFile)) -and (-not (Test-Path -LiteralPath $bundleFile)))
+}
+
+function Invoke-SkillVersionDeleteContractComparison {
+    param([string]$ResultFileName = 'skill-version-delete-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-version-delete-$suffix"
+    $ownerId = "codex-version-delete-owner-$suffix"
+    $slugs = @(
+        "java-delete-$suffix",
+        "python-delete-$suffix",
+        "proxy-delete-$suffix",
+        "proxy-web-delete-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Version Delete', 'Version delete contract', '$ownerId', 'NAMESPACE_ONLY', 'ACTIVE', '$ownerId', '$ownerId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    published_version_id BIGINT;
+    delete_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$ownerId', 'Codex Version Delete Owner', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Version Delete', 'TEAM', 'ACTIVE', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PUBLISHED',
+            jsonb_build_object('name', 'Version Delete', 'description', 'Version delete contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 100, '2026-06-09T08:00:00Z'::timestamptz, '$ownerId',
+            '2026-06-09T07:00:00Z'::timestamptz, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO published_version_id;
+
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.1.0', 'UPLOADED',
+            jsonb_build_object('name', 'Version Delete', 'description', 'Version delete contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 120, '$ownerId', '2026-06-09T09:00:00Z'::timestamptz,
+            TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO delete_version_id;
+
+        INSERT INTO skill_file (version_id, file_path, file_size, content_type, sha256, storage_key, created_at)
+        VALUES (delete_version_id, 'SKILL.md', 120, 'text/markdown', 'sha-delete-' || skill_row.slug, 'skills/' || skill_row.id || '/' || delete_version_id || '/SKILL.md', CURRENT_TIMESTAMP);
+
+        INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at)
+        VALUES (delete_version_id, 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);
+
+        UPDATE skill SET latest_version_id = delete_version_id WHERE id = skill_row.id;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-SkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-DeleteVersionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.version = '1.1.0' LIMIT 1;"
+    }
+    function Get-PublishedVersionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.version = '1.0.0' LIMIT 1;"
+    }
+    function Get-DeleteDbState([string]$Slug, [string]$DeletedVersionId, [string]$PublishedVersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT (NOT EXISTS (SELECT 1 FROM skill_version WHERE id = $DeletedVersionId)) || '|' || (NOT EXISTS (SELECT 1 FROM skill_file WHERE version_id = $DeletedVersionId)) || '|' || (EXISTS (SELECT 1 FROM security_audit WHERE skill_version_id = $DeletedVersionId AND deleted_at IS NOT NULL)) || '|' || (s.latest_version_id = $PublishedVersionId) || '|' || COALESCE(s.updated_by, '') FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug';"
+    }
+    function Get-DeleteAudit([string]$VersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL_VERSION' AND target_id = $VersionId AND action = 'DELETE_SKILL_VERSION' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $skillIds = @{}
+    $deleteVersionIds = @{}
+    $publishedVersionIds = @{}
+    foreach ($slug in $slugs) {
+        $skillIds[$slug] = Get-SkillId $slug
+        $deleteVersionIds[$slug] = Get-DeleteVersionId $slug
+        $publishedVersionIds[$slug] = Get-PublishedVersionId $slug
+        Write-SkillVersionDeleteStorageFiles -SkillId $skillIds[$slug] -VersionId $deleteVersionIds[$slug]
+    }
+
+    $java = Invoke-SkillVersionDeleteJson "$JavaUrl/api/v1/skills/$namespace/$($slugs[0])/versions/1.1.0" $ownerId
+    $python = Invoke-SkillVersionDeleteJson "$PythonUrl/api/v1/skills/$namespace/$($slugs[1])/versions/1.1.0" $ownerId
+    $proxy = Invoke-SkillVersionDeleteJson "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0" $ownerId
+    $proxyWeb = Invoke-SkillVersionDeleteJson "$WebUrl/api/web/skills/$namespace/$($slugs[3])/versions/1.1.0" $ownerId
+
+    Start-Sleep -Milliseconds 300
+
+    $rereleaseJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
+    $rereleaseProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0/rerelease" -Method 'POST'
+    $submitReviewJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" -Method 'POST'
+    $submitReviewProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/submit-review" -Method 'POST'
+    $unauthenticatedDeleteStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.1.0" -Method 'DELETE'
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableSkillVersionDeleteContractJson -Response $java
+        python = ConvertTo-StableSkillVersionDeleteContractJson -Response $python
+        proxy = ConvertTo-StableSkillVersionDeleteContractJson -Response $proxy
+        proxyWeb = ConvertTo-StableSkillVersionDeleteContractJson -Response $proxyWeb
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
+            dbState = ((Get-DeleteDbState $slugs[1] $deleteVersionIds[$slugs[1]] $publishedVersionIds[$slugs[1]]) -eq "true|true|true|true|$ownerId" -and (Get-DeleteDbState $slugs[2] $deleteVersionIds[$slugs[2]] $publishedVersionIds[$slugs[2]]) -eq "true|true|true|true|$ownerId" -and (Get-DeleteDbState $slugs[3] $deleteVersionIds[$slugs[3]] $publishedVersionIds[$slugs[3]]) -eq "true|true|true|true|$ownerId")
+            audit = ((Get-DeleteAudit $deleteVersionIds[$slugs[1]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[1]])|$ownerId|*" -and (Get-DeleteAudit $deleteVersionIds[$slugs[2]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[2]])|$ownerId|*" -and (Get-DeleteAudit $deleteVersionIds[$slugs[3]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[3]])|$ownerId|*")
+            storageDeleted = ((Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[1]] -VersionId $deleteVersionIds[$slugs[1]]) -and (Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[2]] -VersionId $deleteVersionIds[$slugs[2]]) -and (Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[3]] -VersionId $deleteVersionIds[$slugs[3]]))
+            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            submitReviewBoundaryJavaOwned = ($submitReviewJava -eq $submitReviewProxy)
+            unauthenticatedDeleteRejected = ($unauthenticatedDeleteStatus -eq 401)
+        }
+        routeBoundaries = [ordered]@{
+            rereleaseJava = $rereleaseJava
+            rereleaseProxy = $rereleaseProxy
+            submitReviewJava = $submitReviewJava
+            submitReviewProxy = $submitReviewProxy
+            unauthenticatedDeleteStatus = $unauthenticatedDeleteStatus
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill version delete contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillVersionDeleteSmokeVerification {
+    try {
+        Invoke-SkillVersionDeleteTests
+        Start-Hybrid
+        Invoke-SkillVersionDeleteContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -10501,6 +10748,7 @@ switch ($Action) {
     'verify-promotion-submit-reject-smoke' { Invoke-HybridPromotionSubmitRejectSmokeVerification }
     'verify-promotion-approve-smoke' { Invoke-HybridPromotionApproveSmokeVerification }
     'verify-skill-lifecycle-archive-smoke' { Invoke-HybridSkillLifecycleArchiveSmokeVerification }
+    'verify-skill-version-delete-smoke' { Invoke-HybridSkillVersionDeleteSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

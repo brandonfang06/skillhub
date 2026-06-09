@@ -102,5 +102,7 @@ deferred routes are still visible.
 | POST | `/api/web/skills/{namespace}/{slug}/archive` | python | Frontend skill archive alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/archive`. |
 | POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | python | Portal skill unarchive moved to Python. Owner or namespace `OWNER`/`ADMIN` can set `skill.status = ACTIVE`, update `updated_by`, and write `UNARCHIVE_SKILL` audit. |
 | POST | `/api/web/skills/{namespace}/{slug}/unarchive` | python | Frontend skill unarchive alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/unarchive`. |
+| DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | python | Portal version delete moved to Python. Deletes only `DRAFT`/`REJECTED`/`SCAN_FAILED`/`UPLOADED`, clears files, soft-deletes security audit rows, recalculates latest published pointer, writes `DELETE_SKILL_VERSION` audit, and deletes local storage with compensation on failure. |
+| DELETE | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend version delete alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/versions/{version}`. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

@@ -8,6 +8,8 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.publish.scanner_result import scanner_type_db_value
+
 
 @dataclass(frozen=True)
 class PublishSideEffectInput:
@@ -174,7 +176,7 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
                     ),
                     {
                         "skill_version_id": request.version_id,
-                        "scanner_type": "skill-scanner",
+                        "scanner_type": scanner_type_db_value("skill-scanner"),
                         "verdict": "SUSPICIOUS",
                         "is_safe": False,
                         "findings_count": 0,

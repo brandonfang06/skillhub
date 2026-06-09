@@ -188,6 +188,7 @@ Still plan carefully when a group requires:
 | 54 | `POST /api/v1/promotions`, `POST /api/web/promotions`, `POST /api/v1/promotions/{id}/reject`, `POST /api/web/promotions/{id}/reject` | python | Promotion submit and reject write ownership moved to Python. Submit creates pending requests and `PROMOTION_SUBMIT` audit; reject is platform-reviewer only, writes `PROMOTION_REJECT` audit and synchronous governance notification. Promotion approve remains Java-owned. |
 | 55 | `POST /api/v1/promotions/{id}/approve`, `POST /api/web/promotions/{id}/approve` | python | Promotion approve ownership moved to Python. Approval materializes target global skill/version/file records, updates `promotion_request.target_skill_id`, writes `PROMOTION_APPROVE` audit and synchronous governance notification. |
 | 56 | `POST /api/v1/skills/{namespace}/{slug}/archive`, `POST /api/web/skills/{namespace}/{slug}/archive`, `POST /api/v1/skills/{namespace}/{slug}/unarchive`, `POST /api/web/skills/{namespace}/{slug}/unarchive` | python | Portal skill archive/unarchive ownership moved to Python. Owner or namespace manager toggles `skill.status`, updates `updated_by`, and writes Java-compatible lifecycle audit logs. Version delete, withdraw-review, rerelease, submit-review, confirm-publish, admin hide/unhide, and yank remain Java-owned. |
+| 57 | `DELETE /api/v1/skills/{namespace}/{slug}/versions/{version}`, `DELETE /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Portal version delete ownership moved to Python. Deletes allowed non-published statuses, clears file metadata, soft-deletes security audit rows, recalculates latest published pointer, writes `DELETE_SKILL_VERSION` audit, deletes local storage with compensation, and resolves the observed Vite DELETE version proxy boundary by making the route Python-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1198,8 +1199,11 @@ Group E has started with review lifecycle write ownership:
   `POST /api/web/skills/{namespace}/{slug}/archive`,
   `POST /api/v1/skills/{namespace}/{slug}/unarchive`, and
   `POST /api/web/skills/{namespace}/{slug}/unarchive`.
-- Still Java-owned: version delete, withdraw-review, rerelease, submit-review, confirm-publish,
-  admin hide/unhide, yank, and broader post-publish lifecycle/governance actions.
+- Completed: portal version delete APIs:
+  `DELETE /api/v1/skills/{namespace}/{slug}/versions/{version}` and
+  `DELETE /api/web/skills/{namespace}/{slug}/versions/{version}`.
+- Still Java-owned: withdraw-review, rerelease, submit-review, confirm-publish, admin hide/unhide,
+  yank, and broader post-publish lifecycle/governance actions.
 
 Recommended next choice:
 

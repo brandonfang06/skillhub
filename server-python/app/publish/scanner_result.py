@@ -8,6 +8,12 @@ from typing import Any
 from sqlalchemy import text
 
 
+def scanner_type_db_value(scanner_type: str) -> str:
+    if scanner_type == "skill-scanner":
+        return "SKILL_SCANNER"
+    return scanner_type
+
+
 @dataclass(frozen=True)
 class SecurityScanResultInput:
     scan_id: str
@@ -42,6 +48,7 @@ async def apply_security_scan_result(
     scanner_type: str,
     scan_result: SecurityScanResultInput,
 ) -> AppliedSecurityScanResult:
+    db_scanner_type = scanner_type_db_value(scanner_type)
     audit_row = (
         await connection.execute(
             text(
@@ -55,7 +62,7 @@ async def apply_security_scan_result(
                 LIMIT 1
                 """
             ),
-            {"version_id": version_id, "scanner_type": scanner_type},
+            {"version_id": version_id, "scanner_type": db_scanner_type},
         )
     ).mappings().first()
     if audit_row is None:

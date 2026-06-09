@@ -11,7 +11,10 @@ from app.core.response import ok
 from app.lifecycle.skill import (
     SkillArchiveInput,
     SkillLifecycleError,
+    SkillVersionDeleteInput,
     archive_skill as archive_skill_workflow,
+    cleanup_deleted_version_storage,
+    delete_skill_version,
     unarchive_skill as unarchive_skill_workflow,
 )
 
@@ -90,6 +93,42 @@ async def unarchive_skill_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def delete_skill_version_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    delete_input = SkillVersionDeleteInput(
+        namespace=namespace,
+        slug=slug,
+        version=version,
+        user_id=user_id,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_delete_version_writer", None)
+    try:
+        result = await _resolve_result(
+            writer(delete_input) if writer is not None else delete_skill_version(request.app.state.db_engine, delete_input)
+        )
+        storage_cleanup = getattr(request.app.state, "skill_delete_storage_cleanup", None)
+        if storage_cleanup is not None:
+            await _resolve_result(storage_cleanup(request.app.state.db_engine, request.app.state.settings.storage_base_path, result))
+        else:
+            await cleanup_deleted_version_storage(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                result,
+            )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", result.response, request)
+
+
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")
 async def archive_skill_v1(
     request: Request,
@@ -130,3 +169,25 @@ async def unarchive_skill_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await unarchive_skill_route_data(request, namespace, slug, x_mock_user_id)
+
+
+@router.delete("/api/v1/skills/{namespace}/{slug}/versions/{version}")
+async def delete_skill_version_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await delete_skill_version_route_data(request, namespace, slug, version, x_mock_user_id)
+
+
+@router.delete("/api/web/skills/{namespace}/{slug}/versions/{version}")
+async def delete_skill_version_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await delete_skill_version_route_data(request, namespace, slug, version, x_mock_user_id)

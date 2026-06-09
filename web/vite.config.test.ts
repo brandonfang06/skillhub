@@ -252,7 +252,7 @@ describe('Vite dev proxy route ownership', () => {
 
     expect(
       resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.0.0'),
-    ).toBeUndefined()
+    ).toBe('http://localhost:8081')
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.0.0/rerelease'),
     ).toBeUndefined()
@@ -269,6 +269,35 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/web/skills/team-a/agent-helper/unarchive')).toBe(
+      'http://localhost:8081',
+    )
+  })
+
+  it('routes skill version delete lifecycle action to Python only', () => {
+    expect(
+      resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.1.0'),
+    ).toBe('http://localhost:8081')
+    expect(
+      resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/team-a/agent-helper/versions/1.1.0'),
+    ).toBe('http://localhost:8081')
+
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.1.0/rerelease'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.1.0/withdraw-review'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/confirm-publish'),
+    ).toBeUndefined()
+
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.1.0')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/team-a/agent-helper/versions/1.1.0')).toBe(
       'http://localhost:8081',
     )
   })
