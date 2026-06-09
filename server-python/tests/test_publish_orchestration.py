@@ -161,6 +161,31 @@ async def test_execute_publish_write_prepares_storage_finalizes_and_applies_side
 
 
 @pytest.mark.anyio
+async def test_execute_publish_write_runs_after_publish_callback_in_same_transaction(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    seen: list[tuple[FakeConnection, int, int, int]] = []
+
+    async def callback(callback_connection: Any, skill_id: int, version_id: int) -> None:
+        seen.append((callback_connection, skill_id, version_id, len(callback_connection.statements)))
+
+    await execute_publish_write(FakeEngine([connection]), publish_input(str(tmp_path)), after_publish=callback)
+
+    assert seen == [(connection, 7, 42, 8)]
+    assert "INSERT INTO review_task" in connection.statements[7]
+
+
+@pytest.mark.anyio
 async def test_execute_publish_write_publishes_scan_task_when_scanner_enabled(tmp_path) -> None:
     connection = FakeConnection(
         [

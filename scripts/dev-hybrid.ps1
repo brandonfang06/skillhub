@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -11299,6 +11299,267 @@ function Invoke-HybridSkillSubmitReviewSmokeVerification {
     }
 }
 
+function Invoke-SkillRereleaseTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_lifecycle_rerelease.py', 'tests/test_skill_lifecycle_submit_review.py', 'tests/test_skill_lifecycle_confirm_publish.py', 'tests/test_skill_lifecycle_withdraw_review.py', 'tests/test_skill_lifecycle_delete_version.py', 'tests/test_skill_lifecycle_archive.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SkillRereleasePostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$TargetVersion,
+        [bool]$ConfirmWarnings = $false
+    )
+
+    $body = @{ targetVersion = $TargetVersion; confirmWarnings = $ConfirmWarnings } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body
+}
+
+function Invoke-SkillRereleaseStatus {
+    param(
+        [string]$Url,
+        [string]$TargetVersion,
+        [string]$UserId = ''
+    )
+
+    $body = @{ targetVersion = $TargetVersion; confirmWarnings = $true } | ConvertTo-Json -Compress
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    try {
+        Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body $body | Out-Null
+        return 200
+    } catch [System.Net.WebException] {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableSkillRereleaseContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionIdPresent = ($null -ne $Response.data.versionId)
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Write-SkillRereleaseSourceStorage {
+    param(
+        [string]$SkillId,
+        [string]$VersionId,
+        [string]$SkillName
+    )
+
+    $skillFile = Join-Path $JavaStoragePath "skills\$SkillId\$VersionId\SKILL.md"
+    $mainFile = Join-Path $JavaStoragePath "skills\$SkillId\$VersionId\src\main.py"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $skillFile) | Out-Null
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $mainFile) | Out-Null
+    $skillMd = "---`nname: $SkillName`ndescription: Rerelease contract`nversion: 1.0.0`n---`n# $SkillName`n"
+    [System.IO.File]::WriteAllBytes($skillFile, [System.Text.UTF8Encoding]::new($false).GetBytes($skillMd))
+    [System.IO.File]::WriteAllBytes($mainFile, [System.Text.UTF8Encoding]::new($false).GetBytes("print('rerelease')`n"))
+}
+
+function Test-SkillRereleaseStorageVersion {
+    param(
+        [string]$SkillId,
+        [string]$VersionId,
+        [string]$ExpectedVersion
+    )
+
+    $skillFile = Join-Path $JavaStoragePath "skills\$SkillId\$VersionId\SKILL.md"
+    if (-not (Test-Path -LiteralPath $skillFile)) {
+        return $false
+    }
+    return ((Get-Content -LiteralPath $skillFile -Raw) -like "*version: $ExpectedVersion*")
+}
+
+function Invoke-SkillRereleaseContractComparison {
+    param([string]$ResultFileName = 'skill-rerelease-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-rerelease-$suffix"
+    $ownerId = "codex-rerelease-owner-$suffix"
+    $slugs = @(
+        "java-rerelease-$suffix",
+        "python-rerelease-$suffix",
+        "proxy-rerelease-$suffix",
+        "proxy-web-rerelease-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', '$($_)', 'Rerelease contract', '$ownerId', 'NAMESPACE_ONLY', 'ACTIVE', '$ownerId', '$ownerId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    source_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$ownerId', 'Codex Rerelease Owner', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Rerelease', 'TEAM', 'ACTIVE', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PUBLISHED',
+            jsonb_build_object('name', skill_row.slug, 'description', 'Rerelease contract', 'version', '1.0.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md'), jsonb_build_object('path', 'src/main.py')),
+            2, 180, '2026-06-09T08:00:00Z'::timestamptz, '$ownerId',
+            '2026-06-09T07:00:00Z'::timestamptz, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO source_version_id;
+
+        INSERT INTO skill_file (version_id, file_path, file_size, content_type, sha256, storage_key, created_at)
+        VALUES
+            (source_version_id, 'SKILL.md', 140, 'text/markdown', 'sha-rerelease-skill-' || skill_row.slug, 'skills/' || skill_row.id || '/' || source_version_id || '/SKILL.md', CURRENT_TIMESTAMP),
+            (source_version_id, 'src/main.py', 20, 'text/x-python', 'sha-rerelease-main-' || skill_row.slug, 'skills/' || skill_row.id || '/' || source_version_id || '/src/main.py', CURRENT_TIMESTAMP);
+
+        UPDATE skill SET latest_version_id = source_version_id WHERE id = skill_row.id;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-RereleaseSkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-RereleaseVersionId([string]$Slug, [string]$Version) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.version = '$Version' LIMIT 1;"
+    }
+    function Get-RereleaseDbState([string]$Slug, [string]$VersionId, [string]$ExpectedStatus) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.version || '|' || sv.status || '|' || sv.requested_visibility || '|' || sv.file_count || '|' || sv.total_size || '|' || sv.bundle_ready || '|' || sv.download_ready || '|' || COALESCE(s.updated_by, '') || '|' || (SELECT COUNT(*) FROM skill_file sf WHERE sf.version_id = sv.id) FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.id = $VersionId;"
+    }
+    function Get-RereleaseAudit([string]$SourceVersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL_VERSION' AND target_id = $SourceVersionId AND action = 'RERELEASE_SKILL_VERSION' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $skillIds = @{}
+    $sourceVersionIds = @{}
+    foreach ($slug in $slugs) {
+        $skillIds[$slug] = Get-RereleaseSkillId $slug
+        $sourceVersionIds[$slug] = Get-RereleaseVersionId $slug '1.0.0'
+        Write-SkillRereleaseSourceStorage -SkillId $skillIds[$slug] -VersionId $sourceVersionIds[$slug] -SkillName $slug
+    }
+
+    $java = Invoke-SkillRereleasePostJson "$JavaUrl/api/v1/skills/$namespace/$($slugs[0])/versions/1.0.0/rerelease" $ownerId '2.0.0' $true
+    $python = Invoke-SkillRereleasePostJson "$PythonUrl/api/v1/skills/$namespace/$($slugs[1])/versions/1.0.0/rerelease" $ownerId '2.0.0' $true
+    $proxy = Invoke-SkillRereleasePostJson "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.0.0/rerelease" $ownerId '2.0.0' $true
+    $proxyWeb = Invoke-SkillRereleasePostJson "$WebUrl/api/web/skills/$namespace/$($slugs[3])/versions/1.0.0/rerelease" $ownerId '2.0.0' $true
+
+    $targetVersionIds = @{}
+    foreach ($slug in $slugs) {
+        $targetVersionIds[$slug] = Get-RereleaseVersionId $slug '2.0.0'
+    }
+
+    $duplicateStatus = Invoke-SkillRereleaseStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.0.0/rerelease" '2.0.0' $ownerId
+    $unauthenticatedStatus = Invoke-SkillRereleaseStatus "$WebUrl/api/v1/skills/$namespace/$($slugs[2])/versions/1.0.0/rerelease" '3.0.0'
+    $adminYankStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[2]])/yank" -Method 'POST'
+    $adminHideStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/admin/skills/$($skillIds[$slugs[2]])/hide" -Method 'POST'
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableSkillRereleaseContractJson -Response $java
+        python = ConvertTo-StableSkillRereleaseContractJson -Response $python
+        proxy = ConvertTo-StableSkillRereleaseContractJson -Response $proxy
+        proxyWeb = ConvertTo-StableSkillRereleaseContractJson -Response $proxyWeb
+    }
+    $expectedStatus = $java.data.status
+    $expectedDbStatePrefix = "2.0.0|$expectedStatus|NAMESPACE_ONLY|2|"
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
+            dbState = ((Get-RereleaseDbState $slugs[0] $targetVersionIds[$slugs[0]] $expectedStatus) -like "$expectedDbStatePrefix*|true|true|$ownerId|2" -and (Get-RereleaseDbState $slugs[1] $targetVersionIds[$slugs[1]] $expectedStatus) -like "$expectedDbStatePrefix*|true|true|$ownerId|2" -and (Get-RereleaseDbState $slugs[2] $targetVersionIds[$slugs[2]] $expectedStatus) -like "$expectedDbStatePrefix*|true|true|$ownerId|2" -and (Get-RereleaseDbState $slugs[3] $targetVersionIds[$slugs[3]] $expectedStatus) -like "$expectedDbStatePrefix*|true|true|$ownerId|2")
+            audit = ((Get-RereleaseAudit $sourceVersionIds[$slugs[0]]) -like "RERELEASE_SKILL_VERSION|SKILL_VERSION|$($sourceVersionIds[$slugs[0]])|$ownerId|*" -and (Get-RereleaseAudit $sourceVersionIds[$slugs[1]]) -like "RERELEASE_SKILL_VERSION|SKILL_VERSION|$($sourceVersionIds[$slugs[1]])|$ownerId|*" -and (Get-RereleaseAudit $sourceVersionIds[$slugs[2]]) -like "RERELEASE_SKILL_VERSION|SKILL_VERSION|$($sourceVersionIds[$slugs[2]])|$ownerId|*" -and (Get-RereleaseAudit $sourceVersionIds[$slugs[3]]) -like "RERELEASE_SKILL_VERSION|SKILL_VERSION|$($sourceVersionIds[$slugs[3]])|$ownerId|*")
+            storageVersionRewritten = ((Test-SkillRereleaseStorageVersion -SkillId $skillIds[$slugs[1]] -VersionId $targetVersionIds[$slugs[1]] -ExpectedVersion '2.0.0') -and (Test-SkillRereleaseStorageVersion -SkillId $skillIds[$slugs[2]] -VersionId $targetVersionIds[$slugs[2]] -ExpectedVersion '2.0.0') -and (Test-SkillRereleaseStorageVersion -SkillId $skillIds[$slugs[3]] -VersionId $targetVersionIds[$slugs[3]] -ExpectedVersion '2.0.0'))
+            duplicateTargetRejected = ($duplicateStatus -eq 400)
+            unauthenticatedRereleaseRejected = ($unauthenticatedStatus -eq 401)
+            adminYankStillJavaOwned = ($adminYankStatus -eq 401 -or $adminYankStatus -eq 403 -or $adminYankStatus -eq 404)
+            adminHideStillJavaOwned = ($adminHideStatus -eq 401 -or $adminHideStatus -eq 403 -or $adminHideStatus -eq 404)
+        }
+        routeBoundaries = [ordered]@{
+            duplicateStatus = $duplicateStatus
+            unauthenticatedStatus = $unauthenticatedStatus
+            adminYankStatus = $adminYankStatus
+            adminHideStatus = $adminHideStatus
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill rerelease contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillRereleaseSmokeVerification {
+    try {
+        Invoke-SkillRereleaseTests
+        Start-Hybrid
+        Invoke-SkillRereleaseContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -11359,6 +11620,7 @@ switch ($Action) {
     'verify-skill-version-withdraw-review-smoke' { Invoke-HybridSkillVersionWithdrawReviewSmokeVerification }
     'verify-skill-confirm-publish-smoke' { Invoke-HybridSkillConfirmPublishSmokeVerification }
     'verify-skill-submit-review-smoke' { Invoke-HybridSkillSubmitReviewSmokeVerification }
+    'verify-skill-rerelease-smoke' { Invoke-HybridSkillRereleaseSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

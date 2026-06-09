@@ -192,6 +192,7 @@ Still plan carefully when a group requires:
 | 58 | `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review`, `POST /api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Portal version withdraw-review ownership moved to Python. The pending review task submitter can delete the pending task, reopen the version to `UPLOADED`, update `skill.updated_by`, and write `REVIEW_WITHDRAW` audit. |
 | 59 | `POST /api/v1/skills/{namespace}/{slug}/confirm-publish`, `POST /api/web/skills/{namespace}/{slug}/confirm-publish` | python | Portal confirm-publish ownership moved to Python. Owner or namespace manager can directly publish PRIVATE `UPLOADED`/`DRAFT` versions, update `published_at`, skill latest pointer, `updated_by`, and write `CONFIRM_PUBLISH` audit. |
 | 60 | `POST /api/v1/skills/{namespace}/{slug}/submit-review`, `POST /api/web/skills/{namespace}/{slug}/submit-review` | python | Portal submit-review ownership moved to Python. Owner or namespace manager can move `UPLOADED`/`DRAFT` versions to `PENDING_REVIEW`, persist target visibility, create pending review tasks, and write `SUBMIT_REVIEW` audit. |
+| 61 | `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease`, `POST /api/web/skills/{namespace}/{slug}/versions/{version}/rerelease` | python | Portal rerelease ownership moved to Python. Owner or namespace manager can rebuild a target version from a published source version, rewrite `SKILL.md` version, reuse publish orchestration, and write `RERELEASE_SKILL_VERSION` audit. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1214,7 +1215,10 @@ Group E has started with review lifecycle write ownership:
 - Completed: portal submit-review APIs:
   `POST /api/v1/skills/{namespace}/{slug}/submit-review` and
   `POST /api/web/skills/{namespace}/{slug}/submit-review`.
-- Still Java-owned: rerelease, admin hide/unhide, yank, and broader
+- Completed: portal rerelease APIs:
+  `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease` and
+  `POST /api/web/skills/{namespace}/{slug}/versions/{version}/rerelease`.
+- Still Java-owned: admin hide/unhide, yank, and broader
   post-publish lifecycle/governance actions.
 
 Recommended next choice:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Protocol
+from typing import Any, Awaitable, Callable, Protocol
 
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
@@ -73,6 +73,7 @@ async def execute_publish_write(
     request: PublishWriteInput,
     *,
     scan_task_publisher: ScanTaskPublisher | None = None,
+    after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
     replacement_storage_keys: list[str] = []
     async with engine.begin() as connection:
@@ -143,6 +144,8 @@ async def execute_publish_write(
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
+        if after_publish is not None:
+            await after_publish(connection, prepared.skill_id, prepared.version_id)
 
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False

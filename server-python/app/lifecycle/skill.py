@@ -3,10 +3,14 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+import yaml
 from sqlalchemy import text
 
+from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
+from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
 from app.publish.replacement import (
     StorageDeleteCompensationInput,
     bundle_storage_key,
@@ -76,6 +80,23 @@ class SkillSubmitReviewInput:
     version: str
     target_visibility: str
     user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class SkillRereleaseInput:
+    namespace: str
+    slug: str
+    version: str
+    target_version: str
+    confirm_warnings: bool
+    user_id: str
+    storage_base_path: str
+    scanner_enabled: bool = False
+    scan_mode: str = "local"
     request_id: str | None = None
     client_ip: str | None = None
     user_agent: str | None = None
@@ -302,6 +323,45 @@ async def _read_version(connection: Any, skill_id: int, version: str) -> dict[st
     if row is None:
         raise SkillLifecycleError("error.skill.version.notFound", status_code=404)
     return dict(row)
+
+
+async def _find_version(connection: Any, skill_id: int, version: str) -> dict[str, Any] | None:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id AS version_id,
+                       version,
+                       status
+                FROM skill_version
+                WHERE skill_id = :skill_id
+                  AND version = :version
+                LIMIT 1
+                """
+            ),
+            {"skill_id": skill_id, "version": version},
+        )
+    ).mappings().one_or_none()
+    return dict(row) if row is not None else None
+
+
+async def _read_source_files(connection: Any, version_id: int) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT file_path,
+                       content_type,
+                       storage_key
+                FROM skill_file
+                WHERE version_id = :version_id
+                ORDER BY file_path ASC
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
 
 
 async def _read_version_count(connection: Any, skill_id: int) -> int:
@@ -690,6 +750,150 @@ async def submit_skill_version_for_review(engine: Any, request: SkillSubmitRevie
         )
 
     return {"skillId": skill_id, "versionId": version_id, "action": "SUBMIT_REVIEW", "status": "PENDING_REVIEW"}
+
+
+def _read_local_object(storage_base_path: str, object_key: str) -> bytes:
+    base = Path(storage_base_path).resolve()
+    target = (base / object_key).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError as exc:
+        raise SkillLifecycleError(f"Object key escapes storage base: {object_key}") from exc
+    try:
+        return target.read_bytes()
+    except OSError as exc:
+        raise SkillLifecycleError("error.skill.rerelease.sourceFileNotFound") from exc
+
+
+def _rewrite_skill_md_version(content: bytes, target_version: str) -> bytes:
+    text_content = content.decode("utf-8")
+    lines = text_content.splitlines()
+    closing_index: int | None = None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            closing_index = index
+            break
+    if not lines or lines[0].strip() != "---" or closing_index is None:
+        raise SkillLifecycleError("error.skill.publish.skillMd.notFound")
+
+    metadata = parse_skill_metadata(content)
+    frontmatter = dict(metadata.frontmatter)
+    frontmatter["version"] = target_version
+    body = "\n".join(lines[closing_index + 1 :])
+    rewritten = "---\n" + yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip() + "\n---\n" + body
+    if text_content.endswith("\n"):
+        rewritten += "\n"
+    return rewritten.encode("utf-8")
+
+
+def _rebuild_rerelease_entries(
+    storage_base_path: str,
+    files: list[dict[str, Any]],
+    target_version: str,
+) -> list[PackageEntry]:
+    entries: list[PackageEntry] = []
+    for file in files:
+        path = str(file["file_path"])
+        content = _read_local_object(storage_base_path, str(file["storage_key"]))
+        if path == "SKILL.md":
+            content = _rewrite_skill_md_version(content, target_version)
+        entries.append(PackageEntry(path, content, str(file.get("content_type") or "application/octet-stream")))
+    return entries
+
+
+def _validate_rerelease_entries(entries: list[PackageEntry], confirm_warnings: bool) -> SkillMetadata:
+    validation = validate_package(entries)
+    if not validation.valid:
+        raise SkillLifecycleError("error.skill.publish.package.invalid")
+    if validation.warnings and not confirm_warnings:
+        raise SkillLifecycleError("error.skill.publish.precheck.confirmRequired")
+    if validation.metadata is None:
+        raise SkillLifecycleError("error.skill.publish.skillMd.notFound")
+    return validation.metadata
+
+
+async def rerelease_skill_version(
+    engine: Any,
+    request: SkillRereleaseInput,
+    *,
+    publish_writer: Any | None = None,
+) -> dict[str, Any]:
+    timestamp = _now(request.now)
+    target_version = request.target_version.strip()
+    if not target_version:
+        raise SkillLifecycleError("validation.required")
+
+    async with engine.begin() as connection:
+        skill = await _read_skill_context(connection, request.namespace, request.slug)
+        _assert_namespace_active(skill.get("namespace_status"))
+        namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
+        _assert_can_manage(skill, request.user_id, namespace_role)
+
+        skill_id = int(skill["skill_id"])
+        source_version = await _read_version(connection, skill_id, request.version)
+        source_version_id = int(source_version["version_id"])
+        source_version_name = str(source_version["version"])
+        if str(source_version["status"]) != "PUBLISHED":
+            raise SkillLifecycleError("error.skill.version.notPublished")
+
+        existing_target = await _find_version(connection, skill_id, target_version)
+        if existing_target:
+            raise SkillLifecycleError("error.skill.version.exists")
+
+        files = await _read_source_files(connection, source_version_id)
+
+    entries = _rebuild_rerelease_entries(request.storage_base_path, files, target_version)
+    metadata = _validate_rerelease_entries(entries, request.confirm_warnings)
+    write_input = PublishWriteInput(
+        namespace_id=int(skill["namespace_id"]),
+        namespace_slug=str(skill["namespace_slug"]),
+        slug=str(skill["skill_slug"]),
+        display_name=metadata.name,
+        summary=metadata.description,
+        publisher_id=request.user_id,
+        visibility=str(skill["visibility"]),
+        version=target_version,
+        auto_publish=False,
+        metadata=metadata,
+        entries=entries,
+        storage_base_path=request.storage_base_path,
+        scanner_enabled=request.scanner_enabled,
+        scan_mode=request.scan_mode,
+        request_id=request.request_id,
+        client_ip=request.client_ip,
+        user_agent=request.user_agent,
+        now=timestamp,
+    )
+    async def write_rerelease_audit(connection: Any, _skill_id: int | None = None, _version_id: int | None = None) -> None:
+        await _write_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="RERELEASE_SKILL_VERSION",
+            target_type="SKILL_VERSION",
+            target_id=source_version_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps(
+                {"sourceVersion": source_version_name, "targetVersion": target_version},
+                separators=(",", ":"),
+            ),
+            created_at=timestamp,
+        )
+
+    if publish_writer is not None:
+        publish_result = await publish_writer(write_input)
+        async with engine.begin() as connection:
+            await write_rerelease_audit(connection)
+    else:
+        publish_result = await execute_publish_write(engine, write_input, after_publish=write_rerelease_audit)
+
+    return {
+        "skillId": publish_result.skill_id,
+        "versionId": publish_result.version_id,
+        "action": "RERELEASE_VERSION",
+        "status": publish_result.version_status,
+    }
 
 
 async def cleanup_deleted_version_storage(engine: Any, storage_base_path: str, result: SkillVersionDeleteResult) -> None:

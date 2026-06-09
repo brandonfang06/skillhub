@@ -12,6 +12,7 @@ from app.lifecycle.skill import (
     SkillArchiveInput,
     SkillConfirmPublishInput,
     SkillLifecycleError,
+    SkillRereleaseInput,
     SkillSubmitReviewInput,
     SkillVersionDeleteInput,
     SkillVersionWithdrawReviewInput,
@@ -19,6 +20,7 @@ from app.lifecycle.skill import (
     cleanup_deleted_version_storage,
     confirm_publish_skill_version,
     delete_skill_version,
+    rerelease_skill_version,
     submit_skill_version_for_review,
     unarchive_skill as unarchive_skill_workflow,
     withdraw_skill_version_review,
@@ -39,6 +41,11 @@ class SkillConfirmPublishRequest(BaseModel):
 class SkillSubmitReviewRequest(BaseModel):
     version: str
     targetVisibility: str
+
+
+class SkillRereleaseRequest(BaseModel):
+    targetVersion: str
+    confirmWarnings: bool = False
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -232,6 +239,42 @@ async def submit_review_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def rerelease_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    body: SkillRereleaseRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    settings = getattr(request.app.state, "settings", None)
+    rerelease_input = SkillRereleaseInput(
+        namespace=namespace,
+        slug=slug,
+        version=version,
+        target_version=body.targetVersion,
+        confirm_warnings=body.confirmWarnings,
+        user_id=user_id,
+        storage_base_path=settings.storage_base_path if settings is not None else "",
+        scanner_enabled=bool(getattr(settings, "security_scanner_enabled", False)) if settings is not None else False,
+        scan_mode=str(getattr(settings, "security_scanner_mode", "local")) if settings is not None else "local",
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_rerelease_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(rerelease_input)
+            if writer is not None
+            else rerelease_skill_version(request.app.state.db_engine, rerelease_input)
+        )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")
 async def archive_skill_v1(
     request: Request,
@@ -316,6 +359,30 @@ async def withdraw_skill_version_review_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await withdraw_skill_version_review_route_data(request, namespace, slug, version, x_mock_user_id)
+
+
+@router.post("/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease")
+async def rerelease_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    body: SkillRereleaseRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await rerelease_route_data(request, namespace, slug, version, body, x_mock_user_id)
+
+
+@router.post("/api/web/skills/{namespace}/{slug}/versions/{version}/rerelease")
+async def rerelease_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    body: SkillRereleaseRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await rerelease_route_data(request, namespace, slug, version, body, x_mock_user_id)
 
 
 @router.post("/api/v1/skills/{namespace}/{slug}/confirm-publish")
