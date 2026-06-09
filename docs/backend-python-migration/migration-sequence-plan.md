@@ -1165,14 +1165,14 @@ Group E has started with review lifecycle write ownership:
 - Completed: `GET /api/v1/reviews`, `GET /api/web/reviews`,
   `GET /api/v1/reviews/pending`, `GET /api/web/reviews/pending`,
   `GET /api/v1/reviews/my-submissions`, and `GET /api/web/reviews/my-submissions`.
-- Still Java-owned: review detail, review skill-detail, review file/download, promotion review APIs, and
+- Completed: `GET /api/v1/reviews/{id}` and `GET /api/web/reviews/{id}`.
+- Still Java-owned: review skill-detail, review file/download, promotion review APIs, and
   post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with review detail read ownership (`GET /api/v1/reviews/{id}` and
-  `GET /api/web/reviews/{id}`). Keep review skill-detail/file/download and promotion review as
-  separate milestones unless Java parity shows they are tightly coupled.
+- Continue Group E with review skill-detail read ownership. Keep review file/download and
+  promotion review as separate milestones unless Java parity shows they are tightly coupled.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

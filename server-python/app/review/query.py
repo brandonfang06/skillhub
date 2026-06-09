@@ -142,6 +142,12 @@ def _can_review_namespace(
     return namespace_roles.get(namespace_id) in NAMESPACE_REVIEW_ROLES
 
 
+def _can_view_review(row: dict[str, Any], user_id: str, namespace_roles: dict[int, str], platform_roles: set[str]) -> bool:
+    if str(row["submitted_by"]) == user_id:
+        return True
+    return _can_review_namespace(int(row["namespace_id"]), str(row["namespace_type"]), namespace_roles, platform_roles)
+
+
 def _order_clause(status: str, sort_direction: str) -> str:
     primary = "submitted_at" if status == "PENDING" else "reviewed_at"
     return f"ORDER BY rt.{primary} {sort_direction}, rt.id {sort_direction}"
@@ -263,6 +269,43 @@ async def _read_review_task_rows(
     return [dict(row) for row in rows]
 
 
+async def _read_review_task_row(connection: Any, review_task_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT rt.id,
+                       rt.skill_version_id,
+                       rt.namespace_id,
+                       rt.status,
+                       rt.submitted_by,
+                       submitter.display_name AS submitted_by_name,
+                       rt.reviewed_by,
+                       reviewer.display_name AS reviewed_by_name,
+                       rt.review_comment,
+                       rt.submitted_at,
+                       rt.reviewed_at,
+                       n.slug AS namespace_slug,
+                       n.type AS namespace_type,
+                       s.slug AS skill_slug,
+                       sv.version AS version_name
+                FROM review_task rt
+                JOIN namespace n ON n.id = rt.namespace_id
+                JOIN skill_version sv ON sv.id = rt.skill_version_id
+                JOIN skill s ON s.id = sv.skill_id
+                LEFT JOIN user_account submitter ON submitter.id = rt.submitted_by
+                LEFT JOIN user_account reviewer ON reviewer.id = rt.reviewed_by
+                WHERE rt.id = :review_task_id
+                """
+            ),
+            {"review_task_id": review_task_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise ReviewQueryError("review_task.not_found", status_code=404)
+    return dict(row)
+
+
 async def _build_page_response(
     connection: Any,
     *,
@@ -351,3 +394,13 @@ async def list_my_review_submissions(engine: Any, *, page: int, size: int, user_
             size=size,
             sort_direction="DESC",
         )
+
+
+async def read_review_detail(engine: Any, *, review_task_id: int, user_id: str) -> dict[str, Any]:
+    async with engine.connect() as connection:
+        row = await _read_review_task_row(connection, review_task_id)
+        platform_roles = await _read_platform_roles(connection, user_id)
+        namespace_roles = await _read_namespace_roles(connection, user_id)
+        if not _can_view_review(row, user_id, namespace_roles, platform_roles):
+            raise ReviewQueryError("review.no_permission", status_code=403)
+        return _task_response(row)

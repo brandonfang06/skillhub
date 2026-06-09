@@ -1264,6 +1264,21 @@ Expected evidence:
 - Detail and skill-detail review routes remain Java-owned boundaries during this milestone.
 - Playwright smoke E2E passes.
 
+### Review Detail Smoke
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-detail-smoke
+```
+
+Expected evidence:
+
+- Java, direct Python, Vite `/api/v1`, and Vite `/api/web` stable response contracts match for
+  `GET /api/v1/reviews/{id}`.
+- Review task detail keeps Java `ReviewTaskResponse` fields and `获取成功` envelope.
+- Review skill-detail, file, and download subroutes remain Java-owned boundaries during this
+  milestone.
+- Playwright smoke E2E passes.
+
 ## Shutdown
 
 ```powershell

@@ -136,8 +136,14 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews/my-submissions')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews/701')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701?include=basic')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews/701/skill-detail')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701/file?path=SKILL.md')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701/download')).toBeUndefined()
 
     expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/approve')).toBe('http://localhost:8081')
@@ -153,8 +159,11 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('GET', '/api/web/reviews/my-submissions')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/reviews/701')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/reviews/701/skill-detail')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701/file?path=SKILL.md')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701/download')).toBe('http://localhost:8080')
   })
 
   it('routes ClawHub well-known discovery to Python', () => {

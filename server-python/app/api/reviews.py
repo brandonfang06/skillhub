@@ -25,6 +25,7 @@ from app.review.query import (
     list_my_review_submissions,
     list_pending_reviews,
     list_review_tasks,
+    read_review_detail,
 )
 
 
@@ -245,6 +246,27 @@ async def list_my_submissions_route_data(
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
+async def get_review_detail(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "review_detail_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(review_task_id, user_id))
+        else:
+            data = await read_review_detail(
+                request.app.state.db_engine,
+                review_task_id=review_task_id,
+                user_id=user_id,
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
 @router.get("/api/v1/reviews")
 @router.get("/api/web/reviews")
 async def list_reviews_route(
@@ -280,6 +302,16 @@ async def list_my_submissions_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await list_my_submissions_route_data(request, page, size, mock_user_id)
+
+
+@router.get("/api/v1/reviews/{review_task_id}")
+@router.get("/api/web/reviews/{review_task_id}")
+async def get_review_detail_route(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await get_review_detail(request, review_task_id, mock_user_id)
 
 
 @router.post("/api/v1/reviews")
