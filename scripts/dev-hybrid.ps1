@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -8686,6 +8686,311 @@ function Invoke-HybridReviewDetailSmokeVerification {
     }
 }
 
+function Invoke-ReviewSkillDetailTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_review_skill_detail.py', 'tests/test_review_detail.py', 'tests/test_review_list.py', 'tests/test_review_submit.py', 'tests/test_review_approve.py', 'tests/test_review_reject_withdraw.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableReviewSkillLifecycleJson {
+    param([object]$Version)
+
+    if ($null -eq $Version) {
+        return $null
+    }
+
+    return [ordered]@{
+        version = $Version.version
+        status = $Version.status
+    }
+}
+
+function ConvertTo-StableReviewSkillDetailContractJson {
+    param([object]$Response)
+
+    $versions = @()
+    foreach ($version in $Response.data.versions) {
+        $versions += [ordered]@{
+            version = $version.version
+            status = $version.status
+            changelog = $version.changelog
+            fileCount = $version.fileCount
+            totalSize = $version.totalSize
+            hasPublishedAt = ($null -ne $version.publishedAt)
+            downloadAvailable = $version.downloadAvailable
+        }
+    }
+
+    $files = @()
+    foreach ($file in $Response.data.files) {
+        $files += [ordered]@{
+            filePath = $file.filePath
+            fileSize = $file.fileSize
+            contentType = $file.contentType
+            sha256 = $file.sha256
+        }
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skill = [ordered]@{
+                displayName = $Response.data.skill.displayName
+                ownerId = $Response.data.skill.ownerId
+                ownerDisplayName = $Response.data.skill.ownerDisplayName
+                summary = $Response.data.skill.summary
+                visibility = $Response.data.skill.visibility
+                status = $Response.data.skill.status
+                downloadCount = $Response.data.skill.downloadCount
+                starCount = $Response.data.skill.starCount
+                subscriptionCount = $Response.data.skill.subscriptionCount
+                ratingAvg = $Response.data.skill.ratingAvg
+                ratingCount = $Response.data.skill.ratingCount
+                hidden = $Response.data.skill.hidden
+                namespace = $Response.data.skill.namespace
+                labelsCount = @($Response.data.skill.labels).Count
+                canManageLifecycle = $Response.data.skill.canManageLifecycle
+                canSubmitPromotion = $Response.data.skill.canSubmitPromotion
+                canInteract = $Response.data.skill.canInteract
+                canReport = $Response.data.skill.canReport
+                headlineVersion = ConvertTo-StableReviewSkillLifecycleJson -Version $Response.data.skill.headlineVersion
+                publishedVersion = ConvertTo-StableReviewSkillLifecycleJson -Version $Response.data.skill.publishedVersion
+                ownerPreviewVersion = ConvertTo-StableReviewSkillLifecycleJson -Version $Response.data.skill.ownerPreviewVersion
+                ownerPreviewReviewComment = $Response.data.skill.ownerPreviewReviewComment
+                resolutionMode = $Response.data.skill.resolutionMode
+            }
+            versions = $versions
+            files = $files
+            documentationPath = $Response.data.documentationPath
+            documentationContent = $Response.data.documentationContent
+            downloadUrlKind = ($(if ($Response.data.downloadUrl -match '^/api/v1/reviews/\d+/download$') { 'review-download' } else { $Response.data.downloadUrl }))
+            activeVersion = $Response.data.activeVersion
+        }
+    }
+
+    $json = ($stable | ConvertTo-Json -Depth 50 -Compress)
+    $json = [regex]::Replace($json, '("ratingAvg":-?\d+\.\d*?[1-9])0+(?=[,}])', '$1')
+    return [regex]::Replace($json, '("ratingAvg":-?\d+)\.0+(?=[,}])', '$1')
+}
+
+function Write-ReviewSkillDetailStorageObjects {
+    param([string]$Namespace)
+
+    $rows = & docker compose -p skillhub exec -T postgres psql -U skillhub -d skillhub -t -A -F '|' -v ON_ERROR_STOP=1 -c "SELECT sf.storage_key, sf.file_path FROM skill_file sf JOIN skill_version sv ON sv.id = sf.version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$Namespace' AND sf.file_path IN ('README.md', 'SKILL.md') ORDER BY sf.id;"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Postgres storage-key query failed for review skill-detail fixture."
+    }
+
+    foreach ($line in $rows) {
+        if (-not $line -or $line.Trim() -eq '') {
+            continue
+        }
+        $parts = $line.Split('|', 2)
+        $storageKey = $parts[0]
+        $filePath = $parts[1]
+        $relativePath = $storageKey -replace '/', [System.IO.Path]::DirectorySeparatorChar
+        $targetPath = Join-Path $JavaStoragePath $relativePath
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+        if ($filePath -eq 'README.md') {
+            Set-Content -LiteralPath $targetPath -Value "# Review skill detail fixture"
+        } else {
+            Set-Content -LiteralPath $targetPath -Value "# Skill detail fixture"
+        }
+    }
+}
+
+function Invoke-ReviewSkillDetailContractComparison {
+    param([string]$ResultFileName = 'review-skill-detail-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-review-skill-detail-$suffix"
+    $reviewerId = "codex-review-skill-admin-$suffix"
+    $submitterId = "codex-review-skill-submitter-$suffix"
+    $slugs = @(
+        "java-review-skill-$suffix",
+        "python-review-skill-$suffix",
+        "proxy-review-skill-$suffix",
+        "proxy-web-review-skill-$suffix"
+    )
+
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Review Skill Detail', 'Review skill detail contract', '$submitterId', 'NAMESPACE_ONLY', 'ACTIVE', 4, 2, 1, 4.50, 3, '$submitterId', '$submitterId')" }) -join ",`n        "
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    published_version_id BIGINT;
+    review_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES
+        ('$reviewerId', 'Codex Review Skill Admin', 'ACTIVE'),
+        ('$submitterId', 'Codex Review Skill Submitter', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Review Skill Detail', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$reviewerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    FOR skill_row IN
+        INSERT INTO skill (
+            namespace_id, slug, display_name, summary, owner_id, visibility, status,
+            download_count, star_count, subscription_count, rating_avg, rating_count,
+            created_by, updated_by
+        )
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at, bundle_ready,
+            download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '0.9.0', 'PUBLISHED', 'stable',
+            jsonb_build_object('name', 'Review Skill Detail', 'description', 'Stable'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 80, '2026-06-08T09:00:00Z'::timestamptz, '$submitterId',
+            '2026-06-08T08:00:00Z'::timestamptz, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO published_version_id;
+
+        INSERT INTO skill_version (
+            skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at, bundle_ready, download_ready,
+            requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PENDING_REVIEW', 'review me',
+            jsonb_build_object('name', 'Review Skill Detail', 'description', 'Pending review'),
+            jsonb_build_array(jsonb_build_object('path', 'README.md'), jsonb_build_object('path', 'SKILL.md')),
+            3, 120, '$submitterId', '2026-06-09T09:00:00Z'::timestamptz,
+            TRUE, FALSE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO review_version_id;
+
+        UPDATE skill SET latest_version_id = published_version_id WHERE id = skill_row.id;
+
+        INSERT INTO skill_file (version_id, file_path, file_size, content_type, sha256, storage_key, created_at)
+        VALUES
+            (review_version_id, 'README.md', 30, 'text/markdown', 'readme-sha', 'fixtures/review-skill-detail/' || skill_row.slug || '/README.md', CURRENT_TIMESTAMP),
+            (review_version_id, 'SKILL.md', 23, 'text/markdown', 'skill-sha', 'fixtures/review-skill-detail/' || skill_row.slug || '/SKILL.md', CURRENT_TIMESTAMP),
+            (review_version_id, 'missing.txt', 7, 'text/plain', 'missing-sha', 'fixtures/review-skill-detail/' || skill_row.slug || '/missing.txt', CURRENT_TIMESTAMP);
+
+        INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+        VALUES (review_version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP - INTERVAL '1 minute');
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+    Write-ReviewSkillDetailStorageObjects -Namespace $namespace
+
+    function Get-ReviewTaskId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    $javaTaskId = Get-ReviewTaskId $slugs[0]
+    $pythonTaskId = Get-ReviewTaskId $slugs[1]
+    $proxyTaskId = Get-ReviewTaskId $slugs[2]
+    $proxyWebTaskId = Get-ReviewTaskId $slugs[3]
+
+    $java = Invoke-ReviewListGetJson "$JavaUrl/api/v1/reviews/$javaTaskId/skill-detail" $reviewerId
+    $python = Invoke-ReviewListGetJson "$PythonUrl/api/v1/reviews/$pythonTaskId/skill-detail" $reviewerId
+    $proxyV1 = Invoke-ReviewListGetJson "$WebUrl/api/v1/reviews/$proxyTaskId/skill-detail" $reviewerId
+    $proxyWeb = Invoke-ReviewListGetJson "$WebUrl/api/web/reviews/$proxyWebTaskId/skill-detail" $reviewerId
+
+    $javaStable = ConvertTo-StableReviewSkillDetailContractJson -Response $java
+    $pythonStable = ConvertTo-StableReviewSkillDetailContractJson -Response $python
+    $proxyStable = ConvertTo-StableReviewSkillDetailContractJson -Response $proxyV1
+    $proxyWebStable = ConvertTo-StableReviewSkillDetailContractJson -Response $proxyWeb
+
+    $fileProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyTaskId/file?path=SKILL.md" -Method 'GET'
+    $downloadProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyTaskId/download" -Method 'GET'
+
+    $result = [ordered]@{
+        namespace = $namespace
+        taskIds = [ordered]@{
+            java = $javaTaskId
+            python = $pythonTaskId
+            proxy = $proxyTaskId
+            proxyWeb = $proxyWebTaskId
+        }
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+        pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+        javaOwnedBoundaries = [ordered]@{
+            fileStatus = $fileProxyStatus
+            downloadStatus = $downloadProxyStatus
+        }
+        checks = [ordered]@{
+            responsesMatch = ($javaStable -eq $pythonStable -and $pythonStable -eq $proxyStable -and $pythonStable -eq $proxyWebStable)
+            fileRemainsJavaOwned = ($fileProxyStatus -ne 404)
+            downloadRemainsJavaOwned = ($downloadProxyStatus -ne 404)
+        }
+        stable = [ordered]@{
+            java = $javaStable
+            python = $pythonStable
+            proxy = $proxyStable
+            proxyWeb = $proxyWebStable
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.responsesMatch) {
+        throw "Review skill-detail response contract check failed. See .dev/$ResultFileName."
+    }
+    if (-not $result.checks.fileRemainsJavaOwned -or -not $result.checks.downloadRemainsJavaOwned) {
+        throw "Review skill-detail route boundary check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-HybridReviewSkillDetailSmokeVerification {
+    try {
+        Invoke-ReviewSkillDetailTests
+        Start-Hybrid
+        Invoke-ReviewSkillDetailContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -8735,6 +9040,7 @@ switch ($Action) {
     'verify-review-submit-smoke' { Invoke-HybridReviewSubmitSmokeVerification }
     'verify-review-list-smoke' { Invoke-HybridReviewListSmokeVerification }
     'verify-review-detail-smoke' { Invoke-HybridReviewDetailSmokeVerification }
+    'verify-review-skill-detail-smoke' { Invoke-HybridReviewSkillDetailSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

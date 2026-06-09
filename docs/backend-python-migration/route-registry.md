@@ -72,8 +72,10 @@ deferred routes are still visible.
 | GET | `/api/web/reviews/pending` | python | Frontend alias for namespace pending review list. |
 | GET | `/api/v1/reviews/my-submissions` | python | Current user's pending review submissions moved to Python. |
 | GET | `/api/web/reviews/my-submissions` | python | Frontend alias for current user's pending review submissions. |
-| GET | `/api/v1/reviews/{id}` | python | Review task detail moved to Python. Skill-detail, file, and download subroutes remain Java-owned. |
+| GET | `/api/v1/reviews/{id}` | python | Review task detail moved to Python. File and download subroutes remain Java-owned. |
 | GET | `/api/web/reviews/{id}` | python | Frontend alias for review task detail. |
+| GET | `/api/v1/reviews/{id}/skill-detail` | python | Review-bound skill detail moved to Python. Uses the review task's active version snapshot, Java lifecycle ordering, storage-backed documentation content, and review download URL. |
+| GET | `/api/web/reviews/{id}/skill-detail` | python | Frontend alias for review-bound skill detail. |
 | POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Other review routes remain Java-owned. |
 | POST | `/api/web/reviews/{id}/approve` | python | Frontend review approval alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/approve`. |
 | POST | `/api/v1/reviews/{id}/reject` | python | Review rejection write moved to Python. Rejects the review task, moves the version to `REJECTED`, and writes `REVIEW_REJECT` audit. |

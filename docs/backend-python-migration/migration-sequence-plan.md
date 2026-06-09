@@ -178,6 +178,10 @@ Still plan carefully when a group requires:
 | 44 | Publish scan daemon/supervisor integration | n/a | Python FastAPI can optionally start a background scan consumer daemon, ensure its Redis consumer group exists before polling, consume scanner tasks through the real scanner container, update audit/version status, ACK messages, and shut down with the hybrid stack. No route ownership moved. |
 | 45 | `POST /api/v1/reviews/{id}/approve`, `POST /api/web/reviews/{id}/approve` | python | Review approval write ownership moved to Python. The route publishes the reviewed version, updates `skill.latest_version_id`, visibility, metadata, and `updated_by`, records `REVIEW_APPROVE` audit, and passed Java/Python/Vite v1/web live comparison. Reject, withdraw, submit, list, detail, review-file, and review-download routes remain Java-owned. |
 | 46 | `POST /api/v1/reviews/{id}/reject`, `POST /api/web/reviews/{id}/reject`, `POST /api/v1/reviews/{id}/withdraw`, `POST /api/web/reviews/{id}/withdraw` | python | Review reject and withdraw write ownership moved to Python. Reject records reviewer/comment, moves review task/version to `REJECTED`, and writes `REVIEW_REJECT` audit. Withdraw is submitter-only, deletes the pending review task, reopens the version to `UPLOADED`, updates skill `updated_by`, and writes `REVIEW_WITHDRAW` audit. Submit, list, detail, review-file, review-download, and promotion review routes remain Java-owned. |
+| 47 | `POST /api/v1/reviews`, `POST /api/web/reviews` | python | Review submit write ownership moved to Python. The route moves eligible versions to `PENDING_REVIEW`, creates the pending review task, and writes `REVIEW_SUBMIT` audit. |
+| 48 | `GET /api/v1/reviews`, `GET /api/web/reviews`, `GET /api/v1/reviews/pending`, `GET /api/web/reviews/pending`, `GET /api/v1/reviews/my-submissions`, `GET /api/web/reviews/my-submissions` | python | Review list read ownership moved to Python with Java-compatible page envelopes and review authorization. |
+| 49 | `GET /api/v1/reviews/{id}`, `GET /api/web/reviews/{id}` | python | Review task detail read ownership moved to Python with submitter, namespace reviewer, and platform reviewer visibility parity. |
+| 50 | `GET /api/v1/reviews/{id}/skill-detail`, `GET /api/web/reviews/{id}/skill-detail` | python | Review-bound skill detail read ownership moved to Python. The route uses the task's active skill version, Java lifecycle version ordering, storage-backed README/SKILL documentation, and keeps review file/download Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1166,13 +1170,15 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/reviews/pending`, `GET /api/web/reviews/pending`,
   `GET /api/v1/reviews/my-submissions`, and `GET /api/web/reviews/my-submissions`.
 - Completed: `GET /api/v1/reviews/{id}` and `GET /api/web/reviews/{id}`.
-- Still Java-owned: review skill-detail, review file/download, promotion review APIs, and
+- Completed: `GET /api/v1/reviews/{id}/skill-detail` and
+  `GET /api/web/reviews/{id}/skill-detail`.
+- Still Java-owned: review file/download, promotion review APIs, and
   post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with review skill-detail read ownership. Keep review file/download and
-  promotion review as separate milestones unless Java parity shows they are tightly coupled.
+- Continue Group E with review file content or review package download ownership. Keep promotion
+  review as a separate milestone unless Java parity shows it is tightly coupled.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

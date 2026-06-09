@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import text
@@ -10,6 +11,16 @@ from sqlalchemy import text
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
 NAMESPACE_REVIEW_ROLES = {"OWNER", "ADMIN"}
 REVIEW_STATUSES = {"PENDING", "APPROVED", "REJECTED"}
+REVIEW_VERSION_STATUSES = (
+    "PUBLISHED",
+    "PENDING_REVIEW",
+    "UPLOADED",
+    "DRAFT",
+    "REJECTED",
+    "YANKED",
+    "SCANNING",
+    "SCAN_FAILED",
+)
 
 
 @dataclass(frozen=True)
@@ -71,6 +82,123 @@ def _task_response(row: dict[str, Any]) -> dict[str, Any]:
         "reviewComment": row.get("review_comment"),
         "submittedAt": _java_instant(row.get("submitted_at")),
         "reviewedAt": _java_instant(row.get("reviewed_at")),
+    }
+
+
+def _lifecycle_version(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": int(row["id"]),
+        "version": str(row["version"]),
+        "status": str(row["status"]),
+    }
+
+
+def _review_skill_lifecycle_version(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": int(row["active_version_id"]),
+        "version": str(row["active_version"]),
+        "status": str(row["active_version_status"]),
+    }
+
+
+def _file_exists(storage_base_path: str, storage_key: str) -> bool:
+    base = Path(storage_base_path).resolve()
+    target = (base / storage_key).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        return False
+    return target.is_file()
+
+
+def _read_storage_text(storage_base_path: str, storage_key: str) -> str:
+    base = Path(storage_base_path).resolve()
+    target = (base / storage_key).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError as exc:
+        raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
+    try:
+        return target.read_bytes().decode("utf-8")
+    except FileNotFoundError as exc:
+        raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
+
+
+def _resolve_documentation_file(files: list[dict[str, Any]]) -> dict[str, Any] | None:
+    by_path = {str(file["file_path"]): file for file in files}
+    return by_path.get("README.md") or by_path.get("SKILL.md")
+
+
+def _review_skill_file_response(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": int(row["id"]),
+        "filePath": str(row["file_path"]),
+        "fileSize": int(row["file_size"]),
+        "contentType": row["content_type"],
+        "sha256": row["sha256"],
+    }
+
+
+def _review_skill_version_response(row: dict[str, Any], active_version_id: int) -> dict[str, Any]:
+    status = str(row["status"])
+    return {
+        "id": int(row["id"]),
+        "version": str(row["version"]),
+        "status": status,
+        "changelog": row["changelog"],
+        "fileCount": int(row["file_count"]),
+        "totalSize": int(row["total_size"]),
+        "publishedAt": _java_instant(row.get("published_at")),
+        "downloadAvailable": int(row["id"]) == active_version_id or (status == "PUBLISHED" and bool(row["download_ready"])),
+    }
+
+
+def _review_skill_detail_response(
+    *,
+    review_task_id: int,
+    snapshot: dict[str, Any],
+    versions: list[dict[str, Any]],
+    files: list[dict[str, Any]],
+    documentation_file: dict[str, Any] | None,
+    documentation_content: str | None,
+) -> dict[str, Any]:
+    active_version = _review_skill_lifecycle_version(snapshot)
+    published_version = next((version for version in versions if str(version["status"]) == "PUBLISHED"), None)
+    published_lifecycle = _lifecycle_version(published_version) if published_version is not None else None
+    return {
+        "skill": {
+            "id": int(snapshot["id"]),
+            "slug": str(snapshot["slug"]),
+            "displayName": snapshot["display_name"],
+            "ownerId": str(snapshot["owner_id"]),
+            "ownerDisplayName": snapshot["owner_display_name"],
+            "summary": snapshot["summary"],
+            "visibility": str(snapshot["visibility"]),
+            "status": str(snapshot["status"]),
+            "downloadCount": int(snapshot["download_count"]),
+            "starCount": int(snapshot["star_count"]),
+            "subscriptionCount": int(snapshot["subscription_count"]),
+            "ratingAvg": float(snapshot["rating_avg"]),
+            "ratingCount": int(snapshot["rating_count"]),
+            "hidden": bool(snapshot["hidden"]),
+            "namespace": str(snapshot["namespace"]),
+            "labels": [],
+            "canManageLifecycle": False,
+            "canSubmitPromotion": False,
+            "canInteract": False,
+            "canReport": False,
+            "headlineVersion": active_version,
+            "publishedVersion": published_lifecycle,
+            "ownerPreviewVersion": active_version,
+            "ownerPreviewReviewComment": None,
+            "resolutionMode": "REVIEW_TASK",
+        },
+        "versions": [_review_skill_version_response(version, int(snapshot["active_version_id"])) for version in versions],
+        "files": [_review_skill_file_response(file) for file in files],
+        "documentationPath": str(documentation_file["file_path"]) if documentation_file is not None else None,
+        "documentationContent": documentation_content,
+        "downloadUrl": f"/api/v1/reviews/{review_task_id}/download",
+        "activeVersion": str(snapshot["active_version"]),
     }
 
 
@@ -306,6 +434,104 @@ async def _read_review_task_row(connection: Any, review_task_id: int) -> dict[st
     return dict(row)
 
 
+async def _read_review_skill_snapshot(connection: Any, skill_version_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id,
+                       s.slug,
+                       s.display_name,
+                       s.owner_id,
+                       NULLIF(owner.display_name, '') AS owner_display_name,
+                       s.summary,
+                       s.visibility,
+                       s.status,
+                       s.download_count,
+                       s.star_count,
+                       s.subscription_count,
+                       s.rating_avg,
+                       s.rating_count,
+                       s.hidden,
+                       n.slug AS namespace,
+                       active.id AS active_version_id,
+                       active.version AS active_version,
+                       active.status AS active_version_status
+                FROM skill_version active
+                JOIN skill s ON s.id = active.skill_id
+                JOIN namespace n ON n.id = s.namespace_id
+                LEFT JOIN user_account owner ON owner.id = s.owner_id
+                WHERE active.id = :skill_version_id
+                """
+            ),
+            {"skill_version_id": skill_version_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise ReviewQueryError("error.skill.version.notFound", status_code=400)
+    return dict(row)
+
+
+async def _read_review_skill_versions(connection: Any, skill_id: int) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT sv.id,
+                       sv.version,
+                       sv.status,
+                       sv.changelog,
+                       sv.file_count,
+                       sv.total_size,
+                       sv.published_at,
+                       sv.download_ready,
+                       sv.created_at
+                FROM skill_version sv
+                WHERE sv.skill_id = :skill_id
+                  AND sv.status = ANY(:statuses)
+                ORDER BY CASE sv.status
+                             WHEN 'PUBLISHED' THEN 0
+                             WHEN 'SCANNING' THEN 1
+                             WHEN 'SCAN_FAILED' THEN 1
+                             WHEN 'UPLOADED' THEN 2
+                             WHEN 'REJECTED' THEN 3
+                             WHEN 'PENDING_REVIEW' THEN 4
+                             WHEN 'DRAFT' THEN 5
+                             WHEN 'YANKED' THEN 5
+                             ELSE 3
+                         END,
+                         sv.published_at DESC NULLS LAST,
+                         sv.created_at DESC NULLS LAST,
+                         sv.id DESC
+                """
+            ),
+            {"skill_id": skill_id, "statuses": list(REVIEW_VERSION_STATUSES)},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def _read_review_skill_files(connection: Any, version_id: int, storage_base_path: str) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT id, file_path, file_size, content_type, sha256, storage_key
+                FROM skill_file
+                WHERE version_id = :version_id
+                ORDER BY id ASC
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().all()
+    return [
+        dict(row)
+        for row in rows
+        if row.get("storage_key") is not None and _file_exists(storage_base_path, str(row["storage_key"]))
+    ]
+
+
 async def _build_page_response(
     connection: Any,
     *,
@@ -404,3 +630,36 @@ async def read_review_detail(engine: Any, *, review_task_id: int, user_id: str) 
         if not _can_view_review(row, user_id, namespace_roles, platform_roles):
             raise ReviewQueryError("review.no_permission", status_code=403)
         return _task_response(row)
+
+
+async def read_review_skill_detail(
+    engine: Any,
+    storage_base_path: str,
+    *,
+    review_task_id: int,
+    user_id: str,
+) -> dict[str, Any]:
+    async with engine.connect() as connection:
+        task = await _read_review_task_row(connection, review_task_id)
+        platform_roles = await _read_platform_roles(connection, user_id)
+        namespace_roles = await _read_namespace_roles(connection, user_id)
+        if not _can_view_review(task, user_id, namespace_roles, platform_roles):
+            raise ReviewQueryError("review.no_permission", status_code=403)
+
+        snapshot = await _read_review_skill_snapshot(connection, int(task["skill_version_id"]))
+        versions = await _read_review_skill_versions(connection, int(snapshot["id"]))
+        files = await _read_review_skill_files(connection, int(snapshot["active_version_id"]), storage_base_path)
+        documentation_file = _resolve_documentation_file(files)
+        documentation_content = (
+            _read_storage_text(storage_base_path, str(documentation_file["storage_key"]))
+            if documentation_file is not None
+            else None
+        )
+        return _review_skill_detail_response(
+            review_task_id=review_task_id,
+            snapshot=snapshot,
+            versions=versions,
+            files=files,
+            documentation_file=documentation_file,
+            documentation_content=documentation_content,
+        )

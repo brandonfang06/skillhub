@@ -1388,3 +1388,26 @@ Verification status from 2026-06-07:
 
 3. **Future Testing Approach**:
    - Implement automated, single-command contract verification actions (e.g. `verify-files-smoke` in `dev-hybrid.ps1`) to boot the stack, perform comparisons, run E2E, and tear it down automatically. This eliminates manual timing issues and guarantees clean environments.
+
+## Review Skill-Detail Live Gate
+
+For the migrated review-bound skill detail routes, use:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-skill-detail-smoke
+```
+
+This gate:
+
+- runs Python review query regression tests plus Vite proxy ownership tests;
+- starts Java `8080`, Python `8081`, Vite `3000`, and Docker dependency services;
+- compares Java direct, Python direct, Vite `/api/v1`, and Vite `/api/web` responses for
+  `GET /api/*/reviews/{id}/skill-detail`;
+- checks that `GET /api/v1/reviews/{id}/file` and
+  `GET /api/v1/reviews/{id}/download` still fall through to Java;
+- runs Playwright smoke E2E;
+- stops the hybrid stack after verification.
+
+The 2026-06-09 run found and fixed a real parity issue: Python text reads originally normalized
+CRLF to LF. Review skill-detail documentation now reads storage bytes and decodes UTF-8 to preserve
+Java-compatible line endings.
