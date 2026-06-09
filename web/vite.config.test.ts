@@ -120,8 +120,14 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/web/reviews/701/withdraw')).toBe(
       'http://localhost:8081',
     )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/reviews')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews?draft=true')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews')).toBeUndefined()
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews')).toBeUndefined()
 
     expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/approve')).toBe('http://localhost:8081')
@@ -129,8 +135,11 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/reject')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/withdraw')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/withdraw')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/reviews')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/web/reviews')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/web/reviews')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('POST', '/api/v1/reviews')).toBe('http://localhost:8080')
   })
 
   it('routes ClawHub well-known discovery to Python', () => {

@@ -1161,13 +1161,15 @@ Group E has started with review lifecycle write ownership:
 - Completed: `POST /api/v1/reviews/{id}/reject`,
   `POST /api/web/reviews/{id}/reject`, `POST /api/v1/reviews/{id}/withdraw`, and
   `POST /api/web/reviews/{id}/withdraw`.
-- Still Java-owned: submit review, list/detail, review file/download, promotion review APIs, and
+- Completed: `POST /api/v1/reviews` and `POST /api/web/reviews`.
+- Still Java-owned: list/detail, review file/download, promotion review APIs, and
   post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with review submit or review read ownership. Keep submit separate from list/detail
-  unless the plan proves the live gate remains small enough.
+- Continue Group E with review read ownership (`GET /api/v1/reviews`, `GET /api/web/reviews`,
+  and possibly detail if the plan keeps the live gate small enough). Keep promotion review and
+  review file/download as separate milestones unless Java parity shows they are tightly coupled.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

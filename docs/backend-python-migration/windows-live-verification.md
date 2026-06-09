@@ -1232,6 +1232,22 @@ This gate verifies:
 - Submit and detail review routes remain Java-owned boundaries during this milestone.
 - Playwright smoke E2E passes.
 
+### Review Submit Smoke
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-submit-smoke
+```
+
+Expected evidence:
+
+- Java, direct Python, Vite `/api/v1`, and Vite `/api/web` review submit calls match stable
+  `ApiResponse<ReviewTaskResponse>` fields for seeded `UPLOADED` versions.
+- Submit DB parity: each version moves to `PENDING_REVIEW`, each new review task is `PENDING`,
+  and the submitter is recorded.
+- Submit audit parity: Python records `REVIEW_SUBMIT` with `skillVersionId`.
+- Review list/detail GET routes remain Java-owned boundaries during this milestone.
+- Playwright smoke E2E passes.
+
 ## Shutdown
 
 ```powershell

@@ -12,9 +12,11 @@ from app.review.approval import (
     ReviewApprovalError,
     ReviewApproveInput,
     ReviewRejectInput,
+    ReviewSubmitInput,
     ReviewWithdrawInput,
     approve_review_task,
     reject_review_task,
+    submit_review_task,
     withdraw_review_task,
 )
 
@@ -24,6 +26,10 @@ router = APIRouter()
 
 class ReviewActionRequest(BaseModel):
     comment: str | None = None
+
+
+class ReviewSubmitRequest(BaseModel):
+    skillVersionId: int
 
 
 async def _resolve_approval_result(result: Any | Awaitable[Any]) -> Any:
@@ -109,6 +115,41 @@ async def withdraw_review(
     except ReviewApprovalError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
+
+
+async def submit_review(
+    request: Request,
+    body: ReviewSubmitRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+
+    submit_input = ReviewSubmitInput(
+        skill_version_id=body.skillVersionId,
+        user_id=mock_user_id.strip(),
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "review_submit_writer", None)
+    try:
+        data = await _resolve_approval_result(
+            writer(submit_input) if writer is not None else submit_review_task(request.app.state.db_engine, submit_input)
+        )
+    except ReviewApprovalError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u521b\u5efa\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/reviews")
+@router.post("/api/web/reviews")
+async def submit_review_route(
+    request: Request,
+    body: ReviewSubmitRequest,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await submit_review(request, body, mock_user_id)
 
 
 @router.post("/api/v1/reviews/{review_task_id}/approve")

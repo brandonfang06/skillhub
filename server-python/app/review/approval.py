@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -37,6 +38,16 @@ class ReviewRejectInput:
 @dataclass(frozen=True)
 class ReviewWithdrawInput:
     review_task_id: int
+    user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ReviewSubmitInput:
+    skill_version_id: int
     user_id: str
     request_id: str | None = None
     client_ip: str | None = None
@@ -97,6 +108,19 @@ def _can_review(
     return namespace_role in NAMESPACE_REVIEW_ROLES and namespace_id > 0
 
 
+def _can_submit(
+    version_row: dict[str, Any],
+    user_id: str,
+    namespace_role: str | None,
+    platform_roles: set[str],
+) -> bool:
+    if str(version_row["owner_id"]) == user_id:
+        return True
+    if platform_roles & PLATFORM_REVIEW_ROLES:
+        return True
+    return namespace_role in NAMESPACE_REVIEW_ROLES
+
+
 def _review_response(task_row: dict[str, Any], *, status: str, reviewer_id: str, comment: str | None, reviewed_at: datetime) -> dict[str, Any]:
     return {
         "id": int(task_row["id"]),
@@ -112,6 +136,30 @@ def _review_response(task_row: dict[str, Any], *, status: str, reviewer_id: str,
         "reviewComment": comment,
         "submittedAt": task_row["submitted_at"],
         "reviewedAt": reviewed_at,
+    }
+
+
+def _review_submit_response(
+    version_row: dict[str, Any],
+    *,
+    review_task_id: int,
+    submitted_at: datetime,
+    user_id: str,
+) -> dict[str, Any]:
+    return {
+        "id": review_task_id,
+        "skillVersionId": int(version_row["skill_version_id"]),
+        "namespace": str(version_row["namespace_slug"]),
+        "skillSlug": str(version_row["skill_slug"]),
+        "version": str(version_row["version_name"]),
+        "status": "PENDING",
+        "submittedBy": user_id,
+        "submittedByName": version_row.get("submitted_by_name"),
+        "reviewedBy": None,
+        "reviewedByName": None,
+        "reviewComment": None,
+        "submittedAt": submitted_at,
+        "reviewedAt": None,
     }
 
 
@@ -206,6 +254,153 @@ async def _assert_can_review(connection: Any, task: dict[str, Any], reviewer_id:
     namespace_role = await _read_namespace_role(connection, int(task["namespace_id"]), reviewer_id)
     if not _can_review(task, reviewer_id, namespace_role, platform_roles):
         raise ReviewApprovalError("review.no_permission", status_code=403)
+
+
+async def _read_review_submit_context(connection: Any, skill_version_id: int, user_id: str) -> dict[str, Any]:
+    version_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT sv.id AS skill_version_id,
+                       sv.status AS version_status,
+                       sv.version AS version_name,
+                       s.id AS skill_id,
+                       s.namespace_id,
+                       s.slug AS skill_slug,
+                       s.owner_id,
+                       n.slug AS namespace_slug,
+                       n.type AS namespace_type,
+                       n.status AS namespace_status,
+                       submitter.display_name AS submitted_by_name
+                FROM skill_version sv
+                JOIN skill s ON s.id = sv.skill_id
+                JOIN namespace n ON n.id = s.namespace_id
+                LEFT JOIN user_account submitter ON submitter.id = :user_id
+                WHERE sv.id = :skill_version_id
+                """
+            ),
+            {"skill_version_id": skill_version_id, "user_id": user_id},
+        )
+    ).mappings().one_or_none()
+    if version_row is None:
+        raise ReviewApprovalError("skill_version.not_found", status_code=404)
+    return dict(version_row)
+
+
+async def _assert_can_submit(connection: Any, version_row: dict[str, Any], user_id: str) -> None:
+    platform_roles = await _read_platform_roles(connection, user_id)
+    if str(version_row["owner_id"]) == user_id or platform_roles & PLATFORM_REVIEW_ROLES:
+        return
+    namespace_role = await _read_namespace_role(connection, int(version_row["namespace_id"]), user_id)
+    if not _can_submit(version_row, user_id, namespace_role, platform_roles):
+        raise ReviewApprovalError("review.submit.no_permission", status_code=403)
+
+
+async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[str, Any]:
+    submitted_at = _now(request.now)
+    async with engine.begin() as connection:
+        version_row = await _read_review_submit_context(connection, request.skill_version_id, request.user_id)
+        _assert_namespace_active(version_row)
+        await _assert_can_submit(connection, version_row, request.user_id)
+
+        if str(version_row["version_status"]) not in {"DRAFT", "UPLOADED"}:
+            raise ReviewApprovalError("review.submit.not_draft")
+
+        duplicate_count = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM review_task
+                    WHERE skill_version_id = :skill_version_id
+                      AND status = 'PENDING'
+                    """
+                ),
+                {"skill_version_id": request.skill_version_id},
+            )
+        ).scalar_one()
+        if int(duplicate_count) > 0:
+            raise ReviewApprovalError("review.submit.duplicate")
+
+        updated = (
+            await connection.execute(
+                text(
+                    """
+                    UPDATE skill_version
+                    SET status = :status
+                    WHERE id = :skill_version_id
+                      AND status IN ('DRAFT', 'UPLOADED')
+                    RETURNING 1
+                    """
+                ),
+                {"skill_version_id": request.skill_version_id, "status": "PENDING_REVIEW"},
+            )
+        ).scalar_one()
+        if int(updated) == 0:
+            raise ReviewApprovalError("review.concurrent_update", status_code=409)
+
+        try:
+            task_row = (
+                await connection.execute(
+                    text(
+                        """
+                        INSERT INTO review_task (
+                            skill_version_id, namespace_id, status, version, submitted_by, submitted_at
+                        )
+                        VALUES (
+                            :skill_version_id, :namespace_id, 'PENDING', 1, :submitted_by, :submitted_at
+                        )
+                        RETURNING id, submitted_at
+                        """
+                    ),
+                    {
+                        "skill_version_id": request.skill_version_id,
+                        "namespace_id": int(version_row["namespace_id"]),
+                        "submitted_by": request.user_id,
+                        "submitted_at": submitted_at,
+                    },
+                )
+            ).mappings().one_or_none()
+        except IntegrityError as exc:
+            raise ReviewApprovalError("review.submit.duplicate") from exc
+
+        if task_row is None:
+            raise ReviewApprovalError("review.submit.duplicate")
+        review_task_id = int(task_row["id"])
+        task_submitted_at = task_row["submitted_at"]
+
+        await connection.execute(
+            text(
+                """
+                INSERT INTO audit_log (
+                    actor_user_id, action, target_type, target_id, request_id,
+                    client_ip, user_agent, detail_json, created_at
+                )
+                VALUES (
+                    :actor_user_id, :action, :target_type, :target_id, :request_id,
+                    :client_ip, :user_agent, :detail_json, :created_at
+                )
+                """
+            ),
+            {
+                "actor_user_id": request.user_id,
+                "action": "REVIEW_SUBMIT",
+                "target_type": "REVIEW_TASK",
+                "target_id": review_task_id,
+                "request_id": request.request_id,
+                "client_ip": request.client_ip,
+                "user_agent": request.user_agent,
+                "detail_json": json.dumps({"skillVersionId": int(request.skill_version_id)}, separators=(",", ":")),
+                "created_at": submitted_at,
+            },
+        )
+
+    return _review_submit_response(
+        version_row,
+        review_task_id=review_task_id,
+        submitted_at=task_submitted_at,
+        user_id=request.user_id,
+    )
 
 
 async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[str, Any]:
