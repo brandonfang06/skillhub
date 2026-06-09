@@ -12,6 +12,7 @@ from app.admin.skill import (
     AdminSkillGovernanceInput,
     hide_skill_as_admin,
     unhide_skill_as_admin,
+    yank_skill_version_as_admin,
 )
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
@@ -46,6 +47,13 @@ def _require_super_admin(user: dict[str, object]) -> str:
     roles = {str(role) for role in user.get("platformRoles", [])}
     if "SUPER_ADMIN" not in roles:
         raise HTTPException(status_code=403, detail="error.admin.superAdminRequired")
+    return str(user["userId"])
+
+
+def _require_skill_admin_or_super_admin(user: dict[str, object]) -> str:
+    roles = {str(role) for role in user.get("platformRoles", [])}
+    if roles.isdisjoint({"SKILL_ADMIN", "SUPER_ADMIN"}):
+        raise HTTPException(status_code=403, detail="error.admin.skillAdminRequired")
     return str(user["userId"])
 
 
@@ -104,6 +112,26 @@ async def unhide_skill_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def yank_skill_version_route_data(
+    request: Request,
+    version_id: int,
+    body: AdminSkillActionRequest | None,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    actor_user_id = _require_skill_admin_or_super_admin(await _read_current_user(request, mock_user_id))
+    governance_input = _build_input(request, version_id, actor_user_id, body)
+    writer = getattr(request.app.state, "admin_skill_version_yank_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(governance_input)
+            if writer is not None
+            else yank_skill_version_as_admin(request.app.state.db_engine, governance_input)
+        )
+    except AdminSkillGovernanceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/admin/skills/{skill_id}/hide")
 async def hide_skill(
     request: Request,
@@ -121,3 +149,13 @@ async def unhide_skill(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await unhide_skill_route_data(request, skill_id, x_mock_user_id)
+
+
+@router.post("/api/v1/admin/skills/versions/{version_id}/yank")
+async def yank_skill_version(
+    request: Request,
+    version_id: int,
+    body: AdminSkillActionRequest | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await yank_skill_version_route_data(request, version_id, body, x_mock_user_id)

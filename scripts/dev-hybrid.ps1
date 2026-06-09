@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -11625,6 +11625,22 @@ function ConvertTo-StableAdminSkillMutationContractJson {
     return ($stable | ConvertTo-Json -Depth 50 -Compress)
 }
 
+function ConvertTo-StableAdminVersionMutationContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionIdPresent = ($null -ne $Response.data.versionId)
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
 function Invoke-AdminSkillHideUnhideContractComparison {
     param([string]$ResultFileName = 'admin-skill-hide-unhide-contract-result.json')
 
@@ -11792,6 +11808,212 @@ function Invoke-HybridAdminSkillHideUnhideSmokeVerification {
     }
 }
 
+function Invoke-AdminVersionYankTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_skill_governance.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-AdminVersionYankContractComparison {
+    param([string]$ResultFileName = 'admin-version-yank-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-admin-yank-$suffix"
+    $skillAdminId = "codex-skill-admin-$suffix"
+    $superAdminId = "codex-super-admin-$suffix"
+    $userAdminId = "codex-user-admin-$suffix"
+    $slugs = @(
+        "java-yank-$suffix",
+        "python-yank-$suffix",
+        "proxy-yank-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Admin Yank', 'Admin yank contract', '$skillAdminId', 'PUBLIC', 'ACTIVE', '$skillAdminId', '$skillAdminId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    previous_version_id BIGINT;
+    target_version_id BIGINT;
+    skill_admin_role_id BIGINT;
+    super_admin_role_id BIGINT;
+    user_admin_role_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('$skillAdminId', 'Codex Skill Admin', 'skill-$suffix@example.test', '', 'ACTIVE'),
+        ('$superAdminId', 'Codex Super Admin', 'super-$suffix@example.test', '', 'ACTIVE'),
+        ('$userAdminId', 'Codex User Admin', 'user-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO role (code, name, description, is_system)
+    VALUES
+        ('SKILL_ADMIN', 'Skill Admin', 'Skill administrator', TRUE),
+        ('SUPER_ADMIN', 'Super Admin', 'Super administrator', TRUE),
+        ('USER_ADMIN', 'User Admin', 'User administrator', TRUE)
+    ON CONFLICT (code) DO UPDATE
+    SET name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        is_system = EXCLUDED.is_system;
+
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+    SELECT id INTO user_admin_role_id FROM role WHERE code = 'USER_ADMIN';
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('$skillAdminId', skill_admin_role_id),
+        ('$superAdminId', super_admin_role_id),
+        ('$userAdminId', user_admin_role_id)
+    ON CONFLICT (user_id, role_id) DO NOTHING;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Admin Yank', 'TEAM', 'ACTIVE', '$skillAdminId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PUBLISHED',
+            jsonb_build_object('name', 'Admin Yank', 'description', 'Admin yank contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 100, '2026-06-09T08:00:00Z'::timestamptz, '$skillAdminId',
+            '2026-06-09T07:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+        )
+        RETURNING id INTO previous_version_id;
+
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, published_at, created_by, created_at,
+            bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.1.0', 'PUBLISHED',
+            jsonb_build_object('name', 'Admin Yank', 'description', 'Admin yank contract'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 110, '2026-06-09T09:00:00Z'::timestamptz, '$skillAdminId',
+            '2026-06-09T08:30:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+        )
+        RETURNING id INTO target_version_id;
+
+        UPDATE skill SET latest_version_id = target_version_id WHERE id = skill_row.id;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-YankVersionId([string]$Slug, [string]$Version) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.version = '$Version' LIMIT 1;"
+    }
+    function Get-YankDbState([string]$Slug, [string]$TargetVersionId, [string]$PreviousVersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.status || '|' || sv.download_ready || '|' || (sv.yanked_at IS NOT NULL) || '|' || COALESCE(sv.yanked_by, '') || '|' || COALESCE(sv.yank_reason, '') || '|' || (s.latest_version_id = $PreviousVersionId) || '|' || COALESCE(s.updated_by, '') FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' AND sv.id = $TargetVersionId;"
+    }
+    function Get-YankAudit([string]$VersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL_VERSION' AND target_id = $VersionId AND action = 'YANK_SKILL_VERSION' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $targetVersionIds = @{}
+    $previousVersionIds = @{}
+    foreach ($slug in $slugs) {
+        $previousVersionIds[$slug] = Get-YankVersionId $slug '1.0.0'
+        $targetVersionIds[$slug] = Get-YankVersionId $slug '1.1.0'
+    }
+
+    $java = Invoke-AdminSkillPostJson "$JavaUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[0]])/yank" $skillAdminId @{ reason = 'security' }
+    $python = Invoke-AdminSkillPostJson "$PythonUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[1]])/yank" $skillAdminId @{ reason = 'security' }
+    $proxy = Invoke-AdminSkillPostJson "$WebUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[2]])/yank" $skillAdminId @{ reason = 'security' }
+
+    $userAdminStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[2]])/yank" $userAdminId
+    $unauthenticatedStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/versions/$($targetVersionIds[$slugs[2]])/yank"
+    $missingStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/versions/999999/yank" $skillAdminId
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableAdminVersionMutationContractJson -Response $java
+        python = ConvertTo-StableAdminVersionMutationContractJson -Response $python
+        proxy = ConvertTo-StableAdminVersionMutationContractJson -Response $proxy
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy)
+            javaDbState = ((Get-YankDbState $slugs[0] $targetVersionIds[$slugs[0]] $previousVersionIds[$slugs[0]]) -eq "YANKED|false|true|$skillAdminId|security|true|$skillAdminId")
+            pythonDbState = ((Get-YankDbState $slugs[1] $targetVersionIds[$slugs[1]] $previousVersionIds[$slugs[1]]) -eq "YANKED|false|true|$skillAdminId|security|true|$skillAdminId")
+            proxyDbState = ((Get-YankDbState $slugs[2] $targetVersionIds[$slugs[2]] $previousVersionIds[$slugs[2]]) -eq "YANKED|false|true|$skillAdminId|security|true|$skillAdminId")
+            javaAudit = ((Get-YankAudit $targetVersionIds[$slugs[0]]) -like "YANK_SKILL_VERSION|SKILL_VERSION|$($targetVersionIds[$slugs[0]])|$skillAdminId|*")
+            pythonAudit = ((Get-YankAudit $targetVersionIds[$slugs[1]]) -like "YANK_SKILL_VERSION|SKILL_VERSION|$($targetVersionIds[$slugs[1]])|$skillAdminId|*")
+            proxyAudit = ((Get-YankAudit $targetVersionIds[$slugs[2]]) -like "YANK_SKILL_VERSION|SKILL_VERSION|$($targetVersionIds[$slugs[2]])|$skillAdminId|*")
+            userAdminRejected = ($userAdminStatus -eq 403)
+            unauthenticatedRejected = ($unauthenticatedStatus -eq 401)
+            missingVersionRejected = ($missingStatus -eq 404)
+        }
+        routeBoundaries = [ordered]@{
+            userAdminStatus = $userAdminStatus
+            unauthenticatedStatus = $unauthenticatedStatus
+            missingStatus = $missingStatus
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin version yank contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminVersionYankSmokeVerification {
+    try {
+        Invoke-AdminVersionYankTests
+        Start-Hybrid
+        Invoke-AdminVersionYankContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -11854,6 +12076,7 @@ switch ($Action) {
     'verify-skill-submit-review-smoke' { Invoke-HybridSkillSubmitReviewSmokeVerification }
     'verify-skill-rerelease-smoke' { Invoke-HybridSkillRereleaseSmokeVerification }
     'verify-admin-skill-hide-unhide-smoke' { Invoke-HybridAdminSkillHideUnhideSmokeVerification }
+    'verify-admin-version-yank-smoke' { Invoke-HybridAdminVersionYankSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

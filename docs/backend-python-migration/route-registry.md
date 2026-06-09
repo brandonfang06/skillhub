@@ -114,6 +114,6 @@ deferred routes are still visible.
 | POST | `/api/web/skills/{namespace}/{slug}/submit-review` | python | Frontend submit-review alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/submit-review`. |
 | POST | `/api/v1/admin/skills/{skillId}/hide` | python | Platform-admin skill hide moved to Python. `SUPER_ADMIN` only; sets the hidden overlay, preserves `skill.status`, updates audit fields, and writes `HIDE_SKILL` audit with optional reason detail. |
 | POST | `/api/v1/admin/skills/{skillId}/unhide` | python | Platform-admin skill unhide moved to Python. `SUPER_ADMIN` only; clears the hidden overlay, preserves `skill.status`, updates audit fields, and writes `UNHIDE_SKILL` audit. |
-| POST | `/api/v1/admin/skills/versions/{versionId}/yank` | java | Admin version yank remains Java-owned. It intentionally stays on the `/api` fallback until a separate yank migration milestone owns the route. |
+| POST | `/api/v1/admin/skills/versions/{versionId}/yank` | python | Admin version yank moved to Python. `SKILL_ADMIN` or `SUPER_ADMIN` can yank only `PUBLISHED` versions, recalculate the skill latest pointer when needed, disable downloads, and write `YANK_SKILL_VERSION` audit. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

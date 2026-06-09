@@ -194,6 +194,7 @@ Still plan carefully when a group requires:
 | 60 | `POST /api/v1/skills/{namespace}/{slug}/submit-review`, `POST /api/web/skills/{namespace}/{slug}/submit-review` | python | Portal submit-review ownership moved to Python. Owner or namespace manager can move `UPLOADED`/`DRAFT` versions to `PENDING_REVIEW`, persist target visibility, create pending review tasks, and write `SUBMIT_REVIEW` audit. |
 | 61 | `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease`, `POST /api/web/skills/{namespace}/{slug}/versions/{version}/rerelease` | python | Portal rerelease ownership moved to Python. Owner or namespace manager can rebuild a target version from a published source version, rewrite `SKILL.md` version, reuse publish orchestration, and write `RERELEASE_SKILL_VERSION` audit. |
 | 62 | `POST /api/v1/admin/skills/{skillId}/hide`, `POST /api/v1/admin/skills/{skillId}/unhide` | python | Platform-admin skill hide/unhide ownership moved to Python. `SUPER_ADMIN` can toggle the hidden overlay without changing `skill.status`, update audit fields, and write Java-compatible `HIDE_SKILL`/`UNHIDE_SKILL` audit logs. Admin version yank remains Java-owned. |
+| 63 | `POST /api/v1/admin/skills/versions/{versionId}/yank` | python | Admin version yank ownership moved to Python. `SKILL_ADMIN` or `SUPER_ADMIN` can yank a `PUBLISHED` version, set yanked fields, disable download readiness, recalculate `skill.latest_version_id` when the yanked version was latest, and write `YANK_SKILL_VERSION` audit. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1222,8 +1223,10 @@ Group E has started with review lifecycle write ownership:
 - Completed: platform-admin skill hide/unhide APIs:
   `POST /api/v1/admin/skills/{skillId}/hide` and
   `POST /api/v1/admin/skills/{skillId}/unhide`.
-- Still Java-owned: admin version yank and broader
-  post-publish lifecycle/governance actions.
+- Completed: admin version yank API:
+  `POST /api/v1/admin/skills/versions/{versionId}/yank`.
+- Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
+  portal review/promotion/skill lifecycle and admin skill governance routes.
 
 Recommended next choice:
 

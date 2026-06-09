@@ -205,6 +205,11 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/skills\/versions\/\d+\/yank(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
     pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/archive(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

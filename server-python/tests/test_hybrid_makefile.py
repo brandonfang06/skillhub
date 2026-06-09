@@ -126,6 +126,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-skill-submit-review-smoke" in script
     assert "verify-skill-rerelease-smoke" in script
     assert "verify-admin-skill-hide-unhide-smoke" in script
+    assert "verify-admin-version-yank-smoke" in script
     assert "submitReviewBoundaryStillPythonOwned" in script
     assert "confirmPublishBoundaryStillPythonOwned" in script
     assert "Invoke-LabelsContractComparison" in script
@@ -216,6 +217,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-SkillRereleaseContractComparison" in script
     assert "Invoke-AdminSkillHideUnhideTests" in script
     assert "Invoke-AdminSkillHideUnhideContractComparison" in script
+    assert "Invoke-AdminVersionYankTests" in script
+    assert "Invoke-AdminVersionYankContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
     assert "consume_scan_task_fixture.py" in script
@@ -278,6 +281,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "skill-submit-review-contract-result.json" in script
     assert "skill-rerelease-contract-result.json" in script
     assert "admin-skill-hide-unhide-contract-result.json" in script
+    assert "admin-version-yank-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script

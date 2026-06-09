@@ -12,19 +12,24 @@ from app.admin.skill import (
     AdminSkillGovernanceInput,
     hide_skill_as_admin,
     unhide_skill_as_admin,
+    yank_skill_version_as_admin,
 )
 from app.main import create_app
 
 
 class FakeResult:
-    def __init__(self, row: dict[str, Any] | None = None) -> None:
+    def __init__(self, row: dict[str, Any] | None = None, rows: list[dict[str, Any]] | None = None) -> None:
         self.row = row
+        self.rows = rows or ([] if row is None else [row])
 
     def mappings(self) -> "FakeResult":
         return self
 
     def one_or_none(self) -> dict[str, Any] | None:
         return self.row
+
+    def all(self) -> list[dict[str, Any]]:
+        return self.rows
 
 
 class FakeTransaction:
@@ -47,9 +52,18 @@ class FakeEngine:
 
 
 class FakeAdminSkillConnection:
-    def __init__(self, *, skill_status: str = "ACTIVE", missing_skill: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        skill_status: str = "ACTIVE",
+        missing_skill: bool = False,
+        version_row: dict[str, Any] | None = None,
+        latest_published_rows: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.skill_status = skill_status
         self.missing_skill = missing_skill
+        self.version_row = version_row
+        self.latest_published_rows = latest_published_rows or []
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -63,7 +77,13 @@ class FakeAdminSkillConnection:
             if self.missing_skill:
                 return FakeResult()
             return FakeResult({"skill_id": 10, "status": self.skill_status})
+        if "FROM skill_version" in sql and "WHERE sv.id = :version_id" in sql:
+            return FakeResult(self.version_row)
+        if "FROM skill_version" in sql and "status = 'PUBLISHED'" in sql:
+            return FakeResult(rows=self.latest_published_rows)
         if "UPDATE skill" in sql:
+            return FakeResult()
+        if "UPDATE skill_version" in sql:
             return FakeResult()
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
@@ -82,6 +102,18 @@ def admin_input(**overrides: Any) -> AdminSkillGovernanceInput:
     }
     data.update(overrides)
     return AdminSkillGovernanceInput(**data)
+
+
+def published_version_row(**overrides: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "version_id": 501,
+        "skill_id": 10,
+        "version": "1.2.0",
+        "status": "PUBLISHED",
+        "latest_version_id": 501,
+    }
+    row.update(overrides)
+    return row
 
 
 @pytest.mark.anyio
@@ -129,6 +161,57 @@ async def test_admin_skill_governance_raises_not_found_before_mutation() -> None
 
     assert exc_info.value.status_code == 404
     assert not any("UPDATE skill" in sql for sql in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_yank_skill_version_as_admin_yanks_published_latest_and_recalculates_pointer() -> None:
+    connection = FakeAdminSkillConnection(
+        version_row=published_version_row(),
+        latest_published_rows=[{"version_id": 410}],
+    )
+
+    response = await yank_skill_version_as_admin(FakeEngine(connection), admin_input(skill_id=501, reason="security"))
+
+    assert response == {"skillId": 10, "versionId": 501, "action": "YANK", "status": "YANKED"}
+    version_update_index = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill_version" in sql)
+    skill_update_index = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill\n" in sql)
+    audit_index = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    assert version_update_index < skill_update_index < audit_index
+    assert connection.params[version_update_index]["status"] == "YANKED"
+    assert connection.params[version_update_index]["yanked_at"] == datetime(2026, 6, 9, 17, 30, tzinfo=UTC)
+    assert connection.params[version_update_index]["yanked_by"] == "admin"
+    assert connection.params[version_update_index]["yank_reason"] == "security"
+    assert connection.params[version_update_index]["download_ready"] is False
+    assert connection.params[skill_update_index]["latest_version_id"] == 410
+    assert connection.params[skill_update_index]["updated_by"] == "admin"
+    assert connection.params[audit_index]["action"] == "YANK_SKILL_VERSION"
+    assert connection.params[audit_index]["target_type"] == "SKILL_VERSION"
+    assert connection.params[audit_index]["target_id"] == 501
+    assert json.loads(connection.params[audit_index]["detail_json"]) == {"reason": "security"}
+
+
+@pytest.mark.anyio
+async def test_yank_skill_version_as_admin_does_not_recalculate_when_not_latest() -> None:
+    connection = FakeAdminSkillConnection(version_row=published_version_row(latest_version_id=777))
+
+    response = await yank_skill_version_as_admin(FakeEngine(connection), admin_input(skill_id=501, reason=None))
+
+    assert response["status"] == "YANKED"
+    assert not any("UPDATE skill\n" in sql for sql in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_yank_skill_version_as_admin_rejects_missing_or_non_published_version() -> None:
+    missing_connection = FakeAdminSkillConnection(version_row=None)
+    with pytest.raises(AdminSkillGovernanceError, match="error.skill.version.notFound") as missing_exc:
+        await yank_skill_version_as_admin(FakeEngine(missing_connection), admin_input(skill_id=501))
+    assert missing_exc.value.status_code == 404
+
+    draft_connection = FakeAdminSkillConnection(version_row=published_version_row(status="UPLOADED"))
+    with pytest.raises(AdminSkillGovernanceError, match="error.skill.version.notPublished") as draft_exc:
+        await yank_skill_version_as_admin(FakeEngine(draft_connection), admin_input(skill_id=501))
+    assert draft_exc.value.status_code == 400
+    assert not any("UPDATE skill_version" in sql for sql in draft_connection.statements)
 
 
 def auth_user(roles: list[str] | None = None) -> dict[str, object]:
@@ -180,6 +263,33 @@ def test_admin_hide_unhide_routes_require_super_admin_and_return_java_envelopes(
     assert seen[1].reason is None
 
 
+def test_admin_yank_route_allows_skill_admin_and_returns_java_envelope() -> None:
+    app = create_app()
+    seen: list[AdminSkillGovernanceInput] = []
+    app.state.auth_me_reader = lambda user_id: auth_user(["SKILL_ADMIN"])
+
+    async def yanker(governance_input: AdminSkillGovernanceInput) -> dict[str, object]:
+        seen.append(governance_input)
+        return {"skillId": 10, "versionId": 501, "action": "YANK", "status": "YANKED"}
+
+    app.state.admin_skill_version_yank_writer = yanker
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/admin/skills/versions/501/yank",
+        json={"reason": "security"},
+        headers={"X-Mock-User-Id": "skill-admin", "X-Request-Id": "admin-yank-test"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == 0
+    assert response.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert response.json()["requestId"] == "admin-yank-test"
+    assert response.json()["data"] == {"skillId": 10, "versionId": 501, "action": "YANK", "status": "YANKED"}
+    assert seen[0].skill_id == 501
+    assert seen[0].reason == "security"
+
+
 def test_admin_hide_unhide_routes_reject_missing_or_non_super_admin_user() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(["SKILL_ADMIN"])
@@ -194,4 +304,17 @@ def test_admin_hide_unhide_routes_reject_missing_or_non_super_admin_user() -> No
     assert client.post(
         "/api/v1/admin/skills/10/unhide",
         headers={"X-Mock-User-Id": "skill-admin"},
+    ).status_code == 403
+
+
+def test_admin_yank_route_rejects_missing_or_unrelated_role_user() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["USER_ADMIN"])
+    client = TestClient(app)
+
+    assert client.post("/api/v1/admin/skills/versions/501/yank", json={"reason": "security"}).status_code == 401
+    assert client.post(
+        "/api/v1/admin/skills/versions/501/yank",
+        json={"reason": "security"},
+        headers={"X-Mock-User-Id": "user-admin"},
     ).status_code == 403
