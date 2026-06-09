@@ -268,7 +268,12 @@ describe('Vite dev proxy route ownership', () => {
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/confirm-publish'),
     ).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/101/hide')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/101/hide')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/101/unhide')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/versions/501/yank')).toBeUndefined()
 
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/archive')).toBe(

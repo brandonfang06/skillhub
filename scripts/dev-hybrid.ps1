@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -11560,6 +11560,238 @@ function Invoke-HybridSkillRereleaseSmokeVerification {
     }
 }
 
+function Invoke-AdminSkillHideUnhideTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_skill_governance.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-AdminSkillPostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [hashtable]$Body = @{}
+    )
+
+    $json = $Body | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $json
+}
+
+function Invoke-AdminSkillStatus {
+    param(
+        [string]$Url,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    try {
+        Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body '{}' | Out-Null
+        return 200
+    } catch [System.Net.WebException] {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableAdminSkillMutationContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionId = $Response.data.versionId
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-AdminSkillHideUnhideContractComparison {
+    param([string]$ResultFileName = 'admin-skill-hide-unhide-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-admin-skill-$suffix"
+    $superAdminId = "codex-super-admin-$suffix"
+    $skillAdminId = "codex-skill-admin-$suffix"
+    $hideSlugs = @(
+        "java-hide-$suffix",
+        "python-hide-$suffix",
+        "proxy-hide-$suffix"
+    )
+    $unhideSlugs = @(
+        "java-unhide-$suffix",
+        "python-unhide-$suffix",
+        "proxy-unhide-$suffix"
+    )
+    $hideValuesSql = ($hideSlugs | ForEach-Object { "(ns_id, '$($_)', 'Admin Hide', 'Admin hide contract', '$superAdminId', 'PUBLIC', 'ACTIVE', '$superAdminId', '$superAdminId', FALSE)" }) -join ",`n        "
+    $unhideValuesSql = ($unhideSlugs | ForEach-Object { "(ns_id, '$($_)', 'Admin Unhide', 'Admin unhide contract', '$superAdminId', 'PUBLIC', 'ACTIVE', '$superAdminId', '$superAdminId', TRUE)" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    super_admin_role_id BIGINT;
+    skill_admin_role_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('$superAdminId', 'Codex Super Admin', 'super-$suffix@example.test', '', 'ACTIVE'),
+        ('$skillAdminId', 'Codex Skill Admin', 'skill-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO role (code, name, description, is_system)
+    VALUES
+        ('SUPER_ADMIN', 'Super Admin', 'Super administrator', TRUE),
+        ('SKILL_ADMIN', 'Skill Admin', 'Skill administrator', TRUE)
+    ON CONFLICT (code) DO UPDATE
+    SET name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        is_system = EXCLUDED.is_system;
+
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('$superAdminId', super_admin_role_id),
+        ('$skillAdminId', skill_admin_role_id)
+    ON CONFLICT (user_id, role_id) DO NOTHING;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Admin Skill', 'TEAM', 'ACTIVE', '$superAdminId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by, hidden)
+    VALUES
+        $hideValuesSql,
+        $unhideValuesSql;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-AdminSkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-AdminSkillHiddenState([string]$SkillId) {
+        return Invoke-PostgresScalar -Sql "SELECT hidden || '|' || COALESCE(hidden_by, '') || '|' || (hidden_at IS NOT NULL) || '|' || COALESCE(updated_by, '') || '|' || status FROM skill WHERE id = $SkillId;"
+    }
+    function Get-AdminSkillAudit([string]$SkillId, [string]$Action) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL' AND target_id = $SkillId AND action = '$Action' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $hideIds = @{}
+    $unhideIds = @{}
+    foreach ($slug in $hideSlugs) {
+        $hideIds[$slug] = Get-AdminSkillId $slug
+    }
+    foreach ($slug in $unhideSlugs) {
+        $unhideIds[$slug] = Get-AdminSkillId $slug
+    }
+
+    $javaHide = Invoke-AdminSkillPostJson "$JavaUrl/api/v1/admin/skills/$($hideIds[$hideSlugs[0]])/hide" $superAdminId @{ reason = 'policy' }
+    $pythonHide = Invoke-AdminSkillPostJson "$PythonUrl/api/v1/admin/skills/$($hideIds[$hideSlugs[1]])/hide" $superAdminId @{ reason = 'policy' }
+    $proxyHide = Invoke-AdminSkillPostJson "$WebUrl/api/v1/admin/skills/$($hideIds[$hideSlugs[2]])/hide" $superAdminId @{ reason = 'policy' }
+
+    $javaUnhide = Invoke-AdminSkillPostJson "$JavaUrl/api/v1/admin/skills/$($unhideIds[$unhideSlugs[0]])/unhide" $superAdminId
+    $pythonUnhide = Invoke-AdminSkillPostJson "$PythonUrl/api/v1/admin/skills/$($unhideIds[$unhideSlugs[1]])/unhide" $superAdminId
+    $proxyUnhide = Invoke-AdminSkillPostJson "$WebUrl/api/v1/admin/skills/$($unhideIds[$unhideSlugs[2]])/unhide" $superAdminId
+
+    $skillAdminHideStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/$($hideIds[$hideSlugs[2]])/hide" $skillAdminId
+    $unauthenticatedHideStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/$($hideIds[$hideSlugs[2]])/hide"
+    $yankJavaStatus = Invoke-AdminSkillStatus "$JavaUrl/api/v1/admin/skills/versions/999999/yank" $superAdminId
+    $yankProxyStatus = Invoke-AdminSkillStatus "$WebUrl/api/v1/admin/skills/versions/999999/yank" $superAdminId
+
+    $stableHide = [ordered]@{
+        java = ConvertTo-StableAdminSkillMutationContractJson -Response $javaHide
+        python = ConvertTo-StableAdminSkillMutationContractJson -Response $pythonHide
+        proxy = ConvertTo-StableAdminSkillMutationContractJson -Response $proxyHide
+    }
+    $stableUnhide = [ordered]@{
+        java = ConvertTo-StableAdminSkillMutationContractJson -Response $javaUnhide
+        python = ConvertTo-StableAdminSkillMutationContractJson -Response $pythonUnhide
+        proxy = ConvertTo-StableAdminSkillMutationContractJson -Response $proxyUnhide
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            hideResponsesMatch = ($stableHide.java -eq $stableHide.python -and $stableHide.python -eq $stableHide.proxy)
+            unhideResponsesMatch = ($stableUnhide.java -eq $stableUnhide.python -and $stableUnhide.python -eq $stableUnhide.proxy)
+            hideDbState = ((Get-AdminSkillHiddenState $hideIds[$hideSlugs[0]]) -eq "true|$superAdminId|true|$superAdminId|ACTIVE" -and (Get-AdminSkillHiddenState $hideIds[$hideSlugs[1]]) -eq "true|$superAdminId|true|$superAdminId|ACTIVE" -and (Get-AdminSkillHiddenState $hideIds[$hideSlugs[2]]) -eq "true|$superAdminId|true|$superAdminId|ACTIVE")
+            unhideDbState = ((Get-AdminSkillHiddenState $unhideIds[$unhideSlugs[0]]) -eq "false||false|$superAdminId|ACTIVE" -and (Get-AdminSkillHiddenState $unhideIds[$unhideSlugs[1]]) -eq "false||false|$superAdminId|ACTIVE" -and (Get-AdminSkillHiddenState $unhideIds[$unhideSlugs[2]]) -eq "false||false|$superAdminId|ACTIVE")
+            hideAudit = ((Get-AdminSkillAudit $hideIds[$hideSlugs[0]] 'HIDE_SKILL') -like "HIDE_SKILL|SKILL|$($hideIds[$hideSlugs[0]])|$superAdminId|*" -and (Get-AdminSkillAudit $hideIds[$hideSlugs[1]] 'HIDE_SKILL') -like "HIDE_SKILL|SKILL|$($hideIds[$hideSlugs[1]])|$superAdminId|*" -and (Get-AdminSkillAudit $hideIds[$hideSlugs[2]] 'HIDE_SKILL') -like "HIDE_SKILL|SKILL|$($hideIds[$hideSlugs[2]])|$superAdminId|*")
+            unhideAudit = ((Get-AdminSkillAudit $unhideIds[$unhideSlugs[0]] 'UNHIDE_SKILL') -eq "UNHIDE_SKILL|SKILL|$($unhideIds[$unhideSlugs[0]])|$superAdminId|" -and (Get-AdminSkillAudit $unhideIds[$unhideSlugs[1]] 'UNHIDE_SKILL') -eq "UNHIDE_SKILL|SKILL|$($unhideIds[$unhideSlugs[1]])|$superAdminId|" -and (Get-AdminSkillAudit $unhideIds[$unhideSlugs[2]] 'UNHIDE_SKILL') -eq "UNHIDE_SKILL|SKILL|$($unhideIds[$unhideSlugs[2]])|$superAdminId|")
+            skillAdminRejected = ($skillAdminHideStatus -eq 403)
+            unauthenticatedRejected = ($unauthenticatedHideStatus -eq 401)
+            yankStillJavaOwned = ($yankJavaStatus -eq $yankProxyStatus)
+        }
+        routeBoundaries = [ordered]@{
+            skillAdminHideStatus = $skillAdminHideStatus
+            unauthenticatedHideStatus = $unauthenticatedHideStatus
+            yankJavaStatus = $yankJavaStatus
+            yankProxyStatus = $yankProxyStatus
+        }
+        stableHide = $stableHide
+        stableUnhide = $stableUnhide
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin skill hide/unhide contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminSkillHideUnhideSmokeVerification {
+    try {
+        Invoke-AdminSkillHideUnhideTests
+        Start-Hybrid
+        Invoke-AdminSkillHideUnhideContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -11621,6 +11853,7 @@ switch ($Action) {
     'verify-skill-confirm-publish-smoke' { Invoke-HybridSkillConfirmPublishSmokeVerification }
     'verify-skill-submit-review-smoke' { Invoke-HybridSkillSubmitReviewSmokeVerification }
     'verify-skill-rerelease-smoke' { Invoke-HybridSkillRereleaseSmokeVerification }
+    'verify-admin-skill-hide-unhide-smoke' { Invoke-HybridAdminSkillHideUnhideSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
