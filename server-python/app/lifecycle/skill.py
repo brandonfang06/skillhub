@@ -16,6 +16,7 @@ from app.publish.replacement import (
 
 LIFECYCLE_NAMESPACE_ROLES = {"OWNER", "ADMIN"}
 DELETABLE_VERSION_STATUSES = {"DRAFT", "REJECTED", "SCAN_FAILED", "UPLOADED"}
+CONFIRM_PUBLISH_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,18 @@ class SkillVersionDeleteInput:
 
 @dataclass(frozen=True)
 class SkillVersionWithdrawReviewInput:
+    namespace: str
+    slug: str
+    version: str
+    user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class SkillConfirmPublishInput:
     namespace: str
     slug: str
     version: str
@@ -92,6 +105,7 @@ async def _read_skill_context(connection: Any, namespace: str, slug: str) -> dic
                        s.namespace_id,
                        s.slug AS skill_slug,
                        s.owner_id,
+                       s.visibility,
                        s.status,
                        s.latest_version_id,
                        n.slug AS namespace_slug,
@@ -502,6 +516,67 @@ async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdr
         )
 
     return {"skillId": skill_id, "versionId": version_id, "action": "WITHDRAW_REVIEW", "status": "UPLOADED"}
+
+
+async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublishInput) -> dict[str, Any]:
+    timestamp = _now(request.now)
+    async with engine.begin() as connection:
+        skill = await _read_skill_context(connection, request.namespace, request.slug)
+        namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
+        _assert_can_manage(skill, request.user_id, namespace_role)
+
+        if str(skill.get("visibility")) != "PRIVATE":
+            raise SkillLifecycleError("error.skill.confirm.notPrivate")
+
+        skill_id = int(skill["skill_id"])
+        version = await _read_version(connection, skill_id, request.version)
+        version_id = int(version["version_id"])
+        version_name = str(version["version"])
+        if str(version["status"]) not in CONFIRM_PUBLISH_VERSION_STATUSES:
+            raise SkillLifecycleError("error.skill.version.confirm.notUploaded")
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_version
+                SET status = :status,
+                    published_at = :published_at
+                WHERE id = :version_id
+                """
+            ),
+            {"status": "PUBLISHED", "published_at": timestamp, "version_id": version_id},
+        )
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET latest_version_id = :latest_version_id,
+                    updated_by = :updated_by,
+                    updated_at = :updated_at
+                WHERE id = :skill_id
+                """
+            ),
+            {
+                "latest_version_id": version_id,
+                "updated_by": request.user_id,
+                "updated_at": timestamp,
+                "skill_id": skill_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="CONFIRM_PUBLISH",
+            target_type="SKILL_VERSION",
+            target_id=version_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps({"version": version_name}, separators=(",", ":")),
+            created_at=timestamp,
+        )
+
+    return {"skillId": skill_id, "versionId": version_id, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}
 
 
 async def cleanup_deleted_version_storage(engine: Any, storage_base_path: str, result: SkillVersionDeleteResult) -> None:

@@ -10,11 +10,13 @@ from pydantic import BaseModel
 from app.core.response import ok
 from app.lifecycle.skill import (
     SkillArchiveInput,
+    SkillConfirmPublishInput,
     SkillLifecycleError,
     SkillVersionDeleteInput,
     SkillVersionWithdrawReviewInput,
     archive_skill as archive_skill_workflow,
     cleanup_deleted_version_storage,
+    confirm_publish_skill_version,
     delete_skill_version,
     unarchive_skill as unarchive_skill_workflow,
     withdraw_skill_version_review,
@@ -26,6 +28,10 @@ router = APIRouter()
 
 class SkillArchiveRequest(BaseModel):
     reason: str | None = None
+
+
+class SkillConfirmPublishRequest(BaseModel):
+    version: str
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -160,6 +166,35 @@ async def withdraw_skill_version_review_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def confirm_publish_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillConfirmPublishRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    confirm_input = SkillConfirmPublishInput(
+        namespace=namespace,
+        slug=slug,
+        version=body.version,
+        user_id=user_id,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_confirm_publish_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(confirm_input)
+            if writer is not None
+            else confirm_publish_skill_version(request.app.state.db_engine, confirm_input)
+        )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")
 async def archive_skill_v1(
     request: Request,
@@ -244,3 +279,25 @@ async def withdraw_skill_version_review_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await withdraw_skill_version_review_route_data(request, namespace, slug, version, x_mock_user_id)
+
+
+@router.post("/api/v1/skills/{namespace}/{slug}/confirm-publish")
+async def confirm_publish_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillConfirmPublishRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await confirm_publish_route_data(request, namespace, slug, body, x_mock_user_id)
+
+
+@router.post("/api/web/skills/{namespace}/{slug}/confirm-publish")
+async def confirm_publish_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillConfirmPublishRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await confirm_publish_route_data(request, namespace, slug, body, x_mock_user_id)

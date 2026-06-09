@@ -190,6 +190,7 @@ Still plan carefully when a group requires:
 | 56 | `POST /api/v1/skills/{namespace}/{slug}/archive`, `POST /api/web/skills/{namespace}/{slug}/archive`, `POST /api/v1/skills/{namespace}/{slug}/unarchive`, `POST /api/web/skills/{namespace}/{slug}/unarchive` | python | Portal skill archive/unarchive ownership moved to Python. Owner or namespace manager toggles `skill.status`, updates `updated_by`, and writes Java-compatible lifecycle audit logs. Version delete, rerelease, submit-review, confirm-publish, admin hide/unhide, and yank remained Java-owned at this milestone. |
 | 57 | `DELETE /api/v1/skills/{namespace}/{slug}/versions/{version}`, `DELETE /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Portal version delete ownership moved to Python. Deletes allowed non-published statuses, clears file metadata, soft-deletes security audit rows, recalculates latest published pointer, writes `DELETE_SKILL_VERSION` audit, deletes local storage with compensation, and resolves the observed Vite DELETE version proxy boundary by making the route Python-owned. |
 | 58 | `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review`, `POST /api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Portal version withdraw-review ownership moved to Python. The pending review task submitter can delete the pending task, reopen the version to `UPLOADED`, update `skill.updated_by`, and write `REVIEW_WITHDRAW` audit. |
+| 59 | `POST /api/v1/skills/{namespace}/{slug}/confirm-publish`, `POST /api/web/skills/{namespace}/{slug}/confirm-publish` | python | Portal confirm-publish ownership moved to Python. Owner or namespace manager can directly publish PRIVATE `UPLOADED`/`DRAFT` versions, update `published_at`, skill latest pointer, `updated_by`, and write `CONFIRM_PUBLISH` audit. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1206,7 +1207,10 @@ Group E has started with review lifecycle write ownership:
 - Completed: portal version withdraw-review APIs:
   `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` and
   `POST /api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review`.
-- Still Java-owned: rerelease, submit-review, confirm-publish, admin hide/unhide,
+- Completed: portal confirm-publish APIs:
+  `POST /api/v1/skills/{namespace}/{slug}/confirm-publish` and
+  `POST /api/web/skills/{namespace}/{slug}/confirm-publish`.
+- Still Java-owned: rerelease, submit-review, admin hide/unhide,
   yank, and broader post-publish lifecycle/governance actions.
 
 Recommended next choice:

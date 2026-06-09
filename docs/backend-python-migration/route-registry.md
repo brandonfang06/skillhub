@@ -106,5 +106,7 @@ deferred routes are still visible.
 | DELETE | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend version delete alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/versions/{version}`. |
 | POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Portal version withdraw-review moved to Python. Only the pending review task submitter can withdraw; the route deletes the pending task, moves the version back to `UPLOADED`, updates `skill.updated_by`, and writes `REVIEW_WITHDRAW` audit. |
 | POST | `/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Frontend version withdraw-review alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review`. |
+| POST | `/api/v1/skills/{namespace}/{slug}/confirm-publish` | python | Portal confirm-publish moved to Python. Owner or namespace `OWNER`/`ADMIN` can publish a PRIVATE `UPLOADED`/`DRAFT` version directly, set `published_at`, update `skill.latest_version_id`/`updated_by`, and write `CONFIRM_PUBLISH` audit. |
+| POST | `/api/web/skills/{namespace}/{slug}/confirm-publish` | python | Frontend confirm-publish alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/confirm-publish`. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

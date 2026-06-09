@@ -233,6 +233,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/versions\/[^/?]+\/withdraw-review(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/confirm-publish(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/confirm-publish(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
 ]
 
 export function resolveMethodAwareProxyTarget(
