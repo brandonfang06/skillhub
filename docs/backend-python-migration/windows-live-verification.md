@@ -1456,3 +1456,22 @@ The 2026-06-09 run found and fixed a Windows local-storage metadata parity issue
 `Files.probeContentType(.zip)` returns `application/x-zip-compressed` for prebuilt bundle objects.
 Python now uses local mimetype probing for prebuilt review bundles while fallback zips keep
 `application/zip`.
+
+## Promotion Read Live Gate
+
+For the migrated promotion read routes, use:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-promotion-read-smoke
+```
+
+This gate:
+
+- runs Python promotion read regressions plus Vite proxy ownership tests;
+- starts Java `8080`, Python `8081`, Vite `3000`, and Docker dependency services;
+- compares Java direct, Python direct, Vite `/api/v1`, and Vite `/api/web` responses for
+  promotion list, pending list, and detail read paths;
+- verifies unauthenticated requests are rejected with HTTP 401;
+- checks that promotion `POST` submit/approve/reject paths still fall through to Java;
+- runs Playwright smoke E2E;
+- stops the hybrid stack after verification.

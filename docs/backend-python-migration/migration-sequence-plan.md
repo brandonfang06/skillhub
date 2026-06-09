@@ -184,6 +184,7 @@ Still plan carefully when a group requires:
 | 50 | `GET /api/v1/reviews/{id}/skill-detail`, `GET /api/web/reviews/{id}/skill-detail` | python | Review-bound skill detail read ownership moved to Python. The route uses the task's active skill version, Java lifecycle version ordering, storage-backed README/SKILL documentation, and keeps review file/download Java-owned. |
 | 51 | `GET /api/v1/reviews/{id}/file`, `GET /api/web/reviews/{id}/file` | python | Review-bound single-file content moved to Python. The route validates Java-invalid paths, returns raw octet-stream bytes from the review task's active version, and keeps review download Java-owned. |
 | 52 | `GET /api/v1/reviews/{id}/download`, `GET /api/web/reviews/{id}/download` | python | Review-bound package download moved to Python. The route streams the review task's active version prebuilt bundle or fallback zip, preserves attachment headers/content length, and does not increment public download counters. |
+| 53 | `GET /api/v1/promotions`, `GET /api/web/promotions`, `GET /api/v1/promotions/pending`, `GET /api/web/promotions/pending`, `GET /api/v1/promotions/{id}`, `GET /api/web/promotions/{id}` | python | Promotion read ownership moved to Python. List/pending require platform review role; detail allows submitter or platform review role. Promotion submit/approve/reject remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1178,13 +1179,17 @@ Group E has started with review lifecycle write ownership:
   `GET /api/web/reviews/{id}/file`.
 - Completed: `GET /api/v1/reviews/{id}/download` and
   `GET /api/web/reviews/{id}/download`.
-- Still Java-owned: promotion review APIs and
+- Completed: promotion read APIs:
+  `GET /api/v1/promotions`, `GET /api/web/promotions`,
+  `GET /api/v1/promotions/pending`, `GET /api/web/promotions/pending`,
+  `GET /api/v1/promotions/{id}`, and `GET /api/web/promotions/{id}`.
+- Still Java-owned: promotion submit/approve/reject APIs and
   post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with promotion review APIs, or switch to the next migration group if promotion
-  review parity needs a separate planning pass.
+- Continue Group E with promotion submit/approve/reject write APIs, or switch to the next
+  migration group if promotion write/materialization parity needs a separate planning pass.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 
