@@ -127,5 +127,9 @@ deferred routes are still visible.
 | PUT | `/api/web/skills/{skillId}/subscription` | python | Frontend alias for authenticated idempotent subscribe action. |
 | DELETE | `/api/v1/skills/{skillId}/subscription` | java | Unsubscribe remains Java-owned/deferred. Live Java v1 security currently returns 403 for a normal local mock user through the broader `DELETE /api/v1/skills/*/*` policy. |
 | DELETE | `/api/web/skills/{skillId}/subscription` | java | Web unsubscribe remains Java-owned through the Vite fallback and should move later with the broader social/security cleanup. |
+| GET | `/api/v1/skills/{skillId}/rating` | python | Authenticated viewer rating-state read moved to Python. Returns Java-compatible `{ score, rated }`. |
+| GET | `/api/web/skills/{skillId}/rating` | python | Frontend alias for authenticated viewer rating-state read. |
+| PUT | `/api/v1/skills/{skillId}/rating` | python | Authenticated rating create/update moved to Python. Validates score 1..5, upserts `skill_rating`, and refreshes `skill.rating_avg` / `skill.rating_count`. |
+| PUT | `/api/web/skills/{skillId}/rating` | python | Frontend alias for authenticated rating create/update. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |
