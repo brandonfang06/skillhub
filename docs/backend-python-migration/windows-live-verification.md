@@ -1083,6 +1083,23 @@ This gate verifies:
 - `DELETE /api/v1/skills/{canonicalSlug}` and
   `POST /api/v1/skills/{canonicalSlug}/undelete` still follow Java fallback behavior.
 
+### Publish Scanner Result Processing Gate
+
+Run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-scanner-result-processing-smoke
+```
+
+This gate verifies:
+
+- Python can apply normalized scanner results to live PostgreSQL rows.
+- Latest active `security_audit` is updated with scan id, verdict, safety flag, findings count,
+  max severity, findings JSON, duration, and scanned timestamp.
+- Public `SCANNING` versions move to `PENDING_REVIEW`.
+- Private `SCANNING` versions move to `UPLOADED`.
+- Redis stream consumption and scanner HTTP calls remain out of scope for this gate.
+
 ## Shutdown
 
 ```powershell

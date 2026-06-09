@@ -171,6 +171,7 @@ Still plan carefully when a group requires:
 | 37 | `POST /api/cli/v1/skills/{namespace}/publish` | python | CLI publish write ownership moved through Vite after repeated proxy publish matrix covered replacement, pending-review auto-withdraw, Java-owned portal/root route boundaries, and scanner result boundary documentation. |
 | 38 | `POST /api/v1/skills/{namespace}/publish`, `POST /api/web/skills/{namespace}/publish` | python | Portal publish write aliases moved through Vite and reuse the Python publish service path. Root ClawHub and legacy publish remain Java-owned. |
 | 39 | `POST /api/v1/skills`, `POST /api/v1/publish` | python | Root ClawHub payload/files publish and legacy zip+namespace publish moved through Vite. Both return plain ClawHub `{ ok, skillId, versionId }`; delete/undelete remain Java-owned. |
+| 40 | Publish scanner result processing foundation | n/a | Python can apply normalized scanner results to the latest active security audit and Java-compatible `SCANNING` status transitions. Redis consumer/worker remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1134,18 +1135,19 @@ When this plan changes:
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
 the current pre-launch publish work. Group D publish foundations are complete through root,
-legacy, CLI, and portal publish write ownership:
+legacy, CLI, and portal publish write ownership plus scanner result application:
 
 - `POST /api/cli/v1/skills/{namespace}/publish`
 - `POST /api/v1/skills/{namespace}/publish`
 - `POST /api/web/skills/{namespace}/publish`
 - `POST /api/v1/skills`
 - `POST /api/v1/publish`
+- normalized scanner result -> `security_audit` update and `SCANNING` status transition
 
 Next decision point:
 
-- Plan scanner result processing if the next priority is completing asynchronous scan lifecycle
-  status updates after Redis handoff.
+- Plan Python Redis scan task consumer / worker processing if the next priority is completing
+  asynchronous scan lifecycle updates after Redis handoff.
 - Plan lifecycle/governance mutations if the next priority is enabling review/approval and
   post-publish state transitions in Python.
 
