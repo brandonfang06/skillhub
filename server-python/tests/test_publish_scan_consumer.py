@@ -1,0 +1,266 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import pytest
+
+from app.publish.scan_consumer import (
+    MAX_SCAN_RETRY_COUNT,
+    RedisStreamMessage,
+    ScanConsumerRuntime,
+    build_retry_stream_fields,
+    parse_stream_messages,
+)
+from app.publish.scan_worker import SecurityScanTask, ScannerClient
+from app.publish.scanner_result import SecurityScanResultInput
+from tests.test_publish_scan_worker import FakeConnection
+
+
+class FakeRedisStream:
+    def __init__(self, messages: list[RedisStreamMessage] | None = None) -> None:
+        self.messages = messages or []
+        self.acked: list[str] = []
+        self.added: list[tuple[str, dict[str, str]]] = []
+        self.groups: list[tuple[str, str]] = []
+        self.reads: list[tuple[str, str, str, int, int]] = []
+        self.reclaims: list[tuple[str, str, int, str, int]] = []
+
+    async def ensure_group(self, stream_key: str, group_name: str) -> None:
+        self.groups.append((stream_key, group_name))
+
+    async def read_group(
+        self,
+        stream_key: str,
+        group_name: str,
+        consumer_name: str,
+        *,
+        count: int,
+        block_ms: int,
+    ) -> list[RedisStreamMessage]:
+        self.reads.append((stream_key, group_name, consumer_name, count, block_ms))
+        return self.messages
+
+    async def reclaim_pending(
+        self,
+        stream_key: str,
+        group_name: str,
+        consumer_name: str,
+        *,
+        min_idle_ms: int,
+        start_id: str,
+        count: int,
+    ) -> tuple[str, list[RedisStreamMessage]]:
+        self.reclaims.append((stream_key, group_name, min_idle_ms, start_id, count))
+        return "0-0", self.messages
+
+    async def ack(self, stream_key: str, group_name: str, message_id: str) -> None:
+        self.acked.append(message_id)
+
+    async def add(self, stream_key: str, fields: dict[str, str]) -> str:
+        self.added.append((stream_key, fields))
+        return "retry-1"
+
+
+class SafeScanner:
+    async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
+        return SecurityScanResultInput("scan-1", "SAFE", 0, "LOW", [], 1.0)
+
+
+class FailingScanner:
+    async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
+        raise RuntimeError("scanner unavailable")
+
+
+def test_parse_stream_messages_reads_xreadgroup_shape() -> None:
+    payload = [["skillhub:scan:requests", [["1780-0", ["taskId", "task-1", "versionId", "202"]]]]]
+
+    messages = parse_stream_messages(payload)
+
+    assert messages == [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})]
+
+
+def test_build_retry_stream_fields_preserves_java_task_shape() -> None:
+    task = SecurityScanTask(
+        task_id="task-1",
+        version_id=202,
+        skill_path=None,
+        bundle_key="packages/101/202/bundle.zip",
+        scanner_type="skill-scanner",
+        retry_count=1,
+    )
+
+    assert build_retry_stream_fields(task, retry_count=2, created_at_millis=1780969000000) == {
+        "taskId": "task-1",
+        "versionId": "202",
+        "bundleKey": "packages/101/202/bundle.zip",
+        "publisherId": "",
+        "createdAtMillis": "1780969000000",
+        "retryCount": "2",
+        "scannerType": "skill-scanner",
+    }
+
+
+@pytest.mark.anyio
+async def test_consume_once_creates_group_processes_message_and_acks(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-1",
+                    "versionId": "202",
+                    "bundleKey": "packages/101/202/bundle.zip",
+                    "scannerType": "skill-scanner",
+                },
+            )
+        ]
+    )
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        group_name="skillhub-scan-workers",
+        consumer_name="scanner-test",
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+    )
+
+    result = await runtime.consume_once(FakeConnection(), SafeScanner())
+
+    assert result.processed == 1
+    assert result.acknowledged == 1
+    assert result.retried == 0
+    assert redis.groups == [("skillhub:scan:requests", "skillhub-scan-workers")]
+    assert redis.acked == ["1780-0"]
+
+
+@pytest.mark.anyio
+async def test_consume_once_retries_failure_without_marking_failed_before_max_retry(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-1",
+                    "versionId": "202",
+                    "bundleKey": "packages/101/202/bundle.zip",
+                    "scannerType": "skill-scanner",
+                    "retryCount": "2",
+                },
+            )
+        ]
+    )
+    connection = FakeConnection()
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        group_name="skillhub-scan-workers",
+        consumer_name="scanner-test",
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+        clock_millis=lambda: 1780969000000,
+    )
+
+    result = await runtime.consume_once(connection, FailingScanner())
+
+    assert result.processed == 1
+    assert result.retried == 1
+    assert result.failed == 0
+    assert redis.acked == ["1780-0"]
+    assert redis.added == [
+        (
+            "skillhub:scan:requests",
+            {
+                "taskId": "task-1",
+                "versionId": "202",
+                "bundleKey": "packages/101/202/bundle.zip",
+                "publisherId": "",
+                "createdAtMillis": "1780969000000",
+                "retryCount": "3",
+                "scannerType": "skill-scanner",
+            },
+        )
+    ]
+    assert not any("UPDATE skill_version" in statement and "SCAN_FAILED" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_consume_once_marks_failed_at_max_retry(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-1",
+                    "versionId": "202",
+                    "bundleKey": "packages/101/202/bundle.zip",
+                    "scannerType": "skill-scanner",
+                    "retryCount": str(MAX_SCAN_RETRY_COUNT),
+                },
+            )
+        ]
+    )
+    connection = FakeConnection()
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        group_name="skillhub-scan-workers",
+        consumer_name="scanner-test",
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+    )
+
+    result = await runtime.consume_once(connection, FailingScanner())
+
+    assert result.processed == 1
+    assert result.retried == 0
+    assert result.failed == 1
+    assert redis.acked == ["1780-0"]
+    assert any("UPDATE skill_version" in statement and "SCAN_FAILED" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_reclaim_once_processes_pending_messages(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-1",
+                    "versionId": "202",
+                    "bundleKey": "packages/101/202/bundle.zip",
+                    "scannerType": "skill-scanner",
+                },
+            )
+        ]
+    )
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        group_name="skillhub-scan-workers",
+        consumer_name="scanner-test",
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+    )
+
+    result = await runtime.reclaim_once(FakeConnection(), SafeScanner(), min_idle_ms=120000, count=20)
+
+    assert result.processed == 1
+    assert redis.reclaims == [("skillhub:scan:requests", "skillhub-scan-workers", 120000, "0-0", 20)]
+    assert redis.acked == ["1780-0"]

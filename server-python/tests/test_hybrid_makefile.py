@@ -48,7 +48,7 @@ def test_makefile_defines_hybrid_e2e_targets() -> None:
 def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     script = (ROOT / "scripts" / "dev-hybrid.ps1").read_text(encoding="utf-8")
 
-    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'e2e-smoke', 'e2e')]" in script
+    assert "[ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'e2e-smoke', 'e2e')]" in script
     assert "Start-ManagedProcess" in script
     assert "server-python" in script
     assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in script
@@ -105,6 +105,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-root-legacy-publish-write-ownership-smoke" in script
     assert "verify-publish-scanner-result-processing-smoke" in script
     assert "verify-publish-scan-task-worker-boundary-smoke" in script
+    assert "verify-publish-scan-consumer-runtime-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
@@ -151,8 +152,11 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-PublishScannerResultProcessingContractComparison" in script
     assert "Invoke-PublishScanTaskWorkerBoundaryTests" in script
     assert "Invoke-PublishScanTaskWorkerBoundaryContractComparison" in script
+    assert "Invoke-PublishScanConsumerRuntimeTests" in script
+    assert "Invoke-PublishScanConsumerRuntimeContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
+    assert "consume_scan_task_fixture.py" in script
     assert "labels-contract-result.json" in script
     assert "files-contract-result.json" in script
     assert "detail-contract-result.json" in script
@@ -190,6 +194,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "root-legacy-publish-write-ownership-contract-result.json" in script
     assert "publish-scanner-result-processing-contract-result.json" in script
     assert "publish-scan-task-worker-boundary-contract-result.json" in script
+    assert "publish-scan-consumer-runtime-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
@@ -199,6 +204,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_publish_scanner_handoff.py" in script
     assert "tests/test_publish_scanner_result.py" in script
     assert "tests/test_publish_scan_worker.py" in script
+    assert "tests/test_publish_scan_consumer.py" in script
     assert "tests/test_publish_side_effects.py" in script
     assert "tests/test_publish_replacement.py" in script
     assert "tests/test_publish_auto_withdraw.py" in script

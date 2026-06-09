@@ -1118,6 +1118,25 @@ This gate verifies:
 - Long-running Redis consumer groups, retry republish, pending reclaim, and scanner HTTP calls
   remain out of scope for this gate.
 
+### Publish Scan Consumer Runtime Gate
+
+Run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-scan-consumer-runtime-smoke
+```
+
+This gate verifies:
+
+- Python can create and use a Redis consumer group for scan task streams.
+- Python consumes a never-delivered scan task from Redis using `XREADGROUP`.
+- The consumer calls the existing one-task worker and scanner abstraction.
+- Successful processing is acknowledged with Redis `XACK`; `XPENDING` reports zero pending
+  messages afterward.
+- PostgreSQL `skill_version` status and latest active `security_audit` are updated.
+- Staged bundle files are cleaned after consumer processing.
+- Long-running daemon lifecycle and scanner HTTP calls remain out of scope for this gate.
+
 ## Shutdown
 
 ```powershell

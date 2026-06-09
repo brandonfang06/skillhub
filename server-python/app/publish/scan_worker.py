@@ -134,6 +134,7 @@ async def process_scan_task(
     *,
     storage_base_path: str,
     scan_temp_dir: str,
+    mark_failed_on_error: bool = True,
 ) -> AppliedSecurityScanResult:
     resolved = resolve_working_skill_path(task, storage_base_path=storage_base_path, scan_temp_dir=scan_temp_dir)
     try:
@@ -145,7 +146,8 @@ async def process_scan_task(
             scan_result=scan_result,
         )
     except Exception:
-        await mark_scan_task_failed(connection, version_id=task.version_id)
+        if mark_failed_on_error:
+            await mark_scan_task_failed(connection, version_id=task.version_id)
         raise
     finally:
         cleanup_scan_path(resolved.cleanup_path, scan_temp_dir=scan_temp_dir)
