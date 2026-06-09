@@ -112,6 +112,10 @@ def _file_exists(storage_base_path: str, storage_key: str) -> bool:
 
 
 def _read_storage_text(storage_base_path: str, storage_key: str) -> str:
+    return _read_storage_bytes(storage_base_path, storage_key).decode("utf-8")
+
+
+def _read_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
     base = Path(storage_base_path).resolve()
     target = (base / storage_key).resolve()
     try:
@@ -119,7 +123,7 @@ def _read_storage_text(storage_base_path: str, storage_key: str) -> str:
     except ValueError as exc:
         raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
     try:
-        return target.read_bytes().decode("utf-8")
+        return target.read_bytes()
     except FileNotFoundError as exc:
         raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
 
@@ -663,3 +667,25 @@ async def read_review_skill_detail(
             documentation_file=documentation_file,
             documentation_content=documentation_content,
         )
+
+
+async def read_review_file_content(
+    engine: Any,
+    storage_base_path: str,
+    *,
+    review_task_id: int,
+    file_path: str,
+    user_id: str,
+) -> bytes:
+    async with engine.connect() as connection:
+        task = await _read_review_task_row(connection, review_task_id)
+        platform_roles = await _read_platform_roles(connection, user_id)
+        namespace_roles = await _read_namespace_roles(connection, user_id)
+        if not _can_view_review(task, user_id, namespace_roles, platform_roles):
+            raise ReviewQueryError("review.no_permission", status_code=403)
+
+        files = await _read_review_skill_files(connection, int(task["skill_version_id"]), storage_base_path)
+        file_row = next((file for file in files if str(file["file_path"]) == file_path), None)
+        if file_row is None:
+            raise ReviewQueryError("error.skill.file.notFound", status_code=400)
+        return _read_storage_bytes(storage_base_path, str(file_row["storage_key"]))

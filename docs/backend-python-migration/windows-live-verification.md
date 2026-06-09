@@ -1411,3 +1411,24 @@ This gate:
 The 2026-06-09 run found and fixed a real parity issue: Python text reads originally normalized
 CRLF to LF. Review skill-detail documentation now reads storage bytes and decodes UTF-8 to preserve
 Java-compatible line endings.
+
+## Review File Content Live Gate
+
+For the migrated review-bound single-file content routes, use:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-file-smoke
+```
+
+This gate:
+
+- runs Python review file/query regressions plus Vite proxy ownership tests;
+- starts Java `8080`, Python `8081`, Vite `3000`, and Docker dependency services;
+- compares Java direct, Python direct, Vite `/api/v1`, and Vite `/api/web` raw file responses
+  by status, content type, byte length, and SHA-256;
+- verifies Java-invalid paths are rejected with HTTP 400 after mock-user auth is present;
+- checks that `GET /api/v1/reviews/{id}/download` still falls through to Java;
+- runs Playwright smoke E2E;
+- stops the hybrid stack after verification.
+
+The 2026-06-09 run passed with matching raw bytes across Java, Python, and both Vite aliases.

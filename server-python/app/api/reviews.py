@@ -4,7 +4,7 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from app.core.response import ok
@@ -26,6 +26,7 @@ from app.review.query import (
     list_pending_reviews,
     list_review_tasks,
     read_review_detail,
+    read_review_file_content,
     read_review_skill_detail,
 )
 
@@ -57,6 +58,12 @@ def _require_mock_user(mock_user_id: str | None) -> str:
     if mock_user_id is None or mock_user_id.strip() == "":
         raise HTTPException(status_code=401, detail="error.auth.required")
     return mock_user_id.strip()
+
+
+def _validate_review_file_path(path: str | None) -> str:
+    if path is None or path.strip() == "" or ".." in path or path.startswith("/"):
+        raise HTTPException(status_code=400)
+    return path
 
 
 async def approve_review(
@@ -297,6 +304,39 @@ async def get_review_skill_detail(
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
+async def get_review_file_content(
+    request: Request,
+    review_task_id: int,
+    file_path: str | None,
+    mock_user_id: str | None,
+) -> Response:
+    user_id = _require_mock_user(mock_user_id)
+    normalized_path = _validate_review_file_path(file_path)
+    reader = getattr(request.app.state, "review_file_reader", None)
+    try:
+        if reader is not None:
+            content = await _resolve_reader_result(
+                reader(
+                    getattr(request.app.state, "db_engine", None),
+                    request.app.state.settings.storage_base_path,
+                    review_task_id=review_task_id,
+                    file_path=normalized_path,
+                    user_id=user_id,
+                )
+            )
+        else:
+            content = await read_review_file_content(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                review_task_id=review_task_id,
+                file_path=normalized_path,
+                user_id=user_id,
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return Response(content=content, media_type="application/octet-stream")
+
+
 @router.get("/api/v1/reviews")
 @router.get("/api/web/reviews")
 async def list_reviews_route(
@@ -342,6 +382,17 @@ async def get_review_skill_detail_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await get_review_skill_detail(request, review_task_id, mock_user_id)
+
+
+@router.get("/api/v1/reviews/{review_task_id}/file")
+@router.get("/api/web/reviews/{review_task_id}/file")
+async def get_review_file_route(
+    request: Request,
+    review_task_id: int,
+    path: str | None = Query(default=None),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    return await get_review_file_content(request, review_task_id, path, mock_user_id)
 
 
 @router.get("/api/v1/reviews/{review_task_id}")

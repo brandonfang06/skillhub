@@ -182,6 +182,7 @@ Still plan carefully when a group requires:
 | 48 | `GET /api/v1/reviews`, `GET /api/web/reviews`, `GET /api/v1/reviews/pending`, `GET /api/web/reviews/pending`, `GET /api/v1/reviews/my-submissions`, `GET /api/web/reviews/my-submissions` | python | Review list read ownership moved to Python with Java-compatible page envelopes and review authorization. |
 | 49 | `GET /api/v1/reviews/{id}`, `GET /api/web/reviews/{id}` | python | Review task detail read ownership moved to Python with submitter, namespace reviewer, and platform reviewer visibility parity. |
 | 50 | `GET /api/v1/reviews/{id}/skill-detail`, `GET /api/web/reviews/{id}/skill-detail` | python | Review-bound skill detail read ownership moved to Python. The route uses the task's active skill version, Java lifecycle version ordering, storage-backed README/SKILL documentation, and keeps review file/download Java-owned. |
+| 51 | `GET /api/v1/reviews/{id}/file`, `GET /api/web/reviews/{id}/file` | python | Review-bound single-file content moved to Python. The route validates Java-invalid paths, returns raw octet-stream bytes from the review task's active version, and keeps review download Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1172,12 +1173,14 @@ Group E has started with review lifecycle write ownership:
 - Completed: `GET /api/v1/reviews/{id}` and `GET /api/web/reviews/{id}`.
 - Completed: `GET /api/v1/reviews/{id}/skill-detail` and
   `GET /api/web/reviews/{id}/skill-detail`.
-- Still Java-owned: review file/download, promotion review APIs, and
+- Completed: `GET /api/v1/reviews/{id}/file` and
+  `GET /api/web/reviews/{id}/file`.
+- Still Java-owned: review download, promotion review APIs, and
   post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with review file content or review package download ownership. Keep promotion
+- Continue Group E with review package download ownership. Keep promotion
   review as a separate milestone unless Java parity shows it is tightly coupled.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
