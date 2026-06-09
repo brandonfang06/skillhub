@@ -286,7 +286,10 @@ describe('Vite dev proxy route ownership', () => {
     ).toBeUndefined()
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.1.0/withdraw-review'),
-    ).toBeUndefined()
+    ).toBe('http://localhost:8081')
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/versions/1.1.0/withdraw-review'),
+    ).toBe('http://localhost:8081')
     expect(
       resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review'),
     ).toBeUndefined()
@@ -300,6 +303,12 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('DELETE', '/api/web/skills/team-a/agent-helper/versions/1.1.0')).toBe(
       'http://localhost:8081',
     )
+    expect(
+      matchingDevProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.1.0/withdraw-review'),
+    ).toBe('http://localhost:8081')
+    expect(
+      matchingDevProxyTarget('POST', '/api/web/skills/team-a/agent-helper/versions/1.1.0/withdraw-review'),
+    ).toBe('http://localhost:8081')
   })
 
   it('routes ClawHub well-known discovery to Python', () => {

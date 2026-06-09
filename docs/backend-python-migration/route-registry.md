@@ -104,5 +104,7 @@ deferred routes are still visible.
 | POST | `/api/web/skills/{namespace}/{slug}/unarchive` | python | Frontend skill unarchive alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/unarchive`. |
 | DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | python | Portal version delete moved to Python. Deletes only `DRAFT`/`REJECTED`/`SCAN_FAILED`/`UPLOADED`, clears files, soft-deletes security audit rows, recalculates latest published pointer, writes `DELETE_SKILL_VERSION` audit, and deletes local storage with compensation on failure. |
 | DELETE | `/api/web/skills/{namespace}/{slug}/versions/{version}` | python | Frontend version delete alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/versions/{version}`. |
+| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Portal version withdraw-review moved to Python. Only the pending review task submitter can withdraw; the route deletes the pending task, moves the version back to `UPLOADED`, updates `skill.updated_by`, and writes `REVIEW_WITHDRAW` audit. |
+| POST | `/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Frontend version withdraw-review alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review`. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

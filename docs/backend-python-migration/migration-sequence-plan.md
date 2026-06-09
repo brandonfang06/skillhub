@@ -187,8 +187,9 @@ Still plan carefully when a group requires:
 | 53 | `GET /api/v1/promotions`, `GET /api/web/promotions`, `GET /api/v1/promotions/pending`, `GET /api/web/promotions/pending`, `GET /api/v1/promotions/{id}`, `GET /api/web/promotions/{id}` | python | Promotion read ownership moved to Python. List/pending require platform review role; detail allows submitter or platform review role. Promotion write routes remained Java-owned during this milestone. |
 | 54 | `POST /api/v1/promotions`, `POST /api/web/promotions`, `POST /api/v1/promotions/{id}/reject`, `POST /api/web/promotions/{id}/reject` | python | Promotion submit and reject write ownership moved to Python. Submit creates pending requests and `PROMOTION_SUBMIT` audit; reject is platform-reviewer only, writes `PROMOTION_REJECT` audit and synchronous governance notification. Promotion approve remains Java-owned. |
 | 55 | `POST /api/v1/promotions/{id}/approve`, `POST /api/web/promotions/{id}/approve` | python | Promotion approve ownership moved to Python. Approval materializes target global skill/version/file records, updates `promotion_request.target_skill_id`, writes `PROMOTION_APPROVE` audit and synchronous governance notification. |
-| 56 | `POST /api/v1/skills/{namespace}/{slug}/archive`, `POST /api/web/skills/{namespace}/{slug}/archive`, `POST /api/v1/skills/{namespace}/{slug}/unarchive`, `POST /api/web/skills/{namespace}/{slug}/unarchive` | python | Portal skill archive/unarchive ownership moved to Python. Owner or namespace manager toggles `skill.status`, updates `updated_by`, and writes Java-compatible lifecycle audit logs. Version delete, withdraw-review, rerelease, submit-review, confirm-publish, admin hide/unhide, and yank remain Java-owned. |
+| 56 | `POST /api/v1/skills/{namespace}/{slug}/archive`, `POST /api/web/skills/{namespace}/{slug}/archive`, `POST /api/v1/skills/{namespace}/{slug}/unarchive`, `POST /api/web/skills/{namespace}/{slug}/unarchive` | python | Portal skill archive/unarchive ownership moved to Python. Owner or namespace manager toggles `skill.status`, updates `updated_by`, and writes Java-compatible lifecycle audit logs. Version delete, rerelease, submit-review, confirm-publish, admin hide/unhide, and yank remained Java-owned at this milestone. |
 | 57 | `DELETE /api/v1/skills/{namespace}/{slug}/versions/{version}`, `DELETE /api/web/skills/{namespace}/{slug}/versions/{version}` | python | Portal version delete ownership moved to Python. Deletes allowed non-published statuses, clears file metadata, soft-deletes security audit rows, recalculates latest published pointer, writes `DELETE_SKILL_VERSION` audit, deletes local storage with compensation, and resolves the observed Vite DELETE version proxy boundary by making the route Python-owned. |
+| 58 | `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review`, `POST /api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review` | python | Portal version withdraw-review ownership moved to Python. The pending review task submitter can delete the pending task, reopen the version to `UPLOADED`, update `skill.updated_by`, and write `REVIEW_WITHDRAW` audit. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1202,7 +1203,10 @@ Group E has started with review lifecycle write ownership:
 - Completed: portal version delete APIs:
   `DELETE /api/v1/skills/{namespace}/{slug}/versions/{version}` and
   `DELETE /api/web/skills/{namespace}/{slug}/versions/{version}`.
-- Still Java-owned: withdraw-review, rerelease, submit-review, confirm-publish, admin hide/unhide,
+- Completed: portal version withdraw-review APIs:
+  `POST /api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review` and
+  `POST /api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review`.
+- Still Java-owned: rerelease, submit-review, confirm-publish, admin hide/unhide,
   yank, and broader post-publish lifecycle/governance actions.
 
 Recommended next choice:

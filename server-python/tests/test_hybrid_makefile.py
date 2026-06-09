@@ -121,6 +121,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-promotion-approve-smoke" in script
     assert "verify-skill-lifecycle-archive-smoke" in script
     assert "verify-skill-version-delete-smoke" in script
+    assert "verify-skill-version-withdraw-review-smoke" in script
     assert "Invoke-LabelsContractComparison" in script
     assert "Invoke-FilesContractComparison" in script
     assert "Invoke-DetailContractComparison" in script
@@ -199,6 +200,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-SkillLifecycleArchiveContractComparison" in script
     assert "Invoke-SkillVersionDeleteTests" in script
     assert "Invoke-SkillVersionDeleteContractComparison" in script
+    assert "Invoke-SkillVersionWithdrawReviewTests" in script
+    assert "Invoke-SkillVersionWithdrawReviewContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
     assert "consume_scan_task_fixture.py" in script
@@ -256,6 +259,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "promotion-approve-contract-result.json" in script
     assert "skill-lifecycle-archive-contract-result.json" in script
     assert "skill-version-delete-contract-result.json" in script
+    assert "skill-version-withdraw-review-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
@@ -280,6 +284,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_promotion_write.py" in script
     assert "tests/test_skill_lifecycle_archive.py" in script
     assert "tests/test_skill_lifecycle_delete_version.py" in script
+    assert "tests/test_skill_lifecycle_withdraw_review.py" in script
     assert "SKILLHUB_SCAN_CONSUMER_ENABLED" in script
     assert "tests/test_publish_side_effects.py" in script
     assert "tests/test_publish_replacement.py" in script

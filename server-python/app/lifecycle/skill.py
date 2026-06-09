@@ -43,6 +43,18 @@ class SkillVersionDeleteInput:
 
 
 @dataclass(frozen=True)
+class SkillVersionWithdrawReviewInput:
+    namespace: str
+    slug: str
+    version: str
+    user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
 class SkillVersionDeleteResult:
     response: dict[str, Any]
     storage_keys: list[str]
@@ -404,6 +416,92 @@ async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) ->
         slug=request.slug,
         skill_id=skill_id,
     )
+
+
+async def _read_pending_review_task_for_version(connection: Any, version_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id AS review_task_id,
+                       submitted_by,
+                       status
+                FROM review_task
+                WHERE skill_version_id = :version_id
+                  AND status = 'PENDING'
+                LIMIT 1
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().one_or_none()
+    if not row:
+        raise SkillLifecycleError("review_task.not_found_for_version", status_code=404)
+    return dict(row)
+
+
+async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdrawReviewInput) -> dict[str, Any]:
+    timestamp = _now(request.now)
+    async with engine.begin() as connection:
+        skill = await _read_skill_context(connection, request.namespace, request.slug)
+        if str(skill.get("namespace_status")) != "ACTIVE":
+            raise SkillLifecycleError("error.namespace.archived", status_code=403)
+
+        skill_id = int(skill["skill_id"])
+        version = await _read_version(connection, skill_id, request.version)
+        version_id = int(version["version_id"])
+        version_name = str(version["version"])
+        if str(version["status"]) != "PENDING_REVIEW":
+            raise SkillLifecycleError("review.withdraw.not_pending")
+
+        review_task = await _read_pending_review_task_for_version(connection, version_id)
+        if str(review_task["submitted_by"]) != request.user_id:
+            raise SkillLifecycleError("review.withdraw.not_submitter", status_code=403)
+
+        await connection.execute(
+            text(
+                """
+                DELETE FROM review_task
+                WHERE id = :review_task_id
+                """
+            ),
+            {"review_task_id": int(review_task["review_task_id"])},
+        )
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_version
+                SET status = :status
+                WHERE id = :version_id
+                """
+            ),
+            {"status": "UPLOADED", "version_id": version_id},
+        )
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET updated_by = :updated_by,
+                    updated_at = :updated_at
+                WHERE id = :skill_id
+                """
+            ),
+            {"updated_by": request.user_id, "updated_at": timestamp, "skill_id": skill_id},
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="REVIEW_WITHDRAW",
+            target_type="SKILL_VERSION",
+            target_id=version_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps({"version": version_name}, separators=(",", ":")),
+            created_at=timestamp,
+        )
+
+    return {"skillId": skill_id, "versionId": version_id, "action": "WITHDRAW_REVIEW", "status": "UPLOADED"}
 
 
 async def cleanup_deleted_version_storage(engine: Any, storage_base_path: str, result: SkillVersionDeleteResult) -> None:

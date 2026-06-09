@@ -12,10 +12,12 @@ from app.lifecycle.skill import (
     SkillArchiveInput,
     SkillLifecycleError,
     SkillVersionDeleteInput,
+    SkillVersionWithdrawReviewInput,
     archive_skill as archive_skill_workflow,
     cleanup_deleted_version_storage,
     delete_skill_version,
     unarchive_skill as unarchive_skill_workflow,
+    withdraw_skill_version_review,
 )
 
 
@@ -129,6 +131,35 @@ async def delete_skill_version_route_data(
     return ok("\u5220\u9664\u6210\u529f", result.response, request)
 
 
+async def withdraw_skill_version_review_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    withdraw_input = SkillVersionWithdrawReviewInput(
+        namespace=namespace,
+        slug=slug,
+        version=version,
+        user_id=user_id,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_withdraw_review_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(withdraw_input)
+            if writer is not None
+            else withdraw_skill_version_review(request.app.state.db_engine, withdraw_input)
+        )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")
 async def archive_skill_v1(
     request: Request,
@@ -191,3 +222,25 @@ async def delete_skill_version_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await delete_skill_version_route_data(request, namespace, slug, version, x_mock_user_id)
+
+
+@router.post("/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review")
+async def withdraw_skill_version_review_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await withdraw_skill_version_review_route_data(request, namespace, slug, version, x_mock_user_id)
+
+
+@router.post("/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review")
+async def withdraw_skill_version_review_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await withdraw_skill_version_review_route_data(request, namespace, slug, version, x_mock_user_id)
