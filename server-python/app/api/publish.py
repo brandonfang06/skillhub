@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
@@ -16,13 +17,14 @@ from app.publish.dry_run import (
     validate_publish_dry_run,
 )
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
-from app.publish.package import PackageEntry, SkillMetadata, extract_package, validate_package
+from app.publish.package import PackageEntry, SkillMetadata, determine_content_type, extract_package, normalize_entry_path, validate_package
 from app.publish.replacement import ReplaceableVersion, find_replaceable_version
 from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
 
 VALID_VISIBILITIES = {"PUBLIC", "PRIVATE", "NAMESPACE_ONLY"}
+GLOBAL_NAMESPACE = "global"
 
 
 def normalize_visibility(raw: str | None) -> str:
@@ -49,6 +51,50 @@ def publish_response(namespace: str, slug: str, version: str, visibility: str) -
         "version": version,
         "visibility": visibility,
     }
+
+
+def compat_publish_response(result: PublishWriteResult) -> dict[str, object]:
+    return {"ok": True, "skillId": str(result.skill_id), "versionId": str(result.version_id)}
+
+
+def normalize_namespace(namespace: str | None) -> str:
+    normalized = (namespace or "").strip()
+    if normalized.startswith("@"):
+        normalized = normalized[1:]
+    return normalized or GLOBAL_NAMESPACE
+
+
+def namespace_from_payload(payload: dict[str, object] | None) -> str:
+    if not payload:
+        return GLOBAL_NAMESPACE
+
+    raw_namespace = payload.get("namespace")
+    if isinstance(raw_namespace, str) and raw_namespace.strip():
+        return normalize_namespace(raw_namespace)
+
+    raw_slug = payload.get("slug")
+    if isinstance(raw_slug, str) and "--" in raw_slug:
+        return normalize_namespace(raw_slug.split("--", 1)[0])
+
+    return GLOBAL_NAMESPACE
+
+
+async def extract_multipart_files(files: list[UploadFile]) -> list[PackageEntry]:
+    entries: list[PackageEntry] = []
+    seen_paths: set[str] = set()
+    for file in files:
+        if file.filename is None or file.filename.strip() == "":
+            continue
+        try:
+            path = normalize_entry_path(file.filename)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
+        if path in seen_paths:
+            raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
+        seen_paths.add(path)
+        content = await file.read()
+        entries.append(PackageEntry(path=path, content=content, content_type=determine_content_type(path)))
+    return entries
 
 
 async def resolve_current_user(request: Request, mock_user_id: str | None) -> dict[str, object]:
@@ -178,6 +224,69 @@ async def run_publish_write(request: Request, write_input: PublishWriteInput) ->
     )
 
 
+async def publish_entries(
+    request: Request,
+    namespace: str,
+    entries: list[PackageEntry],
+    mock_user_id: str | None,
+    visibility: str | None,
+    *,
+    compat_namespace: str | None = None,
+    compat_slug: str | None = None,
+) -> tuple[PublishDryRunResult, PublishWriteResult, str]:
+    user = await resolve_current_user(request, mock_user_id)
+    resolved_visibility = normalize_visibility(visibility)
+    platform_roles = {str(role) for role in user.get("platformRoles", [])}
+    publisher_id = str(user["userId"])
+
+    dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_roles)
+    if not dry_run.valid:
+        messages = dry_run.errors or dry_run.warnings
+        raise HTTPException(status_code=400, detail=", ".join(messages))
+    if dry_run.resolved_slug is None or dry_run.resolved_version is None:
+        raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
+
+    package_validation = validate_package(entries)
+    metadata = package_validation.metadata
+    if metadata is None:
+        raise HTTPException(status_code=400, detail="error.skill.publish.skillMd.notFound")
+
+    namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_roles)
+    settings = getattr(request.app.state, "settings", get_settings())
+    replacement = await find_publish_replacement(
+        request,
+        namespace_id,
+        namespace,
+        dry_run.resolved_slug,
+        dry_run.resolved_version,
+        publisher_id,
+    )
+    write_input = PublishWriteInput(
+        namespace_id=namespace_id,
+        namespace_slug=namespace,
+        slug=dry_run.resolved_slug,
+        display_name=metadata.name,
+        summary=metadata.description,
+        publisher_id=publisher_id,
+        visibility=resolved_visibility,
+        version=dry_run.resolved_version,
+        auto_publish="SUPER_ADMIN" in platform_roles,
+        metadata=metadata_with_resolved_version(metadata, dry_run.resolved_version),
+        entries=entries,
+        storage_base_path=settings.storage_base_path,
+        scanner_enabled=settings.security_scanner_enabled,
+        scan_mode=settings.security_scanner_mode,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        compat_namespace=compat_namespace,
+        compat_slug=compat_slug,
+        replacement=replacement,
+    )
+    result = await run_publish_write(request, write_input)
+    return dry_run, result, resolved_visibility
+
+
 def metadata_with_resolved_version(metadata: SkillMetadata, resolved_version: str) -> SkillMetadata:
     if metadata.version == resolved_version:
         return metadata
@@ -228,62 +337,72 @@ async def publish_cli_skill(
     visibility: str | None = Form(default=None),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
-    user = await resolve_current_user(request, mock_user_id)
-    resolved_visibility = normalize_visibility(visibility)
-    platform_roles = {str(role) for role in user.get("platformRoles", [])}
-    publisher_id = str(user["userId"])
-
     try:
         entries = extract_package(await file.read())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
 
-    dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_roles)
-    if not dry_run.valid:
-        messages = dry_run.errors or dry_run.warnings
-        raise HTTPException(status_code=400, detail=", ".join(messages))
-    if dry_run.resolved_slug is None or dry_run.resolved_version is None:
-        raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
-
-    package_validation = validate_package(entries)
-    metadata = package_validation.metadata
-    if metadata is None:
-        raise HTTPException(status_code=400, detail="error.skill.publish.skillMd.notFound")
-
-    namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_roles)
-    settings = getattr(request.app.state, "settings", get_settings())
-    replacement = await find_publish_replacement(
-        request,
-        namespace_id,
-        namespace,
-        dry_run.resolved_slug,
-        dry_run.resolved_version,
-        publisher_id,
-    )
-    write_input = PublishWriteInput(
-        namespace_id=namespace_id,
-        namespace_slug=namespace,
-        slug=dry_run.resolved_slug,
-        display_name=metadata.name,
-        summary=metadata.description,
-        publisher_id=publisher_id,
-        visibility=resolved_visibility,
-        version=dry_run.resolved_version,
-        auto_publish="SUPER_ADMIN" in platform_roles,
-        metadata=metadata_with_resolved_version(metadata, dry_run.resolved_version),
-        entries=entries,
-        storage_base_path=settings.storage_base_path,
-        scanner_enabled=settings.security_scanner_enabled,
-        scan_mode=settings.security_scanner_mode,
-        request_id=getattr(request.state, "request_id", None),
-        client_ip=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        replacement=replacement,
-    )
-    await run_publish_write(request, write_input)
+    dry_run, _, resolved_visibility = await publish_entries(request, namespace, entries, mock_user_id, visibility)
 
     return ok(
         "response.success.published",
         publish_response(namespace, dry_run.resolved_slug, dry_run.resolved_version, resolved_visibility),
         request,
     )
+
+
+@router.post("/api/v1/publish")
+async def publish_legacy_skill(
+    request: Request,
+    file: UploadFile = File(...),
+    namespace: str = Form(...),
+    confirm_warnings: bool = Form(default=False, alias="confirmWarnings"),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    _ = confirm_warnings
+    normalized_namespace = normalize_namespace(namespace)
+    try:
+        entries = extract_package(await file.read())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
+
+    _, result, _ = await publish_entries(
+        request,
+        normalized_namespace,
+        entries,
+        mock_user_id,
+        "PUBLIC",
+        compat_namespace=normalized_namespace,
+    )
+    return compat_publish_response(result)
+
+
+@router.post("/api/v1/skills")
+async def publish_clawhub_root_skill(
+    request: Request,
+    payload: str = Form(...),
+    files: list[UploadFile] = File(...),
+    confirm_warnings: bool = Form(default=False, alias="confirmWarnings"),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    _ = confirm_warnings
+    try:
+        payload_data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
+    if not isinstance(payload_data, dict):
+        raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
+
+    namespace = namespace_from_payload(payload_data)
+    entries = await extract_multipart_files(files)
+    compat_slug = payload_data.get("slug")
+    _, result, _ = await publish_entries(
+        request,
+        namespace,
+        entries,
+        mock_user_id,
+        "PUBLIC",
+        compat_namespace=namespace,
+        compat_slug=compat_slug if isinstance(compat_slug, str) else None,
+    )
+    return compat_publish_response(result)

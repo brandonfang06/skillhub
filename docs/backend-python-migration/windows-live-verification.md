@@ -1061,8 +1061,27 @@ Active rule requiring live verification:
 GET /api/v1/skills/{canonicalSlug} -> Python
 POST/DELETE /api/v1/skills/{canonicalSlug} -> Java fallback
 GET /api/v1/skills -> Python
-POST /api/v1/skills -> Java fallback
+POST /api/v1/skills -> Python
+POST /api/v1/publish -> Python
 ```
+
+### Root And Legacy Publish Ownership Gate
+
+Run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-root-legacy-publish-write-ownership-smoke
+```
+
+This gate verifies:
+
+- `POST /api/v1/publish` reaches Python through Vite with multipart zip `file` plus `namespace`.
+- `POST /api/v1/skills` reaches Python through Vite with ClawHub `payload` plus repeated
+  `files` parts.
+- Both compatibility routes return plain `{ ok, skillId, versionId }`, not the portal envelope.
+- Both writes create `PENDING_REVIEW` versions and pending review tasks for `local-user`.
+- `DELETE /api/v1/skills/{canonicalSlug}` and
+  `POST /api/v1/skills/{canonicalSlug}/undelete` still follow Java fallback behavior.
 
 ## Shutdown
 

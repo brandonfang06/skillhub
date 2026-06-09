@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5218,6 +5218,133 @@ function Invoke-MultipartPostJson {
     }
 }
 
+function New-ClawHubMultipartFixtureDirectory {
+    param(
+        [string]$SkillName = 'Codex ClawHub Skill',
+        [string]$Version = '1.0.0',
+        [string]$FilePrefix = 'clawhub-publish-fixture'
+    )
+
+    $fixtureDir = Join-Path $DevDir $FilePrefix
+    if (Test-Path -LiteralPath $fixtureDir) {
+        Remove-Item -LiteralPath $fixtureDir -Recurse -Force
+    }
+
+    New-Item -ItemType Directory -Force -Path (Join-Path $fixtureDir 'src') | Out-Null
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    $skillMd = @"
+---
+name: $SkillName
+description: ClawHub multipart fixture for $SkillName
+version: $Version
+---
+# $SkillName
+"@
+    [System.IO.File]::WriteAllText((Join-Path $fixtureDir 'SKILL.md'), $skillMd, $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $fixtureDir 'src/main.py'), "print('clawhub')`n", $utf8NoBom)
+    return $fixtureDir
+}
+
+function Add-FilePart {
+    param(
+        [System.Net.Http.MultipartFormDataContent]$Content,
+        [string]$FieldName,
+        [string]$Path,
+        [string]$FileName,
+        [string]$ContentType
+    )
+
+    $fileBytes = [System.IO.File]::ReadAllBytes($Path)
+    $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
+    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse($ContentType)
+    $Content.Add($fileContent, $FieldName, $FileName)
+}
+
+function Invoke-LegacyPublishPostJson {
+    param(
+        [string]$Url,
+        [string]$FilePath,
+        [string]$Namespace,
+        [hashtable]$Headers = @{}
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    foreach ($key in $Headers.Keys) {
+        $client.DefaultRequestHeaders.Remove($key) | Out-Null
+        $client.DefaultRequestHeaders.Add($key, [string]$Headers[$key])
+    }
+
+    $content = [System.Net.Http.MultipartFormDataContent]::new()
+    Add-FilePart -Content $content -FieldName 'file' -Path $FilePath -FileName ([System.IO.Path]::GetFileName($FilePath)) -ContentType 'application/zip'
+    $content.Add([System.Net.Http.StringContent]::new($Namespace), 'namespace')
+    $content.Add([System.Net.Http.StringContent]::new('true'), 'confirmWarnings')
+
+    try {
+        $response = $client.PostAsync($Url, $content).GetAwaiter().GetResult()
+        $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $parsedBody = $null
+        if ($body) {
+            try {
+                $parsedBody = $body | ConvertFrom-Json
+            } catch {
+                $parsedBody = $body
+            }
+        }
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            body = $parsedBody
+        }
+    } finally {
+        $content.Dispose()
+        $client.Dispose()
+    }
+}
+
+function Invoke-ClawHubRootPublishPostJson {
+    param(
+        [string]$Url,
+        [string]$FixtureDir,
+        [string]$PayloadJson,
+        [hashtable]$Headers = @{}
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    foreach ($key in $Headers.Keys) {
+        $client.DefaultRequestHeaders.Remove($key) | Out-Null
+        $client.DefaultRequestHeaders.Add($key, [string]$Headers[$key])
+    }
+
+    $content = [System.Net.Http.MultipartFormDataContent]::new()
+    $content.Add([System.Net.Http.StringContent]::new($PayloadJson), 'payload')
+    $content.Add([System.Net.Http.StringContent]::new('true'), 'confirmWarnings')
+    Add-FilePart -Content $content -FieldName 'files' -Path (Join-Path $FixtureDir 'SKILL.md') -FileName 'SKILL.md' -ContentType 'text/markdown'
+    Add-FilePart -Content $content -FieldName 'files' -Path (Join-Path $FixtureDir 'src/main.py') -FileName 'src/main.py' -ContentType 'text/x-python'
+
+    try {
+        $response = $client.PostAsync($Url, $content).GetAwaiter().GetResult()
+        $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $parsedBody = $null
+        if ($body) {
+            try {
+                $parsedBody = $body | ConvertFrom-Json
+            } catch {
+                $parsedBody = $body
+            }
+        }
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            body = $parsedBody
+        }
+    } finally {
+        $content.Dispose()
+        $client.Dispose()
+    }
+}
+
 function Invoke-PublishHttpValidateContractComparison {
     param([string]$ResultFileName = 'publish-http-validate-contract-result.json')
 
@@ -5231,11 +5358,8 @@ function Invoke-PublishHttpValidateContractComparison {
     $proxy = Invoke-MultipartPostJson "$WebUrl$path" -FilePath $zipPath -Headers $headers
 
     $writeCases = @(
-        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
-        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' },
-        [ordered]@{ name = 'portalV1NamespacePublish'; path = '/api/v1/skills/global/publish'; method = 'POST' },
-        [ordered]@{ name = 'portalWebNamespacePublish'; path = '/api/web/skills/global/publish'; method = 'POST' },
-        [ordered]@{ name = 'cliPublishWrite'; path = '/api/cli/v1/skills/global/publish'; method = 'POST' }
+        [ordered]@{ name = 'clawHubDelete'; path = '/api/v1/skills/codex-unmigrated-delete'; method = 'DELETE' },
+        [ordered]@{ name = 'clawHubUndelete'; path = '/api/v1/skills/codex-unmigrated-delete/undelete'; method = 'POST' }
     )
 
     $writeResults = @()
@@ -5282,7 +5406,7 @@ function Invoke-PublishHttpValidateContractComparison {
             proxy = $proxy
         }
         writeRoutes = $writeResults
-        allWriteRoutesRemainJavaOwned = -not [bool]($writeResults | Where-Object { -not $_.proxyMatchesJava })
+        unmigratedMutationRoutesRemainJavaOwned = -not [bool]($writeResults | Where-Object { -not $_.proxyMatchesJava })
         comparedFields = @('status', 'code', 'data.valid', 'data.errors', 'data.warnings', 'data.resolvedSlug', 'data.resolvedVersion')
     }
 
@@ -5290,7 +5414,7 @@ function Invoke-PublishHttpValidateContractComparison {
     $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
     $result | ConvertTo-Json -Depth 50
 
-    if (-not $result.validate.javaMatchesPython -or -not $result.validate.pythonMatchesProxy -or -not $result.allWriteRoutesRemainJavaOwned) {
+    if (-not $result.validate.javaMatchesPython -or -not $result.validate.pythonMatchesProxy -or -not $result.unmigratedMutationRoutesRemainJavaOwned) {
         throw "Publish validate contract check failed. See .dev/$ResultFileName."
     }
 }
@@ -5392,6 +5516,30 @@ function Invoke-CliPublishWriteOwnershipTests {
 }
 
 function Invoke-PortalPublishWriteOwnershipTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_hybrid_makefile.py',
+            'tests/test_publish_http_validate.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+
+    Invoke-WebDeps
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-RootLegacyPublishWriteOwnershipTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
         $env:UV_CACHE_DIR = '.uv-cache'
@@ -5723,10 +5871,8 @@ function Invoke-CliPublishWriteOwnershipContractComparison {
     $nextStatus = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $nextVersionId;"
 
     $javaOwnedCases = @(
-        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
-        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' },
-        [ordered]@{ name = 'portalV1NamespacePublish'; path = '/api/v1/skills/global/publish'; method = 'POST' },
-        [ordered]@{ name = 'portalWebNamespacePublish'; path = '/api/web/skills/global/publish'; method = 'POST' }
+        [ordered]@{ name = 'clawHubDelete'; path = '/api/v1/skills/codex-unmigrated-delete'; method = 'DELETE' },
+        [ordered]@{ name = 'clawHubUndelete'; path = '/api/v1/skills/codex-unmigrated-delete/undelete'; method = 'POST' }
     )
     $javaOwnedResults = @()
     foreach ($case in $javaOwnedCases) {
@@ -5780,7 +5926,7 @@ function Invoke-CliPublishWriteOwnershipContractComparison {
                 $replacementReviewTaskCountAfterNext -eq 0
             )
             nextVersionPendingReview = ($nextStatus -eq 'PENDING_REVIEW')
-            portalAndRootPublishRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
+            unmigratedMutationRoutesRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
         }
         scannerResultBoundary = 'Scanner handoff is covered by Redis stream tests. Scanner result consumption remains a separate milestone.'
         comparedFields = @('status', 'code', 'data.slug', 'data.version', 'db.sameVersionCount', 'db.replacementStatusAfterNext', 'db.nextStatus')
@@ -5797,7 +5943,7 @@ function Invoke-CliPublishWriteOwnershipContractComparison {
         -not $result.checks.oldStorageDeleted -or
         -not $result.checks.pendingVersionAutoWithdrawn -or
         -not $result.checks.nextVersionPendingReview -or
-        -not $result.checks.portalAndRootPublishRemainJavaOwned) {
+        -not $result.checks.unmigratedMutationRoutesRemainJavaOwned) {
         throw "CLI publish write ownership check failed. See .dev/$ResultFileName."
     }
 }
@@ -5830,8 +5976,8 @@ function Invoke-PortalPublishWriteOwnershipContractComparison {
     $webReviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $webVersionId AND status = 'PENDING';")
 
     $javaOwnedCases = @(
-        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
-        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' }
+        [ordered]@{ name = 'clawHubDelete'; path = '/api/v1/skills/codex-unmigrated-delete'; method = 'DELETE' },
+        [ordered]@{ name = 'clawHubUndelete'; path = '/api/v1/skills/codex-unmigrated-delete/undelete'; method = 'POST' }
     )
     $javaOwnedResults = @()
     foreach ($case in $javaOwnedCases) {
@@ -5869,7 +6015,7 @@ function Invoke-PortalPublishWriteOwnershipContractComparison {
             webVersionCreated = -not [string]::IsNullOrWhiteSpace($webVersionId)
             v1PendingReview = ($v1Status -eq 'PENDING_REVIEW' -and $v1ReviewTaskCount -eq 1)
             webPendingReview = ($webStatus -eq 'PENDING_REVIEW' -and $webReviewTaskCount -eq 1)
-            rootAndLegacyPublishRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
+            unmigratedMutationRoutesRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
         }
         comparedFields = @('status', 'code', 'data.slug', 'data.version', 'db.v1Status', 'db.webStatus')
     }
@@ -5884,8 +6030,105 @@ function Invoke-PortalPublishWriteOwnershipContractComparison {
         -not $result.checks.webVersionCreated -or
         -not $result.checks.v1PendingReview -or
         -not $result.checks.webPendingReview -or
-        -not $result.checks.rootAndLegacyPublishRemainJavaOwned) {
+        -not $result.checks.unmigratedMutationRoutesRemainJavaOwned) {
         throw "Portal publish write ownership check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-RootLegacyPublishWriteOwnershipContractComparison {
+    param([string]$ResultFileName = 'root-legacy-publish-write-ownership-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $headers = @{ 'X-Mock-User-Id' = 'local-user' }
+    $legacyPath = '/api/v1/publish'
+    $rootPath = '/api/v1/skills'
+    $legacyVersion = "1.2.$suffix"
+    $rootVersion = "1.3.$suffix"
+    $legacyZip = New-PublishValidateFixtureZip -SkillName "Codex Legacy Publish $suffix" -Version $legacyVersion -FilePrefix "legacy-publish-$suffix"
+    $rootDir = New-ClawHubMultipartFixtureDirectory -SkillName "Codex Root Publish $suffix" -Version $rootVersion -FilePrefix "root-publish-$suffix"
+    $rootPayload = [ordered]@{
+        namespace = 'global'
+        slug = "codex-root-publish-$suffix"
+        displayName = "Codex Root Publish $suffix"
+        version = $rootVersion
+    } | ConvertTo-Json -Compress
+
+    Write-Host "Verifying root and legacy publish ownership through Vite proxy"
+    $legacy = Invoke-LegacyPublishPostJson "$WebUrl$legacyPath" -FilePath $legacyZip -Namespace 'global' -Headers $headers
+    $root = Invoke-ClawHubRootPublishPostJson "$WebUrl$rootPath" -FixtureDir $rootDir -PayloadJson $rootPayload -Headers $headers
+
+    $legacyVersionId = [string]$legacy.body.versionId
+    $rootVersionId = [string]$root.body.versionId
+    $legacyStatus = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $legacyVersionId;"
+    $rootStatus = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $rootVersionId;"
+    $legacyNamespace = Invoke-PostgresScalar -Sql "SELECT n.slug FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE sv.id = $legacyVersionId;"
+    $rootNamespace = Invoke-PostgresScalar -Sql "SELECT n.slug FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE sv.id = $rootVersionId;"
+    $legacyReviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $legacyVersionId AND status = 'PENDING';")
+    $rootReviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $rootVersionId AND status = 'PENDING';")
+
+    $javaOwnedCases = @(
+        [ordered]@{ name = 'clawHubDelete'; path = '/api/v1/skills/codex-unmigrated-delete'; method = 'DELETE' },
+        [ordered]@{ name = 'clawHubUndelete'; path = '/api/v1/skills/codex-unmigrated-delete/undelete'; method = 'POST' }
+    )
+    $javaOwnedResults = @()
+    foreach ($case in $javaOwnedCases) {
+        $javaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$($case.path)" -Method $case.method
+        $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$($case.path)" -Method $case.method
+        $javaOwnedResults += [ordered]@{
+            name = $case.name
+            path = $case.path
+            javaStatus = $javaStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaStatus -eq $proxyStatus)
+        }
+    }
+
+    $result = [ordered]@{
+        legacy = $legacy
+        root = $root
+        db = [ordered]@{
+            legacyVersionId = $legacyVersionId
+            rootVersionId = $rootVersionId
+            legacyStatus = $legacyStatus
+            rootStatus = $rootStatus
+            legacyNamespace = $legacyNamespace
+            rootNamespace = $rootNamespace
+            legacyReviewTaskCount = $legacyReviewTaskCount
+            rootReviewTaskCount = $rootReviewTaskCount
+        }
+        javaOwnedRoutes = $javaOwnedResults
+        checks = [ordered]@{
+            legacyProxyPublishSucceeded = ($legacy.status -eq 200 -and $legacy.body.ok -eq $true)
+            rootProxyPublishSucceeded = ($root.status -eq 200 -and $root.body.ok -eq $true)
+            legacyClawHubResponseShape = (
+                -not [string]::IsNullOrWhiteSpace($legacyVersionId) -and
+                -not [string]::IsNullOrWhiteSpace([string]$legacy.body.skillId)
+            )
+            rootClawHubResponseShape = (
+                -not [string]::IsNullOrWhiteSpace($rootVersionId) -and
+                -not [string]::IsNullOrWhiteSpace([string]$root.body.skillId)
+            )
+            legacyPendingReview = ($legacyStatus -eq 'PENDING_REVIEW' -and $legacyReviewTaskCount -eq 1)
+            rootPendingReview = ($rootStatus -eq 'PENDING_REVIEW' -and $rootReviewTaskCount -eq 1)
+            namespaceMatches = ($legacyNamespace -eq 'global' -and $rootNamespace -eq 'global')
+            unmigratedMutationRoutesRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
+        }
+        comparedFields = @('status', 'ok', 'skillId', 'versionId', 'db.status', 'db.namespace', 'db.reviewTaskCount')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.legacyProxyPublishSucceeded -or
+        -not $result.checks.rootProxyPublishSucceeded -or
+        -not $result.checks.legacyClawHubResponseShape -or
+        -not $result.checks.rootClawHubResponseShape -or
+        -not $result.checks.legacyPendingReview -or
+        -not $result.checks.rootPendingReview -or
+        -not $result.checks.namespaceMatches -or
+        -not $result.checks.unmigratedMutationRoutesRemainJavaOwned) {
+        throw "Root and legacy publish write ownership check failed. See .dev/$ResultFileName."
     }
 }
 
@@ -6265,6 +6508,24 @@ function Invoke-HybridPortalPublishWriteOwnershipSmokeVerification {
     }
 }
 
+function Invoke-HybridRootLegacyPublishWriteOwnershipSmokeVerification {
+    try {
+        Invoke-RootLegacyPublishWriteOwnershipTests
+        Start-Hybrid
+        Invoke-RootLegacyPublishWriteOwnershipContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -6303,6 +6564,7 @@ switch ($Action) {
     'verify-publish-storage-failure-cleanup-smoke' { Invoke-HybridPublishStorageFailureCleanupSmokeVerification }
     'verify-cli-publish-write-ownership-smoke' { Invoke-HybridCliPublishWriteOwnershipSmokeVerification }
     'verify-portal-publish-write-ownership-smoke' { Invoke-HybridPortalPublishWriteOwnershipSmokeVerification }
+    'verify-root-legacy-publish-write-ownership-smoke' { Invoke-HybridRootLegacyPublishWriteOwnershipSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
 from types import SimpleNamespace
 from zipfile import ZipFile
@@ -474,3 +475,212 @@ def test_portal_publish_write_aliases_reuse_publish_service() -> None:
             "auto_publish": True,
         },
     ]
+
+
+def test_legacy_publish_route_uses_namespace_form_and_clawhub_response() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        seen["validate"] = {
+            "namespace": namespace,
+            "publisher_id": publisher_id,
+            "visibility": visibility,
+            "platform_roles": sorted(platform_roles),
+            "paths": [entry.path for entry in entries],
+        }
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        seen["write"] = {
+            "namespace_slug": getattr(request, "namespace_slug"),
+            "visibility": getattr(request, "visibility"),
+            "compat_namespace": getattr(request, "compat_namespace"),
+            "compat_slug": getattr(request, "compat_slug"),
+        }
+        return PublishWriteResult(
+            skill_id=70,
+            version_id=420,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/70/420/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=[],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        data={"namespace": "@team-ai", "confirmWarnings": "true"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "skillId": "70", "versionId": "420"}
+    assert seen == {
+        "validate": {
+            "namespace": "team-ai",
+            "publisher_id": "local-user",
+            "visibility": "PUBLIC",
+            "platform_roles": ["SUPER_ADMIN"],
+            "paths": ["SKILL.md", "src/main.py"],
+        },
+        "write": {
+            "namespace_slug": "team-ai",
+            "visibility": "PUBLIC",
+            "compat_namespace": "team-ai",
+            "compat_slug": None,
+        },
+    }
+
+
+def test_clawhub_root_publish_route_accepts_payload_files_and_clawhub_response() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        seen["validate"] = {
+            "namespace": namespace,
+            "publisher_id": publisher_id,
+            "visibility": visibility,
+            "platform_roles": sorted(platform_roles),
+            "paths": [entry.path for entry in entries],
+            "content_types": [entry.content_type for entry in entries],
+        }
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        seen["write"] = {
+            "namespace_slug": getattr(request, "namespace_slug"),
+            "visibility": getattr(request, "visibility"),
+            "compat_namespace": getattr(request, "compat_namespace"),
+            "compat_slug": getattr(request, "compat_slug"),
+        }
+        return PublishWriteResult(
+            skill_id=71,
+            version_id=421,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/71/421/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=[],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    payload = {
+        "slug": "team-ai--agent-helper",
+        "displayName": "Agent Helper",
+        "version": "1.0.0",
+    }
+    response = client.post(
+        "/api/v1/skills",
+        headers={"X-Mock-User-Id": "local-user"},
+        data={"payload": json.dumps(payload), "confirmWarnings": "true"},
+        files=[
+            (
+                "files",
+                (
+                    "SKILL.md",
+                    b"---\nname: Agent Helper\ndescription: Helps agents\nversion: 1.0.0\n---\n# Skill\n",
+                    "text/markdown",
+                ),
+            ),
+            ("files", ("src/main.py", b"print('ok')\n", "text/x-python")),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "skillId": "71", "versionId": "421"}
+    assert seen == {
+        "validate": {
+            "namespace": "team-ai",
+            "publisher_id": "local-user",
+            "visibility": "PUBLIC",
+            "platform_roles": ["SUPER_ADMIN"],
+            "paths": ["SKILL.md", "src/main.py"],
+            "content_types": ["text/markdown", "text/x-python"],
+        },
+        "write": {
+            "namespace_slug": "team-ai",
+            "visibility": "PUBLIC",
+            "compat_namespace": "team-ai",
+            "compat_slug": "team-ai--agent-helper",
+        },
+    }

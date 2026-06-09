@@ -170,6 +170,7 @@ Still plan carefully when a group requires:
 | 36 | Publish storage-failure cleanup evidence | n/a | Direct Python CLI publish has unit and live evidence that storage write failure rolls back publish database rows. No publish POST route ownership moved. |
 | 37 | `POST /api/cli/v1/skills/{namespace}/publish` | python | CLI publish write ownership moved through Vite after repeated proxy publish matrix covered replacement, pending-review auto-withdraw, Java-owned portal/root route boundaries, and scanner result boundary documentation. |
 | 38 | `POST /api/v1/skills/{namespace}/publish`, `POST /api/web/skills/{namespace}/publish` | python | Portal publish write aliases moved through Vite and reuse the Python publish service path. Root ClawHub and legacy publish remain Java-owned. |
+| 39 | `POST /api/v1/skills`, `POST /api/v1/publish` | python | Root ClawHub payload/files publish and legacy zip+namespace publish moved through Vite. Both return plain ClawHub `{ ok, skillId, versionId }`; delete/undelete remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -222,7 +223,6 @@ Remaining candidate in this group:
 
 Keep Java-owned in this group:
 
-- `POST /api/v1/skills`
 - `DELETE /api/v1/skills/{canonicalSlug}`
 - `POST /api/v1/skills/{canonicalSlug}/undelete`
 - all download/file-content routes.
@@ -230,7 +230,7 @@ Keep Java-owned in this group:
 Acceptance focus:
 
 - `GET /api/v1/skills` plain ClawHub list matches Java.
-- Root `POST /api/v1/skills` still reaches Java until publish/upload is planned.
+- Root `POST /api/v1/skills` is now Python-owned after publish ownership order 39.
 - Existing Python read routes stay green.
 - Vite proxy rules become simpler where possible, but method collisions remain explicitly tested.
 
@@ -1133,16 +1133,21 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through portal
-publish write ownership for `POST /api/v1/skills/{namespace}/publish` and
-`POST /api/web/skills/{namespace}/publish`.
+the current pre-launch publish work. Group D publish foundations are complete through root,
+legacy, CLI, and portal publish write ownership:
+
+- `POST /api/cli/v1/skills/{namespace}/publish`
+- `POST /api/v1/skills/{namespace}/publish`
+- `POST /api/web/skills/{namespace}/publish`
+- `POST /api/v1/skills`
+- `POST /api/v1/publish`
 
 Next decision point:
 
-- Move root ClawHub publish (`POST /api/v1/skills`) and legacy publish (`POST /api/v1/publish`)
-  when ClawHub write compatibility becomes the priority.
 - Plan scanner result processing if the next priority is completing asynchronous scan lifecycle
   status updates after Redis handoff.
+- Plan lifecycle/governance mutations if the next priority is enabling review/approval and
+  post-publish state transitions in Python.
 
 Either choice must include route-specific live gates and must keep `server/` read-only.
 

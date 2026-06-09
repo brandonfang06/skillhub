@@ -65,7 +65,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo')).toBeUndefined()
 
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/demo/undelete')).toBe('http://localhost:8080')
@@ -161,7 +161,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('POST', '/api/web/skills/global/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/demo/undelete')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
@@ -184,14 +184,14 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills?q=agent')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills?page=0&limit=25')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
-  it('routes portal publish aliases to Python while root and legacy publish stay Java-owned', () => {
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('POST', '/api/v1/publish')).toBe('http://localhost:8080')
+  it('routes root, legacy, and portal publish aliases to Python', () => {
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/publish')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/publish')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/web/skills/global/publish')).toBe('http://localhost:8081')
 
@@ -211,7 +211,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/search?q=agent')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
   })
 
@@ -232,7 +232,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8080')
   })
@@ -347,7 +347,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/download')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/download')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/download')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
   })
 
   it('routes CLI publish validate and write to Python', () => {
