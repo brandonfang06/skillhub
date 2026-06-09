@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from io import BytesIO
+import mimetypes
 from pathlib import Path
 from typing import Any
+from zipfile import ZipFile
 
 from sqlalchemy import text
 
@@ -37,6 +40,21 @@ class ReviewQueryError(ValueError):
     def __init__(self, message: str, *, status_code: int = 400) -> None:
         super().__init__(message)
         self.status_code = status_code
+
+
+@dataclass(frozen=True)
+class ReviewDownloadResult:
+    content: bytes
+    content_type: str
+    filename: str
+    content_length: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.content_length is None:
+            object.__setattr__(self, "content_length", len(self.content))
+
+    def as_bytes_io(self) -> BytesIO:
+        return BytesIO(self.content)
 
 
 def _normalize_status(status: str) -> str:
@@ -126,6 +144,83 @@ def _read_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
         return target.read_bytes()
     except FileNotFoundError as exc:
         raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
+
+
+def _read_bundle_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
+    try:
+        return _read_storage_bytes(storage_base_path, storage_key)
+    except ReviewQueryError as exc:
+        raise ReviewQueryError("error.skill.bundle.notFound", status_code=400) from exc
+
+
+def _sanitize_download_filename(value: str) -> str:
+    import re
+
+    sanitized = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "-", value)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized if sanitized != "" else "skill"
+
+
+def _build_download_filename(display_name: str | None, slug: str, version: str) -> str:
+    base_name = display_name if display_name is not None and display_name.strip() != "" else slug
+    return f"{_sanitize_download_filename(base_name)}-{version}.zip"
+
+
+def _bundle_storage_key(skill_id: int, version_id: int) -> str:
+    return f"packages/{skill_id}/{version_id}/bundle.zip"
+
+
+def _probe_bundle_content_type(storage_key: str) -> str:
+    return mimetypes.guess_type(storage_key)[0] or "application/zip"
+
+
+def _build_review_download_result(
+    storage_base_path: str,
+    version_row: dict[str, Any],
+    file_rows: list[dict[str, Any]],
+) -> ReviewDownloadResult:
+    skill_id = int(version_row["skill_id"])
+    version_id = int(version_row["version_id"])
+    filename = _build_download_filename(
+        version_row.get("display_name"),
+        str(version_row["slug"]),
+        str(version_row["version"]),
+    )
+    bundle_key = _bundle_storage_key(skill_id, version_id)
+    if _file_exists(storage_base_path, bundle_key):
+        content = _read_bundle_storage_bytes(storage_base_path, bundle_key)
+        return ReviewDownloadResult(
+            content=content,
+            content_type=_probe_bundle_content_type(bundle_key),
+            filename=filename,
+            content_length=len(content),
+        )
+
+    available_files: list[tuple[str, bytes]] = []
+    for file_row in sorted(file_rows, key=lambda row: str(row["file_path"])):
+        storage_key = file_row.get("storage_key")
+        if storage_key is None:
+            continue
+        try:
+            content = _read_storage_bytes(storage_base_path, str(storage_key))
+        except ReviewQueryError:
+            continue
+        available_files.append((str(file_row["file_path"]), content))
+
+    if not available_files:
+        raise ReviewQueryError("error.skill.bundle.notFound", status_code=400)
+
+    buffer = BytesIO()
+    with ZipFile(buffer, "w") as zip_file:
+        for file_path, content in available_files:
+            zip_file.writestr(file_path, content)
+    content = buffer.getvalue()
+    return ReviewDownloadResult(
+        content=content,
+        content_type="application/zip",
+        filename=filename,
+        content_length=len(content),
+    )
 
 
 def _resolve_documentation_file(files: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -476,6 +571,29 @@ async def _read_review_skill_snapshot(connection: Any, skill_version_id: int) ->
     return dict(row)
 
 
+async def _read_review_download_version_row(connection: Any, skill_version_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id AS skill_id,
+                       active.id AS version_id,
+                       s.slug,
+                       s.display_name,
+                       active.version
+                FROM skill_version active
+                JOIN skill s ON s.id = active.skill_id
+                WHERE active.id = :skill_version_id
+                """
+            ),
+            {"skill_version_id": skill_version_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise ReviewQueryError("error.skill.version.notFound", status_code=400)
+    return dict(row)
+
+
 async def _read_review_skill_versions(connection: Any, skill_id: int) -> list[dict[str, Any]]:
     rows = (
         await connection.execute(
@@ -534,6 +652,23 @@ async def _read_review_skill_files(connection: Any, version_id: int, storage_bas
         for row in rows
         if row.get("storage_key") is not None and _file_exists(storage_base_path, str(row["storage_key"]))
     ]
+
+
+async def _read_review_download_file_rows(connection: Any, version_id: int) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT file_path, storage_key
+                FROM skill_file
+                WHERE version_id = :version_id
+                ORDER BY file_path ASC
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
 
 
 async def _build_page_response(
@@ -689,3 +824,22 @@ async def read_review_file_content(
         if file_row is None:
             raise ReviewQueryError("error.skill.file.notFound", status_code=400)
         return _read_storage_bytes(storage_base_path, str(file_row["storage_key"]))
+
+
+async def read_review_download_package(
+    engine: Any,
+    storage_base_path: str,
+    *,
+    review_task_id: int,
+    user_id: str,
+) -> ReviewDownloadResult:
+    async with engine.connect() as connection:
+        task = await _read_review_task_row(connection, review_task_id)
+        platform_roles = await _read_platform_roles(connection, user_id)
+        namespace_roles = await _read_namespace_roles(connection, user_id)
+        if not _can_view_review(task, user_id, namespace_roles, platform_roles):
+            raise ReviewQueryError("review.no_permission", status_code=403)
+
+        version_row = await _read_review_download_version_row(connection, int(task["skill_version_id"]))
+        file_rows = await _read_review_download_file_rows(connection, int(version_row["version_id"]))
+        return _build_review_download_result(storage_base_path, version_row, file_rows)

@@ -22,10 +22,12 @@ from app.review.approval import (
 from app.review.query import (
     ReviewListQuery,
     ReviewQueryError,
+    ReviewDownloadResult,
     list_my_review_submissions,
     list_pending_reviews,
     list_review_tasks,
     read_review_detail,
+    read_review_download_package,
     read_review_file_content,
     read_review_skill_detail,
 )
@@ -337,6 +339,46 @@ async def get_review_file_content(
     return Response(content=content, media_type="application/octet-stream")
 
 
+def _build_review_download_response(result: ReviewDownloadResult) -> Response:
+    return Response(
+        content=result.content,
+        media_type=result.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{result.filename}"',
+            "Content-Length": str(result.content_length),
+        },
+    )
+
+
+async def get_review_download(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None,
+) -> Response:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "review_download_reader", None)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(
+                reader(
+                    getattr(request.app.state, "db_engine", None),
+                    request.app.state.settings.storage_base_path,
+                    review_task_id=review_task_id,
+                    user_id=user_id,
+                )
+            )
+        else:
+            result = await read_review_download_package(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                review_task_id=review_task_id,
+                user_id=user_id,
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return _build_review_download_response(result)
+
+
 @router.get("/api/v1/reviews")
 @router.get("/api/web/reviews")
 async def list_reviews_route(
@@ -393,6 +435,16 @@ async def get_review_file_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> Response:
     return await get_review_file_content(request, review_task_id, path, mock_user_id)
+
+
+@router.get("/api/v1/reviews/{review_task_id}/download")
+@router.get("/api/web/reviews/{review_task_id}/download")
+async def get_review_download_route(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    return await get_review_download(request, review_task_id, mock_user_id)
 
 
 @router.get("/api/v1/reviews/{review_task_id}")

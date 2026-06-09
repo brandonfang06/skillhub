@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -9219,6 +9219,220 @@ function Invoke-HybridReviewFileSmokeVerification {
     }
 }
 
+function Invoke-ReviewDownloadTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_review_download.py', 'tests/test_review_file_content.py', 'tests/test_review_skill_detail.py', 'tests/test_review_detail.py', 'tests/test_review_list.py', 'tests/test_review_submit.py', 'tests/test_review_approve.py', 'tests/test_review_reject_withdraw.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-ReviewDownloadGetStableJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    $response = Invoke-WebRequest -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -UseBasicParsing
+    $content = $response.Content
+    if ($content -is [byte[]]) {
+        $bytes = [byte[]]$content
+    } else {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes([string]$content)
+    }
+    $stable = [ordered]@{
+        statusCode = [int]$response.StatusCode
+        contentType = ($response.Headers['Content-Type'] -split ';')[0]
+        contentDispositionKind = ($(if ($response.Headers['Content-Disposition'] -match '^attachment; filename="Review Download-1\.0\.0\.zip"$') { 'review-download-attachment' } else { $response.Headers['Content-Disposition'] }))
+        length = $bytes.Length
+        sha256 = Get-BytesSha256Hex -Bytes $bytes
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Write-ReviewDownloadStorageObjects {
+    param([string]$Namespace)
+
+    $rows = & docker compose -p skillhub exec -T postgres psql -U skillhub -d skillhub -t -A -F '|' -v ON_ERROR_STOP=1 -c "SELECT 'packages/' || s.id || '/' || sv.id || '/bundle.zip' AS bundle_key FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$Namespace' ORDER BY rt.id;"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Postgres bundle-key query failed for review download fixture."
+    }
+
+    foreach ($line in $rows) {
+        if (-not $line -or $line.Trim() -eq '') {
+            continue
+        }
+        $relativePath = $line.Trim() -replace '/', [System.IO.Path]::DirectorySeparatorChar
+        $targetPath = Join-Path $JavaStoragePath $relativePath
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+        [System.IO.File]::WriteAllBytes($targetPath, [System.Text.Encoding]::UTF8.GetBytes("review-download-bundle`r`n"))
+    }
+}
+
+function Invoke-ReviewDownloadContractComparison {
+    param([string]$ResultFileName = 'review-download-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-review-download-$suffix"
+    $reviewerId = "codex-review-download-admin-$suffix"
+    $submitterId = "codex-review-download-submitter-$suffix"
+    $slugs = @(
+        "java-review-download-$suffix",
+        "python-review-download-$suffix",
+        "proxy-review-download-$suffix",
+        "proxy-web-review-download-$suffix"
+    )
+
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Review Download', 'Review download contract', '$submitterId', 'NAMESPACE_ONLY', 'ACTIVE', 0, '$submitterId', '$submitterId')" }) -join ",`n        "
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES
+        ('$reviewerId', 'Codex Review Download Admin', 'ACTIVE'),
+        ('$submitterId', 'Codex Review Download Submitter', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Review Download', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$reviewerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    FOR skill_row IN
+        INSERT INTO skill (
+            namespace_id, slug, display_name, summary, owner_id, visibility, status,
+            download_count, created_by, updated_by
+        )
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at, bundle_ready, download_ready,
+            requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PENDING_REVIEW',
+            jsonb_build_object('name', 'Review Download', 'description', 'Pending review'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 22, '$submitterId', '2026-06-09T09:00:00Z'::timestamptz,
+            TRUE, FALSE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO version_id;
+
+        INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+        VALUES (version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP - INTERVAL '1 minute');
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+    Write-ReviewDownloadStorageObjects -Namespace $namespace
+
+    function Get-ReviewTaskId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    function Get-DownloadCount([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.download_count FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    $javaTaskId = Get-ReviewTaskId $slugs[0]
+    $pythonTaskId = Get-ReviewTaskId $slugs[1]
+    $proxyTaskId = Get-ReviewTaskId $slugs[2]
+    $proxyWebTaskId = Get-ReviewTaskId $slugs[3]
+
+    $javaStable = Invoke-ReviewDownloadGetStableJson "$JavaUrl/api/v1/reviews/$javaTaskId/download" $reviewerId
+    $pythonStable = Invoke-ReviewDownloadGetStableJson "$PythonUrl/api/v1/reviews/$pythonTaskId/download" $reviewerId
+    $proxyStable = Invoke-ReviewDownloadGetStableJson "$WebUrl/api/v1/reviews/$proxyTaskId/download" $reviewerId
+    $proxyWebStable = Invoke-ReviewDownloadGetStableJson "$WebUrl/api/web/reviews/$proxyWebTaskId/download" $reviewerId
+
+    $unauthenticatedStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyTaskId/download" -Method 'GET'
+    $counts = [ordered]@{
+        java = Get-DownloadCount $slugs[0]
+        python = Get-DownloadCount $slugs[1]
+        proxy = Get-DownloadCount $slugs[2]
+        proxyWeb = Get-DownloadCount $slugs[3]
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        taskIds = [ordered]@{
+            java = $javaTaskId
+            python = $pythonTaskId
+            proxy = $proxyTaskId
+            proxyWeb = $proxyWebTaskId
+        }
+        javaMatchesPython = ($javaStable -eq $pythonStable)
+        pythonMatchesProxy = ($pythonStable -eq $proxyStable)
+        pythonMatchesProxyWeb = ($pythonStable -eq $proxyWebStable)
+        unauthenticatedStatus = $unauthenticatedStatus
+        downloadCounts = $counts
+        checks = [ordered]@{
+            downloadsMatch = ($javaStable -eq $pythonStable -and $pythonStable -eq $proxyStable -and $pythonStable -eq $proxyWebStable)
+            unauthenticatedRejected = ($unauthenticatedStatus -eq 401)
+            countersUnchanged = ($counts.java -eq '0' -and $counts.python -eq '0' -and $counts.proxy -eq '0' -and $counts.proxyWeb -eq '0')
+        }
+        stable = [ordered]@{
+            java = $javaStable
+            python = $pythonStable
+            proxy = $proxyStable
+            proxyWeb = $proxyWebStable
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.downloadsMatch -or -not $result.checks.unauthenticatedRejected -or -not $result.checks.countersUnchanged) {
+        throw "Review download contract check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-HybridReviewDownloadSmokeVerification {
+    try {
+        Invoke-ReviewDownloadTests
+        Start-Hybrid
+        Invoke-ReviewDownloadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -9270,6 +9484,7 @@ switch ($Action) {
     'verify-review-detail-smoke' { Invoke-HybridReviewDetailSmokeVerification }
     'verify-review-skill-detail-smoke' { Invoke-HybridReviewSkillDetailSmokeVerification }
     'verify-review-file-smoke' { Invoke-HybridReviewFileSmokeVerification }
+    'verify-review-download-smoke' { Invoke-HybridReviewDownloadSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

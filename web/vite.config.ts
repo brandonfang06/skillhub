@@ -115,6 +115,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['GET'],
+    pattern: /^\/api\/v1\/reviews\/[^/?]+\/download(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/reviews\/[^/?]+\/download(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
     pattern: /^\/api\/v1\/reviews\/(?!pending(?:\?.*)?$|my-submissions(?:\?.*)?$)[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

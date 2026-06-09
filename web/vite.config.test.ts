@@ -153,7 +153,12 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews/701/file?path=SKILL.md')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701/download')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/reviews/701/download')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/reviews/701/download')).toBe(
+      'http://localhost:8081',
+    )
 
     expect(matchingDevProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/web/reviews/701/approve')).toBe('http://localhost:8081')
@@ -175,7 +180,8 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/web/reviews/701/skill-detail')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701/file?path=SKILL.md')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/reviews/701/file?path=SKILL.md')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701/download')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/reviews/701/download')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/reviews/701/download')).toBe('http://localhost:8081')
   })
 
   it('routes ClawHub well-known discovery to Python', () => {

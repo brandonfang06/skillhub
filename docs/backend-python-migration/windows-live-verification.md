@@ -1432,3 +1432,27 @@ This gate:
 - stops the hybrid stack after verification.
 
 The 2026-06-09 run passed with matching raw bytes across Java, Python, and both Vite aliases.
+
+## Review Download Live Gate
+
+For the migrated review-bound package download routes, use:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-download-smoke
+```
+
+This gate:
+
+- runs Python review download regressions plus Vite proxy ownership tests;
+- starts Java `8080`, Python `8081`, Vite `3000`, and Docker dependency services;
+- compares Java direct, Python direct, Vite `/api/v1`, and Vite `/api/web` download responses
+  by status, content type, content-disposition shape, byte length, and SHA-256;
+- verifies unauthenticated requests are rejected with HTTP 401;
+- verifies review downloads do not increment public `skill.download_count`;
+- runs Playwright smoke E2E;
+- stops the hybrid stack after verification.
+
+The 2026-06-09 run found and fixed a Windows local-storage metadata parity issue: Java
+`Files.probeContentType(.zip)` returns `application/x-zip-compressed` for prebuilt bundle objects.
+Python now uses local mimetype probing for prebuilt review bundles while fallback zips keep
+`application/zip`.

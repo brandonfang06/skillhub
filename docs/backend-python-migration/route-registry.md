@@ -72,12 +72,14 @@ deferred routes are still visible.
 | GET | `/api/web/reviews/pending` | python | Frontend alias for namespace pending review list. |
 | GET | `/api/v1/reviews/my-submissions` | python | Current user's pending review submissions moved to Python. |
 | GET | `/api/web/reviews/my-submissions` | python | Frontend alias for current user's pending review submissions. |
-| GET | `/api/v1/reviews/{id}` | python | Review task detail moved to Python. Download subroute remains Java-owned. |
+| GET | `/api/v1/reviews/{id}` | python | Review task detail moved to Python. |
 | GET | `/api/web/reviews/{id}` | python | Frontend alias for review task detail. |
 | GET | `/api/v1/reviews/{id}/skill-detail` | python | Review-bound skill detail moved to Python. Uses the review task's active version snapshot, Java lifecycle ordering, storage-backed documentation content, and review download URL. |
 | GET | `/api/web/reviews/{id}/skill-detail` | python | Frontend alias for review-bound skill detail. |
 | GET | `/api/v1/reviews/{id}/file` | python | Review-bound single-file content moved to Python. Returns raw `application/octet-stream` bytes from the review task's active version and preserves Java path validation. |
 | GET | `/api/web/reviews/{id}/file` | python | Frontend alias for review-bound single-file content. |
+| GET | `/api/v1/reviews/{id}/download` | python | Review-bound package download moved to Python. Streams the review task's active version bundle/fallback zip without public download counter increments. |
+| GET | `/api/web/reviews/{id}/download` | python | Frontend alias for review-bound package download. |
 | POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Other review routes remain Java-owned. |
 | POST | `/api/web/reviews/{id}/approve` | python | Frontend review approval alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/approve`. |
 | POST | `/api/v1/reviews/{id}/reject` | python | Review rejection write moved to Python. Rejects the review task, moves the version to `REJECTED`, and writes `REVIEW_REJECT` audit. |
