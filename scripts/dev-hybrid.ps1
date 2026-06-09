@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -8290,6 +8290,232 @@ function Invoke-HybridReviewSubmitSmokeVerification {
     }
 }
 
+function Invoke-ReviewListTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_review_list.py', 'tests/test_review_submit.py', 'tests/test_review_approve.py', 'tests/test_review_reject_withdraw.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableReviewPageContractJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in $Response.data.items) {
+        $items += [ordered]@{
+            status = $item.status
+            submittedBy = $item.submittedBy
+            reviewedBy = $item.reviewedBy
+            reviewComment = $item.reviewComment
+        }
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            total = $Response.data.total
+            page = $Response.data.page
+            size = $Response.data.size
+            itemCount = @($Response.data.items).Count
+            items = $items
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-ReviewListGetJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId }
+}
+
+function Invoke-ReviewListContractComparison {
+    param([string]$ResultFileName = 'review-list-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-review-list-$suffix"
+    $reviewerId = "codex-review-list-admin-$suffix"
+    $submitterId = "codex-review-list-submitter-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    version_id BIGINT;
+    skill_admin_role_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES
+        ('$reviewerId', 'Codex Review List Admin', 'ACTIVE'),
+        ('$submitterId', 'Codex Review List Submitter', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+    IF skill_admin_role_id IS NOT NULL THEN
+        INSERT INTO user_role_binding (user_id, role_id)
+        VALUES ('$reviewerId', skill_admin_role_id)
+        ON CONFLICT (user_id, role_id) DO NOTHING;
+    END IF;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Review List', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$reviewerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+            (ns_id, 'approved-$suffix', 'Approved Review List', 'Approved list', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId'),
+            (ns_id, 'pending-$suffix', 'Pending Review List', 'Pending list', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId'),
+            (ns_id, 'mine-$suffix', 'My Review List', 'Mine list', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PENDING_REVIEW',
+            jsonb_build_object('name', 'Review List Skill', 'description', 'Review list check'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO version_id;
+
+        IF skill_row.slug = 'approved-$suffix' THEN
+            INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, reviewed_by, review_comment, submitted_at, reviewed_at)
+            VALUES (version_id, ns_id, 'APPROVED', 1, '$submitterId', '$reviewerId', 'approved-$suffix', CURRENT_TIMESTAMP - INTERVAL '3 minutes', CURRENT_TIMESTAMP - INTERVAL '2 minutes');
+        ELSE
+            INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+            VALUES (version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP - INTERVAL '1 minute');
+        END IF;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+    $namespaceId = Invoke-PostgresScalar -Sql "SELECT id FROM namespace WHERE slug = '$namespace';"
+    $pendingTaskId = Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN namespace n ON n.id = rt.namespace_id WHERE n.slug = '$namespace' AND rt.status = 'PENDING' ORDER BY rt.id LIMIT 1;"
+
+    $globalPath = "/api/v1/reviews?status=APPROVED&page=0&size=1&sortDirection=ASC"
+    $pendingPath = "/api/v1/reviews/pending?namespaceId=$namespaceId&page=0&size=5"
+    $myPath = "/api/v1/reviews/my-submissions?page=0&size=5"
+    $webGlobalPath = "/api/web/reviews?status=APPROVED&page=0&size=1&sortDirection=ASC"
+    $webPendingPath = "/api/web/reviews/pending?namespaceId=$namespaceId&page=0&size=5"
+    $webMyPath = "/api/web/reviews/my-submissions?page=0&size=5"
+
+    $javaGlobal = Invoke-ReviewListGetJson "$JavaUrl$globalPath" $reviewerId
+    $pythonGlobal = Invoke-ReviewListGetJson "$PythonUrl$globalPath" $reviewerId
+    $proxyGlobal = Invoke-ReviewListGetJson "$WebUrl$globalPath" $reviewerId
+    $proxyWebGlobal = Invoke-ReviewListGetJson "$WebUrl$webGlobalPath" $reviewerId
+
+    $javaPending = Invoke-ReviewListGetJson "$JavaUrl$pendingPath" $reviewerId
+    $pythonPending = Invoke-ReviewListGetJson "$PythonUrl$pendingPath" $reviewerId
+    $proxyPending = Invoke-ReviewListGetJson "$WebUrl$pendingPath" $reviewerId
+    $proxyWebPending = Invoke-ReviewListGetJson "$WebUrl$webPendingPath" $reviewerId
+
+    $javaMine = Invoke-ReviewListGetJson "$JavaUrl$myPath" $submitterId
+    $pythonMine = Invoke-ReviewListGetJson "$PythonUrl$myPath" $submitterId
+    $proxyMine = Invoke-ReviewListGetJson "$WebUrl$myPath" $submitterId
+    $proxyWebMine = Invoke-ReviewListGetJson "$WebUrl$webMyPath" $submitterId
+
+    $globalStable = [ordered]@{
+        java = ConvertTo-StableReviewPageContractJson -Response $javaGlobal
+        python = ConvertTo-StableReviewPageContractJson -Response $pythonGlobal
+        proxy = ConvertTo-StableReviewPageContractJson -Response $proxyGlobal
+        proxyWeb = ConvertTo-StableReviewPageContractJson -Response $proxyWebGlobal
+    }
+    $pendingStable = [ordered]@{
+        java = ConvertTo-StableReviewPageContractJson -Response $javaPending
+        python = ConvertTo-StableReviewPageContractJson -Response $pythonPending
+        proxy = ConvertTo-StableReviewPageContractJson -Response $proxyPending
+        proxyWeb = ConvertTo-StableReviewPageContractJson -Response $proxyWebPending
+    }
+    $mineStable = [ordered]@{
+        java = ConvertTo-StableReviewPageContractJson -Response $javaMine
+        python = ConvertTo-StableReviewPageContractJson -Response $pythonMine
+        proxy = ConvertTo-StableReviewPageContractJson -Response $proxyMine
+        proxyWeb = ConvertTo-StableReviewPageContractJson -Response $proxyWebMine
+    }
+
+    $detailProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$pendingTaskId" -Method 'GET'
+    $skillDetailProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/web/reviews/$pendingTaskId/skill-detail" -Method 'GET'
+
+    $result = [ordered]@{
+        namespace = $namespace
+        namespaceId = $namespaceId
+        global = $globalStable
+        pending = $pendingStable
+        mySubmissions = $mineStable
+        javaOwnedBoundaries = [ordered]@{
+            detailStatus = $detailProxyStatus
+            skillDetailStatus = $skillDetailProxyStatus
+        }
+        checks = [ordered]@{
+            globalMatches = ($globalStable.java -eq $globalStable.python -and $globalStable.python -eq $globalStable.proxy -and $globalStable.python -eq $globalStable.proxyWeb)
+            pendingMatches = ($pendingStable.java -eq $pendingStable.python -and $pendingStable.python -eq $pendingStable.proxy -and $pendingStable.python -eq $pendingStable.proxyWeb)
+            mySubmissionsMatches = ($mineStable.java -eq $mineStable.python -and $mineStable.python -eq $mineStable.proxy -and $mineStable.python -eq $mineStable.proxyWeb)
+            detailRemainsJavaOwned = ($detailProxyStatus -ne 404)
+            skillDetailRemainsJavaOwned = ($skillDetailProxyStatus -ne 404)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.globalMatches -or -not $result.checks.pendingMatches -or -not $result.checks.mySubmissionsMatches) {
+        throw "Review list response contract check failed. See .dev/$ResultFileName."
+    }
+    if (-not $result.checks.detailRemainsJavaOwned -or -not $result.checks.skillDetailRemainsJavaOwned) {
+        throw "Review list route boundary check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-HybridReviewListSmokeVerification {
+    try {
+        Invoke-ReviewListTests
+        Start-Hybrid
+        Invoke-ReviewListContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -8337,6 +8563,7 @@ switch ($Action) {
     'verify-review-approve-smoke' { Invoke-HybridReviewApproveSmokeVerification }
     'verify-review-reject-withdraw-smoke' { Invoke-HybridReviewRejectWithdrawSmokeVerification }
     'verify-review-submit-smoke' { Invoke-HybridReviewSubmitSmokeVerification }
+    'verify-review-list-smoke' { Invoke-HybridReviewListSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

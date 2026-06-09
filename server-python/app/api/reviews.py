@@ -4,7 +4,7 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.core.response import ok
@@ -18,6 +18,13 @@ from app.review.approval import (
     reject_review_task,
     submit_review_task,
     withdraw_review_task,
+)
+from app.review.query import (
+    ReviewListQuery,
+    ReviewQueryError,
+    list_my_review_submissions,
+    list_pending_reviews,
+    list_review_tasks,
 )
 
 
@@ -38,18 +45,29 @@ async def _resolve_approval_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
+async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
+    if isawaitable(result):
+        return await result
+    return result
+
+
+def _require_mock_user(mock_user_id: str | None) -> str:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return mock_user_id.strip()
+
+
 async def approve_review(
     request: Request,
     review_task_id: int,
     body: ReviewActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = _require_mock_user(mock_user_id)
 
     approval_input = ReviewApproveInput(
         review_task_id=review_task_id,
-        reviewer_id=mock_user_id.strip(),
+        reviewer_id=user_id,
         comment=body.comment if body is not None else None,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
@@ -71,12 +89,11 @@ async def reject_review(
     body: ReviewActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = _require_mock_user(mock_user_id)
 
     reject_input = ReviewRejectInput(
         review_task_id=review_task_id,
-        reviewer_id=mock_user_id.strip(),
+        reviewer_id=user_id,
         comment=body.comment if body is not None else None,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
@@ -97,12 +114,11 @@ async def withdraw_review(
     review_task_id: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = _require_mock_user(mock_user_id)
 
     withdraw_input = ReviewWithdrawInput(
         review_task_id=review_task_id,
-        user_id=mock_user_id.strip(),
+        user_id=user_id,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -122,12 +138,11 @@ async def submit_review(
     body: ReviewSubmitRequest,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = _require_mock_user(mock_user_id)
 
     submit_input = ReviewSubmitInput(
         skill_version_id=body.skillVersionId,
-        user_id=mock_user_id.strip(),
+        user_id=user_id,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -140,6 +155,131 @@ async def submit_review(
     except ReviewApprovalError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u521b\u5efa\u6210\u529f", data, request)
+
+
+async def list_reviews(
+    request: Request,
+    status: str,
+    namespace_id: int | None,
+    page: int,
+    size: int,
+    sort_direction: str,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "review_list_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(
+                reader(
+                    status=status,
+                    namespace_id=namespace_id,
+                    page=page,
+                    size=size,
+                    sort_direction=sort_direction,
+                    user_id=user_id,
+                )
+            )
+        else:
+            data = await list_review_tasks(
+                request.app.state.db_engine,
+                ReviewListQuery(
+                    status=status,
+                    namespace_id=namespace_id,
+                    page=page,
+                    size=size,
+                    sort_direction=sort_direction,
+                    user_id=user_id,
+                ),
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+async def list_pending_review_route_data(
+    request: Request,
+    namespace_id: int,
+    page: int,
+    size: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "review_pending_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace_id=namespace_id, page=page, size=size, user_id=user_id))
+        else:
+            data = await list_pending_reviews(
+                request.app.state.db_engine,
+                namespace_id=namespace_id,
+                page=page,
+                size=size,
+                user_id=user_id,
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+async def list_my_submissions_route_data(
+    request: Request,
+    page: int,
+    size: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "review_my_submissions_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(page=page, size=size, user_id=user_id))
+        else:
+            data = await list_my_review_submissions(
+                request.app.state.db_engine,
+                page=page,
+                size=size,
+                user_id=user_id,
+            )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/reviews")
+@router.get("/api/web/reviews")
+async def list_reviews_route(
+    request: Request,
+    status: str,
+    namespace_id: int | None = Query(default=None, alias="namespaceId"),
+    page: int = 0,
+    size: int = 20,
+    sort_direction: str = Query(default="DESC", alias="sortDirection"),
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_reviews(request, status, namespace_id, page, size, sort_direction, mock_user_id)
+
+
+@router.get("/api/v1/reviews/pending")
+@router.get("/api/web/reviews/pending")
+async def list_pending_reviews_route(
+    request: Request,
+    namespace_id: int = Query(alias="namespaceId"),
+    page: int = 0,
+    size: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_pending_review_route_data(request, namespace_id, page, size, mock_user_id)
+
+
+@router.get("/api/v1/reviews/my-submissions")
+@router.get("/api/web/reviews/my-submissions")
+async def list_my_submissions_route(
+    request: Request,
+    page: int = 0,
+    size: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_my_submissions_route_data(request, page, size, mock_user_id)
 
 
 @router.post("/api/v1/reviews")
