@@ -219,6 +219,8 @@ async def validate_cli_publish(
 
 
 @router.post("/api/cli/v1/skills/{namespace}/publish")
+@router.post("/api/v1/skills/{namespace}/publish")
+@router.post("/api/web/skills/{namespace}/publish")
 async def publish_cli_skill(
     request: Request,
     namespace: str,

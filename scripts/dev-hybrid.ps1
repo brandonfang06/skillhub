@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5391,6 +5391,30 @@ function Invoke-CliPublishWriteOwnershipTests {
     }
 }
 
+function Invoke-PortalPublishWriteOwnershipTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_hybrid_makefile.py',
+            'tests/test_publish_http_validate.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+
+    Invoke-WebDeps
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-PublishCliWriteDirectContractComparison {
     param([string]$ResultFileName = 'publish-cli-write-direct-contract-result.json')
 
@@ -5778,6 +5802,93 @@ function Invoke-CliPublishWriteOwnershipContractComparison {
     }
 }
 
+function Invoke-PortalPublishWriteOwnershipContractComparison {
+    param([string]$ResultFileName = 'portal-publish-write-ownership-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $headers = @{ 'X-Mock-User-Id' = 'local-user' }
+    $v1Path = '/api/v1/skills/global/publish'
+    $webPath = '/api/web/skills/global/publish'
+    $v1Version = "1.0.$suffix"
+    $webVersion = "1.1.$suffix"
+    $v1SkillName = "Codex Portal V1 $suffix"
+    $webSkillName = "Codex Portal Web $suffix"
+    $v1Zip = New-PublishValidateFixtureZip -SkillName $v1SkillName -Version $v1Version -FilePrefix "portal-v1-publish-$suffix"
+    $webZip = New-PublishValidateFixtureZip -SkillName $webSkillName -Version $webVersion -FilePrefix "portal-web-publish-$suffix"
+
+    Write-Host "Verifying portal publish write ownership through Vite proxy"
+    $v1 = Invoke-MultipartPostJson "$WebUrl$v1Path" -FilePath $v1Zip -Headers $headers
+    $web = Invoke-MultipartPostJson "$WebUrl$webPath" -FilePath $webZip -Headers $headers
+
+    $v1Slug = $v1.body.data.slug
+    $webSlug = $web.body.data.slug
+    $v1VersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$v1Slug' AND s.owner_id = 'local-user' AND sv.version = '$v1Version' LIMIT 1;"
+    $webVersionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$webSlug' AND s.owner_id = 'local-user' AND sv.version = '$webVersion' LIMIT 1;"
+    $v1Status = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $v1VersionId;"
+    $webStatus = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $webVersionId;"
+    $v1ReviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $v1VersionId AND status = 'PENDING';")
+    $webReviewTaskCount = [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM review_task WHERE skill_version_id = $webVersionId AND status = 'PENDING';")
+
+    $javaOwnedCases = @(
+        [ordered]@{ name = 'clawHubRootPublish'; path = '/api/v1/skills'; method = 'POST' },
+        [ordered]@{ name = 'legacyPublish'; path = '/api/v1/publish'; method = 'POST' }
+    )
+    $javaOwnedResults = @()
+    foreach ($case in $javaOwnedCases) {
+        $javaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$($case.path)" -Method $case.method
+        $proxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$($case.path)" -Method $case.method
+        $javaOwnedResults += [ordered]@{
+            name = $case.name
+            path = $case.path
+            javaStatus = $javaStatus
+            proxyStatus = $proxyStatus
+            proxyMatchesJava = ($javaStatus -eq $proxyStatus)
+        }
+    }
+
+    $result = [ordered]@{
+        v1 = $v1
+        web = $web
+        db = [ordered]@{
+            v1Slug = $v1Slug
+            webSlug = $webSlug
+            v1Version = $v1Version
+            webVersion = $webVersion
+            v1VersionId = $v1VersionId
+            webVersionId = $webVersionId
+            v1Status = $v1Status
+            webStatus = $webStatus
+            v1ReviewTaskCount = $v1ReviewTaskCount
+            webReviewTaskCount = $webReviewTaskCount
+        }
+        javaOwnedRoutes = $javaOwnedResults
+        checks = [ordered]@{
+            v1ProxyPublishSucceeded = ($v1.status -eq 200 -and $v1.body.code -eq 0)
+            webProxyPublishSucceeded = ($web.status -eq 200 -and $web.body.code -eq 0)
+            v1VersionCreated = -not [string]::IsNullOrWhiteSpace($v1VersionId)
+            webVersionCreated = -not [string]::IsNullOrWhiteSpace($webVersionId)
+            v1PendingReview = ($v1Status -eq 'PENDING_REVIEW' -and $v1ReviewTaskCount -eq 1)
+            webPendingReview = ($webStatus -eq 'PENDING_REVIEW' -and $webReviewTaskCount -eq 1)
+            rootAndLegacyPublishRemainJavaOwned = -not [bool]($javaOwnedResults | Where-Object { -not $_.proxyMatchesJava })
+        }
+        comparedFields = @('status', 'code', 'data.slug', 'data.version', 'db.v1Status', 'db.webStatus')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.v1ProxyPublishSucceeded -or
+        -not $result.checks.webProxyPublishSucceeded -or
+        -not $result.checks.v1VersionCreated -or
+        -not $result.checks.webVersionCreated -or
+        -not $result.checks.v1PendingReview -or
+        -not $result.checks.webPendingReview -or
+        -not $result.checks.rootAndLegacyPublishRemainJavaOwned) {
+        throw "Portal publish write ownership check failed. See .dev/$ResultFileName."
+    }
+}
+
 function Invoke-RedisCli {
     param([string[]]$Arguments)
 
@@ -6136,6 +6247,24 @@ function Invoke-HybridCliPublishWriteOwnershipSmokeVerification {
     }
 }
 
+function Invoke-HybridPortalPublishWriteOwnershipSmokeVerification {
+    try {
+        Invoke-PortalPublishWriteOwnershipTests
+        Start-Hybrid
+        Invoke-PortalPublishWriteOwnershipContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -6173,6 +6302,7 @@ switch ($Action) {
     'verify-publish-pending-auto-withdraw-smoke' { Invoke-HybridPublishPendingAutoWithdrawSmokeVerification }
     'verify-publish-storage-failure-cleanup-smoke' { Invoke-HybridPublishStorageFailureCleanupSmokeVerification }
     'verify-cli-publish-write-ownership-smoke' { Invoke-HybridCliPublishWriteOwnershipSmokeVerification }
+    'verify-portal-publish-write-ownership-smoke' { Invoke-HybridPortalPublishWriteOwnershipSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

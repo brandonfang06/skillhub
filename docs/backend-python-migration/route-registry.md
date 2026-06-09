@@ -60,8 +60,8 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/download` | java | Web download alias is not migrated; no Java evidence required moving it in this milestone. |
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/download` | java | Web download alias is not migrated; v1 portal download is Python-owned. |
 | GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | java | Web download alias is not migrated; v1 tag download is Python-owned. |
-| POST | `/api/v1/skills/{namespace}/publish` | java | Portal publish upload remains Java-owned; Python has package helper foundation only. |
-| POST | `/api/web/skills/{namespace}/publish` | java | Frontend publish upload alias remains Java-owned; Vite must not route this shape to Python detail GET. |
+| POST | `/api/v1/skills/{namespace}/publish` | python | Portal publish upload moved to Python and reuses the Python publish write service. Root ClawHub and legacy publish remain Java-owned. |
+| POST | `/api/web/skills/{namespace}/publish` | python | Frontend publish upload alias moved to Python and reuses the Python publish write service. |
 | POST | `/api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only dry-run route. Multipart adapter over Python dry-run model; no DB/storage publish writes. |
 | POST | `/api/cli/v1/skills/{namespace}/publish` | python | CLI publish write moved to Python after publish foundation, replacement, pending-review auto-withdraw, scanner handoff, and rollback live gates. Portal/root publish routes remain Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |

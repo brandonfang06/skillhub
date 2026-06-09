@@ -368,3 +368,109 @@ def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
         "scanner_enabled": True,
         "scan_mode": "upload",
     }
+
+
+def test_portal_publish_write_aliases_reuse_publish_service() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen_paths: list[dict[str, object]] = []
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        seen_paths.append(
+            {
+                "namespace_slug": getattr(request, "namespace_slug"),
+                "slug": getattr(request, "slug"),
+                "version": getattr(request, "version"),
+                "visibility": getattr(request, "visibility"),
+                "publisher_id": getattr(request, "publisher_id"),
+                "auto_publish": getattr(request, "auto_publish"),
+            }
+        )
+        return PublishWriteResult(
+            skill_id=7,
+            version_id=42,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/7/42/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=[],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    for path in ["/api/v1/skills/global/publish", "/api/web/skills/global/publish"]:
+        response = client.post(
+            path,
+            headers={"X-Mock-User-Id": "local-user", "X-Request-Id": f"request-{len(seen_paths)}"},
+            data={"visibility": "PRIVATE"},
+            files={"file": ("skill.zip", skill_zip(), "application/zip")},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["code"] == 0
+        assert body["msg"] == "response.success.published"
+        assert body["data"] == {
+            "namespace": "global",
+            "slug": "agent-helper",
+            "version": "1.0.0",
+            "visibility": "PRIVATE",
+        }
+
+    assert seen_paths == [
+        {
+            "namespace_slug": "global",
+            "slug": "agent-helper",
+            "version": "1.0.0",
+            "visibility": "PRIVATE",
+            "publisher_id": "local-user",
+            "auto_publish": True,
+        },
+        {
+            "namespace_slug": "global",
+            "slug": "agent-helper",
+            "version": "1.0.0",
+            "visibility": "PRIVATE",
+            "publisher_id": "local-user",
+            "auto_publish": True,
+        },
+    ]

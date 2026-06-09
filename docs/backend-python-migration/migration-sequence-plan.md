@@ -169,6 +169,7 @@ Still plan carefully when a group requires:
 | 35 | Publish pending-review auto-withdraw foundation | n/a | Direct Python CLI publish withdraws earlier pending-review versions for the same skill before inserting the next publish version. No publish POST route ownership moved. |
 | 36 | Publish storage-failure cleanup evidence | n/a | Direct Python CLI publish has unit and live evidence that storage write failure rolls back publish database rows. No publish POST route ownership moved. |
 | 37 | `POST /api/cli/v1/skills/{namespace}/publish` | python | CLI publish write ownership moved through Vite after repeated proxy publish matrix covered replacement, pending-review auto-withdraw, Java-owned portal/root route boundaries, and scanner result boundary documentation. |
+| 38 | `POST /api/v1/skills/{namespace}/publish`, `POST /api/web/skills/{namespace}/publish` | python | Portal publish write aliases moved through Vite and reuse the Python publish service path. Root ClawHub and legacy publish remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1132,14 +1133,14 @@ When this plan changes:
 
 Group A public catalog read ownership is complete. Group B file content/download read path is
 complete. Group C has the local current-user bridge and viewer-specific read assumptions needed for
-the current pre-launch publish work. Group D publish foundations are complete through CLI publish
-write ownership for `POST /api/cli/v1/skills/{namespace}/publish`.
+the current pre-launch publish work. Group D publish foundations are complete through portal
+publish write ownership for `POST /api/v1/skills/{namespace}/publish` and
+`POST /api/web/skills/{namespace}/publish`.
 
 Next decision point:
 
-- Move portal publish write (`POST /api/v1/skills/{namespace}/publish`,
-  `POST /api/web/skills/{namespace}/publish`) when frontend publishing becomes the priority. It
-  should reuse the CLI publish service path and add frontend workflow coverage.
+- Move root ClawHub publish (`POST /api/v1/skills`) and legacy publish (`POST /api/v1/publish`)
+  when ClawHub write compatibility becomes the priority.
 - Plan scanner result processing if the next priority is completing asynchronous scan lifecycle
   status updates after Redis handoff.
 

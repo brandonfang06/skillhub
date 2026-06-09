@@ -189,11 +189,11 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
   })
 
-  it('keeps publish upload routes Java-owned during the foundation milestone', () => {
+  it('routes portal publish aliases to Python while root and legacy publish stay Java-owned', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('POST', '/api/v1/publish')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/publish')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('POST', '/api/web/skills/global/publish')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/publish')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/global/publish')).toBe('http://localhost:8081')
 
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/global/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
@@ -350,7 +350,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8080')
   })
 
-  it('routes CLI publish validate and write to Python while keeping portal publish writes on Java', () => {
+  it('routes CLI publish validate and write to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const cliValidate = '^/api/cli/v1/skills/[^/]+/publish/validate$'
@@ -363,7 +363,7 @@ describe('Vite dev proxy route ownership', () => {
 
     expect(matchingProxyTarget('/api/cli/v1/skills/global/publish/validate')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/cli/v1/skills/global/publish')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/global/publish')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/web/skills/global/publish')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/global/publish')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/publish')).toBe('http://localhost:8081')
   })
 })
