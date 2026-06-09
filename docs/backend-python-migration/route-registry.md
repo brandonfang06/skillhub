@@ -88,8 +88,8 @@ deferred routes are still visible.
 | GET | `/api/web/promotions/{id}` | python | Frontend alias for promotion detail. |
 | POST | `/api/v1/promotions` | python | Promotion submit moved to Python. Creates `promotion_request`, enforces source ownership/platform/namespace role permission, duplicate checks, and writes `PROMOTION_SUBMIT` audit. |
 | POST | `/api/web/promotions` | python | Frontend promotion submit alias moved to Python with the same ownership boundary as `/api/v1/promotions`. |
-| POST | `/api/v1/promotions/{id}/approve` | java | Promotion approval remains Java-owned. |
-| POST | `/api/web/promotions/{id}/approve` | java | Frontend promotion approval alias remains Java-owned. |
+| POST | `/api/v1/promotions/{id}/approve` | python | Promotion approval moved to Python. Platform reviewer only, self-review forbidden, materializes public target skill/version/file records in the target global namespace, writes `PROMOTION_APPROVE` audit and synchronous governance notification. |
+| POST | `/api/web/promotions/{id}/approve` | python | Frontend promotion approval alias moved to Python with the same ownership boundary as `/api/v1/promotions/{id}/approve`. |
 | POST | `/api/v1/promotions/{id}/reject` | python | Promotion reject moved to Python. Platform reviewer only, self-review forbidden, updates request to `REJECTED`, writes `PROMOTION_REJECT` audit and synchronous governance notification. |
 | POST | `/api/web/promotions/{id}/reject` | python | Frontend promotion reject alias moved to Python with the same ownership boundary as `/api/v1/promotions/{id}/reject`. |
 | POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Other review routes remain Java-owned. |

@@ -16,9 +16,11 @@ from app.promotion.query import (
     read_promotion_detail,
 )
 from app.promotion.workflow import (
+    PromotionApproveInput,
     PromotionRejectInput,
     PromotionSubmitInput,
     PromotionWorkflowError,
+    approve_promotion,
     reject_promotion,
     submit_promotion,
 )
@@ -170,6 +172,32 @@ async def reject_promotion_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def approve_promotion_route_data(
+    request: Request,
+    promotion_id: int,
+    body: PromotionActionRequest | None,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = _require_mock_user(mock_user_id)
+    promotion_input = PromotionApproveInput(
+        promotion_id=promotion_id,
+        reviewer_id=user_id,
+        comment=body.comment if body is not None else None,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "promotion_approve_writer", None)
+    try:
+        if writer is not None:
+            data = await _resolve_writer_result(writer(promotion_input))
+        else:
+            data = await approve_promotion(request.app.state.db_engine, promotion_input)
+    except PromotionWorkflowError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/promotions")
 @router.post("/api/web/promotions")
 async def submit_promotion_route(
@@ -211,6 +239,17 @@ async def get_promotion_detail_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await get_promotion_detail_route_data(request, promotion_id, mock_user_id)
+
+
+@router.post("/api/v1/promotions/{promotion_id}/approve")
+@router.post("/api/web/promotions/{promotion_id}/approve")
+async def approve_promotion_route(
+    request: Request,
+    promotion_id: int,
+    body: PromotionActionRequest | None = None,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await approve_promotion_route_data(request, promotion_id, body, mock_user_id)
 
 
 @router.post("/api/v1/promotions/{promotion_id}/reject")

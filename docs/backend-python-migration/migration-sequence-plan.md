@@ -186,6 +186,7 @@ Still plan carefully when a group requires:
 | 52 | `GET /api/v1/reviews/{id}/download`, `GET /api/web/reviews/{id}/download` | python | Review-bound package download moved to Python. The route streams the review task's active version prebuilt bundle or fallback zip, preserves attachment headers/content length, and does not increment public download counters. |
 | 53 | `GET /api/v1/promotions`, `GET /api/web/promotions`, `GET /api/v1/promotions/pending`, `GET /api/web/promotions/pending`, `GET /api/v1/promotions/{id}`, `GET /api/web/promotions/{id}` | python | Promotion read ownership moved to Python. List/pending require platform review role; detail allows submitter or platform review role. Promotion write routes remained Java-owned during this milestone. |
 | 54 | `POST /api/v1/promotions`, `POST /api/web/promotions`, `POST /api/v1/promotions/{id}/reject`, `POST /api/web/promotions/{id}/reject` | python | Promotion submit and reject write ownership moved to Python. Submit creates pending requests and `PROMOTION_SUBMIT` audit; reject is platform-reviewer only, writes `PROMOTION_REJECT` audit and synchronous governance notification. Promotion approve remains Java-owned. |
+| 55 | `POST /api/v1/promotions/{id}/approve`, `POST /api/web/promotions/{id}/approve` | python | Promotion approve ownership moved to Python. Approval materializes target global skill/version/file records, updates `promotion_request.target_skill_id`, writes `PROMOTION_APPROVE` audit and synchronous governance notification. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1188,14 +1189,16 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/promotions`, `POST /api/web/promotions`,
   `POST /api/v1/promotions/{id}/reject`, and
   `POST /api/web/promotions/{id}/reject`.
-- Still Java-owned: promotion approve APIs and post-publish lifecycle/governance actions.
+- Completed: promotion approve APIs:
+  `POST /api/v1/promotions/{id}/approve` and
+  `POST /api/web/promotions/{id}/approve`.
+- Still Java-owned: post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with promotion approve materialization as its own milestone, because approval
-  creates target global skill/version/file records and has higher transaction/materialization risk.
-  Alternatively switch to the next migration group if approval should wait for a broader
-  materialization/refactor pass.
+- Continue with post-publish lifecycle/governance APIs or switch to the next migration group based
+  on remaining route ownership priorities. Keep milestones cohesive but small enough for a live
+  Java/Python/Vite gate.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

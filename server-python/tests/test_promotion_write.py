@@ -10,8 +10,10 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.promotion.workflow import (
+    PromotionApproveInput,
     PromotionRejectInput,
     PromotionSubmitInput,
+    approve_promotion,
     reject_promotion,
     submit_promotion,
 )
@@ -47,6 +49,7 @@ class FakePromotionWriteConnection:
         version_status: str = "PUBLISHED",
         promotion_status: str = "PENDING",
         submitted_by: str = "submitter",
+        duplicate_target: bool = False,
     ) -> None:
         self.platform_roles = platform_roles or []
         self.namespace_role = namespace_role
@@ -55,6 +58,7 @@ class FakePromotionWriteConnection:
         self.version_status = version_status
         self.promotion_status = promotion_status
         self.submitted_by = submitted_by
+        self.duplicate_target = duplicate_target
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
 
@@ -71,6 +75,28 @@ class FakePromotionWriteConnection:
             if self.namespace_role is None:
                 return FakeResult(row=None)
             return FakeResult(row={"role": self.namespace_role})
+        if "FROM skill source_skill" in sql and "source_skill.slug AS source_skill_slug" in sql:
+            return FakeResult(
+                row={
+                    "source_skill_id": 101,
+                    "source_namespace_id": 20,
+                    "source_skill_slug": "agent-helper",
+                    "source_owner_id": "submitter",
+                    "source_display_name": "Agent Helper",
+                    "source_summary": "Helps agents",
+                    "source_version_id": 501,
+                    "source_version_name": "1.0.0",
+                    "source_version_created_by": "submitter",
+                    "source_changelog": "Initial",
+                    "source_parsed_metadata_json": {"name": "Agent Helper"},
+                    "source_manifest_json": [{"path": "SKILL.md"}],
+                    "source_file_count": 2,
+                    "source_total_size": 120,
+                    "source_bundle_ready": True,
+                    "source_download_ready": True,
+                    "target_namespace_id": 1,
+                }
+            )
         if "FROM skill source_skill" in sql:
             return FakeResult(
                 row={
@@ -95,6 +121,8 @@ class FakePromotionWriteConnection:
                 row={
                     "id": 301,
                     "source_skill_id": 101,
+                    "source_version_id": 501,
+                    "target_namespace_id": 1,
                     "source_namespace": "team-a",
                     "skill_slug": "agent-helper",
                     "version_name": "1.0.0",
@@ -111,6 +139,37 @@ class FakePromotionWriteConnection:
                     "reviewed_at": None,
                 }
             )
+        if "FROM skill existing_target" in sql:
+            if self.duplicate_target:
+                return FakeResult(row={"id": 999})
+            return FakeResult(row=None)
+        if "INSERT INTO skill (" in sql:
+            return FakeResult(scalar=901)
+        if "INSERT INTO skill_version" in sql:
+            return FakeResult(scalar=902)
+        if "UPDATE skill" in sql:
+            return FakeResult(scalar=1)
+        if "FROM skill_file" in sql:
+            return FakeResult(
+                rows=[
+                    {
+                        "file_path": "SKILL.md",
+                        "file_size": 80,
+                        "content_type": "text/markdown",
+                        "sha256": "abc",
+                        "storage_key": "skills/101/501/SKILL.md",
+                    },
+                    {
+                        "file_path": "src/main.py",
+                        "file_size": 40,
+                        "content_type": "text/x-python",
+                        "sha256": "def",
+                        "storage_key": "skills/101/501/src/main.py",
+                    },
+                ]
+            )
+        if "INSERT INTO skill_file" in sql:
+            return FakeResult()
         if "UPDATE promotion_request" in sql:
             return FakeResult(scalar=1)
         if "INSERT INTO audit_log" in sql:
@@ -153,6 +212,20 @@ def submit_input(**overrides: Any) -> PromotionSubmitInput:
     }
     data.update(overrides)
     return PromotionSubmitInput(**data)
+
+
+def approve_input(**overrides: Any) -> PromotionApproveInput:
+    data = {
+        "promotion_id": 301,
+        "reviewer_id": "admin",
+        "comment": "ship it",
+        "request_id": "req-approve",
+        "client_ip": "127.0.0.1",
+        "user_agent": "pytest",
+        "now": datetime(2026, 6, 9, 14, 0, tzinfo=UTC),
+    }
+    data.update(overrides)
+    return PromotionApproveInput(**data)
 
 
 @pytest.mark.anyio
@@ -247,6 +320,63 @@ async def test_reject_promotion_forbids_submitter_self_review() -> None:
     assert not any("UPDATE promotion_request" in sql for sql in connection.statements)
 
 
+@pytest.mark.anyio
+async def test_approve_promotion_materializes_target_skill_version_files_audits_and_notifies() -> None:
+    connection = FakePromotionWriteConnection(platform_roles=["SUPER_ADMIN"], submitted_by="submitter")
+
+    response = await approve_promotion(FakeEngine(connection), approve_input())
+
+    assert response["status"] == "APPROVED"
+    assert response["targetSkillId"] == 901
+    assert response["reviewedBy"] == "admin"
+    assert response["reviewedByName"] == "Reviewer"
+
+    update_approval = next(index for index, sql in enumerate(connection.statements) if "UPDATE promotion_request" in sql)
+    target_skill_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill (" in sql)
+    target_version_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_version" in sql)
+    first_file_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_file" in sql)
+    target_id_update = max(index for index, sql in enumerate(connection.statements) if "UPDATE promotion_request" in sql)
+    audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    notification_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO user_notification" in sql)
+
+    assert update_approval < target_skill_insert < target_version_insert < first_file_insert < target_id_update < audit_insert < notification_insert
+    assert connection.params[update_approval]["status"] == "APPROVED"
+    assert connection.params[target_skill_insert]["namespace_id"] == 1
+    assert connection.params[target_skill_insert]["slug"] == "agent-helper"
+    assert connection.params[target_skill_insert]["visibility"] == "PUBLIC"
+    assert connection.params[target_skill_insert]["source_skill_id"] == 101
+    assert connection.params[target_version_insert]["skill_id"] == 901
+    assert connection.params[target_version_insert]["status"] == "PUBLISHED"
+    assert connection.params[target_version_insert]["requested_visibility"] == "PUBLIC"
+    assert connection.params[first_file_insert]["version_id"] == 902
+    assert connection.params[first_file_insert]["storage_key"] == "skills/101/501/SKILL.md"
+    assert connection.params[target_id_update]["target_skill_id"] == 901
+    assert connection.params[audit_insert]["action"] == "PROMOTION_APPROVE"
+    assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "ship it"}
+    assert connection.params[notification_insert]["user_id"] == "submitter"
+    assert connection.params[notification_insert]["title"] == "Promotion approved"
+
+
+@pytest.mark.anyio
+async def test_approve_promotion_forbids_duplicate_target_skill_before_materialization() -> None:
+    connection = FakePromotionWriteConnection(platform_roles=["SKILL_ADMIN"], duplicate_target=True)
+
+    with pytest.raises(ValueError, match="promotion.target_skill_conflict"):
+        await approve_promotion(FakeEngine(connection), approve_input())
+
+    assert not any("INSERT INTO skill (" in sql for sql in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_approve_promotion_forbids_submitter_self_review() -> None:
+    connection = FakePromotionWriteConnection(platform_roles=["SUPER_ADMIN"], submitted_by="admin")
+
+    with pytest.raises(ValueError, match="promotion.no_permission"):
+        await approve_promotion(FakeEngine(connection), approve_input())
+
+    assert not any("INSERT INTO skill (" in sql for sql in connection.statements)
+
+
 def test_promotion_submit_and_reject_routes_return_java_envelopes() -> None:
     app = create_app()
     seen: list[object] = []
@@ -259,8 +389,13 @@ def test_promotion_submit_and_reject_routes_return_java_envelopes() -> None:
         seen.append(promotion_input)
         return {"id": promotion_input.promotion_id, "sourceSkillId": 101, "status": "REJECTED", "reviewComment": promotion_input.comment}
 
+    async def approver(promotion_input: PromotionApproveInput) -> dict[str, object]:
+        seen.append(promotion_input)
+        return {"id": promotion_input.promotion_id, "sourceSkillId": 101, "targetSkillId": 901, "status": "APPROVED", "reviewComment": promotion_input.comment}
+
     app.state.promotion_submit_writer = submitter
     app.state.promotion_reject_writer = rejecter
+    app.state.promotion_approve_writer = approver
     client = TestClient(app)
 
     submitted = client.post(
@@ -273,6 +408,11 @@ def test_promotion_submit_and_reject_routes_return_java_envelopes() -> None:
         json={"comment": "not ready"},
         headers={"X-Mock-User-Id": "admin", "X-Request-Id": "promotion-reject-test"},
     )
+    approved = client.post(
+        "/api/web/promotions/301/approve",
+        json={"comment": "ship it"},
+        headers={"X-Mock-User-Id": "admin", "X-Request-Id": "promotion-approve-test"},
+    )
 
     assert submitted.status_code == 200
     assert submitted.json()["msg"] == "\u521b\u5efa\u6210\u529f"
@@ -281,7 +421,11 @@ def test_promotion_submit_and_reject_routes_return_java_envelopes() -> None:
     assert rejected.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
     assert rejected.json()["requestId"] == "promotion-reject-test"
     assert rejected.json()["data"]["status"] == "REJECTED"
-    assert len(seen) == 2
+    assert approved.status_code == 200
+    assert approved.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert approved.json()["requestId"] == "promotion-approve-test"
+    assert approved.json()["data"]["targetSkillId"] == 901
+    assert len(seen) == 3
 
 
 def test_promotion_write_routes_require_mock_user() -> None:
@@ -290,3 +434,4 @@ def test_promotion_write_routes_require_mock_user() -> None:
 
     assert client.post("/api/v1/promotions", json={}).status_code == 401
     assert client.post("/api/v1/promotions/301/reject", json={}).status_code == 401
+    assert client.post("/api/v1/promotions/301/approve", json={}).status_code == 401

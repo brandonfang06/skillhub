@@ -151,6 +151,35 @@ The command writes the latest promotion write comparison summary to:
 .dev/promotion-submit-reject-contract-result.json
 ```
 
+## One-Command Promotion Approve Verification Gate
+
+For the migrated promotion approve materialization API, use:
+
+```powershell
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-promotion-approve-smoke
+```
+
+Expected result:
+
+```text
+responsesMatch: true
+approvalDbState: true
+targetSkillState: true
+targetVersionState: true
+targetFileState: true
+approveAudit: true
+approveNotification: true
+6 passed
+```
+
+The command writes the latest promotion approve comparison summary to:
+
+```text
+.dev/promotion-approve-contract-result.json
+```
+
 ## One-Command Labels Verification Gate
 
 For the migrated public labels API, prefer the one-command gate because it keeps Java, Python, Vite,
