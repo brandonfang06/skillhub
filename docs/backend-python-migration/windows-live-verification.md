@@ -1205,6 +1205,33 @@ This gate verifies:
 - Reject and detail review routes remain Java-owned boundaries during this milestone.
 - Playwright smoke E2E passes.
 
+### Review Reject/Withdraw Write Ownership Smoke
+
+```powershell
+$env:UV_CACHE_DIR='server-python\.uv-cache'
+$env:DOCKER_CONFIG=(Join-Path (Get-Location) '.dev\docker-config')
+$env:DOCKER_HOST='tcp://127.0.0.1:2375'
+$env:COREPACK_HOME=(Join-Path (Get-Location) '.dev\corepack')
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-review-reject-withdraw-smoke
+```
+
+This gate verifies:
+
+- Python owns `POST /api/v1/reviews/{id}/reject`,
+  `POST /api/web/reviews/{id}/reject`, `POST /api/v1/reviews/{id}/withdraw`, and
+  `POST /api/web/reviews/{id}/withdraw` through the Vite proxy.
+- Java, direct Python, Vite `/api/v1`, and Vite `/api/web` review reject calls match stable
+  response fields for seeded pending review tasks.
+- Reject DB parity: review task `REJECTED`, version `REJECTED`, reviewer and comment recorded.
+- Reject audit parity: Python records `REVIEW_REJECT`.
+- Java, direct Python, Vite `/api/v1`, and Vite `/api/web` review withdraw calls match stable
+  `ApiResponse<Void>` fields with `data: null`.
+- Withdraw DB parity: pending review task deleted, version moved back to `UPLOADED`, and skill
+  `updated_by` set to the submitter.
+- Withdraw audit parity: Python records `REVIEW_WITHDRAW` with `skillVersionId`.
+- Submit and detail review routes remain Java-owned boundaries during this milestone.
+- Playwright smoke E2E passes.
+
 ## Shutdown
 
 ```powershell

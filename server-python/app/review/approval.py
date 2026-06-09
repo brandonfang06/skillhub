@@ -23,6 +23,27 @@ class ReviewApproveInput:
     now: datetime | None = None
 
 
+@dataclass(frozen=True)
+class ReviewRejectInput:
+    review_task_id: int
+    reviewer_id: str
+    comment: str | None = None
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ReviewWithdrawInput:
+    review_task_id: int
+    user_id: str
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
 class ReviewApprovalError(ValueError):
     def __init__(self, message: str, *, status_code: int = 400) -> None:
         super().__init__(message)
@@ -129,59 +150,74 @@ async def _read_namespace_role(connection: Any, namespace_id: int, user_id: str)
     return str(row["role"]) if row is not None else None
 
 
+async def _read_review_task(connection: Any, review_task_id: int) -> dict[str, Any]:
+    task_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT rt.id,
+                       rt.skill_version_id,
+                       rt.namespace_id,
+                       rt.status,
+                       rt.version,
+                       rt.submitted_by,
+                       submitter.display_name AS submitted_by_name,
+                       rt.submitted_at,
+                       n.slug AS namespace_slug,
+                       n.type AS namespace_type,
+                       n.status AS namespace_status,
+                       s.id AS skill_id,
+                       s.slug AS skill_slug,
+                       s.owner_id,
+                       sv.version AS version_name,
+                       sv.status AS version_status,
+                       sv.requested_visibility,
+                       sv.parsed_metadata_json
+                FROM review_task rt
+                JOIN namespace n ON n.id = rt.namespace_id
+                JOIN skill_version sv ON sv.id = rt.skill_version_id
+                JOIN skill s ON s.id = sv.skill_id
+                LEFT JOIN user_account submitter ON submitter.id = rt.submitted_by
+                WHERE rt.id = :review_task_id
+                """
+            ),
+            {"review_task_id": review_task_id},
+        )
+    ).mappings().one_or_none()
+    if task_row is None:
+        raise ReviewApprovalError("review_task.not_found", status_code=404)
+    return dict(task_row)
+
+
+def _assert_review_task_pending(task: dict[str, Any]) -> None:
+    if str(task["status"]) != "PENDING":
+        raise ReviewApprovalError("review.not_pending")
+
+
+def _assert_namespace_active(task: dict[str, Any]) -> None:
+    if str(task["namespace_status"]) == "FROZEN":
+        raise ReviewApprovalError("error.namespace.frozen")
+    if str(task["namespace_status"]) == "ARCHIVED":
+        raise ReviewApprovalError("error.namespace.archived")
+
+
+async def _assert_can_review(connection: Any, task: dict[str, Any], reviewer_id: str) -> None:
+    platform_roles = await _read_platform_roles(connection, reviewer_id)
+    namespace_role = await _read_namespace_role(connection, int(task["namespace_id"]), reviewer_id)
+    if not _can_review(task, reviewer_id, namespace_role, platform_roles):
+        raise ReviewApprovalError("review.no_permission", status_code=403)
+
+
 async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[str, Any]:
     reviewed_at = _now(request.now)
     async with engine.begin() as connection:
-        task_row = (
-            await connection.execute(
-                text(
-                    """
-                    SELECT rt.id,
-                           rt.skill_version_id,
-                           rt.namespace_id,
-                           rt.status,
-                           rt.version,
-                           rt.submitted_by,
-                           submitter.display_name AS submitted_by_name,
-                           rt.submitted_at,
-                           n.slug AS namespace_slug,
-                           n.type AS namespace_type,
-                           n.status AS namespace_status,
-                           s.id AS skill_id,
-                           s.slug AS skill_slug,
-                           s.owner_id,
-                           sv.version AS version_name,
-                           sv.status AS version_status,
-                           sv.requested_visibility,
-                           sv.parsed_metadata_json
-                    FROM review_task rt
-                    JOIN namespace n ON n.id = rt.namespace_id
-                    JOIN skill_version sv ON sv.id = rt.skill_version_id
-                    JOIN skill s ON s.id = sv.skill_id
-                    LEFT JOIN user_account submitter ON submitter.id = rt.submitted_by
-                    WHERE rt.id = :review_task_id
-                    """
-                ),
-                {"review_task_id": request.review_task_id},
-            )
-        ).mappings().one_or_none()
-        if task_row is None:
-            raise ReviewApprovalError("review_task.not_found", status_code=404)
-
-        task = dict(task_row)
-        if str(task["status"]) != "PENDING":
-            raise ReviewApprovalError("review.not_pending")
-        if str(task["namespace_status"]) == "FROZEN":
-            raise ReviewApprovalError("error.namespace.frozen")
-        if str(task["namespace_status"]) == "ARCHIVED":
-            raise ReviewApprovalError("error.namespace.archived")
+        task = await _read_review_task(connection, request.review_task_id)
+        _assert_review_task_pending(task)
+        _assert_namespace_active(task)
         if str(task["version_status"]) == "SCANNING":
             raise ReviewApprovalError("review.approve.scan_in_progress")
 
-        platform_roles = await _read_platform_roles(connection, request.reviewer_id)
-        namespace_role = await _read_namespace_role(connection, int(task["namespace_id"]), request.reviewer_id)
-        if not _can_review(task, request.reviewer_id, namespace_role, platform_roles):
-            raise ReviewApprovalError("review.no_permission", status_code=403)
+        await _assert_can_review(connection, task, request.reviewer_id)
 
         conflict_count = (
             await connection.execute(
@@ -306,3 +342,168 @@ async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[
         )
 
     return _review_response(task, status="APPROVED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
+
+
+async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[str, Any]:
+    reviewed_at = _now(request.now)
+    async with engine.begin() as connection:
+        task = await _read_review_task(connection, request.review_task_id)
+        _assert_review_task_pending(task)
+        _assert_namespace_active(task)
+        await _assert_can_review(connection, task, request.reviewer_id)
+
+        updated = (
+            await connection.execute(
+                text(
+                    """
+                    UPDATE review_task
+                    SET status = :status,
+                        reviewed_by = :reviewed_by,
+                        review_comment = :review_comment,
+                        reviewed_at = :reviewed_at,
+                        version = version + 1
+                    WHERE id = :review_task_id
+                      AND version = :expected_version
+                      AND status = 'PENDING'
+                    RETURNING 1
+                    """
+                ),
+                {
+                    "review_task_id": request.review_task_id,
+                    "status": "REJECTED",
+                    "reviewed_by": request.reviewer_id,
+                    "review_comment": request.comment,
+                    "reviewed_at": reviewed_at,
+                    "expected_version": int(task["version"]),
+                },
+            )
+        ).scalar_one()
+        if int(updated) == 0:
+            raise ReviewApprovalError("review.concurrent_update", status_code=409)
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_version
+                SET status = :status
+                WHERE id = :skill_version_id
+                """
+            ),
+            {
+                "skill_version_id": int(task["skill_version_id"]),
+                "status": "REJECTED",
+            },
+        )
+
+        await connection.execute(
+            text(
+                """
+                INSERT INTO audit_log (
+                    actor_user_id, action, target_type, target_id, request_id,
+                    client_ip, user_agent, detail_json, created_at
+                )
+                VALUES (
+                    :actor_user_id, :action, :target_type, :target_id, :request_id,
+                    :client_ip, :user_agent, :detail_json, :created_at
+                )
+                """
+            ),
+            {
+                "actor_user_id": request.reviewer_id,
+                "action": "REVIEW_REJECT",
+                "target_type": "REVIEW_TASK",
+                "target_id": request.review_task_id,
+                "request_id": request.request_id,
+                "client_ip": request.client_ip,
+                "user_agent": request.user_agent,
+                "detail_json": _detail_with_comment(request.comment),
+                "created_at": reviewed_at,
+            },
+        )
+
+    return _review_response(task, status="REJECTED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
+
+
+async def withdraw_review_task(engine: Any, request: ReviewWithdrawInput) -> None:
+    updated_at = _now(request.now)
+    async with engine.begin() as connection:
+        task = await _read_review_task(connection, request.review_task_id)
+        if str(task["status"]) != "PENDING":
+            raise ReviewApprovalError("review_task.not_found_for_version", status_code=404)
+        if str(task["submitted_by"]) != request.user_id:
+            raise ReviewApprovalError("review.withdraw.not_submitter", status_code=403)
+        _assert_namespace_active(task)
+        if str(task["version_status"]) != "PENDING_REVIEW":
+            raise ReviewApprovalError("review.withdraw.not_pending")
+
+        deleted = (
+            await connection.execute(
+                text(
+                    """
+                    DELETE FROM review_task
+                    WHERE id = :review_task_id
+                      AND status = 'PENDING'
+                    RETURNING 1
+                    """
+                ),
+                {"review_task_id": request.review_task_id},
+            )
+        ).scalar_one()
+        if int(deleted) == 0:
+            raise ReviewApprovalError("review.concurrent_update", status_code=409)
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_version
+                SET status = :status
+                WHERE id = :skill_version_id
+                """
+            ),
+            {
+                "skill_version_id": int(task["skill_version_id"]),
+                "status": "UPLOADED",
+            },
+        )
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET updated_by = :updated_by,
+                    updated_at = :updated_at
+                WHERE id = :skill_id
+                """
+            ),
+            {
+                "skill_id": int(task["skill_id"]),
+                "updated_by": request.user_id,
+                "updated_at": updated_at,
+            },
+        )
+
+        await connection.execute(
+            text(
+                """
+                INSERT INTO audit_log (
+                    actor_user_id, action, target_type, target_id, request_id,
+                    client_ip, user_agent, detail_json, created_at
+                )
+                VALUES (
+                    :actor_user_id, :action, :target_type, :target_id, :request_id,
+                    :client_ip, :user_agent, :detail_json, :created_at
+                )
+                """
+            ),
+            {
+                "actor_user_id": request.user_id,
+                "action": "REVIEW_WITHDRAW",
+                "target_type": "REVIEW_TASK",
+                "target_id": request.review_task_id,
+                "request_id": request.request_id,
+                "client_ip": request.client_ip,
+                "user_agent": request.user_agent,
+                "detail_json": json.dumps({"skillVersionId": int(task["skill_version_id"])}, separators=(",", ":")),
+                "created_at": updated_at,
+            },
+        )

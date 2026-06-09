@@ -66,5 +66,9 @@ deferred routes are still visible.
 | POST | `/api/cli/v1/skills/{namespace}/publish` | python | CLI publish write moved to Python after publish foundation, replacement, pending-review auto-withdraw, scanner handoff, and rollback live gates. |
 | POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Other review routes remain Java-owned. |
 | POST | `/api/web/reviews/{id}/approve` | python | Frontend review approval alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/approve`. |
+| POST | `/api/v1/reviews/{id}/reject` | python | Review rejection write moved to Python. Rejects the review task, moves the version to `REJECTED`, and writes `REVIEW_REJECT` audit. |
+| POST | `/api/web/reviews/{id}/reject` | python | Frontend review rejection alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/reject`. |
+| POST | `/api/v1/reviews/{id}/withdraw` | python | Review withdraw write moved to Python. Submitter-only route deletes the pending review task, moves the version back to `UPLOADED`, updates skill `updated_by`, and writes `REVIEW_WITHDRAW` audit. |
+| POST | `/api/web/reviews/{id}/withdraw` | python | Frontend review withdraw alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/withdraw`. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

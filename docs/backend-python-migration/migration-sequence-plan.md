@@ -177,6 +177,7 @@ Still plan carefully when a group requires:
 | 43 | Publish scanner HTTP client | n/a | Python scan consumer can call the real scanner service in upload/local modes, map Java-compatible scanner responses into scanner result input, and pass live Redis consumer verification with the scanner container. Daemon lifecycle remains deferred. |
 | 44 | Publish scan daemon/supervisor integration | n/a | Python FastAPI can optionally start a background scan consumer daemon, ensure its Redis consumer group exists before polling, consume scanner tasks through the real scanner container, update audit/version status, ACK messages, and shut down with the hybrid stack. No route ownership moved. |
 | 45 | `POST /api/v1/reviews/{id}/approve`, `POST /api/web/reviews/{id}/approve` | python | Review approval write ownership moved to Python. The route publishes the reviewed version, updates `skill.latest_version_id`, visibility, metadata, and `updated_by`, records `REVIEW_APPROVE` audit, and passed Java/Python/Vite v1/web live comparison. Reject, withdraw, submit, list, detail, review-file, and review-download routes remain Java-owned. |
+| 46 | `POST /api/v1/reviews/{id}/reject`, `POST /api/web/reviews/{id}/reject`, `POST /api/v1/reviews/{id}/withdraw`, `POST /api/web/reviews/{id}/withdraw` | python | Review reject and withdraw write ownership moved to Python. Reject records reviewer/comment, moves review task/version to `REJECTED`, and writes `REVIEW_REJECT` audit. Withdraw is submitter-only, deletes the pending review task, reopens the version to `UPLOADED`, updates skill `updated_by`, and writes `REVIEW_WITHDRAW` audit. Submit, list, detail, review-file, review-download, and promotion review routes remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1153,18 +1154,20 @@ legacy, CLI, and portal publish write ownership plus scanner result application 
 - scanner HTTP client for real scanner service upload/local mode response mapping
 - FastAPI-managed background scan daemon/supervisor lifecycle
 
-Group E has started with review approval write ownership:
+Group E has started with review lifecycle write ownership:
 
 - Completed: `POST /api/v1/reviews/{id}/approve` and
   `POST /api/web/reviews/{id}/approve`.
-- Still Java-owned: submit review, reject, withdraw, list/detail, review file/download, promotion
-  review APIs, and post-publish lifecycle/governance actions.
+- Completed: `POST /api/v1/reviews/{id}/reject`,
+  `POST /api/web/reviews/{id}/reject`, `POST /api/v1/reviews/{id}/withdraw`, and
+  `POST /api/web/reviews/{id}/withdraw`.
+- Still Java-owned: submit review, list/detail, review file/download, promotion review APIs, and
+  post-publish lifecycle/governance actions.
 
 Recommended next choice:
 
-- Continue Group E with a cohesive review lifecycle milestone, likely reject/withdraw together if
-  Java parity shows they share state, permission, and audit boundaries. Keep submit/list/detail
-  separate unless the plan proves the live gate remains small enough.
+- Continue Group E with review submit or review read ownership. Keep submit separate from list/detail
+  unless the plan proves the live gate remains small enough.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

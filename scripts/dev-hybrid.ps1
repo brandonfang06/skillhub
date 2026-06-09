@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -7853,6 +7853,246 @@ function Invoke-HybridReviewApproveSmokeVerification {
     }
 }
 
+function Invoke-ReviewRejectWithdrawTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_review_approve.py', 'tests/test_review_reject_withdraw.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-ReviewWithdrawPostJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId }
+}
+
+function Invoke-ReviewRejectWithdrawContractComparison {
+    param([string]$ResultFileName = 'review-reject-withdraw-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-review-rw-$suffix"
+    $reviewerId = "codex-reviewer-$suffix"
+    $submitterId = "codex-submitter-$suffix"
+    $comment = "reject-$suffix"
+    $slugs = @(
+        "java-reject-$suffix",
+        "python-reject-$suffix",
+        "proxy-reject-$suffix",
+        "proxy-web-reject-$suffix",
+        "java-withdraw-$suffix",
+        "python-withdraw-$suffix",
+        "proxy-withdraw-$suffix",
+        "proxy-web-withdraw-$suffix"
+    )
+
+    $valuesSql = ($slugs | ForEach-Object { "(ns_id, '$($_)', 'Draft $($_)', 'Before review', '$submitterId', 'PUBLIC', 'ACTIVE', '$submitterId', '$submitterId')" }) -join ",`n        "
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$reviewerId', 'Codex Review Reviewer', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO user_account (id, display_name, status)
+    VALUES ('$submitterId', 'Codex Review Submitter', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Review Reject Withdraw', 'TEAM', 'ACTIVE', '$submitterId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$reviewerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$submitterId', 'MEMBER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    FOR skill_row IN
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+        VALUES
+        $valuesSql
+        RETURNING id, slug
+    LOOP
+        INSERT INTO skill_version (
+            skill_id, version, status, parsed_metadata_json, manifest_json,
+            file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+        )
+        VALUES (
+            skill_row.id, '1.0.0', 'PENDING_REVIEW',
+            jsonb_build_object('name', 'Review Lifecycle Skill', 'description', 'Review lifecycle check'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1, 100, '$submitterId', CURRENT_TIMESTAMP, TRUE, TRUE, 'NAMESPACE_ONLY'
+        )
+        RETURNING id INTO version_id;
+
+        INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+        VALUES (version_id, ns_id, 'PENDING', 1, '$submitterId', CURRENT_TIMESTAMP);
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-ReviewTaskId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT rt.id FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-VersionId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    $javaRejectTaskId = Get-ReviewTaskId $slugs[0]
+    $pythonRejectTaskId = Get-ReviewTaskId $slugs[1]
+    $proxyRejectTaskId = Get-ReviewTaskId $slugs[2]
+    $proxyWebRejectTaskId = Get-ReviewTaskId $slugs[3]
+    $javaWithdrawTaskId = Get-ReviewTaskId $slugs[4]
+    $pythonWithdrawTaskId = Get-ReviewTaskId $slugs[5]
+    $proxyWithdrawTaskId = Get-ReviewTaskId $slugs[6]
+    $proxyWebWithdrawTaskId = Get-ReviewTaskId $slugs[7]
+    $javaWithdrawVersionId = Get-VersionId $slugs[4]
+    $pythonWithdrawVersionId = Get-VersionId $slugs[5]
+    $proxyWithdrawVersionId = Get-VersionId $slugs[6]
+    $proxyWebWithdrawVersionId = Get-VersionId $slugs[7]
+
+    $javaReject = Invoke-ReviewApprovePostJson "$JavaUrl/api/v1/reviews/$javaRejectTaskId/reject" $reviewerId $comment
+    $pythonReject = Invoke-ReviewApprovePostJson "$PythonUrl/api/v1/reviews/$pythonRejectTaskId/reject" $reviewerId $comment
+    $proxyReject = Invoke-ReviewApprovePostJson "$WebUrl/api/v1/reviews/$proxyRejectTaskId/reject" $reviewerId $comment
+    $proxyWebReject = Invoke-ReviewApprovePostJson "$WebUrl/api/web/reviews/$proxyWebRejectTaskId/reject" $reviewerId $comment
+
+    $javaWithdraw = Invoke-ReviewWithdrawPostJson "$JavaUrl/api/v1/reviews/$javaWithdrawTaskId/withdraw" $submitterId
+    $pythonWithdraw = Invoke-ReviewWithdrawPostJson "$PythonUrl/api/v1/reviews/$pythonWithdrawTaskId/withdraw" $submitterId
+    $proxyWithdraw = Invoke-ReviewWithdrawPostJson "$WebUrl/api/v1/reviews/$proxyWithdrawTaskId/withdraw" $submitterId
+    $proxyWebWithdraw = Invoke-ReviewWithdrawPostJson "$WebUrl/api/web/reviews/$proxyWebWithdrawTaskId/withdraw" $submitterId
+
+    $javaRejectStable = ConvertTo-StableReviewTaskContractJson -Response $javaReject
+    $pythonRejectStable = ConvertTo-StableReviewTaskContractJson -Response $pythonReject
+    $proxyRejectStable = ConvertTo-StableReviewTaskContractJson -Response $proxyReject
+    $proxyWebRejectStable = ConvertTo-StableReviewTaskContractJson -Response $proxyWebReject
+    $javaWithdrawStable = ConvertTo-StableContractJson -Response $javaWithdraw
+    $pythonWithdrawStable = ConvertTo-StableContractJson -Response $pythonWithdraw
+    $proxyWithdrawStable = ConvertTo-StableContractJson -Response $proxyWithdraw
+    $proxyWebWithdrawStable = ConvertTo-StableContractJson -Response $proxyWebWithdraw
+
+    function Get-RejectDb([string]$TaskId) {
+        return Invoke-PostgresScalar -Sql "SELECT rt.status || '|' || sv.status || '|' || COALESCE(rt.reviewed_by, '') || '|' || COALESCE(rt.review_comment, '') FROM review_task rt JOIN skill_version sv ON sv.id = rt.skill_version_id WHERE rt.id = $TaskId;"
+    }
+    function Get-WithdrawDb([string]$TaskId, [string]$VersionId) {
+        return Invoke-PostgresScalar -Sql "SELECT (NOT EXISTS (SELECT 1 FROM review_task WHERE id = $TaskId)) || '|' || sv.status || '|' || COALESCE(s.updated_by, '') FROM skill_version sv JOIN skill s ON s.id = sv.skill_id WHERE sv.id = $VersionId;"
+    }
+
+    $javaRejectDb = Get-RejectDb $javaRejectTaskId
+    $pythonRejectDb = Get-RejectDb $pythonRejectTaskId
+    $proxyRejectDb = Get-RejectDb $proxyRejectTaskId
+    $proxyWebRejectDb = Get-RejectDb $proxyWebRejectTaskId
+    $javaWithdrawDb = Get-WithdrawDb $javaWithdrawTaskId $javaWithdrawVersionId
+    $pythonWithdrawDb = Get-WithdrawDb $pythonWithdrawTaskId $pythonWithdrawVersionId
+    $proxyWithdrawDb = Get-WithdrawDb $proxyWithdrawTaskId $proxyWithdrawVersionId
+    $proxyWebWithdrawDb = Get-WithdrawDb $proxyWebWithdrawTaskId $proxyWebWithdrawVersionId
+    $pythonRejectAudit = Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'REVIEW_TASK' AND target_id = $pythonRejectTaskId AND action = 'REVIEW_REJECT' ORDER BY created_at DESC LIMIT 1;"
+    $pythonWithdrawAudit = Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'REVIEW_TASK' AND target_id = $pythonWithdrawTaskId AND action = 'REVIEW_WITHDRAW' ORDER BY created_at DESC LIMIT 1;"
+    $detailProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews/$proxyRejectTaskId" -Method 'GET'
+    $submitProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/reviews" -Method 'POST'
+
+    $expectedRejectDb = "REJECTED|REJECTED|$reviewerId|$comment"
+    $expectedWithdrawDb = "true|UPLOADED|$submitterId"
+    $result = [ordered]@{
+        namespace = $namespace
+        reject = [ordered]@{
+            javaMatchesPython = ($javaRejectStable -eq $pythonRejectStable)
+            pythonMatchesProxy = ($pythonRejectStable -eq $proxyRejectStable)
+            pythonMatchesProxyWeb = ($pythonRejectStable -eq $proxyWebRejectStable)
+            javaDb = $javaRejectDb
+            pythonDb = $pythonRejectDb
+            proxyDb = $proxyRejectDb
+            proxyWebDb = $proxyWebRejectDb
+            pythonAudit = $pythonRejectAudit
+        }
+        withdraw = [ordered]@{
+            javaMatchesPython = ($javaWithdrawStable -eq $pythonWithdrawStable)
+            pythonMatchesProxy = ($pythonWithdrawStable -eq $proxyWithdrawStable)
+            pythonMatchesProxyWeb = ($pythonWithdrawStable -eq $proxyWebWithdrawStable)
+            javaDb = $javaWithdrawDb
+            pythonDb = $pythonWithdrawDb
+            proxyDb = $proxyWithdrawDb
+            proxyWebDb = $proxyWebWithdrawDb
+            pythonAudit = $pythonWithdrawAudit
+        }
+        javaOwnedBoundaries = [ordered]@{
+            detailStatus = $detailProxyStatus
+            submitStatus = $submitProxyStatus
+        }
+        checks = [ordered]@{
+            rejectResponsesMatch = ($javaRejectStable -eq $pythonRejectStable -and $pythonRejectStable -eq $proxyRejectStable -and $pythonRejectStable -eq $proxyWebRejectStable)
+            withdrawResponsesMatch = ($javaWithdrawStable -eq $pythonWithdrawStable -and $pythonWithdrawStable -eq $proxyWithdrawStable -and $pythonWithdrawStable -eq $proxyWebWithdrawStable)
+            rejectDbApproved = ($javaRejectDb -eq $expectedRejectDb -and $pythonRejectDb -eq $expectedRejectDb -and $proxyRejectDb -eq $expectedRejectDb -and $proxyWebRejectDb -eq $expectedRejectDb)
+            withdrawDbApproved = ($javaWithdrawDb -eq $expectedWithdrawDb -and $pythonWithdrawDb -eq $expectedWithdrawDb -and $proxyWithdrawDb -eq $expectedWithdrawDb -and $proxyWebWithdrawDb -eq $expectedWithdrawDb)
+            rejectAuditRecorded = ($pythonRejectAudit -match '^REVIEW_REJECT\|REVIEW_TASK\|')
+            withdrawAuditRecorded = ($pythonWithdrawAudit -match '^REVIEW_WITHDRAW\|REVIEW_TASK\|')
+            detailRemainsJavaOwned = ($detailProxyStatus -ne 404)
+            submitRemainsJavaOwned = ($submitProxyStatus -ne 404)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.rejectResponsesMatch -or -not $result.checks.withdrawResponsesMatch) {
+        throw "Review reject/withdraw response contract check failed. See .dev/$ResultFileName."
+    }
+    if (-not $result.checks.rejectDbApproved -or -not $result.checks.withdrawDbApproved -or -not $result.checks.rejectAuditRecorded -or -not $result.checks.withdrawAuditRecorded) {
+        throw "Review reject/withdraw database/audit check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-HybridReviewRejectWithdrawSmokeVerification {
+    try {
+        Invoke-ReviewRejectWithdrawTests
+        Start-Hybrid
+        Invoke-ReviewRejectWithdrawContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -7898,6 +8138,7 @@ switch ($Action) {
     'verify-publish-scanner-http-client-smoke' { Invoke-HybridPublishScannerHttpClientSmokeVerification }
     'verify-publish-scan-daemon-supervisor-smoke' { Invoke-HybridPublishScanDaemonSupervisorSmokeVerification }
     'verify-review-approve-smoke' { Invoke-HybridReviewApproveSmokeVerification }
+    'verify-review-reject-withdraw-smoke' { Invoke-HybridReviewRejectWithdrawSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
