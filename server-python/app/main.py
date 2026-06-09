@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.labels import router as labels_router
+from app.api.lifecycle import router as lifecycle_router
 from app.api.promotions import router as promotions_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(labels_router)
+    app.include_router(lifecycle_router)
     app.include_router(promotions_router)
     app.include_router(publish_router)
     app.include_router(reviews_router)

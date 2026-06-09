@@ -187,6 +187,7 @@ Still plan carefully when a group requires:
 | 53 | `GET /api/v1/promotions`, `GET /api/web/promotions`, `GET /api/v1/promotions/pending`, `GET /api/web/promotions/pending`, `GET /api/v1/promotions/{id}`, `GET /api/web/promotions/{id}` | python | Promotion read ownership moved to Python. List/pending require platform review role; detail allows submitter or platform review role. Promotion write routes remained Java-owned during this milestone. |
 | 54 | `POST /api/v1/promotions`, `POST /api/web/promotions`, `POST /api/v1/promotions/{id}/reject`, `POST /api/web/promotions/{id}/reject` | python | Promotion submit and reject write ownership moved to Python. Submit creates pending requests and `PROMOTION_SUBMIT` audit; reject is platform-reviewer only, writes `PROMOTION_REJECT` audit and synchronous governance notification. Promotion approve remains Java-owned. |
 | 55 | `POST /api/v1/promotions/{id}/approve`, `POST /api/web/promotions/{id}/approve` | python | Promotion approve ownership moved to Python. Approval materializes target global skill/version/file records, updates `promotion_request.target_skill_id`, writes `PROMOTION_APPROVE` audit and synchronous governance notification. |
+| 56 | `POST /api/v1/skills/{namespace}/{slug}/archive`, `POST /api/web/skills/{namespace}/{slug}/archive`, `POST /api/v1/skills/{namespace}/{slug}/unarchive`, `POST /api/web/skills/{namespace}/{slug}/unarchive` | python | Portal skill archive/unarchive ownership moved to Python. Owner or namespace manager toggles `skill.status`, updates `updated_by`, and writes Java-compatible lifecycle audit logs. Version delete, withdraw-review, rerelease, submit-review, confirm-publish, admin hide/unhide, and yank remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1192,7 +1193,13 @@ Group E has started with review lifecycle write ownership:
 - Completed: promotion approve APIs:
   `POST /api/v1/promotions/{id}/approve` and
   `POST /api/web/promotions/{id}/approve`.
-- Still Java-owned: post-publish lifecycle/governance actions.
+- Completed: portal skill archive/unarchive APIs:
+  `POST /api/v1/skills/{namespace}/{slug}/archive`,
+  `POST /api/web/skills/{namespace}/{slug}/archive`,
+  `POST /api/v1/skills/{namespace}/{slug}/unarchive`, and
+  `POST /api/web/skills/{namespace}/{slug}/unarchive`.
+- Still Java-owned: version delete, withdraw-review, rerelease, submit-review, confirm-publish,
+  admin hide/unhide, yank, and broader post-publish lifecycle/governance actions.
 
 Recommended next choice:
 

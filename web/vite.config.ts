@@ -193,6 +193,26 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     pattern: /^\/api\/web\/promotions\/[^/?]+\/approve(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/archive(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/archive(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/unarchive(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/unarchive(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
 ]
 
 export function resolveMethodAwareProxyTarget(

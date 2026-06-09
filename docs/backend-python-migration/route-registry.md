@@ -98,5 +98,9 @@ deferred routes are still visible.
 | POST | `/api/web/reviews/{id}/reject` | python | Frontend review rejection alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/reject`. |
 | POST | `/api/v1/reviews/{id}/withdraw` | python | Review withdraw write moved to Python. Submitter-only route deletes the pending review task, moves the version back to `UPLOADED`, updates skill `updated_by`, and writes `REVIEW_WITHDRAW` audit. |
 | POST | `/api/web/reviews/{id}/withdraw` | python | Frontend review withdraw alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/withdraw`. |
+| POST | `/api/v1/skills/{namespace}/{slug}/archive` | python | Portal skill archive moved to Python. Owner or namespace `OWNER`/`ADMIN` can set `skill.status = ARCHIVED`, update `updated_by`, and write `ARCHIVE_SKILL` audit. |
+| POST | `/api/web/skills/{namespace}/{slug}/archive` | python | Frontend skill archive alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/archive`. |
+| POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | python | Portal skill unarchive moved to Python. Owner or namespace `OWNER`/`ADMIN` can set `skill.status = ACTIVE`, update `updated_by`, and write `UNARCHIVE_SKILL` audit. |
+| POST | `/api/web/skills/{namespace}/{slug}/unarchive` | python | Frontend skill unarchive alias moved to Python with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/unarchive`. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

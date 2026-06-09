@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -10232,6 +10232,219 @@ function Invoke-HybridPromotionApproveSmokeVerification {
     }
 }
 
+function Invoke-SkillLifecycleArchiveTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_lifecycle_archive.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SkillLifecycleArchivePostJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$Reason
+    )
+
+    $body = @{ reason = $Reason } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body
+}
+
+function Invoke-SkillLifecycleUnarchivePostJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers @{ 'X-Mock-User-Id' = $UserId }
+}
+
+function ConvertTo-StableSkillLifecycleContractJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            skillIdPresent = ($null -ne $Response.data.skillId)
+            versionId = $Response.data.versionId
+            action = $Response.data.action
+            status = $Response.data.status
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-SkillLifecycleArchiveContractComparison {
+    param([string]$ResultFileName = 'skill-lifecycle-archive-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $namespace = "codex-lifecycle-$suffix"
+    $ownerId = "codex-lifecycle-owner-$suffix"
+    $managerId = "codex-lifecycle-admin-$suffix"
+    $actorId = $ownerId
+    $reason = "archive-$suffix"
+    $archiveSlugs = @(
+        "java-archive-$suffix",
+        "python-archive-$suffix",
+        "proxy-archive-$suffix",
+        "proxy-web-archive-$suffix"
+    )
+    $unarchiveSlugs = @(
+        "java-unarchive-$suffix",
+        "python-unarchive-$suffix",
+        "proxy-unarchive-$suffix",
+        "proxy-web-unarchive-$suffix"
+    )
+    $archiveValuesSql = ($archiveSlugs | ForEach-Object { "(ns_id, '$($_)', 'Lifecycle Archive', 'Lifecycle archive contract', '$ownerId', 'NAMESPACE_ONLY', 'ACTIVE', '$ownerId', '$ownerId')" }) -join ",`n        "
+    $unarchiveValuesSql = ($unarchiveSlugs | ForEach-Object { "(ns_id, '$($_)', 'Lifecycle Unarchive', 'Lifecycle unarchive contract', '$ownerId', 'NAMESPACE_ONLY', 'ARCHIVED', '$ownerId', '$ownerId')" }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES
+        ('$ownerId', 'Codex Lifecycle Owner', 'ACTIVE'),
+        ('$managerId', 'Codex Lifecycle Admin', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex Lifecycle', 'TEAM', 'ACTIVE', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$managerId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES
+        $archiveValuesSql,
+        $unarchiveValuesSql;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-SkillId([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-SkillLifecycleState([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT s.status || '|' || COALESCE(s.updated_by, '') FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = '$namespace' AND s.slug = '$Slug' LIMIT 1;"
+    }
+    function Get-SkillLifecycleAudit([string]$SkillId, [string]$Action) {
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || target_id || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'SKILL' AND target_id = $SkillId AND action = '$Action' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $javaArchive = Invoke-SkillLifecycleArchivePostJson "$JavaUrl/api/v1/skills/$namespace/$($archiveSlugs[0])/archive" $actorId $reason
+    $pythonArchive = Invoke-SkillLifecycleArchivePostJson "$PythonUrl/api/v1/skills/$namespace/$($archiveSlugs[1])/archive" $actorId $reason
+    $proxyArchive = Invoke-SkillLifecycleArchivePostJson "$WebUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/archive" $actorId $reason
+    $proxyWebArchive = Invoke-SkillLifecycleArchivePostJson "$WebUrl/api/web/skills/$namespace/$($archiveSlugs[3])/archive" $actorId $reason
+
+    $javaUnarchive = Invoke-SkillLifecycleUnarchivePostJson "$JavaUrl/api/v1/skills/$namespace/$($unarchiveSlugs[0])/unarchive" $actorId
+    $pythonUnarchive = Invoke-SkillLifecycleUnarchivePostJson "$PythonUrl/api/v1/skills/$namespace/$($unarchiveSlugs[1])/unarchive" $actorId
+    $proxyUnarchive = Invoke-SkillLifecycleUnarchivePostJson "$WebUrl/api/v1/skills/$namespace/$($unarchiveSlugs[2])/unarchive" $actorId
+    $proxyWebUnarchive = Invoke-SkillLifecycleUnarchivePostJson "$WebUrl/api/web/skills/$namespace/$($unarchiveSlugs[3])/unarchive" $actorId
+
+    $pythonArchiveSkillId = Get-SkillId $archiveSlugs[1]
+    $proxyArchiveSkillId = Get-SkillId $archiveSlugs[2]
+    $proxyWebArchiveSkillId = Get-SkillId $archiveSlugs[3]
+    $pythonUnarchiveSkillId = Get-SkillId $unarchiveSlugs[1]
+    $proxyUnarchiveSkillId = Get-SkillId $unarchiveSlugs[2]
+    $proxyWebUnarchiveSkillId = Get-SkillId $unarchiveSlugs[3]
+
+    $deleteVersionBoundaryJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/versions/1.0.0" -Method 'DELETE'
+    $deleteVersionBoundaryProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/versions/1.0.0" -Method 'DELETE'
+    $rereleaseBoundaryJava = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/versions/1.0.0/rerelease" -Method 'POST'
+    $rereleaseBoundaryProxy = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/versions/1.0.0/rerelease" -Method 'POST'
+    $unauthenticatedArchiveStatus = Invoke-HttpStatusNoRedirect "$WebUrl/api/v1/skills/$namespace/$($archiveSlugs[2])/archive" -Method 'POST'
+
+    $stableArchive = [ordered]@{
+        java = ConvertTo-StableSkillLifecycleContractJson -Response $javaArchive
+        python = ConvertTo-StableSkillLifecycleContractJson -Response $pythonArchive
+        proxy = ConvertTo-StableSkillLifecycleContractJson -Response $proxyArchive
+        proxyWeb = ConvertTo-StableSkillLifecycleContractJson -Response $proxyWebArchive
+    }
+    $stableUnarchive = [ordered]@{
+        java = ConvertTo-StableSkillLifecycleContractJson -Response $javaUnarchive
+        python = ConvertTo-StableSkillLifecycleContractJson -Response $pythonUnarchive
+        proxy = ConvertTo-StableSkillLifecycleContractJson -Response $proxyUnarchive
+        proxyWeb = ConvertTo-StableSkillLifecycleContractJson -Response $proxyWebUnarchive
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            archiveResponsesMatch = ($stableArchive.java -eq $stableArchive.python -and $stableArchive.python -eq $stableArchive.proxy -and $stableArchive.python -eq $stableArchive.proxyWeb)
+            unarchiveResponsesMatch = ($stableUnarchive.java -eq $stableUnarchive.python -and $stableUnarchive.python -eq $stableUnarchive.proxy -and $stableUnarchive.python -eq $stableUnarchive.proxyWeb)
+            archiveDbState = ((Get-SkillLifecycleState $archiveSlugs[1]) -eq "ARCHIVED|$actorId" -and (Get-SkillLifecycleState $archiveSlugs[2]) -eq "ARCHIVED|$actorId" -and (Get-SkillLifecycleState $archiveSlugs[3]) -eq "ARCHIVED|$actorId")
+            unarchiveDbState = ((Get-SkillLifecycleState $unarchiveSlugs[1]) -eq "ACTIVE|$actorId" -and (Get-SkillLifecycleState $unarchiveSlugs[2]) -eq "ACTIVE|$actorId" -and (Get-SkillLifecycleState $unarchiveSlugs[3]) -eq "ACTIVE|$actorId")
+            archiveAudit = ((Get-SkillLifecycleAudit $pythonArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$pythonArchiveSkillId|$actorId|*" -and (Get-SkillLifecycleAudit $proxyArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$proxyArchiveSkillId|$actorId|*" -and (Get-SkillLifecycleAudit $proxyWebArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$proxyWebArchiveSkillId|$actorId|*")
+            unarchiveAudit = ((Get-SkillLifecycleAudit $pythonUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$pythonUnarchiveSkillId|$actorId|" -and (Get-SkillLifecycleAudit $proxyUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$proxyUnarchiveSkillId|$actorId|" -and (Get-SkillLifecycleAudit $proxyWebUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$proxyWebUnarchiveSkillId|$actorId|")
+            rereleaseBoundaryJavaOwned = ($rereleaseBoundaryJava -eq $rereleaseBoundaryProxy)
+            unauthenticatedArchiveRejected = ($unauthenticatedArchiveStatus -eq 401)
+        }
+        routeBoundaries = [ordered]@{
+            deleteVersionJava = $deleteVersionBoundaryJava
+            deleteVersionProxy = $deleteVersionBoundaryProxy
+            rereleaseJava = $rereleaseBoundaryJava
+            rereleaseProxy = $rereleaseBoundaryProxy
+            unauthenticatedArchiveStatus = $unauthenticatedArchiveStatus
+        }
+        stable = [ordered]@{
+            archive = $stableArchive
+            unarchive = $stableUnarchive
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill lifecycle archive contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillLifecycleArchiveSmokeVerification {
+    try {
+        Invoke-SkillLifecycleArchiveTests
+        Start-Hybrid
+        Invoke-SkillLifecycleArchiveContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -10287,6 +10500,7 @@ switch ($Action) {
     'verify-promotion-read-smoke' { Invoke-HybridPromotionReadSmokeVerification }
     'verify-promotion-submit-reject-smoke' { Invoke-HybridPromotionSubmitRejectSmokeVerification }
     'verify-promotion-approve-smoke' { Invoke-HybridPromotionApproveSmokeVerification }
+    'verify-skill-lifecycle-archive-smoke' { Invoke-HybridSkillLifecycleArchiveSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

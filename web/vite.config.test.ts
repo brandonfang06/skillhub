@@ -236,6 +236,43 @@ describe('Vite dev proxy route ownership', () => {
     )
   })
 
+  it('routes skill archive and unarchive lifecycle actions to Python only', () => {
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/archive')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/archive')).toBe(
+      'http://localhost:8081',
+    )
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/unarchive'),
+    ).toBe('http://localhost:8081')
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-a/agent-helper/unarchive'),
+    ).toBe('http://localhost:8081')
+
+    expect(
+      resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.0.0'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/versions/1.0.0/rerelease'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/submit-review'),
+    ).toBeUndefined()
+    expect(
+      resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/confirm-publish'),
+    ).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/101/hide')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skills/versions/501/yank')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/team-a/agent-helper/archive')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/team-a/agent-helper/unarchive')).toBe(
+      'http://localhost:8081',
+    )
+  })
+
   it('routes ClawHub well-known discovery to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
