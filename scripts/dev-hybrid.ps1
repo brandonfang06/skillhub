@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -5579,6 +5579,23 @@ function Invoke-PublishScannerResultProcessingTests {
     }
 }
 
+function Invoke-PublishScanTaskWorkerBoundaryTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_publish_scan_worker.py',
+            'tests/test_publish_scanner_result.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-PublishCliWriteDirectContractComparison {
     param([string]$ResultFileName = 'publish-cli-write-direct-contract-result.json')
 
@@ -6325,6 +6342,191 @@ END `$`$;
     }
 }
 
+function Invoke-ProcessScanTaskWorkerFixture {
+    param(
+        [string]$FieldsFile,
+        [string]$StorageBasePath,
+        [string]$ScanTempDir,
+        [string]$ScanId,
+        [string]$Verdict,
+        [string]$FindingsCount,
+        [string]$MaxSeverity,
+        [string]$FindingsJson,
+        [string]$Duration
+    )
+
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        $env:PYTHONPATH = '.'
+        $findingsFile = Join-Path $DevDir "scan-worker-findings-$ScanId.json"
+        Set-Content -LiteralPath $findingsFile -Value $FindingsJson
+        $output = & uv @(
+            'run',
+            'python',
+            'scripts/process_scan_task_fixture.py',
+            '--fields-file',
+            $FieldsFile,
+            '--storage-base-path',
+            $StorageBasePath,
+            '--scan-temp-dir',
+            $ScanTempDir,
+            '--scan-id',
+            $ScanId,
+            '--verdict',
+            $Verdict,
+            '--findings-count',
+            $FindingsCount,
+            '--max-severity',
+            $MaxSeverity,
+            '--findings-file',
+            $findingsFile,
+            '--duration',
+            $Duration
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw "Scan task worker fixture failed with exit code ${LASTEXITCODE}"
+        }
+        return (($output | Select-Object -Last 1) | ConvertFrom-Json)
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-PublishScanTaskWorkerBoundaryContractComparison {
+    param([string]$ResultFileName = 'publish-scan-task-worker-boundary-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $slug = "codex-scan-worker-$suffix"
+    $streamKey = 'skillhub:scan:requests'
+    Invoke-RedisCli -Arguments @('DEL', $streamKey) | Out-Null
+
+    $sql = @"
+DO `$`$
+DECLARE
+    fixture_user_id VARCHAR(128) := 'codex-scan-worker-user';
+    ns_id BIGINT;
+    fixture_skill_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, status)
+    VALUES (fixture_user_id, 'Codex Scan Worker User', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', fixture_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, rating_avg, rating_count, created_by, updated_by, hidden
+    )
+    VALUES (
+        ns_id, '$slug', 'Codex scan worker fixture', 'Fixture for scan worker boundary',
+        fixture_user_id, 'PUBLIC', 'ACTIVE', 0, 0, 0.00, 0, fixture_user_id, fixture_user_id, FALSE
+    )
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, parsed_metadata_json, manifest_json,
+        file_count, total_size, created_by, created_at, bundle_ready, download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'SCANNING',
+        jsonb_build_object('name', 'scan-worker', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 10, fixture_user_id, CURRENT_TIMESTAMP, TRUE, TRUE, 'PUBLIC'
+    );
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $versionId = Invoke-PostgresScalar -Sql "SELECT sv.id FROM skill_version sv JOIN skill s ON s.id = sv.skill_id JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' AND sv.version = '1.0.0' LIMIT 1;"
+    $skillId = Invoke-PostgresScalar -Sql "SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$slug' LIMIT 1;"
+    Invoke-PostgresSql -Sql "INSERT INTO security_audit (skill_version_id, scanner_type, verdict, is_safe, findings_count, findings, created_at) VALUES ($versionId, 'skill-scanner', 'SUSPICIOUS', FALSE, 0, '[]'::jsonb, CURRENT_TIMESTAMP);"
+
+    $bundleKey = "packages/$skillId/$versionId/bundle.zip"
+    $bundlePath = Join-Path $JavaStoragePath ($bundleKey -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bundlePath) | Out-Null
+    Set-Content -LiteralPath $bundlePath -Value "scan-worker-bundle-$suffix"
+
+    Invoke-RedisCli -Arguments @(
+        'XADD',
+        $streamKey,
+        '*',
+        'taskId',
+        "scan-worker-$suffix",
+        'versionId',
+        $versionId,
+        'bundleKey',
+        $bundleKey,
+        'scannerType',
+        'skill-scanner'
+    ) | Out-Null
+    $entry = Read-RedisStreamFirstEntry -StreamKey $streamKey
+    if ($null -eq $entry) {
+        throw "No Redis scan worker task was published to $streamKey."
+    }
+
+    $fieldsPath = Join-Path $DevDir "scan-worker-fields-$suffix.json"
+    $entry.fields | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $fieldsPath
+    $scanTempDir = Join-Path $DevDir 'python-scan-worker-temp'
+    $worker = Invoke-ProcessScanTaskWorkerFixture `
+        -FieldsFile $fieldsPath `
+        -StorageBasePath $JavaStoragePath `
+        -ScanTempDir $scanTempDir `
+        -ScanId "scan-worker-result-$suffix" `
+        -Verdict 'SAFE' `
+        -FindingsCount '0' `
+        -MaxSeverity 'LOW' `
+        -FindingsJson '[]' `
+        -Duration '1.75'
+
+    $status = Invoke-PostgresScalar -Sql "SELECT status FROM skill_version WHERE id = $versionId;"
+    $audit = Invoke-PostgresScalar -Sql "SELECT scan_id || '|' || verdict || '|' || is_safe || '|' || findings_count || '|' || COALESCE(max_severity, '') || '|' || (scanned_at IS NOT NULL) FROM security_audit WHERE skill_version_id = $versionId AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1;"
+    $tempFiles = @(Get-ChildItem -LiteralPath $scanTempDir -File -ErrorAction SilentlyContinue)
+
+    $result = [ordered]@{
+        redis = $entry
+        worker = $worker
+        db = [ordered]@{
+            slug = $slug
+            skillId = $skillId
+            versionId = $versionId
+            status = $status
+            audit = $audit
+            bundleKey = $bundleKey
+            stagedFileCountAfterWorker = $tempFiles.Count
+        }
+        checks = [ordered]@{
+            streamFieldsParsed = ($entry.fields.versionId -eq $versionId -and $entry.fields.bundleKey -eq $bundleKey)
+            workerMovedToPendingReview = ($worker.previousStatus -eq 'SCANNING' -and $worker.newStatus -eq 'PENDING_REVIEW' -and $worker.statusChanged -eq $true)
+            auditUpdated = ($audit -eq "scan-worker-result-$suffix|SAFE|true|0|LOW|true")
+            versionMovedToPendingReview = ($status -eq 'PENDING_REVIEW')
+            stagedBundleCleaned = ($tempFiles.Count -eq 0)
+        }
+        comparedFields = @('redis.versionId', 'redis.bundleKey', 'worker.newStatus', 'audit.scan_id', 'version.status')
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.checks.streamFieldsParsed -or
+        -not $result.checks.workerMovedToPendingReview -or
+        -not $result.checks.auditUpdated -or
+        -not $result.checks.versionMovedToPendingReview -or
+        -not $result.checks.stagedBundleCleaned) {
+        throw "Publish scan task worker boundary check failed. See .dev/$ResultFileName."
+    }
+}
+
 function Invoke-RedisCli {
     param([string[]]$Arguments)
 
@@ -6737,6 +6939,24 @@ function Invoke-HybridPublishScannerResultProcessingSmokeVerification {
     }
 }
 
+function Invoke-HybridPublishScanTaskWorkerBoundarySmokeVerification {
+    try {
+        Invoke-PublishScanTaskWorkerBoundaryTests
+        Start-Hybrid
+        Invoke-PublishScanTaskWorkerBoundaryContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -6777,6 +6997,7 @@ switch ($Action) {
     'verify-portal-publish-write-ownership-smoke' { Invoke-HybridPortalPublishWriteOwnershipSmokeVerification }
     'verify-root-legacy-publish-write-ownership-smoke' { Invoke-HybridRootLegacyPublishWriteOwnershipSmokeVerification }
     'verify-publish-scanner-result-processing-smoke' { Invoke-HybridPublishScannerResultProcessingSmokeVerification }
+    'verify-publish-scan-task-worker-boundary-smoke' { Invoke-HybridPublishScanTaskWorkerBoundarySmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

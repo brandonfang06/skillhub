@@ -1100,6 +1100,24 @@ This gate verifies:
 - Private `SCANNING` versions move to `UPLOADED`.
 - Redis stream consumption and scanner HTTP calls remain out of scope for this gate.
 
+### Publish Scan Task Worker Boundary Gate
+
+Run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\dev-hybrid.ps1 verify-publish-scan-task-worker-boundary-smoke
+```
+
+This gate verifies:
+
+- Python can parse Java-compatible Redis scan task fields from `skillhub:scan:requests`.
+- Python can resolve `bundleKey` values using the local Java-compatible storage root.
+- The one-task worker calls the scanner abstraction and applies the normalized scan result.
+- The latest active `security_audit` and `SCANNING` version status are updated in PostgreSQL.
+- Staged bundle files are cleaned after processing.
+- Long-running Redis consumer groups, retry republish, pending reclaim, and scanner HTTP calls
+  remain out of scope for this gate.
+
 ## Shutdown
 
 ```powershell

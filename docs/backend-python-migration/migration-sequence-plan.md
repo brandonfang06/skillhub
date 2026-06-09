@@ -172,6 +172,7 @@ Still plan carefully when a group requires:
 | 38 | `POST /api/v1/skills/{namespace}/publish`, `POST /api/web/skills/{namespace}/publish` | python | Portal publish write aliases moved through Vite and reuse the Python publish service path. Root ClawHub and legacy publish remain Java-owned. |
 | 39 | `POST /api/v1/skills`, `POST /api/v1/publish` | python | Root ClawHub payload/files publish and legacy zip+namespace publish moved through Vite. Both return plain ClawHub `{ ok, skillId, versionId }`; delete/undelete remain Java-owned. |
 | 40 | Publish scanner result processing foundation | n/a | Python can apply normalized scanner results to the latest active security audit and Java-compatible `SCANNING` status transitions. Redis consumer/worker remains deferred. |
+| 41 | Publish scan task worker boundary | n/a | Python can parse Java-compatible Redis scan task fields, stage local bundle objects, call a scanner abstraction, apply scan results, clean staged files, and mark still-`SCANNING` versions `SCAN_FAILED` on processing failure. Long-running consumer/retry/reclaim remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1143,11 +1144,12 @@ legacy, CLI, and portal publish write ownership plus scanner result application:
 - `POST /api/v1/skills`
 - `POST /api/v1/publish`
 - normalized scanner result -> `security_audit` update and `SCANNING` status transition
+- Java-compatible Redis scan task field parsing and one-task Python worker boundary
 
 Next decision point:
 
-- Plan Python Redis scan task consumer / worker processing if the next priority is completing
-  asynchronous scan lifecycle updates after Redis handoff.
+- Plan Python Redis scan task consumer group / retry / pending reclaim if the next priority is
+  completing asynchronous scan lifecycle operations after the one-task worker boundary.
 - Plan lifecycle/governance mutations if the next priority is enabling review/approval and
   post-publish state transitions in Python.
 
