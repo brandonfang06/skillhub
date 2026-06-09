@@ -165,10 +165,15 @@ def test_skill_star_routes_use_java_envelopes_and_auth_boundaries() -> None:
         seen.append(star_input_value)
         starred["value"] = True
 
+    async def unstar_writer(star_input_value: SkillStarInput) -> None:
+        seen.append(star_input_value)
+        starred["value"] = False
+
     async def reader(skill_id: int, user_id: str | None) -> bool:
         return bool(starred["value"] and user_id == "user-1" and skill_id == 10)
 
     app.state.skill_star_writer = star_writer
+    app.state.skill_unstar_writer = unstar_writer
     app.state.skill_star_reader = reader
     client = TestClient(app)
 
@@ -190,6 +195,8 @@ def test_skill_star_routes_use_java_envelopes_and_auth_boundaries() -> None:
     assert check_response.status_code == 200
     assert check_response.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
     assert check_response.json()["data"] is True
-    assert unstar_response.status_code == 405
-    assert seen[0].skill_id == 10
-    assert seen[0].user_id == "user-1"
+    assert unstar_response.status_code == 200
+    assert unstar_response.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert unstar_response.json()["data"] is None
+    assert [entry.skill_id for entry in seen] == [10, 10]
+    assert [entry.user_id for entry in seen] == ["user-1", "user-1"]

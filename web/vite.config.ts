@@ -209,22 +209,22 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
-    methods: ['GET', 'PUT'],
+    methods: ['GET', 'PUT', 'DELETE'],
     pattern: /^\/api\/v1\/skills\/\d+\/star(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
   {
-    methods: ['GET', 'PUT'],
+    methods: ['GET', 'PUT', 'DELETE'],
     pattern: /^\/api\/web\/skills\/\d+\/star(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
   {
-    methods: ['GET', 'PUT'],
+    methods: ['GET', 'PUT', 'DELETE'],
     pattern: /^\/api\/v1\/skills\/\d+\/subscription(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
   {
-    methods: ['GET', 'PUT'],
+    methods: ['GET', 'PUT', 'DELETE'],
     pattern: /^\/api\/web\/skills\/\d+\/subscription(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

@@ -289,36 +289,40 @@ describe('Vite dev proxy route ownership', () => {
     )
   })
 
-  it('routes skill star viewer-state actions to Python without taking over unstar', () => {
+  it('routes skill star viewer-state actions to Python including unstar', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/101/star')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/skills/101/star')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('PUT', '/api/web/skills/101/star')).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/star')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8081')
 
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/star')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8081')
   })
 
-  it('routes skill subscription viewer-state actions to Python without taking over unsubscribe', () => {
+  it('routes skill subscription viewer-state actions to Python including unsubscribe', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/subscription')).toBe(
       'http://localhost:8081',
     )
     expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/101/subscription')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/101/subscription')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/101/subscription')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/skills/101/subscription')).toBe(
       'http://localhost:8081',
     )
     expect(resolveMethodAwareProxyTarget('PUT', '/api/web/skills/101/subscription')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBe(
+      'http://localhost:8081',
+    )
 
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/101/subscription')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/subscription')).toBe('http://localhost:8081')
   })
 
   it('routes skill rating viewer-state actions to Python', () => {

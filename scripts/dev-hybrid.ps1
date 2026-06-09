@@ -12195,11 +12195,9 @@ END `$`$;
             starResponsesMatch = ($stableStar.java -eq $stableStar.python -and $stableStar.python -eq $stableStar.proxy)
             authenticatedReadMatches = ($stableCheck.java -eq $stableCheck.python -and $stableCheck.python -eq $stableCheck.proxy)
             starDbState = ($javaStarState -eq 'true|1' -and $pythonStarState -eq 'true|1' -and $proxyStarState -eq 'true|1')
-            javaV1UnstarStillJavaBlocked = ($javaV1UnstarStatus -eq 403 -and $javaAfterRejectedUnstarState -eq 'true|1')
-            pythonV1UnstarNotOwned = ($pythonV1UnstarStatus -eq 405 -and $pythonAfterRejectedUnstarState -eq 'true|1')
-            proxyWebUnstarStillJavaOwned = ($proxyWebUnstarStatus -eq 200 -and $proxyAfterJavaOwnedUnstarState -eq 'false|0')
-            ratingPutNotPythonOwned = ($pythonRatingPutStatus -ne 200)
-            subscriptionPutNotPythonOwned = ($pythonSubscriptionPutStatus -ne 200)
+            javaV1UnstarKnownPolicyMismatch = ($javaV1UnstarStatus -eq 403 -and $javaAfterRejectedUnstarState -eq 'true|1')
+            pythonV1UnstarOwned = ($pythonV1UnstarStatus -eq 200 -and $pythonAfterRejectedUnstarState -eq 'false|0')
+            proxyWebUnstarPythonOwned = ($proxyWebUnstarStatus -eq 200 -and $proxyAfterJavaOwnedUnstarState -eq 'false|0')
         }
         routeBoundaries = [ordered]@{
             javaAnonymousStatus = $javaAnonymousStatus
@@ -12430,11 +12428,10 @@ END `$`$;
             subscribeResponsesMatch = ($stableSubscribe.java -eq $stableSubscribe.python -and $stableSubscribe.python -eq $stableSubscribe.proxy)
             authenticatedReadMatches = ($stableCheck.java -eq $stableCheck.python -and $stableCheck.python -eq $stableCheck.proxy)
             subscriptionDbState = ($javaSubscriptionState -eq 'true|1' -and $pythonSubscriptionState -eq 'true|1' -and $proxySubscriptionState -eq 'true|1')
-            javaV1UnsubscribeStillJavaBlocked = ($javaV1UnsubscribeStatus -eq 403 -and $javaAfterRejectedUnsubscribeState -eq 'true|1')
-            pythonV1UnsubscribeNotOwned = ($pythonV1UnsubscribeStatus -eq 405 -and $pythonAfterRejectedUnsubscribeState -eq 'true|1')
-            proxyWebUnsubscribeStillJavaOwned = ($proxyWebUnsubscribeStatus -eq 200 -and $proxyAfterJavaOwnedUnsubscribeState -eq 'false|0')
-            ratingPutNotPythonOwned = ($pythonRatingPutStatus -ne 200)
-            meSubscriptionsStillJavaOwned = ($proxyMeSubscriptionsStatus -ne 405)
+            javaV1UnsubscribeKnownPolicyMismatch = ($javaV1UnsubscribeStatus -eq 403 -and $javaAfterRejectedUnsubscribeState -eq 'true|1')
+            pythonV1UnsubscribeOwned = ($pythonV1UnsubscribeStatus -eq 200 -and $pythonAfterRejectedUnsubscribeState -eq 'false|0')
+            proxyWebUnsubscribePythonOwned = ($proxyWebUnsubscribeStatus -eq 200 -and $proxyAfterJavaOwnedUnsubscribeState -eq 'false|0')
+            meSubscriptionsStillPythonOwned = ($proxyMeSubscriptionsStatus -ne 405)
         }
         routeBoundaries = [ordered]@{
             javaV1UnsubscribeStatus = $javaV1UnsubscribeStatus

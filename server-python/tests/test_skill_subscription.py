@@ -179,10 +179,15 @@ def test_skill_subscription_routes_use_java_envelopes_and_auth_boundaries() -> N
         seen.append(subscription_input_value)
         subscribed["value"] = True
 
+    async def unsubscribe_writer(subscription_input_value: SkillSubscriptionInput) -> None:
+        seen.append(subscription_input_value)
+        subscribed["value"] = False
+
     async def reader(skill_id: int, user_id: str | None) -> bool:
         return bool(subscribed["value"] and user_id == "user-1" and skill_id == 10)
 
     app.state.skill_subscription_writer = subscribe_writer
+    app.state.skill_unsubscribe_writer = unsubscribe_writer
     app.state.skill_subscription_reader = reader
     client = TestClient(app)
 
@@ -207,6 +212,8 @@ def test_skill_subscription_routes_use_java_envelopes_and_auth_boundaries() -> N
     assert check_response.status_code == 200
     assert check_response.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
     assert check_response.json()["data"] is True
-    assert unsubscribe_response.status_code == 405
-    assert seen[0].skill_id == 10
-    assert seen[0].user_id == "user-1"
+    assert unsubscribe_response.status_code == 200
+    assert unsubscribe_response.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert unsubscribe_response.json()["data"] is None
+    assert [entry.skill_id for entry in seen] == [10, 10]
+    assert [entry.user_id for entry in seen] == ["user-1", "user-1"]

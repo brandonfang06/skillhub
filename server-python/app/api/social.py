@@ -11,8 +11,14 @@ from app.api.auth import read_current_mock_user
 from app.core.response import ok
 from app.social.lists import SocialListKind, list_my_social_skills
 from app.social.rating import SkillRatingError, SkillRatingInput, check_skill_rating, rate_skill
-from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill
-from app.social.subscription import SkillSubscriptionError, SkillSubscriptionInput, check_skill_subscription, subscribe_skill
+from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill, unstar_skill
+from app.social.subscription import (
+    SkillSubscriptionError,
+    SkillSubscriptionInput,
+    check_skill_subscription,
+    subscribe_skill,
+    unsubscribe_skill,
+)
 
 
 router = APIRouter()
@@ -73,6 +79,20 @@ async def star_skill_route_data(request: Request, skill_id: int, mock_user_id: s
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
+async def unstar_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    writer = getattr(request.app.state, "skill_unstar_writer", None)
+    try:
+        await _resolve_result(
+            writer(_star_input(skill_id, user_id))
+            if writer is not None
+            else unstar_skill(request.app.state.db_engine, _star_input(skill_id, user_id))
+        )
+    except SkillStarError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", None, request)
+
+
 async def check_skill_star_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "skill_star_reader", None)
@@ -95,6 +115,20 @@ async def subscribe_skill_route_data(request: Request, skill_id: int, mock_user_
             writer(_subscription_input(skill_id, user_id))
             if writer is not None
             else subscribe_skill(request.app.state.db_engine, _subscription_input(skill_id, user_id))
+        )
+    except SkillSubscriptionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", None, request)
+
+
+async def unsubscribe_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    writer = getattr(request.app.state, "skill_unsubscribe_writer", None)
+    try:
+        await _resolve_result(
+            writer(_subscription_input(skill_id, user_id))
+            if writer is not None
+            else unsubscribe_skill(request.app.state.db_engine, _subscription_input(skill_id, user_id))
         )
     except SkillSubscriptionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -226,6 +260,16 @@ async def star_skill_route(
     return await star_skill_route_data(request, skill_id, x_mock_user_id)
 
 
+@router.delete("/api/v1/skills/{skill_id}/star")
+@router.delete("/api/web/skills/{skill_id}/star")
+async def unstar_skill_route(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await unstar_skill_route_data(request, skill_id, x_mock_user_id)
+
+
 @router.get("/api/v1/skills/{skill_id}/star")
 @router.get("/api/web/skills/{skill_id}/star")
 async def check_skill_star_route(
@@ -244,6 +288,16 @@ async def subscribe_skill_route(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await subscribe_skill_route_data(request, skill_id, x_mock_user_id)
+
+
+@router.delete("/api/v1/skills/{skill_id}/subscription")
+@router.delete("/api/web/skills/{skill_id}/subscription")
+async def unsubscribe_skill_route(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await unsubscribe_skill_route_data(request, skill_id, x_mock_user_id)
 
 
 @router.get("/api/v1/skills/{skill_id}/subscription")
