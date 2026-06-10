@@ -12,6 +12,7 @@ from app.namespace.members import (
     add_namespace_member,
     batch_add_namespace_members,
     remove_namespace_member,
+    transfer_namespace_ownership,
     update_namespace_member_role,
 )
 
@@ -236,6 +237,128 @@ async def test_member_mutations_enforce_namespace_and_operator_boundaries() -> N
 
 
 @pytest.mark.anyio
+async def test_transfer_namespace_ownership_matches_java_role_swap() -> None:
+    connection = FakeNamespaceMutationConnection(
+        members={
+            "owner": member_row(user_id="owner", role="OWNER"),
+            "new-owner": member_row(user_id="new-owner", role="ADMIN"),
+        },
+        users={
+            "owner": user_row(id="owner", display_name="Owner"),
+            "new-owner": user_row(id="new-owner", display_name="New Owner"),
+        },
+    )
+
+    response = await transfer_namespace_ownership(
+        FakeEngine(connection),
+        slug="team-a",
+        current_owner_id="owner",
+        new_owner_id="new-owner",
+    )
+
+    assert response == {"message": "Ownership transferred successfully"}
+    assert connection.members["owner"]["role"] == "ADMIN"
+    assert connection.members["new-owner"]["role"] == "OWNER"
+
+
+@pytest.mark.anyio
+async def test_transfer_namespace_ownership_preserves_java_error_keys() -> None:
+    missing_current = FakeNamespaceMutationConnection(
+        members={"new-owner": member_row(user_id="new-owner", role="ADMIN")}
+    )
+    with pytest.raises(NamespaceMemberReadError, match="error.namespace.owner.current.notFound") as current_missing:
+        await transfer_namespace_ownership(
+            FakeEngine(missing_current),
+            slug="team-a",
+            current_owner_id="missing-owner",
+            new_owner_id="new-owner",
+        )
+    assert current_missing.value.status_code == 400
+
+    invalid_current = FakeNamespaceMutationConnection(
+        members={
+            "member": member_row(user_id="member", role="MEMBER"),
+            "new-owner": member_row(user_id="new-owner", role="ADMIN"),
+        }
+    )
+    with pytest.raises(NamespaceMemberReadError, match="error.namespace.owner.current.invalid") as current_invalid:
+        await transfer_namespace_ownership(
+            FakeEngine(invalid_current),
+            slug="team-a",
+            current_owner_id="member",
+            new_owner_id="new-owner",
+        )
+    assert current_invalid.value.status_code == 400
+
+    missing_new = FakeNamespaceMutationConnection(members={"owner": member_row(user_id="owner", role="OWNER")})
+    with pytest.raises(NamespaceMemberReadError, match="error.namespace.owner.new.notFound") as new_missing:
+        await transfer_namespace_ownership(
+            FakeEngine(missing_new),
+            slug="team-a",
+            current_owner_id="owner",
+            new_owner_id="missing-new-owner",
+        )
+    assert new_missing.value.status_code == 400
+
+    readonly = FakeNamespaceMutationConnection(namespace=namespace_row(status="FROZEN"))
+    with pytest.raises(NamespaceMemberReadError, match="error.namespace.readonly") as frozen:
+        await transfer_namespace_ownership(
+            FakeEngine(readonly),
+            slug="team-a",
+            current_owner_id="operator",
+            new_owner_id="member",
+        )
+    assert frozen.value.status_code == 400
+
+    global_ns = FakeNamespaceMutationConnection(namespace=namespace_row(type="GLOBAL", slug="global"))
+    with pytest.raises(NamespaceMemberReadError, match="error.namespace.readonly") as immutable:
+        await transfer_namespace_ownership(
+            FakeEngine(global_ns),
+            slug="global",
+            current_owner_id="operator",
+            new_owner_id="member",
+        )
+    assert immutable.value.status_code == 400
+
+
+def test_transfer_ownership_route_returns_java_envelope_for_v1_and_web_aliases() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(user_id)
+    app.state.namespace_transfer_ownership_writer = lambda slug, current_owner_id, new_owner_id: {
+        "message": f"Ownership transferred successfully:{slug}:{current_owner_id}:{new_owner_id}"
+    }
+    client = TestClient(app)
+
+    for prefix in ("/api/v1", "/api/web"):
+        response = client.post(
+            f"{prefix}/namespaces/team-a/transfer-ownership",
+            json={"newOwnerId": "new-owner"},
+            headers={"X-Mock-User-Id": "owner"},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["code"] == 0
+        assert body["msg"] == "更新成功"
+        assert body["data"] == {"message": "Ownership transferred successfully:team-a:owner:new-owner"}
+        assert body["requestId"]
+
+
+def test_transfer_ownership_route_requires_authentication() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: None
+    app.state.namespace_transfer_ownership_writer = lambda slug, current_owner_id, new_owner_id: {
+        "message": "unexpected"
+    }
+    client = TestClient(app)
+
+    response = client.post("/api/v1/namespaces/team-a/transfer-ownership", json={"newOwnerId": "new-owner"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+@pytest.mark.anyio
 async def test_batch_add_namespace_members_preserves_partial_success() -> None:
     connection = FakeNamespaceMutationConnection(members={"operator": member_row(user_id="operator", role="OWNER")})
 
@@ -325,5 +448,3 @@ def test_namespace_member_mutation_routes_use_java_envelopes_and_boundaries() ->
     assert remove_response.status_code == 200
     assert remove_response.json()["msg"] == "\u5220\u9664\u6210\u529f"
     assert remove_response.json()["data"]["message"] == "Member removed successfully"
-
-    assert client.post("/api/v1/namespaces/team-a/transfer-ownership", headers={"X-Mock-User-Id": "operator"}).status_code == 404

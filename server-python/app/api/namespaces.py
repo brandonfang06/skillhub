@@ -15,6 +15,7 @@ from app.namespace.members import (
     list_namespace_members,
     remove_namespace_member,
     search_namespace_member_candidates,
+    transfer_namespace_ownership,
     update_namespace_member_role,
 )
 from app.namespace.read import NamespaceReadError, get_namespace, list_my_namespaces, list_namespaces
@@ -248,6 +249,32 @@ async def update_namespace_member_role_route(
                 member_user_id=member_user_id,
                 role=str(payload["role"]),
                 operator_user_id=user_id,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/namespaces/{slug}/transfer-ownership")
+@router.post("/api/web/namespaces/{slug}/transfer-ownership")
+async def transfer_namespace_ownership_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_transfer_ownership_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, user_id, payload["newOwnerId"])
+            if writer is not None
+            else transfer_namespace_ownership(
+                request.app.state.db_engine,
+                slug=slug,
+                current_owner_id=user_id,
+                new_owner_id=str(payload["newOwnerId"]),
             )
         )
     except NamespaceMemberReadError as exc:

@@ -74,6 +74,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/transfer-ownership(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/transfer-ownership(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['DELETE'],
     pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members\/[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',

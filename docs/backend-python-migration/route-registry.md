@@ -155,8 +155,8 @@ deferred routes are still visible.
 | PUT | `/api/web/namespaces/{slug}/members/{userId}/role` | python | Frontend alias for namespace member role update. |
 | POST | `/api/v1/namespaces/{slug}/members/batch` | python | Namespace member batch add moved to Python. Preserves Java partial-success behavior and batch error mapping. |
 | POST | `/api/web/namespaces/{slug}/members/batch` | python | Frontend alias for namespace member batch add. |
-| POST | `/api/v1/namespaces/{slug}/transfer-ownership` | java | Namespace ownership transfer remains Java-owned. |
-| POST | `/api/web/namespaces/{slug}/transfer-ownership` | java | Namespace ownership transfer remains Java-owned. |
+| POST | `/api/v1/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Requires current owner, swaps old owner to `ADMIN` and new owner to `OWNER`, and keeps namespace lifecycle/profile APIs Java-owned. |
+| POST | `/api/web/namespaces/{slug}/transfer-ownership` | python | Frontend alias for namespace ownership transfer. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
 | GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |

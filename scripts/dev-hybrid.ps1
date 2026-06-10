@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -14498,12 +14498,6 @@ END `$`$;
     $frozenJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
     $frozenPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
     $frozenProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
-    $transferJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
-    $transferPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
-    Reset-MemberFixture -UserId $ownerId -Role 'OWNER'
-    Reset-MemberFixture -UserId $adminId -Role 'ADMIN'
-    $transferProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
-
     $addStable = [ordered]@{
         java = ConvertTo-StableNamespaceMemberMutationJson -Response $javaAdd
         python = ConvertTo-StableNamespaceMemberMutationJson -Response $pythonAdd
@@ -14543,7 +14537,6 @@ END `$`$;
             removeOwnerRejected = ($removeOwnerJava -eq 400 -and $removeOwnerPython -eq 400 -and $removeOwnerProxy -eq 400)
             memberOperatorForbidden = ($memberOperatorJava -eq 403 -and $memberOperatorPython -eq 403 -and $memberOperatorProxy -eq 403)
             frozenReadonlyRejected = ($frozenJava -eq 400 -and $frozenPython -eq 400 -and $frozenProxy -eq 400)
-            transferOwnershipStillJavaOwned = ($transferJava -eq $transferProxy -and $transferPython -eq 404)
         }
         addStable = $addStable
         updateStable = $updateStable
@@ -14554,7 +14547,6 @@ END `$`$;
             removeOwner = @($removeOwnerJava, $removeOwnerPython, $removeOwnerProxy)
             memberOperator = @($memberOperatorJava, $memberOperatorPython, $memberOperatorProxy)
             frozenReadonly = @($frozenJava, $frozenPython, $frozenProxy)
-            transferOwnership = @($transferJava, $transferPython, $transferProxy)
         }
     }
 
@@ -14574,6 +14566,206 @@ function Invoke-HybridNamespaceMemberMutationSmokeVerification {
         Invoke-NamespaceMemberMutationTests
         Start-Hybrid
         Invoke-NamespaceMemberMutationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-NamespaceTransferOwnershipTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_namespace_member_mutation.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-NamespaceTransferOwnershipContractComparison {
+    param([string]$ResultFileName = 'namespace-transfer-ownership-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $ownerId = "codex-ns-xfer-owner-$suffix"
+    $adminId = "codex-ns-xfer-admin-$suffix"
+    $memberId = "codex-ns-xfer-member-$suffix"
+    $missingMemberId = "codex-ns-xfer-current-missing-$suffix"
+    $teamSlug = "codex-ns-xfer-$suffix"
+    $frozenSlug = "codex-ns-xfer-frozen-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    team_id BIGINT;
+    frozen_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('$ownerId', 'Codex Transfer Owner', 'xfer-owner-$suffix@example.test', '', 'ACTIVE'),
+        ('$adminId', 'Codex Transfer Admin', 'xfer-admin-$suffix@example.test', '', 'ACTIVE'),
+        ('$memberId', 'Codex Transfer Member', 'xfer-member-$suffix@example.test', '', 'ACTIVE'),
+        ('$missingMemberId', 'Codex Transfer Missing Member', 'xfer-current-missing-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, description, avatar_url, created_by)
+    VALUES ('$teamSlug', 'Codex Transfer Namespace', 'TEAM', 'ACTIVE', 'transfer ownership fixture', '', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        description = EXCLUDED.description,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, description, avatar_url, created_by)
+    VALUES ('$frozenSlug', 'Codex Transfer Frozen', 'TEAM', 'FROZEN', 'transfer readonly fixture', '', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        description = EXCLUDED.description,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO frozen_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_id, '$ownerId', 'OWNER'),
+        (team_id, '$adminId', 'ADMIN'),
+        (team_id, '$memberId', 'MEMBER'),
+        (frozen_id, '$ownerId', 'OWNER'),
+        (frozen_id, '$adminId', 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Reset-TransferFixture {
+        $resetSql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+BEGIN
+    SELECT id INTO ns_id FROM namespace WHERE slug = '$teamSlug';
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (ns_id, '$ownerId', 'OWNER'),
+        (ns_id, '$adminId', 'ADMIN'),
+        (ns_id, '$memberId', 'MEMBER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+END `$`$;
+"@
+        Invoke-PostgresSql -Sql $resetSql
+    }
+
+    function Read-TransferRoleState {
+        $roleSql = @"
+SELECT string_agg(user_id || ':' || role, ',' ORDER BY user_id) AS roles
+FROM namespace_member
+WHERE namespace_id = (SELECT id FROM namespace WHERE slug = '$teamSlug')
+  AND user_id IN ('$ownerId', '$adminId', '$memberId');
+"@
+        return Invoke-PostgresScalar -Sql $roleSql
+    }
+
+    $body = @{ newOwnerId = $adminId }
+    Reset-TransferFixture
+    $javaTransfer = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId $body
+    $javaRoles = Read-TransferRoleState
+    Reset-TransferFixture
+    $pythonTransfer = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId $body
+    $pythonRoles = Read-TransferRoleState
+    Reset-TransferFixture
+    $proxyTransfer = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/transfer-ownership" $ownerId $body
+    $proxyRoles = Read-TransferRoleState
+
+    Reset-TransferFixture
+    $currentMissingJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $missingMemberId $body
+    $currentMissingPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $missingMemberId $body
+    $currentMissingProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/transfer-ownership" $missingMemberId $body
+    $currentInvalidJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $memberId $body
+    $currentInvalidPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $memberId $body
+    $currentInvalidProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/transfer-ownership" $memberId $body
+    $newMissingBody = @{ newOwnerId = "missing-new-owner-$suffix" }
+    $newMissingJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId $newMissingBody
+    $newMissingPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId $newMissingBody
+    $newMissingProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/transfer-ownership" $ownerId $newMissingBody
+    $frozenJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$frozenSlug/transfer-ownership" $ownerId $body
+    $frozenPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$frozenSlug/transfer-ownership" $ownerId $body
+    $frozenProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$frozenSlug/transfer-ownership" $ownerId $body
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableNamespaceMemberMessageJson -Response $javaTransfer
+        python = ConvertTo-StableNamespaceMemberMessageJson -Response $pythonTransfer
+        proxy = ConvertTo-StableNamespaceMemberMessageJson -Response $proxyTransfer
+    }
+    $expectedRoles = "$adminId`:OWNER,$memberId`:MEMBER,$ownerId`:ADMIN"
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            "/api/v1/namespaces/$teamSlug/transfer-ownership",
+            "/api/web/namespaces/$teamSlug/transfer-ownership"
+        )
+        checks = [ordered]@{
+            successEnvelopeMatches = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy)
+            roleStateMatches = ($javaRoles -eq $expectedRoles -and $pythonRoles -eq $expectedRoles -and $proxyRoles -eq $expectedRoles)
+            currentMissingRejected = ($currentMissingJava -eq 400 -and $currentMissingPython -eq 400 -and $currentMissingProxy -eq 400)
+            currentInvalidRejected = ($currentInvalidJava -eq 400 -and $currentInvalidPython -eq 400 -and $currentInvalidProxy -eq 400)
+            newMissingRejected = ($newMissingJava -eq 400 -and $newMissingPython -eq 400 -and $newMissingProxy -eq 400)
+            frozenReadonlyRejected = ($frozenJava -eq 400 -and $frozenPython -eq 400 -and $frozenProxy -eq 400)
+        }
+        stable = $stable
+        roleStates = [ordered]@{
+            expected = $expectedRoles
+            java = $javaRoles
+            python = $pythonRoles
+            proxy = $proxyRoles
+        }
+        statusBoundaries = [ordered]@{
+            currentMissing = @($currentMissingJava, $currentMissingPython, $currentMissingProxy)
+            currentInvalid = @($currentInvalidJava, $currentInvalidPython, $currentInvalidProxy)
+            newMissing = @($newMissingJava, $newMissingPython, $newMissingProxy)
+            frozenReadonly = @($frozenJava, $frozenPython, $frozenProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Namespace transfer ownership contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNamespaceTransferOwnershipSmokeVerification {
+    try {
+        Invoke-NamespaceTransferOwnershipTests
+        Start-Hybrid
+        Invoke-NamespaceTransferOwnershipContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -14660,6 +14852,7 @@ switch ($Action) {
     'verify-namespace-read-smoke' { Invoke-HybridNamespaceReadSmokeVerification }
     'verify-namespace-member-read-smoke' { Invoke-HybridNamespaceMemberReadSmokeVerification }
     'verify-namespace-member-mutation-smoke' { Invoke-HybridNamespaceMemberMutationSmokeVerification }
+    'verify-namespace-transfer-ownership-smoke' { Invoke-HybridNamespaceTransferOwnershipSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

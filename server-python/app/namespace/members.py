@@ -86,6 +86,11 @@ def _assert_member_mutation_allowed(namespace: dict[str, Any]) -> None:
         raise NamespaceMemberReadError("error.namespace.readonly", status_code=400)
 
 
+def _assert_transfer_ownership_allowed(namespace: dict[str, Any]) -> None:
+    if str(namespace["type"]) != "TEAM" or str(namespace["status"]) != "ACTIVE":
+        raise NamespaceMemberReadError("error.namespace.readonly", status_code=400)
+
+
 def _validate_role(role: str) -> None:
     if role not in {"OWNER", "ADMIN", "MEMBER"}:
         raise NamespaceMemberReadError("error.namespace.member.role.invalid", status_code=400)
@@ -254,6 +259,51 @@ async def update_namespace_member_role(
         if response is None:
             raise NamespaceMemberReadError("error.namespace.member.notFound", status_code=400)
         return response
+
+
+async def transfer_namespace_ownership(
+    engine: Any,
+    *,
+    slug: str,
+    current_owner_id: str,
+    new_owner_id: str,
+) -> dict[str, str]:
+    async with engine.begin() as connection:
+        namespace = await _read_namespace(connection, slug)
+        namespace_id = int(namespace["id"])
+        _assert_transfer_ownership_allowed(namespace)
+        current_role = await _read_member_role(connection, namespace_id, current_owner_id)
+        if current_role is None:
+            raise NamespaceMemberReadError("error.namespace.owner.current.notFound", status_code=400)
+        if current_role != "OWNER":
+            raise NamespaceMemberReadError("error.namespace.owner.current.invalid", status_code=400)
+        if await _read_member_role(connection, namespace_id, new_owner_id) is None:
+            raise NamespaceMemberReadError("error.namespace.owner.new.notFound", status_code=400)
+        await connection.execute(
+            text(
+                """
+                UPDATE namespace_member
+                SET role = :role,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE namespace_id = :namespace_id
+                  AND user_id = :user_id
+                """
+            ),
+            {"namespace_id": namespace_id, "user_id": current_owner_id, "role": "ADMIN"},
+        )
+        await connection.execute(
+            text(
+                """
+                UPDATE namespace_member
+                SET role = :role,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE namespace_id = :namespace_id
+                  AND user_id = :user_id
+                """
+            ),
+            {"namespace_id": namespace_id, "user_id": new_owner_id, "role": "OWNER"},
+        )
+    return {"message": "Ownership transferred successfully"}
 
 
 def _map_batch_error(exc: Exception) -> str:
