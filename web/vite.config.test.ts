@@ -889,7 +889,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/publish')).toBe('http://localhost:8081')
   })
 
-  it('routes governance workbench reads to Python while keeping mark-read on Java', () => {
+  it('routes governance workbench reads and notification mark-read to Python', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/governance/summary')).toBe(
       'http://localhost:8081',
     )
@@ -905,16 +905,20 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/governance/notifications')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/governance/notifications/1/read')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/web/governance/notifications/1/read')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/governance/notifications/1/read')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/governance/notifications/1/read')).toBe(
+      'http://localhost:8081',
+    )
 
     expect(matchingDevProxyTarget('GET', '/api/v1/governance/summary')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/governance/notifications')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/governance/notifications/1/read')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/web/governance/notifications/1/read')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
   })
 

@@ -459,3 +459,43 @@ async def list_governance_notifications(engine: Any, *, user_id: str, page: int,
         "page": normalized_page,
         "size": normalized_size,
     }
+
+
+async def mark_governance_notification_read(engine: Any, *, notification_id: int, user_id: str) -> dict[str, Any]:
+    async with engine.begin() as connection:
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, user_id, category, entity_type, entity_id, title, body_json, status, created_at, read_at
+                    FROM user_notification
+                    WHERE id = :notification_id
+                    """
+                ),
+                {"notification_id": notification_id},
+            )
+        ).mappings().all()
+        if not rows:
+            raise GovernanceWorkbenchError("error.notification.notFound", status_code=404)
+        row = dict(rows[0])
+        if str(row["user_id"]) != user_id:
+            raise GovernanceWorkbenchError("error.notification.noPermission", status_code=403)
+        read_at = datetime.now(UTC)
+        updated_rows = (
+            await connection.execute(
+                text(
+                    """
+                    UPDATE user_notification
+                    SET status = 'READ',
+                        read_at = :read_at
+                    WHERE id = :notification_id
+                      AND user_id = :user_id
+                    RETURNING id, category, entity_type, entity_id, title, body_json, status, created_at, read_at
+                    """
+                ),
+                {"notification_id": notification_id, "user_id": user_id, "read_at": read_at},
+            )
+        ).mappings().all()
+        if not updated_rows:
+            raise GovernanceWorkbenchError("error.notification.noPermission", status_code=403)
+    return _governance_notification_item(dict(updated_rows[0]))

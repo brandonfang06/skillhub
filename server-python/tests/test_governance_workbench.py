@@ -13,6 +13,7 @@ from app.governance.workbench import (
     list_governance_activity,
     list_governance_inbox,
     list_governance_notifications,
+    mark_governance_notification_read,
 )
 from app.main import create_app
 
@@ -38,6 +39,9 @@ class FakeResult:
             return self.scalar
         return int(self.rows[0]["count"])
 
+    def rowcount(self) -> int:
+        return len(self.rows)
+
 
 class FakeTransaction:
     def __init__(self, connection: "FakeGovernanceConnection") -> None:
@@ -55,6 +59,9 @@ class FakeEngine:
         self.connection = connection
 
     def connect(self) -> FakeTransaction:
+        return FakeTransaction(self.connection)
+
+    def begin(self) -> FakeTransaction:
         return FakeTransaction(self.connection)
 
 
@@ -122,6 +129,7 @@ class FakeGovernanceConnection:
         self.notification_rows = [
             {
                 "id": 51,
+                "user_id": "skill-admin",
                 "category": "REVIEW",
                 "entity_type": "REVIEW",
                 "entity_id": 11,
@@ -132,6 +140,7 @@ class FakeGovernanceConnection:
                 "read_at": None,
             }
         ]
+        self.updated_notifications: list[dict[str, Any]] = []
         self.params: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
@@ -165,7 +174,20 @@ class FakeGovernanceConnection:
             return FakeResult(rows=self.activity_rows)
         if "COUNT(*)" in sql and "FROM user_notification" in sql:
             return FakeResult(scalar=len(self.notification_rows))
+        if "UPDATE user_notification" in sql:
+            updated_rows = [
+                row
+                for row in self.notification_rows
+                if row["id"] == bound["notification_id"] and row["user_id"] == bound["user_id"]
+            ]
+            for row in updated_rows:
+                row["status"] = "READ"
+                row["read_at"] = datetime(2026, 6, 10, 8, 10, tzinfo=UTC)
+            self.updated_notifications.extend(updated_rows)
+            return FakeResult(rows=updated_rows)
         if "FROM user_notification" in sql:
+            if "id = :notification_id" in sql:
+                return FakeResult(rows=[row for row in self.notification_rows if row["id"] == bound["notification_id"]])
             return FakeResult(rows=self.notification_rows)
         raise AssertionError(f"unexpected SQL: {sql}")
 
@@ -261,7 +283,40 @@ async def test_governance_notifications_read_legacy_user_notification_table() ->
     }
 
 
-def test_governance_routes_use_read_envelopes_and_keep_mark_read_unowned() -> None:
+@pytest.mark.anyio
+async def test_mark_governance_notification_read_updates_owned_legacy_row() -> None:
+    connection = FakeGovernanceConnection()
+
+    response = await mark_governance_notification_read(FakeEngine(connection), notification_id=51, user_id="skill-admin")
+
+    assert response == {
+        "id": 51,
+        "category": "REVIEW",
+        "entityType": "REVIEW",
+        "entityId": 11,
+        "title": "Review needed",
+        "bodyJson": '{"skill":"review-skill"}',
+        "status": "READ",
+        "createdAt": "2026-06-10T08:09:00Z",
+        "readAt": "2026-06-10T08:10:00Z",
+    }
+    assert connection.updated_notifications[0]["status"] == "READ"
+
+
+@pytest.mark.anyio
+async def test_mark_governance_notification_read_matches_java_error_keys() -> None:
+    connection = FakeGovernanceConnection()
+
+    with pytest.raises(GovernanceWorkbenchError, match="error.notification.notFound") as missing:
+        await mark_governance_notification_read(FakeEngine(connection), notification_id=999, user_id="skill-admin")
+    assert missing.value.status_code == 404
+
+    with pytest.raises(GovernanceWorkbenchError, match="error.notification.noPermission") as foreign:
+        await mark_governance_notification_read(FakeEngine(connection), notification_id=51, user_id="other-user")
+    assert foreign.value.status_code == 403
+
+
+def test_governance_routes_use_read_and_mark_read_envelopes() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: {
         "userId": user_id,
@@ -275,9 +330,21 @@ def test_governance_routes_use_read_envelopes_and_keep_mark_read_unowned() -> No
     app.state.governance_inbox_reader = lambda payload, user_id: {"items": [], "total": 0, "page": 0, "size": 20}
     app.state.governance_activity_reader = lambda payload, user_id: {"items": [], "total": 0, "page": 0, "size": 20}
     app.state.governance_notification_reader = lambda payload, user_id: {"items": [], "total": 0, "page": 0, "size": 20}
+    app.state.governance_notification_mark_read_writer = lambda notification_id, user_id: {
+        "id": notification_id,
+        "category": "REVIEW",
+        "entityType": "REVIEW",
+        "entityId": 11,
+        "title": "Review needed",
+        "bodyJson": "{}",
+        "status": "READ",
+        "createdAt": "2026-06-10T08:09:00Z",
+        "readAt": "2026-06-10T08:10:00Z",
+    }
     client = TestClient(app)
 
     assert client.get("/api/v1/governance/summary").status_code == 401
+    assert client.post("/api/v1/governance/notifications/1/read").status_code == 401
 
     response = client.get("/api/v1/governance/summary", headers={"X-Mock-User-Id": "skill-admin"})
     assert response.status_code == 200
@@ -288,4 +355,11 @@ def test_governance_routes_use_read_envelopes_and_keep_mark_read_unowned() -> No
     assert web_response.status_code == 200
     assert web_response.json()["data"]["items"] == []
 
-    assert client.post("/api/v1/governance/notifications/1/read", headers={"X-Mock-User-Id": "skill-admin"}).status_code == 404
+    mark_response = client.post("/api/v1/governance/notifications/51/read", headers={"X-Mock-User-Id": "skill-admin"})
+    assert mark_response.status_code == 200
+    assert mark_response.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert mark_response.json()["data"]["status"] == "READ"
+
+    web_mark_response = client.post("/api/web/governance/notifications/51/read", headers={"X-Mock-User-Id": "skill-admin"})
+    assert web_mark_response.status_code == 200
+    assert web_mark_response.json()["data"]["id"] == 51

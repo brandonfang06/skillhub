@@ -14,6 +14,7 @@ from app.governance.workbench import (
     list_governance_activity,
     list_governance_inbox,
     list_governance_notifications,
+    mark_governance_notification_read,
 )
 
 
@@ -131,3 +132,27 @@ async def governance_notifications_route(
         )
     )
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/governance/notifications/{notification_id}/read")
+@router.post("/api/web/governance/notifications/{notification_id}/read")
+async def governance_notification_mark_read_route(
+    notification_id: int,
+    request: Request,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "governance_notification_mark_read_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(notification_id, user_id)
+            if writer is not None
+            else mark_governance_notification_read(
+                request.app.state.db_engine,
+                notification_id=notification_id,
+                user_id=user_id,
+            )
+        )
+    except GovernanceWorkbenchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)

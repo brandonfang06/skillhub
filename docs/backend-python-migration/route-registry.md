@@ -218,7 +218,7 @@ deferred routes are still visible.
 | GET | `/api/web/governance/activity` | python | Frontend alias for governance activity read. |
 | GET | `/api/v1/governance/notifications` | python | Legacy governance notification list moved to Python. Reads `user_notification` rather than the newer `notification` table to match Java. |
 | GET | `/api/web/governance/notifications` | python | Frontend alias for legacy governance notification list. |
-| POST | `/api/v1/governance/notifications/{id}/read` | java | Legacy governance notification mark-read remains Java-owned during this milestone. |
-| POST | `/api/web/governance/notifications/{id}/read` | java | Frontend alias for legacy governance notification mark-read remains Java-owned. |
+| POST | `/api/v1/governance/notifications/{id}/read` | python | Legacy governance notification mark-read moved to Python. Reads and updates `user_notification`, preserves Java owner guard, `error.notification.notFound`, `error.notification.noPermission`, and `更新成功` response. |
+| POST | `/api/web/governance/notifications/{id}/read` | python | Frontend alias for legacy governance notification mark-read. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

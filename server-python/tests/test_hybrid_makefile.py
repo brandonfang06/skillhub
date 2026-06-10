@@ -143,6 +143,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-admin-label-definition-smoke" in script
     assert "verify-admin-user-management-smoke" in script
     assert "verify-governance-workbench-smoke" in script
+    assert "verify-governance-notification-mark-read-smoke" in script
     assert "verify-admin-audit-log-smoke" in script
     assert "verify-admin-review-report-smoke" in script
     assert "verify-admin-review-report-mutation-smoke" in script
@@ -345,6 +346,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "admin-user-management-contract-result.json" in script
     assert "tests/test_admin_user_management.py" in script
     assert "governance-workbench-contract-result.json" in script
+    assert "governance-notification-mark-read-contract-result.json" in script
     assert "tests/test_governance_workbench.py" in script
     assert "admin-audit-log-contract-result.json" in script
     assert "tests/test_admin_audit_logs.py" in script

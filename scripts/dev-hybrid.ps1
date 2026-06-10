@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -16097,9 +16097,6 @@ function Invoke-GovernanceWorkbenchContractComparison {
     $javaNotifications = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/notifications?page=0&size=20" $adminId
     $pythonNotifications = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/notifications?page=0&size=20" $adminId
     $proxyNotifications = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/notifications?page=0&size=20" $adminId
-    $markReadJava = Invoke-GovernanceStatus 'Post' "$JavaUrl/api/v1/governance/notifications/999999999/read" $adminId
-    $markReadProxy = Invoke-GovernanceStatus 'Post' "$WebUrl/api/v1/governance/notifications/999999999/read" $adminId
-
     $stable = [ordered]@{
         summary = [ordered]@{
             java = ConvertTo-StableGovernanceJson -Response $javaSummary
@@ -16158,12 +16155,8 @@ function Invoke-GovernanceWorkbenchContractComparison {
             activityEnvelopeMatches = ($stable.activity.java -eq $stable.activity.python -and $stable.activity.python -eq $stable.activity.proxy)
             managerActivityEnvelopeMatches = ($stable.managerActivity.java -eq $stable.managerActivity.python -and $stable.managerActivity.python -eq $stable.managerActivity.proxy)
             notificationEnvelopeMatches = ($stable.notifications.java -eq $stable.notifications.python -and $stable.notifications.python -eq $stable.notifications.proxy)
-            markReadStillJavaOwned = ($markReadJava -eq $markReadProxy)
         }
         stable = $stable
-        statuses = [ordered]@{
-            markRead = @($markReadJava, $markReadProxy)
-        }
     }
 
     $resultPath = Join-Path $DevDir $ResultFileName
@@ -16182,6 +16175,173 @@ function Invoke-HybridGovernanceWorkbenchSmokeVerification {
         Invoke-GovernanceWorkbenchTests
         Start-Hybrid
         Invoke-GovernanceWorkbenchContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-GovernanceNotificationMarkReadTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_governance_workbench.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableGovernanceMarkReadJson {
+    param([object]$Response)
+
+    $data = $Response.data
+    $normalizedTitle = "$($data.title)" -replace ' (Java|Python|Proxy)$', ''
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            category = $data.category
+            entityType = $data.entityType
+            entityId = $data.entityId
+            title = $normalizedTitle
+            bodyJson = $data.bodyJson
+            status = $data.status
+            createdAt = $data.createdAt
+            readAtPresent = ($null -ne $data.readAt -and "$($data.readAt)" -ne '')
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-GovernanceNotificationMarkReadFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DELETE FROM user_notification WHERE title LIKE 'Codex Governance Mark Read $Suffix%';
+DELETE FROM user_account WHERE id IN ('codex-governance-mark-read-$Suffix', 'codex-governance-mark-read-foreign-$Suffix');
+
+INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+VALUES
+    ('codex-governance-mark-read-$Suffix', 'Codex Governance Mark Read', 'governance-mark-read-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 09:00:00', TIMESTAMP '2036-06-10 09:00:00'),
+    ('codex-governance-mark-read-foreign-$Suffix', 'Codex Governance Mark Read Foreign', 'governance-mark-read-foreign-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 09:00:00', TIMESTAMP '2036-06-10 09:00:00')
+ON CONFLICT (id) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO user_notification (user_id, category, entity_type, entity_id, title, body_json, status, created_at, read_at)
+VALUES
+    ('codex-governance-mark-read-$Suffix', 'REVIEW', 'REVIEW', 901, 'Codex Governance Mark Read $Suffix Java', '{"suffix":"$Suffix"}', 'UNREAD', TIMESTAMPTZ '2036-06-10 09:01:00+00', NULL),
+    ('codex-governance-mark-read-$Suffix', 'REVIEW', 'REVIEW', 901, 'Codex Governance Mark Read $Suffix Python', '{"suffix":"$Suffix"}', 'UNREAD', TIMESTAMPTZ '2036-06-10 09:01:00+00', NULL),
+    ('codex-governance-mark-read-$Suffix', 'REVIEW', 'REVIEW', 901, 'Codex Governance Mark Read $Suffix Proxy', '{"suffix":"$Suffix"}', 'UNREAD', TIMESTAMPTZ '2036-06-10 09:01:00+00', NULL),
+    ('codex-governance-mark-read-foreign-$Suffix', 'REVIEW', 'REVIEW', 901, 'Codex Governance Mark Read $Suffix Foreign', '{"suffix":"$Suffix"}', 'UNREAD', TIMESTAMPTZ '2036-06-10 09:01:00+00', NULL);
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-GovernanceMarkReadNotificationId {
+    param([string]$Title)
+
+    return Invoke-PostgresScalar -Sql "SELECT id FROM user_notification WHERE title = '$Title' LIMIT 1;"
+}
+
+function Get-GovernanceMarkReadState {
+    param([long]$NotificationId)
+
+    return "$(Invoke-PostgresScalar -Sql "SELECT status || '|' || CASE WHEN read_at IS NULL THEN 'null' ELSE 'set' END FROM user_notification WHERE id = $NotificationId;")".Trim()
+}
+
+function Invoke-GovernanceNotificationMarkReadContractComparison {
+    param([string]$ResultFileName = 'governance-notification-mark-read-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-GovernanceNotificationMarkReadFixture -Suffix $suffix
+
+    $userId = "codex-governance-mark-read-$suffix"
+    $javaId = [long](Get-GovernanceMarkReadNotificationId -Title "Codex Governance Mark Read $suffix Java")
+    $pythonId = [long](Get-GovernanceMarkReadNotificationId -Title "Codex Governance Mark Read $suffix Python")
+    $proxyId = [long](Get-GovernanceMarkReadNotificationId -Title "Codex Governance Mark Read $suffix Proxy")
+    $foreignId = [long](Get-GovernanceMarkReadNotificationId -Title "Codex Governance Mark Read $suffix Foreign")
+
+    $javaSuccess = Invoke-GovernanceJson 'Post' "$JavaUrl/api/v1/governance/notifications/$javaId/read" $userId
+    $pythonSuccess = Invoke-GovernanceJson 'Post' "$PythonUrl/api/v1/governance/notifications/$pythonId/read" $userId
+    $proxySuccess = Invoke-GovernanceJson 'Post' "$WebUrl/api/web/governance/notifications/$proxyId/read" $userId
+
+    $javaMissing = Invoke-GovernanceStatus 'Post' "$JavaUrl/api/v1/governance/notifications/999999999/read" $userId
+    $pythonMissing = Invoke-GovernanceStatus 'Post' "$PythonUrl/api/v1/governance/notifications/999999999/read" $userId
+    $proxyMissing = Invoke-GovernanceStatus 'Post' "$WebUrl/api/web/governance/notifications/999999999/read" $userId
+
+    $javaForeign = Invoke-GovernanceStatus 'Post' "$JavaUrl/api/v1/governance/notifications/$foreignId/read" $userId
+    $pythonForeign = Invoke-GovernanceStatus 'Post' "$PythonUrl/api/v1/governance/notifications/$foreignId/read" $userId
+    $proxyForeign = Invoke-GovernanceStatus 'Post' "$WebUrl/api/web/governance/notifications/$foreignId/read" $userId
+
+    $stable = [ordered]@{
+        java = ConvertTo-StableGovernanceMarkReadJson -Response $javaSuccess
+        python = ConvertTo-StableGovernanceMarkReadJson -Response $pythonSuccess
+        proxy = ConvertTo-StableGovernanceMarkReadJson -Response $proxySuccess
+    }
+    $javaState = Get-GovernanceMarkReadState -NotificationId $javaId
+    $pythonState = Get-GovernanceMarkReadState -NotificationId $pythonId
+    $proxyState = Get-GovernanceMarkReadState -NotificationId $proxyId
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/governance/notifications/{id}/read',
+            '/api/web/governance/notifications/{id}/read'
+        )
+        checks = [ordered]@{
+            successEnvelopeMatches = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy)
+            javaStateUpdated = ($javaState -eq 'READ|set')
+            pythonStateUpdated = ($pythonState -eq 'READ|set')
+            proxyStateUpdated = ($proxyState -eq 'READ|set')
+            missingStatusMatches = ($javaMissing -eq $pythonMissing -and $pythonMissing -eq $proxyMissing)
+            foreignStatusMatches = ($javaForeign -eq $pythonForeign -and $pythonForeign -eq $proxyForeign)
+        }
+        stable = $stable
+        state = [ordered]@{
+            java = $javaState
+            python = $pythonState
+            proxy = $proxyState
+        }
+        statuses = [ordered]@{
+            missing = @($javaMissing, $pythonMissing, $proxyMissing)
+            foreign = @($javaForeign, $pythonForeign, $proxyForeign)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Governance notification mark-read contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridGovernanceNotificationMarkReadSmokeVerification {
+    try {
+        Invoke-GovernanceNotificationMarkReadTests
+        Start-Hybrid
+        Invoke-GovernanceNotificationMarkReadContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -16978,6 +17138,7 @@ switch ($Action) {
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
+    'verify-governance-notification-mark-read-smoke' { Invoke-HybridGovernanceNotificationMarkReadSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }
     'verify-admin-review-report-smoke' { Invoke-HybridAdminReviewReportSmokeVerification }
     'verify-admin-review-report-mutation-smoke' { Invoke-HybridAdminReviewReportMutationSmokeVerification }

@@ -535,6 +535,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['POST'],
+    pattern: /^\/api\/v1\/governance\/notifications\/\d+\/read(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/governance\/notifications\/\d+\/read(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
     pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/archive(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
