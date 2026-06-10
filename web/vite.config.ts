@@ -791,11 +791,23 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/web/skills/[^/]+/[^/]+/download$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/download$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/web/skills/[^/]+/[^/]+/tags/[^/]+/download$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },

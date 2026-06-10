@@ -153,7 +153,7 @@ Still plan carefully when a group requires:
 | 19 | `GET /api/v1/skills/{namespace}/{slug}/versions/compare`, `GET /api/web/skills/{namespace}/{slug}/versions/compare` | python | Manager-only owner preview version compare migrated with Java-compatible text diff behavior. File bytes/download endpoints remain deferred. |
 | 20 | `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/files`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Authenticated context forwarding and Java-compatible negative owner-preview tag file metadata coverage completed. Non-published tag targets remain rejected. |
 | 21 | `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | File content read foundation migrated. Version file content supports manager-only owner preview; tag file content remains published-only. Download routes remain Java-owned. |
-| 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. Web download aliases remain Java-owned/unmigrated. |
+| 22 | `GET /api/v1/download/{canonicalSlug}`, `GET /api/v1/download`, `GET /api/v1/skills/{namespace}/{slug}/download`, `GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download`, `GET /api/web/skills/{namespace}/{slug}/download`, `GET /api/web/skills/{namespace}/{slug}/versions/{version}/download`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Download read path migrated. ClawHub routes redirect, portal v1 and web routes stream local bundles or fallback zip entries, and published downloads increment Java-compatible counters. |
 | 23 | Publish upload foundation | n/a | Python package extraction/validation helpers added. No publish POST route ownership moved; Vite detail routes are GET-only so publish POST paths remain Java-owned. |
 | 24 | Publish transaction dry-run model | n/a | Python mirrors Java `validateOnly(...)` preflight decisions for namespace, membership, package, metadata, pre-publish warnings, slug, and version conflicts. No publish POST route ownership moved. |
 | 25 | Publish local storage write foundation | n/a | Python writes Java-compatible local object keys, bundle zip, and future `skill_file` metadata records. No DB writes or publish POST route ownership moved. |
@@ -1325,14 +1325,20 @@ Group E has started with review lifecycle write ownership:
   `POST /api/web/governance/notifications/{id}/read`.
   Live gate caught and fixed a Python transaction boundary issue: the route response showed
   `READ`, but the DB state stayed `UNREAD` until the mutation used `engine.begin()`.
+- Completed: web download alias APIs:
+  `GET /api/web/skills/{namespace}/{slug}/download`,
+  `GET /api/web/skills/{namespace}/{slug}/versions/{version}/download`, and
+  `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/download`.
+  These share the existing Python v1 download implementation. Live gate now compares Java/Python/proxy
+  web alias stream contracts and verifies published download counter deltas across v1 and web hits.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
   surfaces, admin password reset, and notification SSE.
 
 Recommended next choice:
 
-- Continue with admin password reset, web download aliases, final proxy cleanup, or auth/token
-  surfaces based on route ownership priority.
+- Continue with admin password reset, final proxy cleanup, or auth/token surfaces based on route
+  ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

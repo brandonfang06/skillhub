@@ -2766,6 +2766,7 @@ async def get_skill_tag_file_content(
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/download")
+@router.get("/api/web/skills/{namespace}/{slug}/download")
 async def download_skill_latest(
     namespace: str,
     slug: str,
@@ -2791,6 +2792,7 @@ async def download_skill_latest(
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/download")
+@router.get("/api/web/skills/{namespace}/{slug}/versions/{version}/download")
 async def download_skill_version(
     namespace: str,
     slug: str,
@@ -2818,6 +2820,7 @@ async def download_skill_version(
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download")
+@router.get("/api/web/skills/{namespace}/{slug}/tags/{tagName}/download")
 async def download_skill_tag(
     namespace: str,
     slug: str,

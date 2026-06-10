@@ -166,6 +166,9 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-OwnerPreviewTagFilesContractComparison" in script
     assert "Invoke-FileContentContractComparison" in script
     assert "Invoke-DownloadContractComparison" in script
+    assert "webLatestBundle" in script
+    assert "webExplicitBundle" in script
+    assert "webTagBundle" in script
     assert "Invoke-OwnerPreviewResolveContractComparison" in script
     assert "Invoke-OwnerPreviewCompareContractComparison" in script
     assert "Invoke-PublishFoundationContractComparison" in script

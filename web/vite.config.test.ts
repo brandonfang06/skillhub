@@ -797,10 +797,10 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8080')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8081')
   })
 
-  it('routes skill files list aliases and v1 file content to Python while web downloads stay Java-owned', () => {
+  it('routes skill files list aliases, v1 file content, and web downloads to Python', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const v1SkillVersionFiles = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/files$'
@@ -818,10 +818,10 @@ describe('Vite dev proxy route ownership', () => {
     expect(proxy[v1SkillVersionFile]?.target).toBe('http://localhost:8081')
     expect(proxy[v1SkillTagFile]?.target).toBe('http://localhost:8081')
 
-    // web file aliases do not exist in Java and web download aliases stay Java-owned
+    // web file aliases do not exist in Java, but web download aliases share the Java portal mapping
     expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$']?.target).toBeUndefined()
     expect(proxy['^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBe('http://localhost:8081')
-    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBeUndefined()
+    expect(proxy['^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$']?.target).toBe('http://localhost:8081')
 
     expect(keys.indexOf(v1SkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(webSkillVersionFiles)).toBeLessThan(keys.indexOf('/api'))
@@ -837,10 +837,10 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.2.0/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/file')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/file')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8081')
   })
 
-  it('routes planned v1 download paths to Python while keeping web aliases and mutations on Java', () => {
+  it('routes planned v1 and web download paths to Python while keeping mutations on Java', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
     const clawHubDownloadQuery = '^/api/v1/download(?:\\?.*)?$'
@@ -848,18 +848,27 @@ describe('Vite dev proxy route ownership', () => {
     const v1LatestDownload = '^/api/v1/skills/[^/]+/[^/]+/download$'
     const v1VersionDownload = '^/api/v1/skills/[^/]+/[^/]+/versions/[^/]+/download$'
     const v1TagDownload = '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/download$'
+    const webLatestDownload = '^/api/web/skills/[^/]+/[^/]+/download$'
+    const webVersionDownload = '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/download$'
+    const webTagDownload = '^/api/web/skills/[^/]+/[^/]+/tags/[^/]+/download$'
 
     expect(proxy[clawHubDownloadQuery]?.target).toBe('http://localhost:8081')
     expect(proxy[clawHubDownloadPath]?.target).toBe('http://localhost:8081')
     expect(proxy[v1LatestDownload]?.target).toBe('http://localhost:8081')
     expect(proxy[v1VersionDownload]?.target).toBe('http://localhost:8081')
     expect(proxy[v1TagDownload]?.target).toBe('http://localhost:8081')
+    expect(proxy[webLatestDownload]?.target).toBe('http://localhost:8081')
+    expect(proxy[webVersionDownload]?.target).toBe('http://localhost:8081')
+    expect(proxy[webTagDownload]?.target).toBe('http://localhost:8081')
 
     expect(keys.indexOf(clawHubDownloadQuery)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(clawHubDownloadPath)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(v1LatestDownload)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(v1VersionDownload)).toBeLessThan(keys.indexOf('/api'))
     expect(keys.indexOf(v1TagDownload)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webLatestDownload)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webVersionDownload)).toBeLessThan(keys.indexOf('/api'))
+    expect(keys.indexOf(webTagDownload)).toBeLessThan(keys.indexOf('/api'))
 
     expect(matchingProxyTarget('/api/v1/download?slug=demo&version=latest')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
@@ -867,8 +876,9 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/skills/global/demo/download')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.0.0/download')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/tags/stable/download')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/web/skills/global/demo/download')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/download')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/download')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.0.0/download')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/skills/global/demo/tags/stable/download')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
   })
 

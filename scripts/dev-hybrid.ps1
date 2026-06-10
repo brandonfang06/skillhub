@@ -4542,6 +4542,7 @@ function Invoke-DownloadContractComparison {
     Ensure-DownloadContractFixture
 
     $basePath = '/api/v1/skills/codex-download-team/codex-download-20260608'
+    $webBasePath = '/api/web/skills/codex-download-team/codex-download-20260608'
     $redirectCases = @(
         [ordered]@{ name = 'clawhubPathLatest'; path = '/api/v1/download/codex-download-team--codex-download-20260608'; expectedLocation = "$basePath/download" },
         [ordered]@{ name = 'clawhubPathVersion'; path = '/api/v1/download/codex-download-team--codex-download-20260608?version=1.0.0'; expectedLocation = "$basePath/versions/1.0.0/download" },
@@ -4571,6 +4572,9 @@ function Invoke-DownloadContractComparison {
         [ordered]@{ name = 'portalLatestBundle'; path = "$basePath/download"; headers = @{} },
         [ordered]@{ name = 'portalExplicitBundle'; path = "$basePath/versions/1.0.0/download"; headers = @{} },
         [ordered]@{ name = 'portalTagBundle'; path = "$basePath/tags/stable/download"; headers = @{} },
+        [ordered]@{ name = 'webLatestBundle'; path = "$webBasePath/download"; headers = @{} },
+        [ordered]@{ name = 'webExplicitBundle'; path = "$webBasePath/versions/1.0.0/download"; headers = @{} },
+        [ordered]@{ name = 'webTagBundle'; path = "$webBasePath/tags/stable/download"; headers = @{} },
         [ordered]@{ name = 'portalFallbackZip'; path = "$basePath/versions/1.1.0/download"; headers = @{} },
         [ordered]@{ name = 'ownerPendingBundle'; path = "$basePath/versions/1.2.0/download"; headers = @{ 'X-Mock-User-Id' = 'local-user' } }
     )
@@ -4619,8 +4623,8 @@ function Invoke-DownloadContractComparison {
         version110 = $afterCounters.version110 - $beforeCounters.version110
     }
     $expectedCounterDelta = [ordered]@{
-        skill = 12
-        version100 = 9
+        skill = 21
+        version100 = 18
         version110 = 3
     }
 

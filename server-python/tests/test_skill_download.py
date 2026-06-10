@@ -199,6 +199,22 @@ def test_portal_latest_download_route_streams_bytes_and_headers() -> None:
     assert response.headers["content-disposition"] == 'attachment; filename="Demo-1.0.0.zip"'
 
 
+def test_web_latest_download_alias_streams_bytes_and_headers() -> None:
+    app = create_app()
+    app.state.skill_download_latest_reader = lambda namespace, slug, current_user_id: DownloadResult(
+        content=b"web-bundle",
+        content_type="application/zip",
+        filename="Demo-1.0.0.zip",
+    )
+
+    client = TestClient(app)
+    response = client.get("/api/web/skills/global/demo/download")
+
+    assert response.status_code == 200
+    assert response.content == b"web-bundle"
+    assert response.headers["content-disposition"] == 'attachment; filename="Demo-1.0.0.zip"'
+
+
 def test_portal_version_download_route_forwards_params_and_current_user() -> None:
     seen: list[tuple[str, str, str, str | None]] = []
     app = create_app()
@@ -220,6 +236,27 @@ def test_portal_version_download_route_forwards_params_and_current_user() -> Non
     assert seen == [("team-ai", "demo", "1.1.0", "local-user")]
 
 
+def test_web_version_download_alias_forwards_params_and_current_user() -> None:
+    seen: list[tuple[str, str, str, str | None]] = []
+    app = create_app()
+
+    def reader(namespace: str, slug: str, version: str, current_user_id: str | None) -> DownloadResult:
+        seen.append((namespace, slug, version, current_user_id))
+        return DownloadResult(content=b"web-version", content_type="application/zip", filename="Demo-1.1.0.zip")
+
+    app.state.skill_download_version_reader = reader
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/team-ai/demo/versions/1.1.0/download",
+        headers={"X-Mock-User-Id": " local-user "},
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"web-version"
+    assert seen == [("team-ai", "demo", "1.1.0", "local-user")]
+
+
 def test_portal_tag_download_route_streams_bytes() -> None:
     app = create_app()
     app.state.skill_download_tag_reader = lambda namespace, slug, tag, current_user_id: DownloadResult(
@@ -233,6 +270,21 @@ def test_portal_tag_download_route_streams_bytes() -> None:
 
     assert response.status_code == 200
     assert response.content == b"tag"
+
+
+def test_web_tag_download_alias_streams_bytes() -> None:
+    app = create_app()
+    app.state.skill_download_tag_reader = lambda namespace, slug, tag, current_user_id: DownloadResult(
+        content=b"web-tag",
+        content_type="application/zip",
+        filename="Demo-1.0.0.zip",
+    )
+
+    client = TestClient(app)
+    response = client.get("/api/web/skills/global/demo/tags/stable/download")
+
+    assert response.status_code == 200
+    assert response.content == b"web-tag"
 
 
 def test_portal_download_route_maps_reader_error_to_http_status() -> None:

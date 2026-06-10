@@ -61,9 +61,9 @@ deferred routes are still visible.
 | GET | `/api/v1/skills/{namespace}/{slug}/download` | python | Latest portal download stream. Supports Java-compatible redirects upstream, headers, local bundle stream, fallback zip, and published counter increments. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | Explicit version portal download stream. Java-compatible access allows public skill `PUBLISHED`, `UPLOADED`, and `PENDING_REVIEW`; counters increment only for `PUBLISHED`. |
 | GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Tag-selected portal download stream with Java-compatible tag lookup and published counter increments. |
-| GET | `/api/web/skills/{namespace}/{slug}/download` | java | Web download alias is not migrated; no Java evidence required moving it in this milestone. |
-| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/download` | java | Web download alias is not migrated; v1 portal download is Python-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | java | Web download alias is not migrated; v1 tag download is Python-owned. |
+| GET | `/api/web/skills/{namespace}/{slug}/download` | python | Frontend alias for latest skill download. Shares the Python v1 download implementation and preserves Java stream headers and download counters. |
+| GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/download` | python | Frontend alias for explicit version download. Shares the Python v1 download implementation and preserves Java stream headers and download counters. |
+| GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/download` | python | Frontend alias for tag download. Shares the Python v1 download implementation and preserves Java stream headers and download counters. |
 | POST | `/api/v1/skills/{namespace}/publish` | python | Portal publish upload moved to Python and reuses the Python publish write service. |
 | POST | `/api/web/skills/{namespace}/publish` | python | Frontend publish upload alias moved to Python and reuses the Python publish write service. |
 | POST | `/api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only dry-run route. Multipart adapter over Python dry-run model; no DB/storage publish writes. |
