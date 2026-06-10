@@ -921,4 +921,38 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/audit-logs')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/audit-logs')).toBe('http://localhost:8080')
   })
+
+  it('routes admin review/report list reads to Python without taking over mutations', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/skill-reports')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/skill-reports?status=pending')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/resolve')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/dismiss')).toBeUndefined()
+    expect(matchingDevProxyTarget('GET', '/api/v1/admin/skill-reports')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/skill-reports/1/resolve')).toBe(
+      'http://localhost:8080',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/skill-reports/1/dismiss')).toBe(
+      'http://localhost:8080',
+    )
+
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/profile-reviews')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/profile-reviews?sortDirection=ASC')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/approve')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/reject')).toBeUndefined()
+    expect(matchingDevProxyTarget('GET', '/api/v1/admin/profile-reviews')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/profile-reviews/1/approve')).toBe(
+      'http://localhost:8080',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/profile-reviews/1/reject')).toBe(
+      'http://localhost:8080',
+    )
+  })
 })

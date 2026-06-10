@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -15997,6 +15997,220 @@ function Invoke-HybridGovernanceWorkbenchSmokeVerification {
     }
 }
 
+function Invoke-AdminReviewReportTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_review_reports.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminReviewReportJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $Response.data
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-AdminReviewReportJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -TimeoutSec 20
+}
+
+function Invoke-AdminReviewReportStatus {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-AdminReviewReportFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    skill_admin_role_id BIGINT;
+    user_admin_role_id BIGINT;
+    super_admin_role_id BIGINT;
+    namespace_id BIGINT;
+    skill_id BIGINT;
+BEGIN
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+    SELECT id INTO user_admin_role_id FROM role WHERE code = 'USER_ADMIN';
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+
+    DELETE FROM skill_report WHERE reporter_id LIKE 'codex-admin-review-%';
+    DELETE FROM profile_change_request WHERE user_id LIKE 'codex-admin-review-%' OR reviewer_id LIKE 'codex-admin-review-%';
+    DELETE FROM skill WHERE slug LIKE 'codex-admin-review-skill-%';
+    DELETE FROM namespace WHERE slug LIKE 'codex-admin-review-%';
+    DELETE FROM user_role_binding WHERE user_id LIKE 'codex-admin-review-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-admin-review-%';
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES
+        ('codex-admin-review-skill-admin-$Suffix', 'Codex Skill Admin', 'codex-skill-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00'),
+        ('codex-admin-review-user-admin-$Suffix', 'Codex User Admin', 'codex-user-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00'),
+        ('codex-admin-review-super-admin-$Suffix', 'Codex Super Admin', 'codex-super-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00'),
+        ('codex-admin-review-owner-$Suffix', 'Codex Skill Owner', 'codex-owner-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00'),
+        ('codex-admin-review-reporter-$Suffix', 'Codex Reporter', 'codex-reporter-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00'),
+        ('codex-admin-review-profile-user-$Suffix', 'Newest Profile Name', 'codex-profile-user-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00');
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('codex-admin-review-skill-admin-$Suffix', skill_admin_role_id),
+        ('codex-admin-review-user-admin-$Suffix', user_admin_role_id),
+        ('codex-admin-review-super-admin-$Suffix', super_admin_role_id);
+
+    INSERT INTO namespace (slug, display_name, type, description, status, created_by, created_at, updated_at)
+    VALUES ('codex-admin-review-$Suffix', 'Codex Admin Review', 'TEAM', 'admin review fixture', 'ACTIVE', 'codex-admin-review-owner-$Suffix', TIMESTAMP '2036-06-10 10:00:00', TIMESTAMP '2036-06-10 10:00:00')
+    RETURNING id INTO namespace_id;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, created_at, updated_by, updated_at)
+    VALUES (namespace_id, 'codex-admin-review-skill-$Suffix', 'Codex Review Skill', 'review fixture', 'codex-admin-review-owner-$Suffix', 'PUBLIC', 'ACTIVE', 'codex-admin-review-owner-$Suffix', TIMESTAMP '2036-06-10 10:01:00', 'codex-admin-review-owner-$Suffix', TIMESTAMP '2036-06-10 10:01:00')
+    RETURNING id INTO skill_id;
+
+    INSERT INTO skill_report (skill_id, namespace_id, reporter_id, reason, details, status, created_at)
+    VALUES (skill_id, namespace_id, 'codex-admin-review-reporter-$Suffix', 'Spam', 'codex report details', 'PENDING', TIMESTAMPTZ '2036-06-10 10:02:00+00');
+
+    INSERT INTO profile_change_request (user_id, changes, old_values, status, machine_result, reviewer_id, review_comment, created_at, reviewed_at)
+    VALUES
+        ('codex-admin-review-profile-user-$Suffix', jsonb_build_object('displayName', 'Requested Profile Name'), jsonb_build_object('displayName', 'Old Profile Name'), 'PENDING', 'PASS', NULL, NULL, TIMESTAMP '2036-06-10 10:03:00', NULL),
+        ('codex-admin-review-profile-user-$Suffix', jsonb_build_object('displayName', 'Approved Profile Name'), jsonb_build_object('displayName', 'Before Approved Name'), 'APPROVED', 'PASS', 'codex-admin-review-user-admin-$Suffix', NULL, TIMESTAMP '2036-06-10 10:04:00', TIMESTAMP '2036-06-10 10:05:00');
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-AdminReviewReportContractComparison {
+    param([string]$ResultFileName = 'admin-review-report-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-AdminReviewReportFixture -Suffix $suffix
+
+    $skillAdminId = "codex-admin-review-skill-admin-$suffix"
+    $userAdminId = "codex-admin-review-user-admin-$suffix"
+    $skillReportQuery = '?status=PENDING&page=0&size=20'
+    $profilePendingQuery = '?status=PENDING&page=0&size=20&sortDirection=DESC'
+    $profileApprovedQuery = '?status=APPROVED&page=0&size=20&sortDirection=ASC'
+
+    $javaSkillReports = Invoke-AdminReviewReportJson "$JavaUrl/api/v1/admin/skill-reports$skillReportQuery" $skillAdminId
+    $pythonSkillReports = Invoke-AdminReviewReportJson "$PythonUrl/api/v1/admin/skill-reports$skillReportQuery" $skillAdminId
+    $proxySkillReports = Invoke-AdminReviewReportJson "$WebUrl/api/v1/admin/skill-reports$skillReportQuery" $skillAdminId
+
+    $javaProfilePending = Invoke-AdminReviewReportJson "$JavaUrl/api/v1/admin/profile-reviews$profilePendingQuery" $userAdminId
+    $pythonProfilePending = Invoke-AdminReviewReportJson "$PythonUrl/api/v1/admin/profile-reviews$profilePendingQuery" $userAdminId
+    $proxyProfilePending = Invoke-AdminReviewReportJson "$WebUrl/api/v1/admin/profile-reviews$profilePendingQuery" $userAdminId
+
+    $javaProfileApproved = Invoke-AdminReviewReportJson "$JavaUrl/api/v1/admin/profile-reviews$profileApprovedQuery" $userAdminId
+    $pythonProfileApproved = Invoke-AdminReviewReportJson "$PythonUrl/api/v1/admin/profile-reviews$profileApprovedQuery" $userAdminId
+    $proxyProfileApproved = Invoke-AdminReviewReportJson "$WebUrl/api/v1/admin/profile-reviews$profileApprovedQuery" $userAdminId
+
+    $skillForbiddenJava = Invoke-AdminReviewReportStatus "$JavaUrl/api/v1/admin/skill-reports$skillReportQuery" 'local-user'
+    $skillForbiddenPython = Invoke-AdminReviewReportStatus "$PythonUrl/api/v1/admin/skill-reports$skillReportQuery" 'local-user'
+    $skillForbiddenProxy = Invoke-AdminReviewReportStatus "$WebUrl/api/v1/admin/skill-reports$skillReportQuery" 'local-user'
+    $profileForbiddenJava = Invoke-AdminReviewReportStatus "$JavaUrl/api/v1/admin/profile-reviews$profilePendingQuery" $skillAdminId
+    $profileForbiddenPython = Invoke-AdminReviewReportStatus "$PythonUrl/api/v1/admin/profile-reviews$profilePendingQuery" $skillAdminId
+    $profileForbiddenProxy = Invoke-AdminReviewReportStatus "$WebUrl/api/v1/admin/profile-reviews$profilePendingQuery" $skillAdminId
+    $invalidSkillJava = Invoke-AdminReviewReportStatus "$JavaUrl/api/v1/admin/skill-reports?status=bad" $skillAdminId
+    $invalidSkillPython = Invoke-AdminReviewReportStatus "$PythonUrl/api/v1/admin/skill-reports?status=bad" $skillAdminId
+    $invalidProfileJava = Invoke-AdminReviewReportStatus "$JavaUrl/api/v1/admin/profile-reviews?status=bad" $userAdminId
+    $invalidProfilePython = Invoke-AdminReviewReportStatus "$PythonUrl/api/v1/admin/profile-reviews?status=bad" $userAdminId
+
+    $stable = [ordered]@{
+        skillReports = [ordered]@{
+            java = ConvertTo-StableAdminReviewReportJson -Response $javaSkillReports
+            python = ConvertTo-StableAdminReviewReportJson -Response $pythonSkillReports
+            proxy = ConvertTo-StableAdminReviewReportJson -Response $proxySkillReports
+        }
+        profilePending = [ordered]@{
+            java = ConvertTo-StableAdminReviewReportJson -Response $javaProfilePending
+            python = ConvertTo-StableAdminReviewReportJson -Response $pythonProfilePending
+            proxy = ConvertTo-StableAdminReviewReportJson -Response $proxyProfilePending
+        }
+        profileApproved = [ordered]@{
+            java = ConvertTo-StableAdminReviewReportJson -Response $javaProfileApproved
+            python = ConvertTo-StableAdminReviewReportJson -Response $pythonProfileApproved
+            proxy = ConvertTo-StableAdminReviewReportJson -Response $proxyProfileApproved
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @('/api/v1/admin/skill-reports', '/api/v1/admin/profile-reviews')
+        checks = [ordered]@{
+            skillReportEnvelopeMatches = ($stable.skillReports.java -eq $stable.skillReports.python -and $stable.skillReports.python -eq $stable.skillReports.proxy)
+            profilePendingEnvelopeMatches = ($stable.profilePending.java -eq $stable.profilePending.python -and $stable.profilePending.python -eq $stable.profilePending.proxy)
+            profileApprovedEnvelopeMatches = ($stable.profileApproved.java -eq $stable.profileApproved.python -and $stable.profileApproved.python -eq $stable.profileApproved.proxy)
+            skillReportForbidden = ($skillForbiddenJava -eq 403 -and $skillForbiddenPython -eq 403 -and $skillForbiddenProxy -eq 403)
+            profileReviewForbidden = ($profileForbiddenJava -eq 403 -and $profileForbiddenPython -eq 403 -and $profileForbiddenProxy -eq 403)
+            invalidStatusesRejected = ($invalidSkillJava -eq 400 -and $invalidSkillPython -eq 400 -and $invalidProfileJava -eq 400 -and $invalidProfilePython -eq 400)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            skillForbidden = @($skillForbiddenJava, $skillForbiddenPython, $skillForbiddenProxy)
+            profileForbidden = @($profileForbiddenJava, $profileForbiddenPython, $profileForbiddenProxy)
+            invalid = @($invalidSkillJava, $invalidSkillPython, $invalidProfileJava, $invalidProfilePython)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin review/report contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminReviewReportSmokeVerification {
+    try {
+        Invoke-AdminReviewReportTests
+        Start-Hybrid
+        Invoke-AdminReviewReportContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-AdminAuditLogTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
@@ -16257,6 +16471,7 @@ switch ($Action) {
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }
+    'verify-admin-review-report-smoke' { Invoke-HybridAdminReviewReportSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

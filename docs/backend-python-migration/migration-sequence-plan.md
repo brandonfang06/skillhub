@@ -212,6 +212,7 @@ Still plan carefully when a group requires:
 | 78 | `GET /api/v1/admin/users`, `PUT /api/v1/admin/users/{userId}/role`, `PUT /api/v1/admin/users/{userId}/status`, `POST /api/v1/admin/users/{userId}/approve`, `POST /api/v1/admin/users/{userId}/disable`, `POST /api/v1/admin/users/{userId}/enable` | python | Admin user management basics moved to Python. Preserves `USER_ADMIN`/`SUPER_ADMIN` guard, list filters/page envelope, role replacement semantics, status aliases, and leaves password reset Java-owned. |
 | 79 | `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`, `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`, `GET /api/v1/governance/activity`, `GET /api/web/governance/activity`, `GET /api/v1/governance/notifications`, `GET /api/web/governance/notifications` | python | Governance workbench read APIs moved to Python. Preserves Java summary counts, inbox merge projections, activity visibility, legacy `user_notification` list behavior, and keeps governance notification mark-read Java-owned. |
 | 80 | `GET /api/v1/admin/audit-logs` | python | Admin audit log read moved to Python. Preserves `AUDITOR`/`SUPER_ADMIN` guard, dynamic filters, details fallback, UTC timestamp handling, and page envelope. |
+| 81 | `GET /api/v1/admin/skill-reports`, `GET /api/v1/admin/profile-reviews` | python | Admin report/review list reads moved to Python. Preserves platform-role guards, status parsing, skill/report and profile-review projections, profile JSON fallback, sort behavior, and keeps admin report/profile mutation routes Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1299,14 +1300,17 @@ Group E has started with review lifecycle write ownership:
   Governance notification mark-read remains Java-owned.
 - Completed: admin audit log read API:
   `GET /api/v1/admin/audit-logs`.
+- Completed: admin report/review list read APIs:
+  `GET /api/v1/admin/skill-reports` and `GET /api/v1/admin/profile-reviews`.
+  Skill report resolve/dismiss and profile review approve/reject remain Java-owned.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
-  surfaces, admin password reset, legacy governance notification mark-read, admin skill
-  reports/profile reviews, skill label attach/detach, and notification SSE.
+  surfaces, admin password reset, legacy governance notification mark-read, admin report/profile
+  review mutations, skill label attach/detach, and notification SSE.
 
 Recommended next choice:
 
-- Continue with admin skill reports/profile reviews, admin password reset, or
+- Continue with admin report/profile review mutations, admin password reset, or
   auth/token surfaces based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
