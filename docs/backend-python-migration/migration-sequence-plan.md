@@ -224,6 +224,7 @@ Still plan carefully when a group requires:
 | 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping session/OAuth callbacks and bearer-token authentication filters Java-owned. |
 | 90 | `POST /api/v1/skills/{namespace}/{slug}/reports`, `POST /api/web/skills/{namespace}/{slug}/reports` | python | Skill report submit moved to Python. Preserves Java published-preference target resolution, blank/self/duplicate/unavailable validation, pending report insert, `REPORT_SKILL` audit, and `REPORT_SUBMITTED` notification side effects. |
 | 91 | `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, `POST /api/v1/auth/local/change-password` | python | Local auth core moved to Python. Preserves Java local account normalization/validation, BCrypt credential handling, failed-attempt lockout/reset, password policy, global namespace membership on register, and hybrid mock-user change-password behavior while keeping Spring Session creation deferred. |
+| 92 | `POST /api/v1/auth/direct/login`, `POST /api/v1/auth/session/bootstrap` | python | Direct login and session bootstrap boundaries moved to Python. Preserves Java default-disabled 403 behavior and unsupported-provider ordering. Direct local can reuse migrated local login response, while final cookie/session persistence and passive bootstrap success remain deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -393,12 +394,8 @@ Python-owned in this group:
 
 Still Java-owned in this group:
 
-- `GET /api/v1/auth/methods`
-- `GET /api/v1/auth/providers`
-- `POST /api/v1/auth/session/bootstrap`
-- `POST /api/v1/auth/direct/login`
-- `/api/v1/auth/local/**`
-- `/api/v1/tokens/**`
+- OAuth callback/session establishment paths not explicitly moved to Python.
+- Bearer-token authentication filters and scope enforcement.
 - `/oauth2/**`
 
 Next candidate routes:
@@ -1323,14 +1320,17 @@ Group E has started with review lifecycle write ownership:
   behavior. Spring Session creation remains deferred to the final auth/session replacement work.
 - Completed: public auth catalog read APIs:
   `GET /api/v1/auth/providers` and `GET /api/v1/auth/methods`. These move provider/method
-  discovery to Python while keeping local register/login/change-password, direct login,
-  session bootstrap, OAuth callbacks/authorization, bearer-token authentication, and scope
-  enforcement Java-owned.
+  discovery to Python while keeping OAuth callbacks/authorization, bearer-token authentication,
+  and scope enforcement Java-owned.
+- Completed: direct/session auth boundary APIs:
+  `POST /api/v1/auth/direct/login` and `POST /api/v1/auth/session/bootstrap`. These move the
+  default-disabled route boundary to Python, preserve Java 403 disabled behavior and
+  unsupported-provider ordering, and keep final cookie/session persistence, passive bootstrap
+  success, device flow, bearer-token authentication, and scope enforcement deferred.
 - Completed: current-principal whoami read APIs:
   `GET /api/v1/whoami` and `GET /api/cli/v1/auth/whoami`. These move ClawHub and CLI
-  whoami reads to Python while keeping local register/login/change-password, direct login,
-  session bootstrap, OAuth callbacks/authorization, bearer-token authentication filters, and
-  scope enforcement Java-owned.
+  whoami reads to Python while keeping OAuth callbacks/authorization, bearer-token authentication
+  filters, and scope enforcement Java-owned.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,

@@ -751,6 +751,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/auth/(?:direct/login|session/bootstrap)(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/whoami(?:\\?.*)?$': {
         target: 'http://localhost:8081',
         changeOrigin: true,

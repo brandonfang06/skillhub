@@ -149,6 +149,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "local-password-reset-contract-result.json" in script
     assert "verify-local-auth-core-smoke" in script
     assert "local-auth-core-contract-result.json" in script
+    assert "verify-direct-session-auth-boundary-smoke" in script
+    assert "direct-session-auth-boundary-contract-result.json" in script
     assert "verify-auth-method-catalog-smoke" in script
     assert "auth-method-catalog-contract-result.json" in script
     assert "verify-auth-whoami-smoke" in script

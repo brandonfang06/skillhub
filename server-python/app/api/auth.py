@@ -222,6 +222,16 @@ async def _read_mock_user_or_401(request: Request, mock_user_id: str | None) -> 
     return data
 
 
+async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
+    if isawaitable(result):
+        return await result
+    return result
+
+
+def _payload_provider(payload: dict[str, Any]) -> str:
+    return str(payload.get("provider") or "").strip()
+
+
 @router.get("/api/v1/auth/me")
 async def get_current_user(
     request: Request,
@@ -266,3 +276,38 @@ async def get_auth_methods(request: Request, returnTo: str | None = None) -> dic
         ),
         request,
     )
+
+
+@router.post("/api/v1/auth/direct/login")
+async def direct_login(request: Request, payload: dict[str, Any]) -> dict[str, object]:
+    if not _direct_enabled(request):
+        raise HTTPException(status_code=403, detail="error.auth.direct.disabled")
+
+    provider = _payload_provider(payload)
+    if provider != "local":
+        raise HTTPException(status_code=400, detail="error.auth.direct.providerUnsupported")
+
+    from app.auth.local import LocalAuthError, login_local_user
+
+    login = getattr(request.app.state, "local_auth_login", None)
+    try:
+        data = await _resolve_result(
+            login(payload)
+            if login is not None
+            else login_local_user(
+                request.app.state.db_engine,
+                username=payload.get("username"),
+                password=payload.get("password"),
+            )
+        )
+    except LocalAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("response.success.read", data, request)
+
+
+@router.post("/api/v1/auth/session/bootstrap")
+async def session_bootstrap(request: Request, payload: dict[str, Any]) -> dict[str, object]:
+    if not _session_bootstrap_enabled(request):
+        raise HTTPException(status_code=403, detail="error.auth.sessionBootstrap.disabled")
+
+    raise HTTPException(status_code=400, detail="error.auth.sessionBootstrap.providerUnsupported")
