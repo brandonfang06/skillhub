@@ -379,8 +379,18 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/skill-reports\/\d+\/(?:resolve|dismiss)(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/admin\/profile-reviews(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/profile-reviews\/\d+\/(?:approve|reject)(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
   {

@@ -922,21 +922,25 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/audit-logs')).toBe('http://localhost:8080')
   })
 
-  it('routes admin review/report list reads to Python without taking over mutations', () => {
+  it('routes admin review/report reads and mutations to Python', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/skill-reports')).toBe(
       'http://localhost:8081',
     )
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/skill-reports?status=pending')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/resolve')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/dismiss')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/resolve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/skill-reports/1/dismiss')).toBe(
+      'http://localhost:8081',
+    )
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/skill-reports')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/skill-reports/1/resolve')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/skill-reports/1/dismiss')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
 
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/profile-reviews')).toBe(
@@ -945,14 +949,18 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/profile-reviews?sortDirection=ASC')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/approve')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/reject')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/approve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/profile-reviews/1/reject')).toBe(
+      'http://localhost:8081',
+    )
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/profile-reviews')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/profile-reviews/1/approve')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/profile-reviews/1/reject')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
   })
 })

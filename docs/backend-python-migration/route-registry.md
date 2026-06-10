@@ -201,11 +201,11 @@ deferred routes are still visible.
 | POST | `/api/v1/admin/users/{userId}/password-reset` | java | Password reset remains Java-owned because it depends on local-auth reset token generation and email/operator behavior. |
 | GET | `/api/v1/admin/audit-logs` | python | Admin audit log read moved to Python. Requires `AUDITOR` or `SUPER_ADMIN`, preserves Java filters, details fallback, UTC timestamps, and page envelope. |
 | GET | `/api/v1/admin/skill-reports` | python | Admin skill report list moved to Python. Requires `SKILL_ADMIN` or `SUPER_ADMIN`, preserves Java status parsing, skill/namespace summary projection, and page envelope. |
-| POST | `/api/v1/admin/skill-reports/{reportId}/resolve` | java | Admin skill report resolve remains Java-owned during this milestone. |
-| POST | `/api/v1/admin/skill-reports/{reportId}/dismiss` | java | Admin skill report dismiss remains Java-owned during this milestone. |
+| POST | `/api/v1/admin/skill-reports/{reportId}/resolve` | python | Admin skill report resolve moved to Python. Requires `SKILL_ADMIN` or `SUPER_ADMIN`, restricts `RESOLVE_AND_HIDE` to `SUPER_ADMIN`, preserves report state mutation, optional skill hide/archive side effects, audit logs, and legacy report notification. |
+| POST | `/api/v1/admin/skill-reports/{reportId}/dismiss` | python | Admin skill report dismiss moved to Python. Requires `SKILL_ADMIN` or `SUPER_ADMIN`, preserves pending-only transition, trimmed handle comment, audit log, and legacy report notification. |
 | GET | `/api/v1/admin/profile-reviews` | python | Admin profile review list moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves Java status parsing, sort behavior, JSON snapshot fallback, reviewer projection, and page envelope. |
-| POST | `/api/v1/admin/profile-reviews/{id}/approve` | java | Admin profile review approve remains Java-owned during this milestone. |
-| POST | `/api/v1/admin/profile-reviews/{id}/reject` | java | Admin profile review reject remains Java-owned during this milestone. |
+| POST | `/api/v1/admin/profile-reviews/{id}/approve` | python | Admin profile review approve moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves pending-only transition, display-name application, and audit log. |
+| POST | `/api/v1/admin/profile-reviews/{id}/reject` | python | Admin profile review reject moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves pending-only transition, review comment, and audit log detail JSON. |
 | GET | `/api/v1/governance/summary` | python | Governance summary read moved to Python. Preserves Java platform/namespace-scoped pending counts and legacy `user_notification` unread count. |
 | GET | `/api/web/governance/summary` | python | Frontend alias for governance summary read. |
 | GET | `/api/v1/governance/inbox` | python | Governance inbox read moved to Python. Preserves Java review/promotion/report merge behavior, namespace/platform visibility, type filtering, and page envelope. |

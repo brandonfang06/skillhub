@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -16051,6 +16051,315 @@ function Invoke-AdminReviewReportStatus {
     }
 }
 
+function Invoke-AdminReviewReportMutationTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_review_report_mutations.py', 'tests/test_admin_review_reports.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminReviewMutationJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        status = $Response.data.status
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Invoke-AdminReviewReportMutationJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body
+    )
+
+    $headers = @{
+        'X-Mock-User-Id' = $UserId
+        'X-Request-Id' = 'codex-admin-review-mutation-live-gate'
+    }
+    $payload = if ($null -eq $Body) { '{}' } else { $Body | ConvertTo-Json -Depth 20 -Compress }
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body $payload -TimeoutSec 20
+}
+
+function Ensure-AdminReviewReportMutationFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    skill_admin_role_id BIGINT;
+    user_admin_role_id BIGINT;
+    super_admin_role_id BIGINT;
+    namespace_id BIGINT;
+    skill_id BIGINT;
+    label TEXT;
+BEGIN
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+    SELECT id INTO user_admin_role_id FROM role WHERE code = 'USER_ADMIN';
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES
+        ('codex-admin-review-mutation-skill-admin-$Suffix', 'Codex Mutation Skill Admin', 'codex-mutation-skill-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00'),
+        ('codex-admin-review-mutation-user-admin-$Suffix', 'Codex Mutation User Admin', 'codex-mutation-user-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00'),
+        ('codex-admin-review-mutation-super-admin-$Suffix', 'Codex Mutation Super Admin', 'codex-mutation-super-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00'),
+        ('codex-admin-review-mutation-owner-$Suffix', 'Codex Mutation Owner', 'codex-mutation-owner-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00'),
+        ('codex-admin-review-mutation-reporter-$Suffix', 'Codex Mutation Reporter', 'codex-mutation-reporter-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            status = 'ACTIVE',
+            updated_at = EXCLUDED.updated_at;
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('codex-admin-review-mutation-skill-admin-$Suffix', skill_admin_role_id),
+        ('codex-admin-review-mutation-user-admin-$Suffix', user_admin_role_id),
+        ('codex-admin-review-mutation-super-admin-$Suffix', super_admin_role_id)
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO namespace (slug, display_name, type, description, status, created_by, created_at, updated_at)
+    VALUES ('codex-admin-review-mutation-$Suffix', 'Codex Admin Review Mutation', 'TEAM', 'admin review mutation fixture', 'ACTIVE', 'codex-admin-review-mutation-owner-$Suffix', TIMESTAMP '2036-06-10 11:00:00', TIMESTAMP '2036-06-10 11:00:00')
+    RETURNING id INTO namespace_id;
+
+    FOREACH label IN ARRAY ARRAY['java-resolve', 'python-resolve', 'proxy-resolve', 'java-dismiss', 'python-dismiss', 'proxy-dismiss'] LOOP
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, hidden, created_by, created_at, updated_by, updated_at)
+        VALUES (namespace_id, 'codex-admin-review-mutation-' || label || '-$Suffix', 'Codex Review Mutation ' || label, 'review mutation fixture', 'codex-admin-review-mutation-owner-$Suffix', 'PUBLIC', 'ACTIVE', FALSE, 'codex-admin-review-mutation-owner-$Suffix', TIMESTAMP '2036-06-10 11:01:00', 'codex-admin-review-mutation-owner-$Suffix', TIMESTAMP '2036-06-10 11:01:00')
+        RETURNING id INTO skill_id;
+
+        INSERT INTO skill_report (skill_id, namespace_id, reporter_id, reason, details, status, created_at)
+        VALUES (skill_id, namespace_id, 'codex-admin-review-mutation-reporter-$Suffix', label, 'codex mutation details', 'PENDING', TIMESTAMPTZ '2036-06-10 11:02:00+00');
+    END LOOP;
+
+    FOREACH label IN ARRAY ARRAY['java-approve', 'python-approve', 'proxy-approve', 'java-reject', 'python-reject', 'proxy-reject'] LOOP
+        INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+        VALUES ('codex-admin-review-mutation-profile-' || label || '-$Suffix', 'Old Mutation Profile', 'codex-mutation-profile-' || label || '-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 11:03:00', TIMESTAMP '2036-06-10 11:03:00');
+
+        INSERT INTO profile_change_request (user_id, changes, old_values, status, machine_result, reviewer_id, review_comment, created_at, reviewed_at)
+        VALUES ('codex-admin-review-mutation-profile-' || label || '-$Suffix', jsonb_build_object('displayName', 'Updated Mutation Profile'), jsonb_build_object('displayName', 'Old Mutation Profile'), 'PENDING', 'PASS', NULL, NULL, TIMESTAMP '2036-06-10 11:04:00', NULL);
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-AdminReviewReportMutationReportId {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT sr.id FROM skill_report sr JOIN skill s ON s.id = sr.skill_id WHERE s.slug = 'codex-admin-review-mutation-$Label-$Suffix' LIMIT 1"
+}
+
+function Get-AdminReviewReportMutationProfileId {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT id FROM profile_change_request WHERE user_id = 'codex-admin-review-mutation-profile-$Label-$Suffix' LIMIT 1"
+}
+
+function Get-AdminReviewReportMutationReportState {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT sr.status || '|' || COALESCE(sr.handled_by, '') || '|' || COALESCE(sr.handle_comment, '') || '|' || s.hidden::text || '|' || COALESCE(s.hidden_by, '') FROM skill_report sr JOIN skill s ON s.id = sr.skill_id WHERE s.slug = 'codex-admin-review-mutation-$Label-$Suffix' LIMIT 1"
+}
+
+function Get-AdminReviewReportMutationReportAudit {
+    param([string]$ReportId)
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE(string_agg(action || ':' || target_type || ':' || COALESCE(detail_json::text, ''), ',' ORDER BY action, target_type), '') FROM audit_log WHERE (target_type = 'SKILL_REPORT' AND target_id = $ReportId) OR (target_type = 'SKILL' AND target_id = (SELECT skill_id FROM skill_report WHERE id = $ReportId))"
+}
+
+function Get-AdminReviewReportMutationNotification {
+    param([string]$ReportId)
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE(string_agg(title || '|' || body_json::text || '|' || status, ',' ORDER BY title), '') FROM user_notification WHERE entity_type = 'SKILL_REPORT' AND entity_id = $ReportId"
+}
+
+function Get-AdminReviewReportMutationProfileState {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT pcr.status || '|' || COALESCE(pcr.reviewer_id, '') || '|' || COALESCE(pcr.review_comment, '') || '|' || ua.display_name FROM profile_change_request pcr JOIN user_account ua ON ua.id = pcr.user_id WHERE ua.id = 'codex-admin-review-mutation-profile-$Label-$Suffix' LIMIT 1"
+}
+
+function Get-AdminReviewReportMutationProfileAudit {
+    param([string]$RequestId)
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE(string_agg(action || ':' || target_type || ':' || COALESCE(detail_json::text, ''), ',' ORDER BY action), '') FROM audit_log WHERE target_type = 'PROFILE_CHANGE_REQUEST' AND target_id = $RequestId"
+}
+
+function Invoke-AdminReviewReportMutationContractComparison {
+    param([string]$ResultFileName = 'admin-review-report-mutation-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-AdminReviewReportMutationFixture -Suffix $suffix
+
+    $skillAdminId = "codex-admin-review-mutation-skill-admin-$suffix"
+    $userAdminId = "codex-admin-review-mutation-user-admin-$suffix"
+    $superAdminId = "codex-admin-review-mutation-super-admin-$suffix"
+
+    $javaResolveId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'java-resolve'
+    $pythonResolveId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'python-resolve'
+    $proxyResolveId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'proxy-resolve'
+    $javaDismissId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'java-dismiss'
+    $pythonDismissId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'python-dismiss'
+    $proxyDismissId = Get-AdminReviewReportMutationReportId -Suffix $suffix -Label 'proxy-dismiss'
+    $javaApproveId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'java-approve'
+    $pythonApproveId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'python-approve'
+    $proxyApproveId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'proxy-approve'
+    $javaRejectId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'java-reject'
+    $pythonRejectId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'python-reject'
+    $proxyRejectId = Get-AdminReviewReportMutationProfileId -Suffix $suffix -Label 'proxy-reject'
+
+    $resolveBody = @{ disposition = ' resolve_and_hide '; comment = ' policy violation ' }
+    $dismissBody = @{ comment = ' duplicate report ' }
+    $rejectBody = @{ comment = 'needs cleanup' }
+
+    $javaResolve = Invoke-AdminReviewReportMutationJson "$JavaUrl/api/v1/admin/skill-reports/$javaResolveId/resolve" $superAdminId $resolveBody
+    $pythonResolve = Invoke-AdminReviewReportMutationJson "$PythonUrl/api/v1/admin/skill-reports/$pythonResolveId/resolve" $superAdminId $resolveBody
+    $proxyResolve = Invoke-AdminReviewReportMutationJson "$WebUrl/api/v1/admin/skill-reports/$proxyResolveId/resolve" $superAdminId $resolveBody
+    $javaDismiss = Invoke-AdminReviewReportMutationJson "$JavaUrl/api/v1/admin/skill-reports/$javaDismissId/dismiss" $skillAdminId $dismissBody
+    $pythonDismiss = Invoke-AdminReviewReportMutationJson "$PythonUrl/api/v1/admin/skill-reports/$pythonDismissId/dismiss" $skillAdminId $dismissBody
+    $proxyDismiss = Invoke-AdminReviewReportMutationJson "$WebUrl/api/v1/admin/skill-reports/$proxyDismissId/dismiss" $skillAdminId $dismissBody
+    $javaApprove = Invoke-AdminReviewReportMutationJson "$JavaUrl/api/v1/admin/profile-reviews/$javaApproveId/approve" $userAdminId $null
+    $pythonApprove = Invoke-AdminReviewReportMutationJson "$PythonUrl/api/v1/admin/profile-reviews/$pythonApproveId/approve" $userAdminId $null
+    $proxyApprove = Invoke-AdminReviewReportMutationJson "$WebUrl/api/v1/admin/profile-reviews/$proxyApproveId/approve" $userAdminId $null
+    $javaReject = Invoke-AdminReviewReportMutationJson "$JavaUrl/api/v1/admin/profile-reviews/$javaRejectId/reject" $userAdminId $rejectBody
+    $pythonReject = Invoke-AdminReviewReportMutationJson "$PythonUrl/api/v1/admin/profile-reviews/$pythonRejectId/reject" $userAdminId $rejectBody
+    $proxyReject = Invoke-AdminReviewReportMutationJson "$WebUrl/api/v1/admin/profile-reviews/$proxyRejectId/reject" $userAdminId $rejectBody
+
+    $stable = [ordered]@{
+        resolve = [ordered]@{
+            java = ConvertTo-StableAdminReviewMutationJson -Response $javaResolve
+            python = ConvertTo-StableAdminReviewMutationJson -Response $pythonResolve
+            proxy = ConvertTo-StableAdminReviewMutationJson -Response $proxyResolve
+            javaState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'java-resolve'
+            pythonState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'python-resolve'
+            proxyState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'proxy-resolve'
+            javaAudit = Get-AdminReviewReportMutationReportAudit -ReportId $javaResolveId
+            pythonAudit = Get-AdminReviewReportMutationReportAudit -ReportId $pythonResolveId
+            proxyAudit = Get-AdminReviewReportMutationReportAudit -ReportId $proxyResolveId
+            javaNotification = Get-AdminReviewReportMutationNotification -ReportId $javaResolveId
+            pythonNotification = Get-AdminReviewReportMutationNotification -ReportId $pythonResolveId
+            proxyNotification = Get-AdminReviewReportMutationNotification -ReportId $proxyResolveId
+        }
+        dismiss = [ordered]@{
+            java = ConvertTo-StableAdminReviewMutationJson -Response $javaDismiss
+            python = ConvertTo-StableAdminReviewMutationJson -Response $pythonDismiss
+            proxy = ConvertTo-StableAdminReviewMutationJson -Response $proxyDismiss
+            javaState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'java-dismiss'
+            pythonState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'python-dismiss'
+            proxyState = Get-AdminReviewReportMutationReportState -Suffix $suffix -Label 'proxy-dismiss'
+            javaAudit = Get-AdminReviewReportMutationReportAudit -ReportId $javaDismissId
+            pythonAudit = Get-AdminReviewReportMutationReportAudit -ReportId $pythonDismissId
+            proxyAudit = Get-AdminReviewReportMutationReportAudit -ReportId $proxyDismissId
+            javaNotification = Get-AdminReviewReportMutationNotification -ReportId $javaDismissId
+            pythonNotification = Get-AdminReviewReportMutationNotification -ReportId $pythonDismissId
+            proxyNotification = Get-AdminReviewReportMutationNotification -ReportId $proxyDismissId
+        }
+        approve = [ordered]@{
+            java = ConvertTo-StableAdminReviewMutationJson -Response $javaApprove
+            python = ConvertTo-StableAdminReviewMutationJson -Response $pythonApprove
+            proxy = ConvertTo-StableAdminReviewMutationJson -Response $proxyApprove
+            javaState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'java-approve'
+            pythonState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'python-approve'
+            proxyState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'proxy-approve'
+            javaAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $javaApproveId
+            pythonAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $pythonApproveId
+            proxyAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $proxyApproveId
+        }
+        reject = [ordered]@{
+            java = ConvertTo-StableAdminReviewMutationJson -Response $javaReject
+            python = ConvertTo-StableAdminReviewMutationJson -Response $pythonReject
+            proxy = ConvertTo-StableAdminReviewMutationJson -Response $proxyReject
+            javaState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'java-reject'
+            pythonState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'python-reject'
+            proxyState = Get-AdminReviewReportMutationProfileState -Suffix $suffix -Label 'proxy-reject'
+            javaAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $javaRejectId
+            pythonAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $pythonRejectId
+            proxyAudit = Get-AdminReviewReportMutationProfileAudit -RequestId $proxyRejectId
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/admin/skill-reports/{reportId}/resolve',
+            '/api/v1/admin/skill-reports/{reportId}/dismiss',
+            '/api/v1/admin/profile-reviews/{id}/approve',
+            '/api/v1/admin/profile-reviews/{id}/reject'
+        )
+        checks = [ordered]@{
+            resolveEnvelopeMatches = ($stable.resolve.java -eq $stable.resolve.python -and $stable.resolve.python -eq $stable.resolve.proxy)
+            resolveDbStateMatches = ($stable.resolve.javaState -eq $stable.resolve.pythonState -and $stable.resolve.pythonState -eq $stable.resolve.proxyState)
+            resolveAuditMatches = ($stable.resolve.javaAudit -eq $stable.resolve.pythonAudit -and $stable.resolve.pythonAudit -eq $stable.resolve.proxyAudit)
+            resolveNotificationMatches = ($stable.resolve.javaNotification -eq $stable.resolve.pythonNotification -and $stable.resolve.pythonNotification -eq $stable.resolve.proxyNotification)
+            dismissEnvelopeMatches = ($stable.dismiss.java -eq $stable.dismiss.python -and $stable.dismiss.python -eq $stable.dismiss.proxy)
+            dismissDbStateMatches = ($stable.dismiss.javaState -eq $stable.dismiss.pythonState -and $stable.dismiss.pythonState -eq $stable.dismiss.proxyState)
+            dismissAuditMatches = ($stable.dismiss.javaAudit -eq $stable.dismiss.pythonAudit -and $stable.dismiss.pythonAudit -eq $stable.dismiss.proxyAudit)
+            dismissNotificationMatches = ($stable.dismiss.javaNotification -eq $stable.dismiss.pythonNotification -and $stable.dismiss.pythonNotification -eq $stable.dismiss.proxyNotification)
+            approveEnvelopeMatches = ($stable.approve.java -eq $stable.approve.python -and $stable.approve.python -eq $stable.approve.proxy)
+            approveDbStateMatches = ($stable.approve.javaState -eq $stable.approve.pythonState -and $stable.approve.pythonState -eq $stable.approve.proxyState)
+            approveAuditMatches = ($stable.approve.javaAudit -eq $stable.approve.pythonAudit -and $stable.approve.pythonAudit -eq $stable.approve.proxyAudit)
+            rejectEnvelopeMatches = ($stable.reject.java -eq $stable.reject.python -and $stable.reject.python -eq $stable.reject.proxy)
+            rejectDbStateMatches = ($stable.reject.javaState -eq $stable.reject.pythonState -and $stable.reject.pythonState -eq $stable.reject.proxyState)
+            rejectAuditMatches = ($stable.reject.javaAudit -eq $stable.reject.pythonAudit -and $stable.reject.pythonAudit -eq $stable.reject.proxyAudit)
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin review/report mutation contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminReviewReportMutationSmokeVerification {
+    try {
+        Invoke-AdminReviewReportMutationTests
+        Start-Hybrid
+        Invoke-AdminReviewReportMutationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Ensure-AdminReviewReportFixture {
     param([string]$Suffix)
 
@@ -16472,6 +16781,7 @@ switch ($Action) {
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }
     'verify-admin-review-report-smoke' { Invoke-HybridAdminReviewReportSmokeVerification }
+    'verify-admin-review-report-mutation-smoke' { Invoke-HybridAdminReviewReportMutationSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

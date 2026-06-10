@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -12,6 +13,7 @@ SKILL_REPORT_READ_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
 PROFILE_REVIEW_READ_ROLES = {"USER_ADMIN", "SUPER_ADMIN"}
 SKILL_REPORT_STATUSES = {"PENDING", "RESOLVED", "DISMISSED"}
 PROFILE_REVIEW_STATUSES = {"PENDING", "MACHINE_REJECTED", "APPROVED", "REJECTED", "CANCELLED"}
+REPORT_RESOLUTION_DISPOSITIONS = {"RESOLVE_ONLY", "RESOLVE_AND_HIDE", "RESOLVE_AND_ARCHIVE"}
 
 
 class AdminReviewReportError(ValueError):
@@ -30,12 +32,45 @@ def require_profile_review_reader(platform_roles: list[str]) -> None:
         raise AdminReviewReportError("error.profileReview.readDenied", status_code=403)
 
 
+def _now(value: datetime | None) -> datetime:
+    return value or datetime.now(UTC)
+
+
+def _db_timestamp(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
+def _normalize_comment(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _raw_reason_detail(value: str | None) -> str | None:
+    if value is None or value.strip() == "":
+        return None
+    return json.dumps({"reason": value}, separators=(",", ":"))
+
+
 def _normalize_status(status: str | None, allowed: set[str], default: str, error_key: str) -> str:
     if status is None or status.strip() == "":
         return default
     normalized = status.strip().upper()
     if normalized not in allowed:
         raise AdminReviewReportError(error_key, status_code=400)
+    return normalized
+
+
+def _normalize_disposition(disposition: str | None) -> str:
+    normalized = _normalize_status(
+        disposition,
+        REPORT_RESOLUTION_DISPOSITIONS,
+        "RESOLVE_ONLY",
+        "error.skill.report.disposition.invalid",
+    )
     return normalized
 
 
@@ -97,6 +132,471 @@ def _profile_review_item(row: dict[str, Any]) -> dict[str, Any]:
         "createdAt": to_java_instant(row.get("created_at")),
         "reviewedAt": to_java_instant(row.get("reviewed_at")) if row.get("reviewed_at") is not None else None,
     }
+
+
+async def _read_skill_report(connection: Any, report_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id,
+                       skill_id,
+                       reporter_id,
+                       status
+                FROM skill_report
+                WHERE id = :report_id
+                LIMIT 1
+                """
+            ),
+            {"report_id": report_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise AdminReviewReportError("error.skill.report.notFound", status_code=404)
+    return dict(row)
+
+
+async def _read_profile_review(connection: Any, request_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id,
+                       user_id,
+                       changes,
+                       status
+                FROM profile_change_request
+                WHERE id = :request_id
+                LIMIT 1
+                """
+            ),
+            {"request_id": request_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise AdminReviewReportError("error.profileReview.notFound", status_code=404)
+    return dict(row)
+
+
+async def _read_user(connection: Any, user_id: str) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id,
+                       display_name
+                FROM user_account
+                WHERE id = :user_id
+                LIMIT 1
+                """
+            ),
+            {"user_id": user_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise AdminReviewReportError("error.user.notFound", status_code=404)
+    return dict(row)
+
+
+async def _write_audit(
+    connection: Any,
+    *,
+    actor_user_id: str,
+    action: str,
+    target_type: str,
+    target_id: int,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    detail_json: str | None,
+    created_at: datetime,
+) -> None:
+    await connection.execute(
+        text(
+            """
+            INSERT INTO audit_log (
+                actor_user_id, action, target_type, target_id, request_id,
+                client_ip, user_agent, detail_json, created_at
+            )
+            VALUES (
+                :actor_user_id, :action, :target_type, :target_id, :request_id,
+                :client_ip, :user_agent, :detail_json, :created_at
+            )
+            """
+        ),
+        {
+            "actor_user_id": actor_user_id,
+            "action": action,
+            "target_type": target_type,
+            "target_id": target_id,
+            "request_id": request_id,
+            "client_ip": client_ip,
+            "user_agent": user_agent,
+            "detail_json": detail_json,
+            "created_at": created_at,
+        },
+    )
+
+
+async def _write_report_notification(
+    connection: Any,
+    *,
+    user_id: str,
+    entity_id: int,
+    title: str,
+    body_json: str,
+    created_at: datetime,
+) -> None:
+    await connection.execute(
+        text(
+            """
+            INSERT INTO user_notification (
+                user_id, category, entity_type, entity_id, title, body_json, status, created_at
+            )
+            VALUES (
+                :user_id, :category, :entity_type, :entity_id, :title, :body_json, :status, :created_at
+            )
+            """
+        ),
+        {
+            "user_id": user_id,
+            "category": "REPORT",
+            "entity_type": "SKILL_REPORT",
+            "entity_id": entity_id,
+            "title": title,
+            "body_json": body_json,
+            "status": "UNREAD",
+            "created_at": created_at,
+        },
+    )
+
+
+async def _apply_report_disposition(
+    connection: Any,
+    *,
+    skill_id: int,
+    disposition: str,
+    actor_user_id: str,
+    reason: str | None,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    timestamp: datetime,
+) -> None:
+    if disposition == "RESOLVE_AND_HIDE":
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET hidden = TRUE,
+                    hidden_by = :actor_user_id,
+                    hidden_at = :timestamp,
+                    updated_by = :actor_user_id,
+                    updated_at = :timestamp
+                WHERE id = :skill_id
+                """
+            ),
+            {"skill_id": skill_id, "actor_user_id": actor_user_id, "timestamp": timestamp},
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=actor_user_id,
+            action="HIDE_SKILL",
+            target_type="SKILL",
+            target_id=skill_id,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=_raw_reason_detail(reason),
+            created_at=timestamp,
+        )
+    elif disposition == "RESOLVE_AND_ARCHIVE":
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET status = :status,
+                    updated_by = :actor_user_id,
+                    updated_at = :timestamp
+                WHERE id = :skill_id
+                """
+            ),
+            {"skill_id": skill_id, "status": "ARCHIVED", "actor_user_id": actor_user_id, "timestamp": timestamp},
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=actor_user_id,
+            action="ARCHIVE_SKILL",
+            target_type="SKILL",
+            target_id=skill_id,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=_raw_reason_detail(reason),
+            created_at=timestamp,
+        )
+
+
+async def resolve_admin_skill_report(
+    engine: Any,
+    *,
+    report_id: int,
+    actor_user_id: str,
+    platform_roles: list[str],
+    disposition: str | None,
+    comment: str | None,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    require_skill_report_reader(platform_roles)
+    normalized_disposition = _normalize_disposition(disposition)
+    roles = {str(role) for role in platform_roles}
+    if normalized_disposition == "RESOLVE_AND_HIDE" and "SUPER_ADMIN" not in roles:
+        raise AdminReviewReportError("error.skill.lifecycle.noPermission", status_code=403)
+
+    timestamp = _now(now)
+    normalized_comment = _normalize_comment(comment)
+    async with engine.begin() as connection:
+        report = await _read_skill_report(connection, report_id)
+        if str(report["status"]) != "PENDING":
+            raise AdminReviewReportError("error.skill.report.alreadyHandled", status_code=400)
+
+        await _apply_report_disposition(
+            connection,
+            skill_id=int(report["skill_id"]),
+            disposition=normalized_disposition,
+            actor_user_id=actor_user_id,
+            reason=comment,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            timestamp=timestamp,
+        )
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_report
+                SET status = :status,
+                    handled_by = :handled_by,
+                    handle_comment = :handle_comment,
+                    handled_at = :handled_at
+                WHERE id = :report_id
+                """
+            ),
+            {
+                "status": "RESOLVED",
+                "handled_by": actor_user_id,
+                "handle_comment": normalized_comment,
+                "handled_at": timestamp,
+                "report_id": report_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=actor_user_id,
+            action="RESOLVE_SKILL_REPORT",
+            target_type="SKILL_REPORT",
+            target_id=report_id,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=None,
+            created_at=timestamp,
+        )
+        await _write_report_notification(
+            connection,
+            user_id=str(report["reporter_id"]),
+            entity_id=report_id,
+            title="Report handled",
+            body_json='{"status":"RESOLVED"}',
+            created_at=timestamp,
+        )
+    return {"id": report_id, "status": "RESOLVED"}
+
+
+async def dismiss_admin_skill_report(
+    engine: Any,
+    *,
+    report_id: int,
+    actor_user_id: str,
+    platform_roles: list[str],
+    comment: str | None,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    require_skill_report_reader(platform_roles)
+    timestamp = _now(now)
+    normalized_comment = _normalize_comment(comment)
+    async with engine.begin() as connection:
+        report = await _read_skill_report(connection, report_id)
+        if str(report["status"]) != "PENDING":
+            raise AdminReviewReportError("error.skill.report.alreadyHandled", status_code=400)
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill_report
+                SET status = :status,
+                    handled_by = :handled_by,
+                    handle_comment = :handle_comment,
+                    handled_at = :handled_at
+                WHERE id = :report_id
+                """
+            ),
+            {
+                "status": "DISMISSED",
+                "handled_by": actor_user_id,
+                "handle_comment": normalized_comment,
+                "handled_at": timestamp,
+                "report_id": report_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=actor_user_id,
+            action="DISMISS_SKILL_REPORT",
+            target_type="SKILL_REPORT",
+            target_id=report_id,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=None,
+            created_at=timestamp,
+        )
+        await _write_report_notification(
+            connection,
+            user_id=str(report["reporter_id"]),
+            entity_id=report_id,
+            title="Report dismissed",
+            body_json='{"status":"DISMISSED"}',
+            created_at=timestamp,
+        )
+    return {"id": report_id, "status": "DISMISSED"}
+
+
+async def approve_admin_profile_review(
+    engine: Any,
+    *,
+    request_id: int,
+    reviewer_id: str,
+    platform_roles: list[str],
+    http_request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    require_profile_review_reader(platform_roles)
+    timestamp = _db_timestamp(_now(now))
+    async with engine.begin() as connection:
+        review = await _read_profile_review(connection, request_id)
+        if str(review["status"]) != "PENDING":
+            raise AdminReviewReportError("error.profileReview.notPending", status_code=400)
+
+        user_id = str(review["user_id"])
+        await _read_user(connection, user_id)
+        changes = _json_map(review.get("changes"))
+        if "displayName" in changes:
+            await connection.execute(
+                text(
+                    """
+                    UPDATE user_account
+                    SET display_name = :display_name,
+                        updated_at = :updated_at
+                    WHERE id = :user_id
+                    """
+                ),
+                {"display_name": changes.get("displayName"), "updated_at": timestamp, "user_id": user_id},
+            )
+
+        await connection.execute(
+            text(
+                """
+                UPDATE profile_change_request
+                SET status = :status,
+                    reviewer_id = :reviewer_id,
+                    review_comment = :review_comment,
+                    reviewed_at = :reviewed_at
+                WHERE id = :request_id
+                """
+            ),
+            {
+                "status": "APPROVED",
+                "reviewer_id": reviewer_id,
+                "review_comment": None,
+                "reviewed_at": timestamp,
+                "request_id": request_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=reviewer_id,
+            action="PROFILE_REVIEW_APPROVE",
+            target_type="PROFILE_CHANGE_REQUEST",
+            target_id=request_id,
+            request_id=http_request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=None,
+            created_at=timestamp,
+        )
+    return {"id": request_id, "status": "APPROVED"}
+
+
+async def reject_admin_profile_review(
+    engine: Any,
+    *,
+    request_id: int,
+    reviewer_id: str,
+    platform_roles: list[str],
+    comment: str,
+    http_request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    require_profile_review_reader(platform_roles)
+    timestamp = _db_timestamp(_now(now))
+    async with engine.begin() as connection:
+        review = await _read_profile_review(connection, request_id)
+        if str(review["status"]) != "PENDING":
+            raise AdminReviewReportError("error.profileReview.notPending", status_code=400)
+
+        await connection.execute(
+            text(
+                """
+                UPDATE profile_change_request
+                SET status = :status,
+                    reviewer_id = :reviewer_id,
+                    review_comment = :review_comment,
+                    reviewed_at = :reviewed_at
+                WHERE id = :request_id
+                """
+            ),
+            {
+                "status": "REJECTED",
+                "reviewer_id": reviewer_id,
+                "review_comment": comment,
+                "reviewed_at": timestamp,
+                "request_id": request_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=reviewer_id,
+            action="PROFILE_REVIEW_REJECT",
+            target_type="PROFILE_CHANGE_REQUEST",
+            target_id=request_id,
+            request_id=http_request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail_json=json.dumps({"comment": comment}, separators=(",", ":")),
+            created_at=timestamp,
+        )
+    return {"id": request_id, "status": "REJECTED"}
 
 
 async def list_admin_skill_reports(
