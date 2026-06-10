@@ -31,6 +31,8 @@ deferred routes are still visible.
 | GET | `/api/v1/download` | python | ClawHub compatibility download query route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/download/{canonicalSlug}` | python | ClawHub compatibility download path route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/auth/me` | python | Current local mock-user bridge for frontend auth context. Login, OAuth, token, and CLI auth remain Java-owned. |
+| GET | `/api/v1/whoami` | python | ClawHub current-principal read moved to Python. Returns plain `{ user: { handle, displayName, image } }` JSON, not `ApiResponse`. |
+| GET | `/api/cli/v1/auth/whoami` | python | CLI current-principal read moved to Python. Returns Java-compatible `ApiResponse` envelope with `{ handle, displayName, email }`. |
 | GET | `/api/v1/auth/providers` | python | Public OAuth provider catalog moved to Python. Preserves Java registration sorting, display-name fallback, OAuth authorization URL shape, and safe `returnTo` handling. |
 | GET | `/api/v1/auth/methods` | python | Public auth method catalog moved to Python. Preserves Java local-password first entry, sorted OAuth methods, default-disabled direct/session-bootstrap methods, and safe `returnTo` handling. |
 | POST | `/api/v1/auth/local/password-reset/request` | python | Anonymous local password reset request moved to Python. Preserves Java email normalization/validation, silent success for unknown or ineligible users, BCrypt reset code storage, old pending request consumption, and sender failure tolerance. |

@@ -221,6 +221,7 @@ Still plan carefully when a group requires:
 | 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token authentication filters remain Java-owned. |
 | 87 | `POST /api/v1/auth/local/password-reset/request`, `POST /api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset request/confirm moved to Python. Preserves Java normalization, validation, silent request success for unknown/ineligible users, BCrypt reset code storage, password policy, credential reset, and pending reset request consumption while local register/login/change-password remain Java-owned. |
 | 88 | `GET /api/v1/auth/providers`, `GET /api/v1/auth/methods` | python | Public auth catalog reads moved to Python. Preserves Java OAuth provider sorting, method ordering, default-disabled direct/session-bootstrap entries, authorization URLs, and safe `returnTo` sanitization while login/session/OAuth callbacks remain Java-owned. |
+| 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping login/session/OAuth callbacks and bearer-token authentication filters Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -363,6 +364,8 @@ Goal:
 Python-owned in this group:
 
 - `GET /api/v1/auth/me`
+- `GET /api/v1/whoami`
+- `GET /api/cli/v1/auth/whoami`
 - viewer-specific capability flags for `GET /api/v1/skills/{namespace}/{slug}`
 - viewer-specific capability flags for `GET /api/web/skills/{namespace}/{slug}`
 - manager-only owner preview projection for `GET /api/v1/skills/{namespace}/{slug}`
@@ -395,8 +398,6 @@ Still Java-owned in this group:
 - `/api/v1/auth/local/**`
 - `/api/v1/tokens/**`
 - `/oauth2/**`
-- `GET /api/v1/whoami`
-- `GET /api/cli/v1/auth/whoami`
 
 Next candidate routes:
 
@@ -1318,6 +1319,11 @@ Group E has started with review lifecycle write ownership:
   discovery to Python while keeping local register/login/change-password, direct login,
   session bootstrap, OAuth callbacks/authorization, bearer-token authentication, and scope
   enforcement Java-owned.
+- Completed: current-principal whoami read APIs:
+  `GET /api/v1/whoami` and `GET /api/cli/v1/auth/whoami`. These move ClawHub and CLI
+  whoami reads to Python while keeping local register/login/change-password, direct login,
+  session bootstrap, OAuth callbacks/authorization, bearer-token authentication filters, and
+  scope enforcement Java-owned.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,

@@ -34,6 +34,24 @@ def build_auth_me_response(user_row: dict[str, Any], role_codes: list[str]) -> d
     }
 
 
+def build_clawhub_whoami_response(user: dict[str, object]) -> dict[str, object]:
+    return {
+        "user": {
+            "handle": str(user["userId"]),
+            "displayName": str(user["displayName"]),
+            "image": user.get("avatarUrl") or "",
+        }
+    }
+
+
+def build_cli_whoami_response(user: dict[str, object]) -> dict[str, object]:
+    return {
+        "handle": str(user["userId"]),
+        "displayName": str(user["displayName"]),
+        "email": user.get("email") or "",
+    }
+
+
 def sanitize_return_to(candidate: str | None) -> str | None:
     if candidate is None or candidate.strip() == "":
         return None
@@ -188,11 +206,7 @@ async def _resolve_reader_result(
     return result
 
 
-@router.get("/api/v1/auth/me")
-async def get_current_user(
-    request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
-) -> dict[str, object]:
+async def _read_mock_user_or_401(request: Request, mock_user_id: str | None) -> dict[str, object]:
     if mock_user_id is None or mock_user_id.strip() == "":
         raise HTTPException(status_code=401, detail="error.auth.required")
 
@@ -205,8 +219,34 @@ async def get_current_user(
 
     if data is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
+    return data
 
+
+@router.get("/api/v1/auth/me")
+async def get_current_user(
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    data = await _read_mock_user_or_401(request, mock_user_id)
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/whoami")
+async def get_clawhub_whoami(
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    data = await _read_mock_user_or_401(request, mock_user_id)
+    return build_clawhub_whoami_response(data)
+
+
+@router.get("/api/cli/v1/auth/whoami")
+async def get_cli_whoami(
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    data = await _read_mock_user_or_401(request, mock_user_id)
+    return ok("\u83b7\u53d6\u6210\u529f", build_cli_whoami_response(data), request)
 
 
 @router.get("/api/v1/auth/providers")
