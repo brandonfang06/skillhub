@@ -187,5 +187,10 @@ deferred routes are still visible.
 | GET | `/api/web/notification-preferences` | python | Frontend alias for notification preference read. |
 | PUT | `/api/v1/notification-preferences` | python | Notification preference update moved to Python. Validates Java-compatible category/channel/duplicate rules, upserts `notification_preference`, and returns the full preference list. |
 | PUT | `/api/web/notification-preferences` | python | Frontend alias for notification preference update. |
+| GET | `/api/v1/admin/labels` | python | Admin label definition list moved to Python. Requires `SUPER_ADMIN`, preserves Java sort order and response shape. |
+| POST | `/api/v1/admin/labels` | python | Admin label definition create moved to Python. Requires `SUPER_ADMIN`, normalizes slug/translations, writes label rows, and records `LABEL_CREATE` audit. |
+| PUT | `/api/v1/admin/labels/{slug}` | python | Admin label definition update moved to Python. Requires `SUPER_ADMIN`, replaces translations, updates type/visibility/sort order, and records `LABEL_UPDATE` audit. |
+| DELETE | `/api/v1/admin/labels/{slug}` | python | Admin label definition delete moved to Python. Requires `SUPER_ADMIN`, deletes the definition through DB cascade and records `LABEL_DELETE` audit. |
+| PUT | `/api/v1/admin/labels/sort-order` | python | Admin label definition sort update moved to Python. Requires `SUPER_ADMIN`, updates per-label sort order and records `LABEL_SORT_ORDER_UPDATE` audit. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

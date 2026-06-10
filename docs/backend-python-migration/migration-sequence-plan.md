@@ -208,6 +208,7 @@ Still plan carefully when a group requires:
 | 74 | `POST /api/v1/namespaces/{slug}/members`, `POST /api/web/namespaces/{slug}/members`, `DELETE /api/v1/namespaces/{slug}/members/{userId}`, `DELETE /api/web/namespaces/{slug}/members/{userId}`, `PUT /api/v1/namespaces/{slug}/members/{userId}/role`, `PUT /api/web/namespaces/{slug}/members/{userId}/role`, `POST /api/v1/namespaces/{slug}/members/batch`, `POST /api/web/namespaces/{slug}/members/batch` | python | Namespace member mutation ownership moved to Python. Preserves Java active-team/admin-or-owner checks, owner role protections, duplicate/missing-member errors, and batch partial-success mapping. |
 | 75 | `POST /api/v1/namespaces/{slug}/transfer-ownership`, `POST /api/web/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Preserves Java `TEAM`/`ACTIVE` transferability, current-owner validation, new-owner membership validation, and role swap semantics. |
 | 76 | `POST /api/v1/namespaces`, `POST /api/web/namespaces`, `PUT /api/v1/namespaces/{slug}`, `PUT /api/web/namespaces/{slug}`, `DELETE /api/v1/namespaces/{slug}`, `DELETE /api/web/namespaces/{slug}`, `POST /api/v1/namespaces/{slug}/freeze`, `POST /api/web/namespaces/{slug}/freeze`, `POST /api/v1/namespaces/{slug}/unfreeze`, `POST /api/web/namespaces/{slug}/unfreeze`, `POST /api/v1/namespaces/{slug}/archive`, `POST /api/web/namespaces/{slug}/archive`, `POST /api/v1/namespaces/{slug}/restore`, `POST /api/web/namespaces/{slug}/restore` | python | Namespace profile and lifecycle mutations moved to Python. Preserves platform-role create, owner/admin update, owner-only delete, dependency guard, lifecycle state transitions, and namespace audit logs. |
+| 77 | `GET /api/v1/admin/labels`, `POST /api/v1/admin/labels`, `PUT /api/v1/admin/labels/{slug}`, `DELETE /api/v1/admin/labels/{slug}`, `PUT /api/v1/admin/labels/sort-order` | python | Admin label definition management moved to Python. Preserves `SUPER_ADMIN` guard, slug/translation normalization, create/update/delete/sort DB effects, and admin label audit logs. Skill label attach/detach remains Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1277,13 +1278,17 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/namespaces/{slug}/archive`, `POST /api/web/namespaces/{slug}/archive`,
   `POST /api/v1/namespaces/{slug}/restore`, and
   `POST /api/web/namespaces/{slug}/restore`.
+- Completed: admin label definition APIs:
+  `GET /api/v1/admin/labels`, `POST /api/v1/admin/labels`,
+  `PUT /api/v1/admin/labels/{slug}`, `DELETE /api/v1/admin/labels/{slug}`, and
+  `PUT /api/v1/admin/labels/sort-order`. Skill label attach/detach remains Java-owned.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
-  surfaces, admin user/label management, and notification SSE.
+  surfaces, admin user management, skill label attach/detach, and notification SSE.
 
 Recommended next choice:
 
-- Continue with admin user/label management, remaining dashboard/governance read groups, or auth/token
+- Continue with admin user management, remaining dashboard/governance read groups, or auth/token
   surfaces based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.

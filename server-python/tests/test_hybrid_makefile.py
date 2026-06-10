@@ -139,6 +139,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-namespace-member-mutation-smoke" in script
     assert "verify-namespace-transfer-ownership-smoke" in script
     assert "verify-namespace-profile-lifecycle-smoke" in script
+    assert "verify-admin-label-definition-smoke" in script
+    assert "Push-Location (Join-Path $Root 'server-python')" in script
     assert "submitReviewBoundaryStillPythonOwned" in script
     assert "confirmPublishBoundaryStillPythonOwned" in script
     assert "Invoke-LabelsContractComparison" in script
@@ -330,6 +332,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "namespace-member-mutation-contract-result.json" in script
     assert "namespace-transfer-ownership-contract-result.json" in script
     assert "namespace-profile-lifecycle-contract-result.json" in script
+    assert "admin-label-definition-contract-result.json" in script
+    assert "tests/test_admin_label_definitions.py" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script

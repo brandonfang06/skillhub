@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -15100,6 +15100,343 @@ function Invoke-HybridNamespaceProfileLifecycleSmokeVerification {
     }
 }
 
+function Invoke-AdminLabelDefinitionTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_label_definitions.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminLabelJson {
+    param(
+        [object]$Response,
+        [string]$StableSlug = 'fixture'
+    )
+
+    $translations = @()
+    if ($Response.data -and $Response.data.translations) {
+        $translations = @($Response.data.translations | Sort-Object locale | ForEach-Object {
+            [ordered]@{
+                locale = $_.locale
+                displayName = $_.displayName
+            }
+        })
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            slug = $StableSlug
+            type = $Response.data.type
+            visibleInFilter = [bool]$Response.data.visibleInFilter
+            sortOrder = [int]$Response.data.sortOrder
+            translations = $translations
+        }
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableAdminLabelListJson {
+    param([object]$Response)
+
+    $items = @()
+    if ($Response.data) {
+        $items = @($Response.data | Sort-Object slug | ForEach-Object {
+            [ordered]@{
+                slug = $_.slug
+                type = $_.type
+                visibleInFilter = [bool]$_.visibleInFilter
+                sortOrder = [int]$_.sortOrder
+                translations = @($_.translations | Sort-Object locale | ForEach-Object {
+                    [ordered]@{
+                        locale = $_.locale
+                        displayName = $_.displayName
+                    }
+                })
+            }
+        })
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $items
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableAdminLabelSortJson {
+    param([object]$Response)
+
+    $items = @()
+    if ($Response.data) {
+        $index = 0
+        $items = @($Response.data | ForEach-Object {
+            $index += 1
+            [ordered]@{
+                slug = "fixture-$index"
+                type = $_.type
+                visibleInFilter = [bool]$_.visibleInFilter
+                sortOrder = [int]$_.sortOrder
+            }
+        })
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $items
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-AdminLabelDefinitionJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ 'X-Mock-User-Id' = $UserId }
+        ContentType = 'application/json'
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+    return Invoke-RestMethod @params
+}
+
+function Invoke-AdminLabelDefinitionStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ 'X-Mock-User-Id' = $UserId }
+        ContentType = 'application/json'
+        UseBasicParsing = $true
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+
+    try {
+        $response = Invoke-WebRequest @params
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Invoke-AdminLabelDefinitionContractComparison {
+    param([string]$ResultFileName = 'admin-label-definition-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $adminId = 'local-admin'
+    $userId = 'local-user'
+
+    Invoke-PostgresSql -Sql "DELETE FROM label_definition WHERE slug LIKE 'codex-admin-label-%';"
+
+    $createBody = @{
+        slug = "codex-admin-label-create-java-$suffix"
+        type = 'RECOMMENDED'
+        visibleInFilter = $true
+        sortOrder = 11
+        translations = @(@{ locale = 'en_US'; displayName = 'Created Label' })
+    }
+    $javaCreate = Invoke-AdminLabelDefinitionJson 'Post' "$JavaUrl/api/v1/admin/labels" $adminId $createBody
+    $createBody.slug = "codex-admin-label-create-python-$suffix"
+    $pythonCreate = Invoke-AdminLabelDefinitionJson 'Post' "$PythonUrl/api/v1/admin/labels" $adminId $createBody
+    $createBody.slug = "codex-admin-label-create-proxy-$suffix"
+    $proxyCreate = Invoke-AdminLabelDefinitionJson 'Post' "$WebUrl/api/v1/admin/labels" $adminId $createBody
+
+    $updateSlugs = @{
+        java = "codex-admin-label-update-java-$suffix"
+        python = "codex-admin-label-update-python-$suffix"
+        proxy = "codex-admin-label-update-proxy-$suffix"
+    }
+    $sortSlugs = @{
+        javaA = "codex-admin-label-sort-java-a-$suffix"
+        javaB = "codex-admin-label-sort-java-b-$suffix"
+        pythonA = "codex-admin-label-sort-python-a-$suffix"
+        pythonB = "codex-admin-label-sort-python-b-$suffix"
+        proxyA = "codex-admin-label-sort-proxy-a-$suffix"
+        proxyB = "codex-admin-label-sort-proxy-b-$suffix"
+    }
+    $deleteSlugs = @{
+        java = "codex-admin-label-delete-java-$suffix"
+        python = "codex-admin-label-delete-python-$suffix"
+        proxy = "codex-admin-label-delete-proxy-$suffix"
+    }
+
+    $allFixtureSlugs = @($updateSlugs.java, $updateSlugs.python, $updateSlugs.proxy, $sortSlugs.javaA, $sortSlugs.javaB, $sortSlugs.pythonA, $sortSlugs.pythonB, $sortSlugs.proxyA, $sortSlugs.proxyB, $deleteSlugs.java, $deleteSlugs.python, $deleteSlugs.proxy)
+    $values = ($allFixtureSlugs | ForEach-Object { "('$_', 'RECOMMENDED', TRUE, 50, '$adminId')" }) -join ",`n        "
+    $seedSql = @"
+WITH inserted AS (
+    INSERT INTO label_definition (slug, type, visible_in_filter, sort_order, created_by)
+    VALUES
+        $values
+    ON CONFLICT (slug) DO UPDATE
+        SET type = EXCLUDED.type,
+            visible_in_filter = EXCLUDED.visible_in_filter,
+            sort_order = EXCLUDED.sort_order,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id, slug
+)
+INSERT INTO label_translation (label_id, locale, display_name)
+SELECT id, 'en', 'Seeded Label'
+FROM inserted
+ON CONFLICT (label_id, locale) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        updated_at = CURRENT_TIMESTAMP;
+"@
+    Invoke-PostgresSql -Sql $seedSql
+
+    $updateBody = @{
+        type = 'PRIVILEGED'
+        visibleInFilter = $false
+        sortOrder = 7
+        translations = @(@{ locale = 'zh_TW'; displayName = 'Updated Label' })
+    }
+    $javaUpdate = Invoke-AdminLabelDefinitionJson 'Put' "$JavaUrl/api/v1/admin/labels/$($updateSlugs.java)" $adminId $updateBody
+    $pythonUpdate = Invoke-AdminLabelDefinitionJson 'Put' "$PythonUrl/api/v1/admin/labels/$($updateSlugs.python)" $adminId $updateBody
+    $proxyUpdate = Invoke-AdminLabelDefinitionJson 'Put' "$WebUrl/api/v1/admin/labels/$($updateSlugs.proxy)" $adminId $updateBody
+
+    $sortBodyJava = @{ items = @(@{ slug = $sortSlugs.javaB; sortOrder = 1 }, @{ slug = $sortSlugs.javaA; sortOrder = 2 }) }
+    $sortBodyPython = @{ items = @(@{ slug = $sortSlugs.pythonB; sortOrder = 1 }, @{ slug = $sortSlugs.pythonA; sortOrder = 2 }) }
+    $sortBodyProxy = @{ items = @(@{ slug = $sortSlugs.proxyB; sortOrder = 1 }, @{ slug = $sortSlugs.proxyA; sortOrder = 2 }) }
+    $javaSort = Invoke-AdminLabelDefinitionJson 'Put' "$JavaUrl/api/v1/admin/labels/sort-order" $adminId $sortBodyJava
+    $pythonSort = Invoke-AdminLabelDefinitionJson 'Put' "$PythonUrl/api/v1/admin/labels/sort-order" $adminId $sortBodyPython
+    $proxySort = Invoke-AdminLabelDefinitionJson 'Put' "$WebUrl/api/v1/admin/labels/sort-order" $adminId $sortBodyProxy
+
+    $javaDelete = Invoke-AdminLabelDefinitionJson 'Delete' "$JavaUrl/api/v1/admin/labels/$($deleteSlugs.java)" $adminId
+    $pythonDelete = Invoke-AdminLabelDefinitionJson 'Delete' "$PythonUrl/api/v1/admin/labels/$($deleteSlugs.python)" $adminId
+    $proxyDelete = Invoke-AdminLabelDefinitionJson 'Delete' "$WebUrl/api/v1/admin/labels/$($deleteSlugs.proxy)" $adminId
+
+    $list = Invoke-AdminLabelDefinitionJson 'Get' "$PythonUrl/api/v1/admin/labels" $adminId
+    $proxyList = Invoke-AdminLabelDefinitionJson 'Get' "$WebUrl/api/v1/admin/labels" $adminId
+    $forbiddenGetJava = Invoke-AdminLabelDefinitionStatus 'Get' "$JavaUrl/api/v1/admin/labels" $userId
+    $forbiddenGetPython = Invoke-AdminLabelDefinitionStatus 'Get' "$PythonUrl/api/v1/admin/labels" $userId
+    $forbiddenGetProxy = Invoke-AdminLabelDefinitionStatus 'Get' "$WebUrl/api/v1/admin/labels" $userId
+
+    $createdByJava = Invoke-PostgresScalar -Sql "SELECT created_by FROM label_definition WHERE slug = 'codex-admin-label-create-java-$suffix';"
+    $createdByPython = Invoke-PostgresScalar -Sql "SELECT created_by FROM label_definition WHERE slug = 'codex-admin-label-create-python-$suffix';"
+    $createdByProxy = Invoke-PostgresScalar -Sql "SELECT created_by FROM label_definition WHERE slug = 'codex-admin-label-create-proxy-$suffix';"
+    $deleteExists = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM label_definition WHERE slug IN ('$($deleteSlugs.java)', '$($deleteSlugs.python)', '$($deleteSlugs.proxy)');"
+    $auditCreate = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM audit_log WHERE action = 'LABEL_CREATE' AND actor_user_id = '$adminId' AND detail_json->>'slug' LIKE 'codex-admin-label-create-%-$suffix';"
+    $auditUpdate = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM audit_log WHERE action = 'LABEL_UPDATE' AND actor_user_id = '$adminId' AND detail_json->>'slug' LIKE 'codex-admin-label-update-%-$suffix';"
+    $auditDelete = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM audit_log WHERE action = 'LABEL_DELETE' AND actor_user_id = '$adminId' AND detail_json->>'slug' LIKE 'codex-admin-label-delete-%-$suffix';"
+    $auditSort = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM audit_log WHERE action = 'LABEL_SORT_ORDER_UPDATE' AND actor_user_id = '$adminId' AND detail_json->>'count' = '2';"
+    $sortPersisted = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM label_definition WHERE (slug IN ('$($sortSlugs.javaB)', '$($sortSlugs.pythonB)', '$($sortSlugs.proxyB)') AND sort_order = 1) OR (slug IN ('$($sortSlugs.javaA)', '$($sortSlugs.pythonA)', '$($sortSlugs.proxyA)') AND sort_order = 2);"
+
+    $stable = [ordered]@{
+        create = [ordered]@{
+            java = ConvertTo-StableAdminLabelJson -Response $javaCreate
+            python = ConvertTo-StableAdminLabelJson -Response $pythonCreate
+            proxy = ConvertTo-StableAdminLabelJson -Response $proxyCreate
+        }
+        update = [ordered]@{
+            java = ConvertTo-StableAdminLabelJson -Response $javaUpdate
+            python = ConvertTo-StableAdminLabelJson -Response $pythonUpdate
+            proxy = ConvertTo-StableAdminLabelJson -Response $proxyUpdate
+        }
+        sort = [ordered]@{
+            java = ConvertTo-StableAdminLabelSortJson -Response $javaSort
+            python = ConvertTo-StableAdminLabelSortJson -Response $pythonSort
+            proxy = ConvertTo-StableAdminLabelSortJson -Response $proxySort
+        }
+        list = [ordered]@{
+            python = ConvertTo-StableAdminLabelListJson -Response $list
+            proxy = ConvertTo-StableAdminLabelListJson -Response $proxyList
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/admin/labels',
+            '/api/v1/admin/labels/{slug}',
+            '/api/v1/admin/labels/sort-order'
+        )
+        checks = [ordered]@{
+            createEnvelopeMatches = ($stable.create.java -eq $stable.create.python -and $stable.create.python -eq $stable.create.proxy)
+            updateEnvelopeMatches = ($stable.update.java -eq $stable.update.python -and $stable.update.python -eq $stable.update.proxy)
+            sortEnvelopeMatches = ($stable.sort.java -eq $stable.sort.python -and $stable.sort.python -eq $stable.sort.proxy)
+            sortOrderPersisted = ($sortPersisted -eq '6')
+            deleteEnvelopeMatches = ($javaDelete.data.message -eq 'Label deleted' -and $pythonDelete.data.message -eq 'Label deleted' -and $proxyDelete.data.message -eq 'Label deleted')
+            deleteRemovesRows = ($deleteExists -eq '0')
+            listProxyMatchesPython = ($stable.list.python -eq $stable.list.proxy)
+            createdByMatchesActor = ($createdByJava -eq $adminId -and $createdByPython -eq $adminId -and $createdByProxy -eq $adminId)
+            auditCreateWritten = ([int]$auditCreate -ge 3)
+            auditUpdateWritten = ([int]$auditUpdate -ge 3)
+            auditDeleteWritten = ([int]$auditDelete -ge 3)
+            auditSortWritten = ([int]$auditSort -ge 3)
+            superAdminRequired = ($forbiddenGetJava -eq 403 -and $forbiddenGetPython -eq 403 -and $forbiddenGetProxy -eq 403)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            forbiddenGet = @($forbiddenGetJava, $forbiddenGetPython, $forbiddenGetProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin label definition contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminLabelDefinitionSmokeVerification {
+    try {
+        Invoke-AdminLabelDefinitionTests
+        Start-Hybrid
+        Invoke-AdminLabelDefinitionContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -15175,6 +15512,7 @@ switch ($Action) {
     'verify-namespace-member-mutation-smoke' { Invoke-HybridNamespaceMemberMutationSmokeVerification }
     'verify-namespace-transfer-ownership-smoke' { Invoke-HybridNamespaceTransferOwnershipSmokeVerification }
     'verify-namespace-profile-lifecycle-smoke' { Invoke-HybridNamespaceProfileLifecycleSmokeVerification }
+    'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

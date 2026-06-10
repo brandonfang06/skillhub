@@ -599,6 +599,26 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf('/api/web/labels')).toBeLessThan(keys.indexOf('/api'))
   })
 
+  it('routes admin label definition APIs to Python without taking over skill label mutations', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/labels')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/labels?type=RECOMMENDED')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/labels')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/admin/labels/featured')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/admin/labels/featured')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/admin/labels/sort-order')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PATCH', '/api/v1/admin/labels/featured')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/admin/labels')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/admin/labels')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('PUT', '/api/v1/admin/labels/sort-order')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('PUT', '/api/v1/skills/global/demo/labels/featured')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/labels/featured')).toBe(
+      'http://localhost:8080',
+    )
+  })
+
   it('routes skill labels aliases to Python without taking over all skill routes', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
