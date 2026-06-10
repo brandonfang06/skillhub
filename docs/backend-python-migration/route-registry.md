@@ -142,7 +142,16 @@ deferred routes are still visible.
 | GET | `/api/v1/me/namespaces` | python | Current user's namespace membership list moved to Python. Includes Java-compatible lifecycle capability flags and dependency-sensitive `canDelete`. |
 | GET | `/api/web/me/namespaces` | python | Frontend alias for current user's namespace membership list. |
 | GET | `/api/v1/namespaces/{slug}` | python | Namespace detail read moved to Python. Requires namespace membership; archived namespaces remain visible only to members. |
-| GET | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace detail read. Member, lifecycle, and mutation subroutes remain Java-owned. |
+| GET | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace detail read. Lifecycle and mutation subroutes remain Java-owned. |
+| GET | `/api/v1/namespaces/{slug}/members` | python | Namespace member list moved to Python. Requires namespace membership and preserves Java `PageResponse<MemberResponse>` shape. |
+| GET | `/api/web/namespaces/{slug}/members` | python | Frontend alias for namespace member list. |
+| GET | `/api/v1/namespaces/{slug}/member-candidates` | python | Namespace member candidate search moved to Python. Requires namespace `OWNER` or `ADMIN`, rejects immutable/read-only namespaces, trims search, enforces Java size defaults/cap, filters ACTIVE users, and excludes existing members. |
+| GET | `/api/web/namespaces/{slug}/member-candidates` | python | Frontend alias for namespace member candidate search. |
+| POST | `/api/v1/namespaces/{slug}/members` | java | Namespace member mutation remains Java-owned. |
+| DELETE | `/api/v1/namespaces/{slug}/members/{userId}` | java | Namespace member mutation remains Java-owned. |
+| PUT | `/api/v1/namespaces/{slug}/members/{userId}/role` | java | Namespace member mutation remains Java-owned. |
+| POST | `/api/v1/namespaces/{slug}/members/batch` | java | Namespace member mutation remains Java-owned. |
+| POST | `/api/v1/namespaces/{slug}/transfer-ownership` | java | Namespace ownership transfer remains Java-owned. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
 | GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |

@@ -8,6 +8,11 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
+from app.namespace.members import (
+    NamespaceMemberReadError,
+    list_namespace_members,
+    search_namespace_member_candidates,
+)
 from app.namespace.read import NamespaceReadError, get_namespace, list_my_namespaces, list_namespaces
 
 
@@ -37,6 +42,12 @@ def _parse_non_negative_int(value: int, default: int) -> int:
 
 def _parse_positive_int(value: int, default: int) -> int:
     return value if value > 0 else default
+
+
+def _parse_candidate_size(value: int) -> int:
+    if value <= 0:
+        return 10
+    return min(value, 20)
 
 
 @router.get("/api/v1/namespaces")
@@ -70,6 +81,65 @@ async def list_my_namespaces_route(
     data = await _resolve_result(
         reader(user_id) if reader is not None else list_my_namespaces(request.app.state.db_engine, user_id=user_id)
     )
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/namespaces/{slug}/members")
+@router.get("/api/web/namespaces/{slug}/members")
+async def list_namespace_members_route(
+    request: Request,
+    slug: str,
+    page: int = 0,
+    size: int = 20,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    reader = getattr(request.app.state, "namespace_member_reader", None)
+    normalized_page = _parse_non_negative_int(page, 0)
+    normalized_size = _parse_positive_int(size, 20)
+    try:
+        data = await _resolve_result(
+            reader(slug, user_id, normalized_page, normalized_size)
+            if reader is not None
+            else list_namespace_members(
+                request.app.state.db_engine,
+                slug=slug,
+                user_id=user_id,
+                page=normalized_page,
+                size=normalized_size,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/namespaces/{slug}/member-candidates")
+@router.get("/api/web/namespaces/{slug}/member-candidates")
+async def search_namespace_member_candidates_route(
+    request: Request,
+    slug: str,
+    search: str = "",
+    size: int = 10,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    reader = getattr(request.app.state, "namespace_member_candidate_reader", None)
+    normalized_size = _parse_candidate_size(size)
+    try:
+        data = await _resolve_result(
+            reader(slug, search, user_id, normalized_size)
+            if reader is not None
+            else search_namespace_member_candidates(
+                request.app.state.db_engine,
+                slug=slug,
+                search=search,
+                user_id=user_id,
+                size=normalized_size,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 

@@ -135,6 +135,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-notification-preferences-smoke" in script
     assert "verify-my-skills-smoke" in script
     assert "verify-namespace-read-smoke" in script
+    assert "verify-namespace-member-read-smoke" in script
     assert "submitReviewBoundaryStillPythonOwned" in script
     assert "confirmPublishBoundaryStillPythonOwned" in script
     assert "Invoke-LabelsContractComparison" in script
@@ -243,6 +244,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-MySkillsContractComparison" in script
     assert "Invoke-NamespaceReadTests" in script
     assert "Invoke-NamespaceReadContractComparison" in script
+    assert "Invoke-NamespaceMemberReadTests" in script
+    assert "Invoke-NamespaceMemberReadContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
     assert "consume_scan_task_fixture.py" in script
@@ -314,6 +317,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "notification-preferences-contract-result.json" in script
     assert "my-skills-contract-result.json" in script
     assert "namespace-read-contract-result.json" in script
+    assert "namespace-member-read-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
@@ -351,6 +355,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_notification_preferences.py" in script
     assert "tests/test_my_skills.py" in script
     assert "tests/test_namespace_read.py" in script
+    assert "tests/test_namespace_member_read.py" in script
     assert "SKILLHUB_SCAN_CONSUMER_ENABLED" in script
     assert "tests/test_publish_side_effects.py" in script
     assert "tests/test_publish_replacement.py" in script

@@ -186,7 +186,7 @@ def auth_user(user_id: str = "user-1") -> dict[str, object]:
     }
 
 
-def test_namespace_routes_use_java_envelopes_and_keep_member_routes_unimplemented() -> None:
+def test_namespace_routes_use_java_envelopes() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(user_id)
 
@@ -222,5 +222,3 @@ def test_namespace_routes_use_java_envelopes_and_keep_member_routes_unimplemente
     detail_response = client.get("/api/web/namespaces/team-a", headers={"X-Mock-User-Id": "user-1"})
     assert detail_response.status_code == 200
     assert detail_response.json()["data"]["slug"] == "team-a"
-
-    assert client.get("/api/v1/namespaces/team-a/members", headers={"X-Mock-User-Id": "user-1"}).status_code == 404

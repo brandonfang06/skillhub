@@ -203,7 +203,8 @@ Still plan carefully when a group requires:
 | 69 | `GET /api/v1/notifications`, `GET /api/web/notifications`, `GET /api/v1/notifications/unread-count`, `GET /api/web/notifications/unread-count`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/web/notifications/{id}/read`, `PUT /api/v1/notifications/read-all`, `PUT /api/web/notifications/read-all`, `DELETE /api/v1/notifications/{id}`, `DELETE /api/web/notifications/{id}` | python | Notification read/read-state ownership moved to Python. Requires auth, preserves Java `PageResponse` and `{ count }` / `{ updated }` shapes, keeps mark-one-read success `data = null`, and leaves SSE/preferences Java-owned. |
 | 70 | `GET /api/v1/notification-preferences`, `GET /api/web/notification-preferences`, `PUT /api/v1/notification-preferences`, `PUT /api/web/notification-preferences` | python | Notification preference ownership moved to Python. Requires auth, returns Java enum-order `IN_APP` preferences with missing rows defaulting enabled, validates category/channel/duplicate payloads, and keeps notification SSE Java-owned. |
 | 71 | `GET /api/v1/me/skills`, `GET /api/web/me/skills` | python | Current-user owned skill list moved to Python. Preserves Java `page=0&size=10`, filter/q/namespace behavior, owner summary lifecycle projection, default direct owner list including hidden/archived, and filter-path hidden/archived exclusion semantics. |
-| 72 | `GET /api/v1/namespaces`, `GET /api/web/namespaces`, `GET /api/v1/me/namespaces`, `GET /api/web/me/namespaces`, `GET /api/v1/namespaces/{slug}`, `GET /api/web/namespaces/{slug}` | python | Namespace read ownership moved to Python. Preserves membership-scoped active listing, current-user namespace capability flags, archived namespace member-only detail visibility, and keeps namespace mutations/member routes Java-owned. |
+| 72 | `GET /api/v1/namespaces`, `GET /api/web/namespaces`, `GET /api/v1/me/namespaces`, `GET /api/web/me/namespaces`, `GET /api/v1/namespaces/{slug}`, `GET /api/web/namespaces/{slug}` | python | Namespace read ownership moved to Python. Preserves membership-scoped active listing, current-user namespace capability flags, archived namespace member-only detail visibility, and keeps namespace lifecycle/mutation routes Java-owned. |
+| 73 | `GET /api/v1/namespaces/{slug}/members`, `GET /api/web/namespaces/{slug}/members`, `GET /api/v1/namespaces/{slug}/member-candidates`, `GET /api/web/namespaces/{slug}/member-candidates` | python | Namespace member read ownership moved to Python. Preserves membership/admin checks, Java candidate search normalization, ACTIVE user filtering, existing-member exclusion, and keeps namespace member mutations Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1249,15 +1250,19 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/namespaces`, `GET /api/web/namespaces`,
   `GET /api/v1/me/namespaces`, `GET /api/web/me/namespaces`,
   `GET /api/v1/namespaces/{slug}`, and `GET /api/web/namespaces/{slug}`.
+- Completed: namespace member read APIs:
+  `GET /api/v1/namespaces/{slug}/members`, `GET /api/web/namespaces/{slug}/members`,
+  `GET /api/v1/namespaces/{slug}/member-candidates`, and
+  `GET /api/web/namespaces/{slug}/member-candidates`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, namespace mutations
-  and member-management routes, and notification SSE.
+  and member-management mutation routes, and notification SSE.
 
 Recommended next choice:
 
-- Continue with the next dashboard/governance read group or namespace member-management group based
-  on route ownership priority. Keep milestones cohesive but small enough for a live Java/Python/Vite
-  gate.
+- Continue with the next dashboard/governance read group or namespace member-management mutation
+  group based on route ownership priority. Mutating namespace membership should get its own
+  transaction/audit/authorization plan before route ownership moves.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 
