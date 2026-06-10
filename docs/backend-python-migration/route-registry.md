@@ -36,8 +36,12 @@ deferred routes are still visible.
 | POST | `/api/v1/publish` | python | Legacy ClawHub compatibility publish moved to Python. Accepts multipart zip `file` plus `namespace` and returns plain `{ ok, skillId, versionId }`. |
 | GET | `/api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail. GET-only method-aware proxy; publish, delete, and undelete remain Java-owned. |
 | GET | `/api/web/skills` | python | Public portal skill search. `/api/v1/skills` remains Java-owned ClawHub compatibility. |
-| GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. Label mutations remain Java-owned. |
-| GET | `/api/web/skills/{namespace}/{slug}/labels` | python | Frontend alias for public anonymous skill labels list. Label mutations remain Java-owned. |
+| GET | `/api/v1/skills/{namespace}/{slug}/labels` | python | Public anonymous skill labels list. |
+| GET | `/api/web/skills/{namespace}/{slug}/labels` | python | Frontend alias for public anonymous skill labels list. |
+| PUT | `/api/v1/skills/{namespace}/{slug}/labels/{labelSlug}` | python | Skill label attach moved to Python. Preserves owner/namespace-admin/super-admin permission rules, privileged-label restriction, max-label guard, idempotent existing attach, Java update envelope, and `SKILL_LABEL_ATTACH` audit. |
+| PUT | `/api/web/skills/{namespace}/{slug}/labels/{labelSlug}` | python | Frontend alias for skill label attach. |
+| DELETE | `/api/v1/skills/{namespace}/{slug}/labels/{labelSlug}` | python | Skill label detach moved to Python. Preserves owner/namespace-admin/super-admin permission rules, privileged-label restriction, missing-label error, Java delete envelope, and `SKILL_LABEL_DETACH` audit. |
+| DELETE | `/api/web/skills/{namespace}/{slug}/labels/{labelSlug}` | python | Frontend alias for skill label detach. |
 | GET | `/api/v1/skills/{namespace}/{slug}` | python | Public skill detail with local mock-user viewer capability flags and manager-only owner preview projection. Non-public visibility and mutations remain deferred. |
 | GET | `/api/web/skills/{namespace}/{slug}` | python | Frontend alias for public skill detail with local mock-user viewer capability flags and manager-only owner preview projection. Non-public visibility and mutations remain deferred. |
 | GET | `/api/v1/skills/{namespace}/{slug}/resolve` | python | Public published version selector resolution with authenticated context forwarding. Non-published owner-preview resolve remains rejected to match Java. |

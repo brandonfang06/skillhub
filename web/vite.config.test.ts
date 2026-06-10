@@ -599,7 +599,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(keys.indexOf('/api/web/labels')).toBeLessThan(keys.indexOf('/api'))
   })
 
-  it('routes admin label definition APIs to Python without taking over skill label mutations', () => {
+  it('routes admin label definition APIs and skill label mutations to Python', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/labels')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/labels?type=RECOMMENDED')).toBe(
       'http://localhost:8081',
@@ -613,10 +613,18 @@ describe('Vite dev proxy route ownership', () => {
 
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/labels')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('PUT', '/api/v1/admin/labels/sort-order')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('PUT', '/api/v1/skills/global/demo/labels/featured')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/labels/featured')).toBe(
-      'http://localhost:8080',
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/global/demo/labels/featured')).toBe(
+      'http://localhost:8081',
     )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/global/demo/labels/featured')).toBe(
+      'http://localhost:8081',
+    )
+
+    expect(matchingDevProxyTarget('PUT', '/api/v1/skills/global/demo/labels/featured')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/labels/featured')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('PUT', '/api/web/skills/global/demo/labels/featured')).toBe('http://localhost:8081')
   })
 
   it('routes admin user management APIs to Python while keeping password reset on Java', () => {

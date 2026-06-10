@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -1405,6 +1405,204 @@ function Invoke-LabelsContractComparison {
     }
     if (-not $result.pythonMatchesProxyWeb) {
         throw 'Vite /api/web/labels proxy does not match Python. See .dev/labels-contract-result.json.'
+    }
+}
+
+function Invoke-SkillLabelMutationTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_label_mutations.py', 'tests/test_labels.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableSkillLabelMutationJson {
+    param([object]$Response)
+
+    return (($Response | Select-Object code,msg,data) | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Invoke-SkillLabelMutationJson {
+    param(
+        [string]$Url,
+        [string]$Method,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod `
+        -Uri $Url `
+        -Method $Method `
+        -Headers @{ 'X-Mock-User-Id' = $UserId; 'X-Request-Id' = 'codex-skill-label-mutation-live-gate' } `
+        -ContentType 'application/json' `
+        -TimeoutSec 20
+}
+
+function Ensure-SkillLabelMutationFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    owner_id VARCHAR(128) := 'codex-skill-label-owner-$Suffix';
+    label_row_id BIGINT;
+    skill_row_id BIGINT;
+    slug_value TEXT;
+BEGIN
+    DELETE FROM audit_log WHERE request_id = 'codex-skill-label-mutation-live-gate';
+    DELETE FROM skill_label WHERE skill_id IN (
+        SELECT id FROM skill WHERE slug LIKE 'codex-skill-label-%-$Suffix'
+    );
+    DELETE FROM label_translation WHERE label_id IN (
+        SELECT id FROM label_definition WHERE slug = 'codex-skill-label-$Suffix'
+    );
+    DELETE FROM label_definition WHERE slug = 'codex-skill-label-$Suffix';
+    DELETE FROM skill WHERE slug LIKE 'codex-skill-label-%-$Suffix';
+    DELETE FROM namespace WHERE slug = 'codex-skill-label-$Suffix';
+    DELETE FROM user_account WHERE id = owner_id;
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES (owner_id, 'Codex Skill Label Owner', 'codex-skill-label-owner-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 12:00:00', TIMESTAMP '2036-06-10 12:00:00');
+
+    INSERT INTO namespace (slug, display_name, type, description, status, created_by, created_at, updated_at)
+    VALUES ('codex-skill-label-$Suffix', 'Codex Skill Label', 'TEAM', 'skill label mutation fixture', 'ACTIVE', owner_id, TIMESTAMP '2036-06-10 12:00:00', TIMESTAMP '2036-06-10 12:00:00')
+    RETURNING id INTO ns_id;
+
+    INSERT INTO label_definition (slug, type, visible_in_filter, sort_order, created_by, created_at, updated_at)
+    VALUES ('codex-skill-label-$Suffix', 'RECOMMENDED', TRUE, 1, owner_id, TIMESTAMP '2036-06-10 12:00:00', TIMESTAMP '2036-06-10 12:00:00')
+    RETURNING id INTO label_row_id;
+
+    INSERT INTO label_translation (label_id, locale, display_name, created_at, updated_at)
+    VALUES (label_row_id, 'en', 'Codex Skill Label', TIMESTAMP '2036-06-10 12:00:00', TIMESTAMP '2036-06-10 12:00:00');
+
+    FOREACH slug_value IN ARRAY ARRAY['java-attach', 'python-attach', 'proxy-attach', 'java-detach', 'python-detach', 'proxy-detach'] LOOP
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, created_at, updated_by, updated_at, hidden)
+        VALUES (ns_id, 'codex-skill-label-' || slug_value || '-$Suffix', 'Codex Skill Label ' || slug_value, 'skill label mutation fixture', owner_id, 'PUBLIC', 'ACTIVE', owner_id, TIMESTAMP '2036-06-10 12:01:00', owner_id, TIMESTAMP '2036-06-10 12:01:00', FALSE)
+        RETURNING id INTO skill_row_id;
+
+        IF slug_value LIKE '%detach' THEN
+            INSERT INTO skill_label (skill_id, label_id, created_by, created_at)
+            VALUES (skill_row_id, label_row_id, owner_id, TIMESTAMP '2036-06-10 12:02:00');
+        END IF;
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-SkillLabelMutationState {
+    param(
+        [string]$Suffix,
+        [string]$SkillSlug
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT COUNT(*)::text FROM skill_label sl JOIN skill s ON s.id = sl.skill_id JOIN label_definition ld ON ld.id = sl.label_id WHERE s.slug = 'codex-skill-label-$SkillSlug-$Suffix' AND ld.slug = 'codex-skill-label-$Suffix'"
+}
+
+function Get-SkillLabelMutationAudit {
+    param(
+        [string]$Suffix,
+        [string]$SkillSlug
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE(string_agg(action || ':' || target_type || ':' || COALESCE(detail_json::text, ''), ',' ORDER BY action), '') FROM audit_log WHERE target_type = 'SKILL' AND target_id = (SELECT id FROM skill WHERE slug = 'codex-skill-label-$SkillSlug-$Suffix')"
+}
+
+function Invoke-SkillLabelMutationContractComparison {
+    param([string]$ResultFileName = 'skill-label-mutation-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-SkillLabelMutationFixture -Suffix $suffix
+
+    $ownerId = "codex-skill-label-owner-$suffix"
+    $namespace = "codex-skill-label-$suffix"
+    $labelSlug = "codex-skill-label-$suffix"
+
+    $javaAttach = Invoke-SkillLabelMutationJson "$JavaUrl/api/v1/skills/$namespace/codex-skill-label-java-attach-$suffix/labels/$labelSlug" 'Put' $ownerId
+    $pythonAttach = Invoke-SkillLabelMutationJson "$PythonUrl/api/v1/skills/$namespace/codex-skill-label-python-attach-$suffix/labels/$labelSlug" 'Put' $ownerId
+    $proxyAttach = Invoke-SkillLabelMutationJson "$WebUrl/api/v1/skills/$namespace/codex-skill-label-proxy-attach-$suffix/labels/$labelSlug" 'Put' $ownerId
+    $javaDetach = Invoke-SkillLabelMutationJson "$JavaUrl/api/v1/skills/$namespace/codex-skill-label-java-detach-$suffix/labels/$labelSlug" 'Delete' $ownerId
+    $pythonDetach = Invoke-SkillLabelMutationJson "$PythonUrl/api/v1/skills/$namespace/codex-skill-label-python-detach-$suffix/labels/$labelSlug" 'Delete' $ownerId
+    $proxyDetach = Invoke-SkillLabelMutationJson "$WebUrl/api/web/skills/$namespace/codex-skill-label-proxy-detach-$suffix/labels/$labelSlug" 'Delete' $ownerId
+
+    $stable = [ordered]@{
+        attach = [ordered]@{
+            java = ConvertTo-StableSkillLabelMutationJson -Response $javaAttach
+            python = ConvertTo-StableSkillLabelMutationJson -Response $pythonAttach
+            proxy = ConvertTo-StableSkillLabelMutationJson -Response $proxyAttach
+            javaState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'java-attach'
+            pythonState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'python-attach'
+            proxyState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'proxy-attach'
+            javaAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'java-attach'
+            pythonAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'python-attach'
+            proxyAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'proxy-attach'
+        }
+        detach = [ordered]@{
+            java = ConvertTo-StableSkillLabelMutationJson -Response $javaDetach
+            python = ConvertTo-StableSkillLabelMutationJson -Response $pythonDetach
+            proxy = ConvertTo-StableSkillLabelMutationJson -Response $proxyDetach
+            javaState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'java-detach'
+            pythonState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'python-detach'
+            proxyState = Get-SkillLabelMutationState -Suffix $suffix -SkillSlug 'proxy-detach'
+            javaAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'java-detach'
+            pythonAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'python-detach'
+            proxyAudit = Get-SkillLabelMutationAudit -Suffix $suffix -SkillSlug 'proxy-detach'
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/skills/{namespace}/{slug}/labels/{labelSlug}',
+            '/api/web/skills/{namespace}/{slug}/labels/{labelSlug}'
+        )
+        checks = [ordered]@{
+            attachEnvelopeMatches = ($stable.attach.java -eq $stable.attach.python -and $stable.attach.python -eq $stable.attach.proxy)
+            attachDbStateMatches = ($stable.attach.javaState -eq $stable.attach.pythonState -and $stable.attach.pythonState -eq $stable.attach.proxyState)
+            attachAuditMatches = ($stable.attach.javaAudit -eq $stable.attach.pythonAudit -and $stable.attach.pythonAudit -eq $stable.attach.proxyAudit)
+            detachEnvelopeMatches = ($stable.detach.java -eq $stable.detach.python -and $stable.detach.python -eq $stable.detach.proxy)
+            detachDbStateMatches = ($stable.detach.javaState -eq $stable.detach.pythonState -and $stable.detach.pythonState -eq $stable.detach.proxyState)
+            detachAuditMatches = ($stable.detach.javaAudit -eq $stable.detach.pythonAudit -and $stable.detach.pythonAudit -eq $stable.detach.proxyAudit)
+        }
+        stable = $stable
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill label mutation contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillLabelMutationSmokeVerification {
+    try {
+        Invoke-SkillLabelMutationTests
+        Start-Hybrid
+        Invoke-SkillLabelMutationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
     }
 }
 
@@ -16706,6 +16904,7 @@ switch ($Action) {
     'down' { Stop-Hybrid }
     'status' { Show-Status }
     'verify-labels-smoke' { Invoke-HybridLabelsSmokeVerification }
+    'verify-skill-label-mutation-smoke' { Invoke-HybridSkillLabelMutationSmokeVerification }
     'verify-files-smoke' { Invoke-HybridFilesSmokeVerification }
     'verify-detail-smoke' { Invoke-HybridDetailSmokeVerification }
     'verify-search-smoke' { Invoke-HybridSearchSmokeVerification }

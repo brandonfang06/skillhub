@@ -71,6 +71,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "pnpm-store" in script
     assert "$processId -le 0" in script
     assert "verify-labels-smoke" in script
+    assert "verify-skill-label-mutation-smoke" in script
     assert "verify-files-smoke" in script
     assert "verify-detail-smoke" in script
     assert "verify-search-smoke" in script
@@ -267,6 +268,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "consume_scan_task_fixture.py" in script
     assert "--scanner-source" in script
     assert "labels-contract-result.json" in script
+    assert "skill-label-mutation-contract-result.json" in script
     assert "files-contract-result.json" in script
     assert "detail-contract-result.json" in script
     assert "search-contract-result.json" in script
@@ -339,6 +341,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "namespace-profile-lifecycle-contract-result.json" in script
     assert "admin-label-definition-contract-result.json" in script
     assert "tests/test_admin_label_definitions.py" in script
+    assert "tests/test_skill_label_mutations.py" in script
     assert "admin-user-management-contract-result.json" in script
     assert "tests/test_admin_user_management.py" in script
     assert "governance-workbench-contract-result.json" in script
