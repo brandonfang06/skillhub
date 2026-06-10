@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -13241,6 +13241,230 @@ function Invoke-HybridNotificationReadSmokeVerification {
     }
 }
 
+function Invoke-NotificationPreferencesTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_notification_preferences.py', 'tests/test_notifications.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-NotificationPreferencesRequest {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $headers = @{ 'X-Mock-User-Id' = $UserId }
+    if ($null -eq $Body) {
+        return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers -TimeoutSec 15
+    }
+    return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20) -TimeoutSec 15
+}
+
+function Invoke-NotificationPreferencesStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    try {
+        if ($null -eq $Body) {
+            Invoke-WebRequest -Method $Method -Uri $Url -Headers $headers -UseBasicParsing -TimeoutSec 15 | Out-Null
+        } else {
+            Invoke-WebRequest -Method $Method -Uri $Url -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20) -UseBasicParsing -TimeoutSec 15 | Out-Null
+        }
+        return 200
+    } catch {
+        if ($_.Exception.Response) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableNotificationPreferencesJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in @($Response.data)) {
+        $items += [ordered]@{
+            category = $item.category
+            channel = $item.channel
+            enabled = [bool]$item.enabled
+        }
+    }
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $items
+    } | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Get-NotificationPreferenceEnabled {
+    param(
+        [string]$UserId,
+        [string]$Category
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT enabled FROM notification_preference WHERE user_id = '$UserId' AND category = '$Category' AND channel = 'IN_APP' LIMIT 1;"
+}
+
+function Invoke-NotificationPreferencesContractComparison {
+    param([string]$ResultFileName = 'notification-preferences-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $javaUser = "codex-notification-pref-java-$suffix"
+    $pythonUser = "codex-notification-pref-python-$suffix"
+    $proxyUser = "codex-notification-pref-proxy-$suffix"
+    $users = @($javaUser, $pythonUser, $proxyUser)
+    $userValues = ($users | ForEach-Object {
+        "('$_', 'Codex Notification Preference User', '$_@example.test', '', 'ACTIVE')"
+    }) -join ",`n        "
+    $userList = ($users | ForEach-Object { "'$_'" }) -join ','
+
+    $sql = @"
+INSERT INTO user_account (id, display_name, email, avatar_url, status)
+VALUES
+        $userValues
+ON CONFLICT (id) DO UPDATE
+SET display_name = EXCLUDED.display_name,
+    email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+DELETE FROM notification_preference WHERE user_id IN ($userList);
+
+INSERT INTO notification_preference (user_id, category, channel, enabled)
+VALUES
+    ('$javaUser', 'REVIEW', 'IN_APP', FALSE),
+    ('$pythonUser', 'REVIEW', 'IN_APP', FALSE),
+    ('$proxyUser', 'REVIEW', 'IN_APP', FALSE)
+ON CONFLICT (user_id, category, channel)
+DO UPDATE SET enabled = EXCLUDED.enabled;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $javaGet = Invoke-NotificationPreferencesRequest 'Get' "$JavaUrl/api/v1/notification-preferences" $javaUser
+    $pythonGet = Invoke-NotificationPreferencesRequest 'Get' "$PythonUrl/api/v1/notification-preferences" $pythonUser
+    $proxyGet = Invoke-NotificationPreferencesRequest 'Get' "$WebUrl/api/web/notification-preferences" $proxyUser
+
+    $updateBody = @{
+        preferences = @(
+            @{ category = 'PUBLISH'; channel = 'IN_APP'; enabled = $false },
+            @{ category = 'REPORT'; channel = 'IN_APP'; enabled = $false }
+        )
+    }
+    $javaPut = Invoke-NotificationPreferencesRequest 'Put' "$JavaUrl/api/v1/notification-preferences" $javaUser $updateBody
+    $pythonPut = Invoke-NotificationPreferencesRequest 'Put' "$PythonUrl/api/v1/notification-preferences" $pythonUser $updateBody
+    $proxyPut = Invoke-NotificationPreferencesRequest 'Put' "$WebUrl/api/web/notification-preferences" $proxyUser $updateBody
+
+    $invalidCategoryBody = @{ preferences = @( @{ category = 'review'; channel = 'IN_APP'; enabled = $true } ) }
+    $duplicateBody = @{
+        preferences = @(
+            @{ category = 'REVIEW'; channel = 'IN_APP'; enabled = $true },
+            @{ category = 'REVIEW'; channel = 'IN_APP'; enabled = $false }
+        )
+    }
+    $invalidChannelBody = @{ preferences = @( @{ category = 'REVIEW'; channel = 'EMAIL'; enabled = $true } ) }
+
+    $javaInvalidCategory = Invoke-NotificationPreferencesStatus 'Put' "$JavaUrl/api/v1/notification-preferences" $javaUser $invalidCategoryBody
+    $pythonInvalidCategory = Invoke-NotificationPreferencesStatus 'Put' "$PythonUrl/api/v1/notification-preferences" $pythonUser $invalidCategoryBody
+    $proxyInvalidCategory = Invoke-NotificationPreferencesStatus 'Put' "$WebUrl/api/web/notification-preferences" $proxyUser $invalidCategoryBody
+    $javaDuplicate = Invoke-NotificationPreferencesStatus 'Put' "$JavaUrl/api/v1/notification-preferences" $javaUser $duplicateBody
+    $pythonDuplicate = Invoke-NotificationPreferencesStatus 'Put' "$PythonUrl/api/v1/notification-preferences" $pythonUser $duplicateBody
+    $proxyDuplicate = Invoke-NotificationPreferencesStatus 'Put' "$WebUrl/api/web/notification-preferences" $proxyUser $duplicateBody
+    $javaInvalidChannel = Invoke-NotificationPreferencesStatus 'Put' "$JavaUrl/api/v1/notification-preferences" $javaUser $invalidChannelBody
+    $pythonInvalidChannel = Invoke-NotificationPreferencesStatus 'Put' "$PythonUrl/api/v1/notification-preferences" $pythonUser $invalidChannelBody
+    $proxyInvalidChannel = Invoke-NotificationPreferencesStatus 'Put' "$WebUrl/api/web/notification-preferences" $proxyUser $invalidChannelBody
+    $anonymousProxy = Invoke-NotificationPreferencesStatus 'Get' "$WebUrl/api/web/notification-preferences" ''
+    $proxySseBoundary = Invoke-NotificationStatus 'Get' "$WebUrl/api/v1/notifications/sse" $javaUser
+
+    $getStable = [ordered]@{
+        java = ConvertTo-StableNotificationPreferencesJson -Response $javaGet
+        python = ConvertTo-StableNotificationPreferencesJson -Response $pythonGet
+        proxy = ConvertTo-StableNotificationPreferencesJson -Response $proxyGet
+    }
+    $putStable = [ordered]@{
+        java = ConvertTo-StableNotificationPreferencesJson -Response $javaPut
+        python = ConvertTo-StableNotificationPreferencesJson -Response $pythonPut
+        proxy = ConvertTo-StableNotificationPreferencesJson -Response $proxyPut
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        checks = [ordered]@{
+            getMatches = ($getStable.java -eq $getStable.python -and $getStable.python -eq $getStable.proxy)
+            putMatches = ($putStable.java -eq $putStable.python -and $putStable.python -eq $putStable.proxy)
+            invalidCategoryRejected = ($javaInvalidCategory -eq 400 -and $pythonInvalidCategory -eq 400 -and $proxyInvalidCategory -eq 400)
+            duplicateRejected = ($javaDuplicate -eq 400 -and $pythonDuplicate -eq 400 -and $proxyDuplicate -eq 400)
+            invalidChannelRejected = ($javaInvalidChannel -eq 400 -and $pythonInvalidChannel -eq 400 -and $proxyInvalidChannel -eq 400)
+            anonymousRejected = ($anonymousProxy -eq 401)
+            sseStillJavaOwned = ($proxySseBoundary -eq 200)
+            dbUpsertsPersisted = (
+                (Get-NotificationPreferenceEnabled -UserId $javaUser -Category 'PUBLISH') -eq 'f' -and
+                (Get-NotificationPreferenceEnabled -UserId $pythonUser -Category 'PUBLISH') -eq 'f' -and
+                (Get-NotificationPreferenceEnabled -UserId $proxyUser -Category 'PUBLISH') -eq 'f' -and
+                (Get-NotificationPreferenceEnabled -UserId $proxyUser -Category 'REPORT') -eq 'f'
+            )
+        }
+        getStable = $getStable
+        putStable = $putStable
+        routeBoundaries = [ordered]@{
+            invalidCategory = @($javaInvalidCategory, $pythonInvalidCategory, $proxyInvalidCategory)
+            duplicate = @($javaDuplicate, $pythonDuplicate, $proxyDuplicate)
+            invalidChannel = @($javaInvalidChannel, $pythonInvalidChannel, $proxyInvalidChannel)
+            anonymousProxy = $anonymousProxy
+            proxySseBoundary = $proxySseBoundary
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Notification preferences contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNotificationPreferencesSmokeVerification {
+    try {
+        Invoke-NotificationPreferencesTests
+        Start-Hybrid
+        Invoke-NotificationPreferencesContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -13309,6 +13533,7 @@ switch ($Action) {
     'verify-skill-rating-smoke' { Invoke-HybridSkillRatingSmokeVerification }
     'verify-my-social-lists-smoke' { Invoke-HybridMySocialListsSmokeVerification }
     'verify-notification-read-smoke' { Invoke-HybridNotificationReadSmokeVerification }
+    'verify-notification-preferences-smoke' { Invoke-HybridNotificationPreferencesSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

@@ -16,6 +16,11 @@ from app.notifications.service import (
     mark_notification_read,
     unread_notification_count,
 )
+from app.notifications.preferences import (
+    NotificationPreferenceError,
+    get_notification_preferences,
+    update_notification_preferences,
+)
 
 
 router = APIRouter()
@@ -144,3 +149,42 @@ async def delete_read_route(
     except NotificationError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u5220\u9664\u6210\u529f", None, request)
+
+
+@router.get("/api/v1/notification-preferences")
+@router.get("/api/web/notification-preferences")
+async def get_notification_preferences_route(
+    request: Request,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    reader = getattr(request.app.state, "notification_preference_reader", None)
+    data = await _resolve_result(
+        reader(user_id)
+        if reader is not None
+        else get_notification_preferences(request.app.state.db_engine, user_id)
+    )
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.put("/api/v1/notification-preferences")
+@router.put("/api/web/notification-preferences")
+async def update_notification_preferences_route(
+    request: Request,
+    payload: dict[str, Any] | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "notification_preference_writer", None)
+    preferences = payload.get("preferences") if isinstance(payload, dict) else None
+    try:
+        if preferences is None:
+            raise NotificationPreferenceError("error.notification.preference.request.invalid", status_code=400)
+        data = await _resolve_result(
+            writer(user_id, preferences)
+            if writer is not None
+            else update_notification_preferences(request.app.state.db_engine, user_id, preferences)
+        )
+    except NotificationPreferenceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)

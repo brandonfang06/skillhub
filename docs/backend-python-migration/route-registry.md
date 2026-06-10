@@ -149,7 +149,9 @@ deferred routes are still visible.
 | DELETE | `/api/web/notifications/{id}` | python | Frontend alias for delete-read notification. |
 | GET | `/api/v1/notifications/sse` | java | SSE stream remains Java-owned. |
 | GET | `/api/web/notifications/sse` | java | Frontend SSE stream remains Java-owned. |
-| GET/PUT | `/api/v1/notification-preferences` | java | Notification preferences remain Java-owned for a later preferences/settings milestone. |
-| GET/PUT | `/api/web/notification-preferences` | java | Frontend notification preferences remain Java-owned. |
+| GET | `/api/v1/notification-preferences` | python | Current user's notification preferences moved to Python. Returns all Java notification categories in enum order with `IN_APP` channel and default `enabled = true` for missing rows. |
+| GET | `/api/web/notification-preferences` | python | Frontend alias for notification preference read. |
+| PUT | `/api/v1/notification-preferences` | python | Notification preference update moved to Python. Validates Java-compatible category/channel/duplicate rules, upserts `notification_preference`, and returns the full preference list. |
+| PUT | `/api/web/notification-preferences` | python | Frontend alias for notification preference update. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

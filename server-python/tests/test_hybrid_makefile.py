@@ -132,6 +132,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-skill-rating-smoke" in script
     assert "verify-my-social-lists-smoke" in script
     assert "verify-notification-read-smoke" in script
+    assert "verify-notification-preferences-smoke" in script
     assert "submitReviewBoundaryStillPythonOwned" in script
     assert "confirmPublishBoundaryStillPythonOwned" in script
     assert "Invoke-LabelsContractComparison" in script
@@ -234,6 +235,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-MySocialListsContractComparison" in script
     assert "Invoke-NotificationReadTests" in script
     assert "Invoke-NotificationReadContractComparison" in script
+    assert "Invoke-NotificationPreferencesTests" in script
+    assert "Invoke-NotificationPreferencesContractComparison" in script
     assert "apply_scan_result_fixture.py" in script
     assert "process_scan_task_fixture.py" in script
     assert "consume_scan_task_fixture.py" in script
@@ -302,6 +305,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "skill-rating-contract-result.json" in script
     assert "my-social-lists-contract-result.json" in script
     assert "notification-read-contract-result.json" in script
+    assert "notification-preferences-contract-result.json" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script
@@ -336,6 +340,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_skill_rating.py" in script
     assert "tests/test_my_social_lists.py" in script
     assert "tests/test_notifications.py" in script
+    assert "tests/test_notification_preferences.py" in script
     assert "SKILLHUB_SCAN_CONSUMER_ENABLED" in script
     assert "tests/test_publish_side_effects.py" in script
     assert "tests/test_publish_replacement.py" in script

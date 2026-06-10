@@ -371,8 +371,12 @@ describe('Vite dev proxy route ownership', () => {
       )
 
       expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications/sse`)).toBeUndefined()
-      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notification-preferences`)).toBeUndefined()
-      expect(resolveMethodAwareProxyTarget('PUT', `${prefix}/notification-preferences`)).toBeUndefined()
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notification-preferences`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('PUT', `${prefix}/notification-preferences`)).toBe(
+        'http://localhost:8081',
+      )
 
       expect(matchingDevProxyTarget('GET', `${prefix}/notifications`)).toBe('http://localhost:8081')
       expect(matchingDevProxyTarget('GET', `${prefix}/notifications/unread-count`)).toBe(
@@ -389,7 +393,10 @@ describe('Vite dev proxy route ownership', () => {
       )
       expect(matchingDevProxyTarget('GET', `${prefix}/notifications/sse`)).toBe('http://localhost:8080')
       expect(matchingDevProxyTarget('GET', `${prefix}/notification-preferences`)).toBe(
-        'http://localhost:8080',
+        'http://localhost:8081',
+      )
+      expect(matchingDevProxyTarget('PUT', `${prefix}/notification-preferences`)).toBe(
+        'http://localhost:8081',
       )
     }
   })
