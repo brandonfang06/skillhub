@@ -342,11 +342,15 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/subscriptions')).toBe('http://localhost:8081')
 
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/stars')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/skills')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/skills')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/skills')).toBeUndefined()
 
     expect(matchingDevProxyTarget('GET', '/api/v1/me/stars?page=0&size=12')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/me/subscriptions')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/me/skills?filter=HIDDEN')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/me/skills')).toBe('http://localhost:8080')
   })
 
   it('routes notification read-state APIs to Python while SSE and preferences stay Java-owned', () => {

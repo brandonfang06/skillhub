@@ -135,8 +135,8 @@ deferred routes are still visible.
 | GET | `/api/web/me/stars` | python | Frontend alias for current user's starred skill list. |
 | GET | `/api/v1/me/subscriptions` | python | Current user's subscribed skill list moved to Python. Requires auth, defaults to `page=0&size=12`, preserves Java page envelope and summary shape. |
 | GET | `/api/web/me/subscriptions` | python | Frontend alias for current user's subscribed skill list. |
-| GET | `/api/v1/me/skills` | java | Current user's owned skill list remains Java-owned until the broader dashboard/my-skills milestone. |
-| GET | `/api/web/me/skills` | java | Frontend alias for owned skill list remains Java-owned. |
+| GET | `/api/v1/me/skills` | python | Current user's owned skill list moved to Python. Requires auth, preserves Java defaults `page=0&size=10`, filter/q/namespace behavior, owner lifecycle projection, and hidden/archived filter semantics. |
+| GET | `/api/web/me/skills` | python | Frontend alias for current user's owned skill list. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
 | GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |

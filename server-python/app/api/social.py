@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
+from app.social.owned import list_my_owned_skills
 from app.social.lists import SocialListKind, list_my_social_skills
 from app.social.rating import SkillRatingError, SkillRatingInput, check_skill_rating, rate_skill
 from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill, unstar_skill
@@ -51,6 +52,18 @@ async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
     if user_id is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
     return user_id
+
+
+async def _require_user_context(request: Request, mock_user_id: str | None) -> dict[str, Any]:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+
+    user_id = mock_user_id.strip()
+    reader = getattr(request.app.state, "auth_me_reader", None)
+    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
+    if data is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return dict(data)
 
 
 def _star_input(skill_id: int, user_id: str) -> SkillStarInput:
@@ -214,6 +227,61 @@ async def list_my_social_skills_route_data(
         )
     )
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+async def list_my_owned_skills_route_data(
+    request: Request,
+    *,
+    mock_user_id: str | None,
+    page: int,
+    size: int,
+    filter_value: str | None,
+    keyword: str | None,
+    namespace: str | None,
+) -> dict[str, Any]:
+    user = await _require_user_context(request, mock_user_id)
+    user_id = str(user["userId"])
+    platform_roles = {str(role) for role in user.get("platformRoles", [])}
+    normalized_page = _parse_non_negative_int(page, 0)
+    normalized_size = _parse_positive_int(size, 10)
+    reader = getattr(request.app.state, "my_skills_reader", None)
+    data = await _resolve_result(
+        reader(user_id, platform_roles, normalized_page, normalized_size, filter_value, keyword, namespace)
+        if reader is not None
+        else list_my_owned_skills(
+            request.app.state.db_engine,
+            user_id=user_id,
+            platform_roles=platform_roles,
+            page=normalized_page,
+            size=normalized_size,
+            filter_value=filter_value,
+            keyword=keyword,
+            namespace=namespace,
+        )
+    )
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/me/skills")
+@router.get("/api/web/me/skills")
+async def list_my_skills_route(
+    request: Request,
+    page: int = 0,
+    size: int = 10,
+    filter: str | None = None,
+    q: str | None = None,
+    namespace: str | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_my_owned_skills_route_data(
+        request,
+        mock_user_id=x_mock_user_id,
+        page=page,
+        size=size,
+        filter_value=filter,
+        keyword=q,
+        namespace=namespace,
+    )
 
 
 @router.get("/api/v1/me/stars")

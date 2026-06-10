@@ -202,6 +202,7 @@ Still plan carefully when a group requires:
 | 68 | `DELETE /api/v1/skills/{skillId}/star`, `DELETE /api/web/skills/{skillId}/star`, `DELETE /api/v1/skills/{skillId}/subscription`, `DELETE /api/web/skills/{skillId}/subscription` | python | Social delete cleanup moved unstar/unsubscribe to Python. Both actions require auth, remain idempotent, update counters, and intentionally follow Java controller/domain behavior instead of the live Java v1 broad hard-delete security mismatch. |
 | 69 | `GET /api/v1/notifications`, `GET /api/web/notifications`, `GET /api/v1/notifications/unread-count`, `GET /api/web/notifications/unread-count`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/web/notifications/{id}/read`, `PUT /api/v1/notifications/read-all`, `PUT /api/web/notifications/read-all`, `DELETE /api/v1/notifications/{id}`, `DELETE /api/web/notifications/{id}` | python | Notification read/read-state ownership moved to Python. Requires auth, preserves Java `PageResponse` and `{ count }` / `{ updated }` shapes, keeps mark-one-read success `data = null`, and leaves SSE/preferences Java-owned. |
 | 70 | `GET /api/v1/notification-preferences`, `GET /api/web/notification-preferences`, `PUT /api/v1/notification-preferences`, `PUT /api/web/notification-preferences` | python | Notification preference ownership moved to Python. Requires auth, returns Java enum-order `IN_APP` preferences with missing rows defaulting enabled, validates category/channel/duplicate payloads, and keeps notification SSE Java-owned. |
+| 71 | `GET /api/v1/me/skills`, `GET /api/web/me/skills` | python | Current-user owned skill list moved to Python. Preserves Java `page=0&size=10`, filter/q/namespace behavior, owner summary lifecycle projection, default direct owner list including hidden/archived, and filter-path hidden/archived exclusion semantics. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1241,12 +1242,14 @@ Group E has started with review lifecycle write ownership:
 - Completed: notification preference APIs:
   `GET /api/v1/notification-preferences`, `GET /api/web/notification-preferences`,
   `PUT /api/v1/notification-preferences`, and `PUT /api/web/notification-preferences`.
+- Completed: current-user owned skill list APIs:
+  `GET /api/v1/me/skills` and `GET /api/web/me/skills`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, and notification SSE.
 
 Recommended next choice:
 
-- Continue with dashboard/current-user owned skill reads or the next post-publish governance API
+- Continue with the next dashboard/current-user read group or the next post-publish governance API
   group based on route ownership priority. Keep milestones cohesive but small enough for a live
   Java/Python/Vite gate.
 

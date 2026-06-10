@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -13465,6 +13465,259 @@ function Invoke-HybridNotificationPreferencesSmokeVerification {
     }
 }
 
+function Invoke-MySkillsTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_my_skills.py', 'tests/test_my_social_lists.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableMySkillsJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in @($Response.data.items)) {
+        $items += [ordered]@{
+            slug = $item.slug
+            displayName = $item.displayName
+            visibility = $item.visibility
+            status = $item.status
+            namespace = $item.namespace
+            canSubmitPromotion = [bool]$item.canSubmitPromotion
+            headlineVersion = $item.headlineVersion
+            publishedVersion = $item.publishedVersion
+            ownerPreviewVersion = $item.ownerPreviewVersion
+            resolutionMode = $item.resolutionMode
+        }
+    }
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        total = $Response.data.total
+        page = $Response.data.page
+        size = $Response.data.size
+        items = $items
+    } | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-MySkillsContractComparison {
+    param([string]$ResultFileName = 'my-skills-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $userId = "codex-my-skills-user-$suffix"
+    $namespace = "codex-my-skills-$suffix"
+    $adminNamespace = "codex-my-skills-admin-$suffix"
+    $adminUserId = 'local-admin'
+    $visibleSlug = "visible-agent-$suffix"
+    $pendingSlug = "pending-work-$suffix"
+    $archivedSlug = "archived-agent-$suffix"
+    $hiddenSlug = "hidden-agent-$suffix"
+    $adminHiddenSlug = "admin-hidden-agent-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    admin_ns_id BIGINT;
+    visible_id BIGINT;
+    pending_id BIGINT;
+    archived_id BIGINT;
+    hidden_id BIGINT;
+    admin_hidden_id BIGINT;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES ('$userId', 'Codex My Skills User', 'my-skills-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$namespace', 'Codex My Skills', 'TEAM', 'ACTIVE', '$userId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$adminNamespace', 'Codex My Skills Admin', 'TEAM', 'ACTIVE', '$adminUserId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO admin_ns_id;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status, hidden,
+        download_count, star_count, subscription_count, rating_avg, rating_count,
+        created_by, updated_by, updated_at
+    )
+    VALUES
+        (ns_id, '$visibleSlug', 'Visible Agent Skill', 'visible agent summary', '$userId', 'PUBLIC', 'ACTIVE', FALSE, 11, 3, 0, 4.50, 2, '$userId', '$userId', '2026-06-10T12:00:00Z'::timestamptz),
+        (ns_id, '$pendingSlug', 'Pending Work Skill', 'pending summary', '$userId', 'PUBLIC', 'ACTIVE', FALSE, 5, 1, 0, 0, 0, '$userId', '$userId', '2026-06-10T11:00:00Z'::timestamptz),
+        (ns_id, '$archivedSlug', 'Archived Agent Skill', 'archived agent summary', '$userId', 'PUBLIC', 'ARCHIVED', FALSE, 2, 0, 0, 0, 0, '$userId', '$userId', '2026-06-10T10:00:00Z'::timestamptz),
+        (ns_id, '$hiddenSlug', 'Hidden Agent Skill', 'hidden agent summary', '$userId', 'PUBLIC', 'ACTIVE', TRUE, 1, 0, 0, 0, 0, '$userId', '$userId', '2026-06-10T09:00:00Z'::timestamptz),
+        (admin_ns_id, '$adminHiddenSlug', 'Admin Hidden Agent Skill', 'admin hidden summary', '$adminUserId', 'PUBLIC', 'ACTIVE', TRUE, 1, 0, 0, 0, 0, '$adminUserId', '$adminUserId', '2026-06-10T08:00:00Z'::timestamptz);
+
+    SELECT id INTO visible_id FROM skill WHERE namespace_id = ns_id AND slug = '$visibleSlug';
+    SELECT id INTO pending_id FROM skill WHERE namespace_id = ns_id AND slug = '$pendingSlug';
+    SELECT id INTO archived_id FROM skill WHERE namespace_id = ns_id AND slug = '$archivedSlug';
+    SELECT id INTO hidden_id FROM skill WHERE namespace_id = ns_id AND slug = '$hiddenSlug';
+    SELECT id INTO admin_hidden_id FROM skill WHERE namespace_id = admin_ns_id AND slug = '$adminHiddenSlug';
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        visible_id, '1.0.0', 'PUBLISHED', 'published',
+        jsonb_build_object('name', 'Visible Agent Skill', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 32, '2026-06-10T12:05:00Z'::timestamptz, '$userId',
+        '2026-06-10T12:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+    SET status = 'PUBLISHED', published_at = EXCLUDED.published_at, created_at = EXCLUDED.created_at
+    RETURNING id INTO version_id;
+    UPDATE skill SET latest_version_id = version_id WHERE id = visible_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        visible_id, '1.1.0', 'PENDING_REVIEW', 'pending',
+        jsonb_build_object('name', 'Visible Agent Skill', 'version', '1.1.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 32, NULL, '$userId',
+        '2026-06-10T12:10:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+    SET status = 'PENDING_REVIEW', created_at = EXCLUDED.created_at;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        pending_id, '0.1.0', 'PENDING_REVIEW', 'pending only',
+        jsonb_build_object('name', 'Pending Work Skill', 'version', '0.1.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 32, NULL, '$userId',
+        '2026-06-10T11:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+    SET status = 'PENDING_REVIEW', created_at = EXCLUDED.created_at;
+
+    UPDATE skill SET latest_version_id = NULL WHERE id IN (pending_id, archived_id, hidden_id, admin_hidden_id);
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $headers = @{ 'X-Mock-User-Id' = $userId }
+    $adminHeaders = @{ 'X-Mock-User-Id' = $adminUserId }
+    $defaultPath = '/api/v1/me/skills?page=0&size=10'
+    $filterPath = "/api/v1/me/skills?page=0&size=10&q=agent&namespace=$namespace"
+    $hiddenPath = "/api/v1/me/skills?page=0&size=10&filter=HIDDEN&namespace=$adminNamespace"
+
+    $javaDefault = Invoke-RestMethod "$JavaUrl$defaultPath" -Headers $headers
+    $pythonDefault = Invoke-RestMethod "$PythonUrl$defaultPath" -Headers $headers
+    $proxyDefault = Invoke-RestMethod "$WebUrl/api/web/me/skills?page=0&size=10" -Headers $headers
+    $javaFilter = Invoke-RestMethod "$JavaUrl$filterPath" -Headers $headers
+    $pythonFilter = Invoke-RestMethod "$PythonUrl$filterPath" -Headers $headers
+    $proxyFilter = Invoke-RestMethod "$WebUrl/api/web/me/skills?page=0&size=10&q=agent&namespace=$namespace" -Headers $headers
+    $javaHidden = Invoke-RestMethod "$JavaUrl$hiddenPath" -Headers $adminHeaders
+    $pythonHidden = Invoke-RestMethod "$PythonUrl$hiddenPath" -Headers $adminHeaders
+    $proxyHidden = Invoke-RestMethod "$WebUrl/api/web/me/skills?page=0&size=10&filter=HIDDEN&namespace=$adminNamespace" -Headers $adminHeaders
+
+    $anonymousProxy = Invoke-NotificationStatus 'Get' "$WebUrl/api/web/me/skills" $null
+    $postProxy = Invoke-NotificationStatus 'Post' "$WebUrl/api/v1/me/skills" $userId
+
+    $defaultStable = [ordered]@{
+        java = ConvertTo-StableMySkillsJson -Response $javaDefault
+        python = ConvertTo-StableMySkillsJson -Response $pythonDefault
+        proxy = ConvertTo-StableMySkillsJson -Response $proxyDefault
+    }
+    $filterStable = [ordered]@{
+        java = ConvertTo-StableMySkillsJson -Response $javaFilter
+        python = ConvertTo-StableMySkillsJson -Response $pythonFilter
+        proxy = ConvertTo-StableMySkillsJson -Response $proxyFilter
+    }
+    $hiddenStable = [ordered]@{
+        java = ConvertTo-StableMySkillsJson -Response $javaHidden
+        python = ConvertTo-StableMySkillsJson -Response $pythonHidden
+        proxy = ConvertTo-StableMySkillsJson -Response $proxyHidden
+    }
+
+    $result = [ordered]@{
+        namespace = $namespace
+        checks = [ordered]@{
+            defaultMatches = ($defaultStable.java -eq $defaultStable.python -and $defaultStable.python -eq $defaultStable.proxy)
+            filterMatches = ($filterStable.java -eq $filterStable.python -and $filterStable.python -eq $filterStable.proxy)
+            hiddenMatches = ($hiddenStable.java -eq $hiddenStable.python -and $hiddenStable.python -eq $hiddenStable.proxy)
+            defaultIncludesArchivedHidden = ($javaDefault.data.total -eq 4)
+            filterExcludesArchivedHidden = ($javaFilter.data.total -eq 1 -and $javaFilter.data.items[0].slug -eq $visibleSlug)
+            hiddenRequiresAdmin = ($javaHidden.data.total -eq 1 -and $javaHidden.data.items[0].slug -eq $adminHiddenSlug)
+            anonymousRejected = ($anonymousProxy -eq 401)
+            postStillJavaOwned = ($postProxy -ne 404)
+        }
+        defaultStable = $defaultStable
+        filterStable = $filterStable
+        hiddenStable = $hiddenStable
+        routeBoundaries = [ordered]@{
+            anonymousProxy = $anonymousProxy
+            postProxy = $postProxy
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "My skills contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridMySkillsSmokeVerification {
+    try {
+        Invoke-MySkillsTests
+        Start-Hybrid
+        Invoke-MySkillsContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -13534,6 +13787,7 @@ switch ($Action) {
     'verify-my-social-lists-smoke' { Invoke-HybridMySocialListsSmokeVerification }
     'verify-notification-read-smoke' { Invoke-HybridNotificationReadSmokeVerification }
     'verify-notification-preferences-smoke' { Invoke-HybridNotificationPreferencesSmokeVerification }
+    'verify-my-skills-smoke' { Invoke-HybridMySkillsSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

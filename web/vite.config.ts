@@ -260,6 +260,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['GET'],
+    pattern: /^\/api\/v1\/me\/skills(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/me\/skills(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
     pattern: /^\/api\/v1\/notifications(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
