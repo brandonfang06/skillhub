@@ -137,5 +137,19 @@ deferred routes are still visible.
 | GET | `/api/web/me/subscriptions` | python | Frontend alias for current user's subscribed skill list. |
 | GET | `/api/v1/me/skills` | java | Current user's owned skill list remains Java-owned until the broader dashboard/my-skills milestone. |
 | GET | `/api/web/me/skills` | java | Frontend alias for owned skill list remains Java-owned. |
+| GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
+| GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
+| GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |
+| GET | `/api/web/notifications/unread-count` | python | Frontend alias for unread notification count. |
+| PUT | `/api/v1/notifications/{id}/read` | python | Mark-one-read moved to Python. Missing ids return `error.notification.notFound`; foreign ids return `error.notification.noPermission`; success returns Java-compatible update envelope with `data = null`. |
+| PUT | `/api/web/notifications/{id}/read` | python | Frontend alias for mark-one-read. |
+| PUT | `/api/v1/notifications/read-all` | python | Mark-all-read moved to Python. Returns Java-compatible `{ updated }`. |
+| PUT | `/api/web/notifications/read-all` | python | Frontend alias for mark-all-read. |
+| DELETE | `/api/v1/notifications/{id}` | python | Delete-read notification moved to Python. Deletes only current-user `READ` notifications; otherwise returns `error.notification.readNotFound`. |
+| DELETE | `/api/web/notifications/{id}` | python | Frontend alias for delete-read notification. |
+| GET | `/api/v1/notifications/sse` | java | SSE stream remains Java-owned. |
+| GET | `/api/web/notifications/sse` | java | Frontend SSE stream remains Java-owned. |
+| GET/PUT | `/api/v1/notification-preferences` | java | Notification preferences remain Java-owned for a later preferences/settings milestone. |
+| GET/PUT | `/api/web/notification-preferences` | java | Frontend notification preferences remain Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

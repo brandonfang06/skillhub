@@ -349,6 +349,51 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8080')
   })
 
+  it('routes notification read-state APIs to Python while SSE and preferences stay Java-owned', () => {
+    for (const prefix of ['/api/v1', '/api/web']) {
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications?page=1&size=5`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications/unread-count`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('PUT', `${prefix}/notifications/11/read`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('PUT', `${prefix}/notifications/read-all`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(resolveMethodAwareProxyTarget('DELETE', `${prefix}/notifications/11`)).toBe(
+        'http://localhost:8081',
+      )
+
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications/sse`)).toBeUndefined()
+      expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notification-preferences`)).toBeUndefined()
+      expect(resolveMethodAwareProxyTarget('PUT', `${prefix}/notification-preferences`)).toBeUndefined()
+
+      expect(matchingDevProxyTarget('GET', `${prefix}/notifications`)).toBe('http://localhost:8081')
+      expect(matchingDevProxyTarget('GET', `${prefix}/notifications/unread-count`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(matchingDevProxyTarget('PUT', `${prefix}/notifications/11/read`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(matchingDevProxyTarget('PUT', `${prefix}/notifications/read-all`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(matchingDevProxyTarget('DELETE', `${prefix}/notifications/11`)).toBe(
+        'http://localhost:8081',
+      )
+      expect(matchingDevProxyTarget('GET', `${prefix}/notifications/sse`)).toBe('http://localhost:8080')
+      expect(matchingDevProxyTarget('GET', `${prefix}/notification-preferences`)).toBe(
+        'http://localhost:8080',
+      )
+    }
+  })
+
   it('routes skill version delete lifecycle action to Python only', () => {
     expect(
       resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/team-a/agent-helper/versions/1.1.0'),

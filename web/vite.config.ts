@@ -259,6 +259,56 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/notifications(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/notifications(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/notifications\/unread-count(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/notifications\/unread-count(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/v1\/notifications\/[^/?]+\/read(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/web\/notifications\/[^/?]+\/read(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/v1\/notifications\/read-all(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/web\/notifications\/read-all(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['DELETE'],
+    pattern: /^\/api\/v1\/notifications\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['DELETE'],
+    pattern: /^\/api\/web\/notifications\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['POST'],
     pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/archive(?:\?.*)?$/,
     target: 'http://localhost:8081',

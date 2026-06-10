@@ -200,6 +200,7 @@ Still plan carefully when a group requires:
 | 66 | `GET /api/v1/skills/{skillId}/rating`, `GET /api/web/skills/{skillId}/rating`, `PUT /api/v1/skills/{skillId}/rating`, `PUT /api/web/skills/{skillId}/rating` | python | Skill rating read/create/update ownership moved to Python. Anonymous reads stay rejected to match live Java security, score 1..5 is validated, same-user rating updates reuse the existing row, and `skill.rating_avg` / `skill.rating_count` refresh synchronously. |
 | 67 | `GET /api/v1/me/stars`, `GET /api/web/me/stars`, `GET /api/v1/me/subscriptions`, `GET /api/web/me/subscriptions` | python | Current-user social list reads moved to Python. Requires auth, preserves Java `page=0&size=12` defaults and page envelope, filters missing skills from `items` while preserving relationship-table total, and keeps `/me/skills` Java-owned. |
 | 68 | `DELETE /api/v1/skills/{skillId}/star`, `DELETE /api/web/skills/{skillId}/star`, `DELETE /api/v1/skills/{skillId}/subscription`, `DELETE /api/web/skills/{skillId}/subscription` | python | Social delete cleanup moved unstar/unsubscribe to Python. Both actions require auth, remain idempotent, update counters, and intentionally follow Java controller/domain behavior instead of the live Java v1 broad hard-delete security mismatch. |
+| 69 | `GET /api/v1/notifications`, `GET /api/web/notifications`, `GET /api/v1/notifications/unread-count`, `GET /api/web/notifications/unread-count`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/web/notifications/{id}/read`, `PUT /api/v1/notifications/read-all`, `PUT /api/web/notifications/read-all`, `DELETE /api/v1/notifications/{id}`, `DELETE /api/web/notifications/{id}` | python | Notification read/read-state ownership moved to Python. Requires auth, preserves Java `PageResponse` and `{ count }` / `{ updated }` shapes, keeps mark-one-read success `data = null`, and leaves SSE/preferences Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1230,14 +1231,21 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/admin/skills/{skillId}/unhide`.
 - Completed: admin version yank API:
   `POST /api/v1/admin/skills/versions/{versionId}/yank`.
+- Completed: notification read/read-state APIs:
+  `GET /api/v1/notifications`, `GET /api/web/notifications`,
+  `GET /api/v1/notifications/unread-count`, `GET /api/web/notifications/unread-count`,
+  `PUT /api/v1/notifications/{id}/read`, `PUT /api/web/notifications/{id}/read`,
+  `PUT /api/v1/notifications/read-all`, `PUT /api/web/notifications/read-all`,
+  `DELETE /api/v1/notifications/{id}`, and `DELETE /api/web/notifications/{id}`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes.
+  portal review/promotion/skill lifecycle and admin skill governance routes, notification SSE,
+  and notification preferences.
 
 Recommended next choice:
 
-- Continue with post-publish lifecycle/governance APIs or switch to the next migration group based
-  on remaining route ownership priorities. Keep milestones cohesive but small enough for a live
-  Java/Python/Vite gate.
+- Continue with remaining notification/preferences/settings routes, dashboard/current-user owned
+  skill reads, or the next post-publish governance API group based on route ownership priority.
+  Keep milestones cohesive but small enough for a live Java/Python/Vite gate.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

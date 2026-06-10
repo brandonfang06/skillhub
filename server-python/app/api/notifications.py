@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+from collections.abc import Awaitable
+from inspect import isawaitable
+from typing import Any
+
+from fastapi import APIRouter, Header, HTTPException, Request
+
+from app.api.auth import read_current_mock_user
+from app.core.response import ok
+from app.notifications.service import (
+    NotificationError,
+    delete_read_notification,
+    list_notifications,
+    mark_all_notifications_read,
+    mark_notification_read,
+    unread_notification_count,
+)
+
+
+router = APIRouter()
+
+
+async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
+    if isawaitable(result):
+        return await result
+    return result
+
+
+async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = mock_user_id.strip()
+    reader = getattr(request.app.state, "auth_me_reader", None)
+    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
+    if data is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return str(data["userId"])
+
+
+def _parse_non_negative_int(value: int, default: int) -> int:
+    return value if value >= 0 else default
+
+
+def _parse_positive_int(value: int, default: int) -> int:
+    return value if value > 0 else default
+
+
+@router.get("/api/v1/notifications")
+@router.get("/api/web/notifications")
+async def list_notifications_route(
+    request: Request,
+    category: str | None = None,
+    page: int = 0,
+    size: int = 20,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    reader = getattr(request.app.state, "notification_list_reader", None)
+    try:
+        data = await _resolve_result(
+            reader(user_id, category, _parse_non_negative_int(page, 0), _parse_positive_int(size, 20))
+            if reader is not None
+            else list_notifications(
+                request.app.state.db_engine,
+                user_id=user_id,
+                category=category,
+                page=_parse_non_negative_int(page, 0),
+                size=_parse_positive_int(size, 20),
+            )
+        )
+    except NotificationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/notifications/unread-count")
+@router.get("/api/web/notifications/unread-count")
+async def unread_count_route(
+    request: Request,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    reader = getattr(request.app.state, "notification_unread_count_reader", None)
+    data = await _resolve_result(
+        reader(user_id)
+        if reader is not None
+        else unread_notification_count(request.app.state.db_engine, user_id)
+    )
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.put("/api/v1/notifications/{notification_id}/read")
+@router.put("/api/web/notifications/{notification_id}/read")
+async def mark_read_route(
+    request: Request,
+    notification_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "notification_mark_read_writer", None)
+    try:
+        await _resolve_result(
+            writer(notification_id, user_id)
+            if writer is not None
+            else mark_notification_read(request.app.state.db_engine, notification_id=notification_id, user_id=user_id)
+        )
+    except NotificationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", None, request)
+
+
+@router.put("/api/v1/notifications/read-all")
+@router.put("/api/web/notifications/read-all")
+async def mark_all_read_route(
+    request: Request,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "notification_mark_all_read_writer", None)
+    data = await _resolve_result(
+        writer(user_id)
+        if writer is not None
+        else mark_all_notifications_read(request.app.state.db_engine, user_id)
+    )
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.delete("/api/v1/notifications/{notification_id}")
+@router.delete("/api/web/notifications/{notification_id}")
+async def delete_read_route(
+    request: Request,
+    notification_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "notification_delete_read_writer", None)
+    try:
+        await _resolve_result(
+            writer(notification_id, user_id)
+            if writer is not None
+            else delete_read_notification(request.app.state.db_engine, notification_id=notification_id, user_id=user_id)
+        )
+    except NotificationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", None, request)

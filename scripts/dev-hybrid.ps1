@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -12973,6 +12973,274 @@ function Invoke-HybridMySocialListsSmokeVerification {
     }
 }
 
+function Invoke-NotificationReadTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_notifications.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-NotificationRequest {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId
+    )
+
+    $headers = @{ 'X-Mock-User-Id' = $UserId }
+    return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers -TimeoutSec 15
+}
+
+function Invoke-NotificationStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId
+    )
+
+    $headers = if ($UserId) { @{ 'X-Mock-User-Id' = $UserId } } else { @{} }
+    try {
+        Invoke-WebRequest -Method $Method -Uri $Url -Headers $headers -UseBasicParsing -TimeoutSec 15 | Out-Null
+        return 200
+    } catch {
+        if ($_.Exception.Response) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableNotificationListJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in @($Response.data.items)) {
+        $items += [ordered]@{
+            category = $item.category
+            eventType = $item.eventType
+            title = $item.title
+            bodyJson = $item.bodyJson
+            entityType = $item.entityType
+            entityId = $item.entityId
+            status = $item.status
+            targetType = $item.targetType
+            targetId = $item.targetId
+            targetRoute = $item.targetRoute
+            hasCreatedAt = [bool]$item.createdAt
+            hasReadAt = [bool]$item.readAt
+        }
+    }
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        total = $Response.data.total
+        page = $Response.data.page
+        size = $Response.data.size
+        items = $items
+    } | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Get-NotificationIdByEventType {
+    param([string]$EventType)
+
+    return Invoke-PostgresScalar -Sql "SELECT id FROM notification WHERE event_type = '$EventType' LIMIT 1;"
+}
+
+function Get-NotificationStatusByEventType {
+    param([string]$EventType)
+
+    return Invoke-PostgresScalar -Sql "SELECT status FROM notification WHERE event_type = '$EventType' LIMIT 1;"
+}
+
+function Get-NotificationCountByEventType {
+    param([string]$EventType)
+
+    return [int](Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM notification WHERE event_type = '$EventType';")
+}
+
+function Invoke-NotificationReadContractComparison {
+    param([string]$ResultFileName = 'notification-read-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $javaUser = "codex-notification-java-$suffix"
+    $pythonUser = "codex-notification-python-$suffix"
+    $proxyUser = "codex-notification-proxy-$suffix"
+    $users = @($javaUser, $pythonUser, $proxyUser)
+    $userValues = ($users | ForEach-Object {
+        "('$_', 'Codex Notification User', '$_@example.test', '', 'ACTIVE')"
+    }) -join ",`n        "
+    $userList = ($users | ForEach-Object { "'$_'" }) -join ','
+
+    $sql = @"
+INSERT INTO user_account (id, display_name, email, avatar_url, status)
+VALUES
+        $userValues
+ON CONFLICT (id) DO UPDATE
+SET display_name = EXCLUDED.display_name,
+    email = EXCLUDED.email,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+DELETE FROM notification WHERE recipient_id IN ($userList);
+
+INSERT INTO notification (recipient_id, category, event_type, title, body_json, entity_type, entity_id, status, created_at, read_at)
+SELECT recipient_id, category, event_type, title, body_json, entity_type, entity_id, status, created_at, read_at
+FROM (VALUES
+    ('$javaUser', 'REVIEW', 'CODEX_NOTIFICATION_LIST_REVIEW_$suffix', 'Review submitted', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7001, 'UNREAD', '2026-06-10T09:00:00Z'::timestamptz, NULL),
+    ('$javaUser', 'PUBLISH', 'CODEX_NOTIFICATION_LIST_PUBLISH_$suffix', 'Published', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7002, 'READ', '2026-06-10T08:00:00Z'::timestamptz, '2026-06-10T08:30:00Z'::timestamptz),
+    ('$pythonUser', 'REVIEW', 'CODEX_NOTIFICATION_LIST_REVIEW_$suffix', 'Review submitted', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7001, 'UNREAD', '2026-06-10T09:00:00Z'::timestamptz, NULL),
+    ('$pythonUser', 'PUBLISH', 'CODEX_NOTIFICATION_LIST_PUBLISH_$suffix', 'Published', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7002, 'READ', '2026-06-10T08:00:00Z'::timestamptz, '2026-06-10T08:30:00Z'::timestamptz),
+    ('$proxyUser', 'REVIEW', 'CODEX_NOTIFICATION_LIST_REVIEW_$suffix', 'Review submitted', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7001, 'UNREAD', '2026-06-10T09:00:00Z'::timestamptz, NULL),
+    ('$proxyUser', 'PUBLISH', 'CODEX_NOTIFICATION_LIST_PUBLISH_$suffix', 'Published', jsonb_build_object('namespace', 'team-a', 'slug', 'demo')::text, 'SKILL', 7002, 'READ', '2026-06-10T08:00:00Z'::timestamptz, '2026-06-10T08:30:00Z'::timestamptz),
+    ('$javaUser', 'REVIEW', 'CODEX_NOTIFICATION_MARK_READ_JAVA_$suffix', 'Mark java', jsonb_build_object()::text, 'REVIEW', 7101, 'UNREAD', '2026-06-10T07:00:00Z'::timestamptz, NULL),
+    ('$pythonUser', 'REVIEW', 'CODEX_NOTIFICATION_MARK_READ_PYTHON_$suffix', 'Mark python', jsonb_build_object()::text, 'REVIEW', 7102, 'UNREAD', '2026-06-10T07:00:00Z'::timestamptz, NULL),
+    ('$proxyUser', 'REVIEW', 'CODEX_NOTIFICATION_MARK_READ_PROXY_$suffix', 'Mark proxy', jsonb_build_object()::text, 'REVIEW', 7103, 'UNREAD', '2026-06-10T07:00:00Z'::timestamptz, NULL),
+    ('$javaUser', 'REPORT', 'CODEX_NOTIFICATION_DELETE_JAVA_$suffix', 'Delete java', jsonb_build_object()::text, 'REPORT', 7201, 'READ', '2026-06-10T06:00:00Z'::timestamptz, '2026-06-10T06:30:00Z'::timestamptz),
+    ('$pythonUser', 'REPORT', 'CODEX_NOTIFICATION_DELETE_PYTHON_$suffix', 'Delete python', jsonb_build_object()::text, 'REPORT', 7202, 'READ', '2026-06-10T06:00:00Z'::timestamptz, '2026-06-10T06:30:00Z'::timestamptz),
+    ('$proxyUser', 'REPORT', 'CODEX_NOTIFICATION_DELETE_PROXY_$suffix', 'Delete proxy', jsonb_build_object()::text, 'REPORT', 7203, 'READ', '2026-06-10T06:00:00Z'::timestamptz, '2026-06-10T06:30:00Z'::timestamptz),
+    ('$javaUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_JAVA_A_$suffix', 'All java a', jsonb_build_object()::text, 'SKILL', 7301, 'UNREAD', '2026-06-10T05:00:00Z'::timestamptz, NULL),
+    ('$javaUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_JAVA_B_$suffix', 'All java b', jsonb_build_object()::text, 'SKILL', 7302, 'UNREAD', '2026-06-10T05:01:00Z'::timestamptz, NULL),
+    ('$pythonUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_PYTHON_A_$suffix', 'All python a', jsonb_build_object()::text, 'SKILL', 7303, 'UNREAD', '2026-06-10T05:00:00Z'::timestamptz, NULL),
+    ('$pythonUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_PYTHON_B_$suffix', 'All python b', jsonb_build_object()::text, 'SKILL', 7304, 'UNREAD', '2026-06-10T05:01:00Z'::timestamptz, NULL),
+    ('$proxyUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_PROXY_A_$suffix', 'All proxy a', jsonb_build_object()::text, 'SKILL', 7305, 'UNREAD', '2026-06-10T05:00:00Z'::timestamptz, NULL),
+    ('$proxyUser', 'PUBLISH', 'CODEX_NOTIFICATION_ALL_PROXY_B_$suffix', 'All proxy b', jsonb_build_object()::text, 'SKILL', 7306, 'UNREAD', '2026-06-10T05:01:00Z'::timestamptz, NULL)
+) AS fixture(recipient_id, category, event_type, title, body_json, entity_type, entity_id, status, created_at, read_at);
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $javaList = Invoke-NotificationRequest 'Get' "$JavaUrl/api/v1/notifications?page=0&size=2" $javaUser
+    $pythonList = Invoke-NotificationRequest 'Get' "$PythonUrl/api/v1/notifications?page=0&size=2" $pythonUser
+    $proxyList = Invoke-NotificationRequest 'Get' "$WebUrl/api/web/notifications?page=0&size=2" $proxyUser
+    $javaReview = Invoke-NotificationRequest 'Get' "$JavaUrl/api/v1/notifications?page=0&size=1&category=REVIEW" $javaUser
+    $pythonReview = Invoke-NotificationRequest 'Get' "$PythonUrl/api/v1/notifications?page=0&size=1&category=REVIEW" $pythonUser
+    $proxyReview = Invoke-NotificationRequest 'Get' "$WebUrl/api/web/notifications?page=0&size=1&category=REVIEW" $proxyUser
+    $javaUnread = Invoke-NotificationRequest 'Get' "$JavaUrl/api/v1/notifications/unread-count" $javaUser
+    $pythonUnread = Invoke-NotificationRequest 'Get' "$PythonUrl/api/v1/notifications/unread-count" $pythonUser
+    $proxyUnread = Invoke-NotificationRequest 'Get' "$WebUrl/api/web/notifications/unread-count" $proxyUser
+
+    $javaMarkId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_MARK_READ_JAVA_$suffix"
+    $pythonMarkId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_MARK_READ_PYTHON_$suffix"
+    $proxyMarkId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_MARK_READ_PROXY_$suffix"
+    $javaDeleteId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_DELETE_JAVA_$suffix"
+    $pythonDeleteId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_DELETE_PYTHON_$suffix"
+    $proxyDeleteId = Get-NotificationIdByEventType "CODEX_NOTIFICATION_DELETE_PROXY_$suffix"
+
+    $javaMark = Invoke-NotificationRequest 'Put' "$JavaUrl/api/v1/notifications/$javaMarkId/read" $javaUser
+    $pythonMark = Invoke-NotificationRequest 'Put' "$PythonUrl/api/v1/notifications/$pythonMarkId/read" $pythonUser
+    $proxyMark = Invoke-NotificationRequest 'Put' "$WebUrl/api/web/notifications/$proxyMarkId/read" $proxyUser
+
+    $javaAll = Invoke-NotificationRequest 'Put' "$JavaUrl/api/v1/notifications/read-all" $javaUser
+    $pythonAll = Invoke-NotificationRequest 'Put' "$PythonUrl/api/v1/notifications/read-all" $pythonUser
+    $proxyAll = Invoke-NotificationRequest 'Put' "$WebUrl/api/web/notifications/read-all" $proxyUser
+
+    $javaDelete = Invoke-NotificationRequest 'Delete' "$JavaUrl/api/v1/notifications/$javaDeleteId" $javaUser
+    $pythonDelete = Invoke-NotificationRequest 'Delete' "$PythonUrl/api/v1/notifications/$pythonDeleteId" $pythonUser
+    $proxyDelete = Invoke-NotificationRequest 'Delete' "$WebUrl/api/web/notifications/$proxyDeleteId" $proxyUser
+
+    $javaInvalid = Invoke-NotificationStatus 'Get' "$JavaUrl/api/v1/notifications?category=review" $javaUser
+    $pythonInvalid = Invoke-NotificationStatus 'Get' "$PythonUrl/api/v1/notifications?category=review" $pythonUser
+    $proxyInvalid = Invoke-NotificationStatus 'Get' "$WebUrl/api/web/notifications?category=review" $proxyUser
+    $anonymousProxy = Invoke-NotificationStatus 'Get' "$WebUrl/api/web/notifications" $null
+    $proxySseBoundary = Invoke-NotificationStatus 'Get' "$WebUrl/api/v1/notifications/sse" $javaUser
+    $proxyPreferencesBoundary = Invoke-NotificationStatus 'Get' "$WebUrl/api/v1/notification-preferences" $javaUser
+
+    $javaMarkStatus = Get-NotificationStatusByEventType "CODEX_NOTIFICATION_MARK_READ_JAVA_$suffix"
+    $pythonMarkStatus = Get-NotificationStatusByEventType "CODEX_NOTIFICATION_MARK_READ_PYTHON_$suffix"
+    $proxyMarkStatus = Get-NotificationStatusByEventType "CODEX_NOTIFICATION_MARK_READ_PROXY_$suffix"
+    $javaDeleteCount = Get-NotificationCountByEventType "CODEX_NOTIFICATION_DELETE_JAVA_$suffix"
+    $pythonDeleteCount = Get-NotificationCountByEventType "CODEX_NOTIFICATION_DELETE_PYTHON_$suffix"
+    $proxyDeleteCount = Get-NotificationCountByEventType "CODEX_NOTIFICATION_DELETE_PROXY_$suffix"
+    $listStable = [ordered]@{
+        java = ConvertTo-StableNotificationListJson -Response $javaList
+        python = ConvertTo-StableNotificationListJson -Response $pythonList
+        proxy = ConvertTo-StableNotificationListJson -Response $proxyList
+    }
+    $reviewStable = [ordered]@{
+        java = ConvertTo-StableNotificationListJson -Response $javaReview
+        python = ConvertTo-StableNotificationListJson -Response $pythonReview
+        proxy = ConvertTo-StableNotificationListJson -Response $proxyReview
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        checks = [ordered]@{
+            listMatches = ($listStable.java -eq $listStable.python -and $listStable.python -eq $listStable.proxy)
+            reviewFilterMatches = ($reviewStable.java -eq $reviewStable.python -and $reviewStable.python -eq $reviewStable.proxy)
+            unreadCountMatches = ($javaUnread.data.count -eq $pythonUnread.data.count -and $pythonUnread.data.count -eq $proxyUnread.data.count)
+            markReadEnvelopeMatches = ($javaMark.data -eq $null -and $pythonMark.data -eq $null -and $proxyMark.data -eq $null)
+            markAllUpdatedMatches = ($javaAll.data.updated -eq 3 -and $pythonAll.data.updated -eq 3 -and $proxyAll.data.updated -eq 3)
+            deleteReadEnvelopeMatches = ($javaDelete.data -eq $null -and $pythonDelete.data -eq $null -and $proxyDelete.data -eq $null)
+            invalidCategoryRejected = ($javaInvalid -eq 400 -and $pythonInvalid -eq 400 -and $proxyInvalid -eq 400)
+            anonymousRejected = ($anonymousProxy -eq 401)
+            routeBoundariesRemainJava = ($proxySseBoundary -ne 404 -and $proxyPreferencesBoundary -ne 405)
+            mutationsPersisted = ($javaMarkStatus -eq 'READ' -and $pythonMarkStatus -eq 'READ' -and $proxyMarkStatus -eq 'READ' -and $javaDeleteCount -eq 0 -and $pythonDeleteCount -eq 0 -and $proxyDeleteCount -eq 0)
+        }
+        listStable = $listStable
+        reviewStable = $reviewStable
+        counts = [ordered]@{
+            javaUnread = $javaUnread.data.count
+            pythonUnread = $pythonUnread.data.count
+            proxyUnread = $proxyUnread.data.count
+            javaAllUpdated = $javaAll.data.updated
+            pythonAllUpdated = $pythonAll.data.updated
+            proxyAllUpdated = $proxyAll.data.updated
+        }
+        routeBoundaries = [ordered]@{
+            invalidCategory = @($javaInvalid, $pythonInvalid, $proxyInvalid)
+            anonymousProxy = $anonymousProxy
+            proxySseBoundary = $proxySseBoundary
+            proxyPreferencesBoundary = $proxyPreferencesBoundary
+        }
+        dbStatuses = [ordered]@{
+            javaMark = $javaMarkStatus
+            pythonMark = $pythonMarkStatus
+            proxyMark = $proxyMarkStatus
+            javaDeleteCount = $javaDeleteCount
+            pythonDeleteCount = $pythonDeleteCount
+            proxyDeleteCount = $proxyDeleteCount
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Notification read contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNotificationReadSmokeVerification {
+    try {
+        Invoke-NotificationReadTests
+        Start-Hybrid
+        Invoke-NotificationReadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -13040,6 +13308,7 @@ switch ($Action) {
     'verify-skill-subscription-smoke' { Invoke-HybridSkillSubscriptionSmokeVerification }
     'verify-skill-rating-smoke' { Invoke-HybridSkillRatingSmokeVerification }
     'verify-my-social-lists-smoke' { Invoke-HybridMySocialListsSmokeVerification }
+    'verify-notification-read-smoke' { Invoke-HybridNotificationReadSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
