@@ -137,6 +137,12 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes notification SSE boundary to Python while keeping OAuth on Java', () => {
+    expect(matchingProxyTarget('/api/v1/notifications/sse')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/web/notifications/sse')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
+  })
+
   it('routes skill report submit aliases to Python without changing nearby reads', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-ai/reported-skill/reports')).toBe(
       'http://localhost:8081',
@@ -527,7 +533,7 @@ describe('Vite dev proxy route ownership', () => {
     )
   })
 
-  it('routes notification read-state APIs to Python while SSE and preferences stay Java-owned', () => {
+  it('routes notification read-state, SSE, and preferences APIs to Python', () => {
     for (const prefix of ['/api/v1', '/api/web']) {
       expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications`)).toBe(
         'http://localhost:8081',
@@ -569,7 +575,7 @@ describe('Vite dev proxy route ownership', () => {
       expect(matchingDevProxyTarget('DELETE', `${prefix}/notifications/11`)).toBe(
         'http://localhost:8081',
       )
-      expect(matchingDevProxyTarget('GET', `${prefix}/notifications/sse`)).toBe('http://localhost:8080')
+      expect(matchingDevProxyTarget('GET', `${prefix}/notifications/sse`)).toBe('http://localhost:8081')
       expect(matchingDevProxyTarget('GET', `${prefix}/notification-preferences`)).toBe(
         'http://localhost:8081',
       )

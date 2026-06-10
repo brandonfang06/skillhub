@@ -775,6 +775,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/(?:v1|web)/notifications/sse(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api/v1/labels': {
         target: 'http://localhost:8081',
         changeOrigin: true,

@@ -133,6 +133,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-skill-rating-smoke" in script
     assert "verify-my-social-lists-smoke" in script
     assert "verify-notification-read-smoke" in script
+    assert "verify-notification-sse-boundary-smoke" in script
     assert "verify-notification-preferences-smoke" in script
     assert "verify-my-skills-smoke" in script
     assert "verify-namespace-read-smoke" in script
@@ -351,6 +352,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "skill-rating-contract-result.json" in script
     assert "my-social-lists-contract-result.json" in script
     assert "notification-read-contract-result.json" in script
+    assert "notification-sse-boundary-contract-result.json" in script
     assert "notification-preferences-contract-result.json" in script
     assert "my-skills-contract-result.json" in script
     assert "namespace-read-contract-result.json" in script

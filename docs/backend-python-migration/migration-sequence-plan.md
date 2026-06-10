@@ -225,6 +225,7 @@ Still plan carefully when a group requires:
 | 90 | `POST /api/v1/skills/{namespace}/{slug}/reports`, `POST /api/web/skills/{namespace}/{slug}/reports` | python | Skill report submit moved to Python. Preserves Java published-preference target resolution, blank/self/duplicate/unavailable validation, pending report insert, `REPORT_SKILL` audit, and `REPORT_SUBMITTED` notification side effects. |
 | 91 | `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, `POST /api/v1/auth/local/change-password` | python | Local auth core moved to Python. Preserves Java local account normalization/validation, BCrypt credential handling, failed-attempt lockout/reset, password policy, global namespace membership on register, and hybrid mock-user change-password behavior while keeping Spring Session creation deferred. |
 | 92 | `POST /api/v1/auth/direct/login`, `POST /api/v1/auth/session/bootstrap` | python | Direct login and session bootstrap boundaries moved to Python. Preserves Java default-disabled 403 behavior and unsupported-provider ordering. Direct local can reuse migrated local login response, while final cookie/session persistence and passive bootstrap success remain deferred. |
+| 93 | `GET /api/v1/notifications/sse`, `GET /api/web/notifications/sse` | python | Notification SSE connection boundary moved to Python. Preserves auth rejection, `text/event-stream`, connected event, and heartbeat comment shape. Active notification fanout remains deferred to a Python dispatcher/refactor milestone. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1260,6 +1261,11 @@ Group E has started with review lifecycle write ownership:
 - Completed: notification preference APIs:
   `GET /api/v1/notification-preferences`, `GET /api/web/notification-preferences`,
   `PUT /api/v1/notification-preferences`, and `PUT /api/web/notification-preferences`.
+- Completed: notification SSE connection boundary APIs:
+  `GET /api/v1/notifications/sse` and `GET /api/web/notifications/sse`. These move the
+  event-stream connection route to Python, preserve authentication rejection, `connected` event,
+  and heartbeat comment shape, and defer active notification fanout until Python has a unified
+  notification dispatcher abstraction.
 - Completed: current-user owned skill list APIs:
   `GET /api/v1/me/skills` and `GET /api/web/me/skills`.
 - Completed: namespace read APIs:
@@ -1373,11 +1379,11 @@ Group E has started with review lifecycle write ownership:
   `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/download`.
   These share the existing Python v1 download implementation. Live gate now compares Java/Python/proxy
   web alias stream contracts and verifies published download counter deltas across v1 and web hits.
-- Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
+- Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
-  surfaces outside migrated current-user/token/local-auth/password-reset routes, Spring Session
-  establishment, direct login/session bootstrap, device flow, bearer-token authentication filters,
-  scope enforcement, and notification SSE.
+  surfaces outside migrated current-user/token/local-auth/password-reset/direct-session boundary
+  routes, Spring Session establishment, device flow, bearer-token authentication filters, scope
+  enforcement, active SSE notification fanout, and final proxy cleanup.
 
 Recommended next choice:
 

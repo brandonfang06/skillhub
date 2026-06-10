@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -13632,7 +13632,7 @@ FROM (VALUES
             deleteReadEnvelopeMatches = ($javaDelete.data -eq $null -and $pythonDelete.data -eq $null -and $proxyDelete.data -eq $null)
             invalidCategoryRejected = ($javaInvalid -eq 400 -and $pythonInvalid -eq 400 -and $proxyInvalid -eq 400)
             anonymousRejected = ($anonymousProxy -eq 401)
-            routeBoundariesRemainJava = ($proxySseBoundary -ne 404 -and $proxyPreferencesBoundary -ne 405)
+            routeBoundariesReachable = ($proxySseBoundary -ne 404 -and $proxyPreferencesBoundary -ne 405)
             mutationsPersisted = ($javaMarkStatus -eq 'READ' -and $pythonMarkStatus -eq 'READ' -and $proxyMarkStatus -eq 'READ' -and $javaDeleteCount -eq 0 -and $pythonDeleteCount -eq 0 -and $proxyDeleteCount -eq 0)
         }
         listStable = $listStable
@@ -13677,6 +13677,111 @@ function Invoke-HybridNotificationReadSmokeVerification {
         Invoke-NotificationReadTests
         Start-Hybrid
         Invoke-NotificationReadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-NotificationSseBoundaryTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_notification_sse.py', 'tests/test_notifications.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SseFirstChunk {
+    param(
+        [string]$Url,
+        [hashtable]$Headers = @{}
+    )
+
+    Add-Type -AssemblyName System.Net.Http
+    $client = [System.Net.Http.HttpClient]::new()
+    $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $Url)
+    $request.Headers.Accept.ParseAdd('text/event-stream')
+    foreach ($header in $Headers.GetEnumerator()) {
+        [void]$request.Headers.TryAddWithoutValidation($header.Key, [string]$header.Value)
+    }
+    $cts = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
+    try {
+        $response = $client.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead, $cts.Token).GetAwaiter().GetResult()
+        $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $buffer = New-Object byte[] 256
+        $read = $stream.ReadAsync($buffer, 0, $buffer.Length).GetAwaiter().GetResult()
+        return [ordered]@{
+            status = [int]$response.StatusCode
+            contentType = [string]$response.Content.Headers.ContentType
+            chunk = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $read)
+        }
+    } finally {
+        $request.Dispose()
+        $client.Dispose()
+        $cts.Dispose()
+    }
+}
+
+function Invoke-NotificationSseBoundaryContractComparison {
+    param([string]$ResultFileName = 'notification-sse-boundary-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $userId = "codex-notification-sse-$suffix"
+    Invoke-PostgresSql "INSERT INTO user_account (id, display_name, email, avatar_url, status) VALUES ('$userId', 'Codex SSE User', '$userId@example.test', '', 'ACTIVE') ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP;"
+
+    $javaAnonymous = Invoke-HttpStatusNoRedirect "$JavaUrl/api/v1/notifications/sse"
+    $pythonAnonymous = Invoke-HttpStatusNoRedirect "$PythonUrl/api/v1/notifications/sse"
+    $proxyAnonymous = Invoke-HttpStatusNoRedirect "$WebUrl/api/web/notifications/sse"
+    $pythonStream = Invoke-SseFirstChunk "$PythonUrl/api/v1/notifications/sse" @{ 'X-Mock-User-Id' = $userId }
+    $proxyStream = Invoke-SseFirstChunk "$WebUrl/api/web/notifications/sse" @{ 'X-Mock-User-Id' = $userId }
+
+    $expectedChunk = "event: connected`ndata: ok`n`n"
+    $result = [ordered]@{
+        suffix = $suffix
+        checks = [ordered]@{
+            anonymousRejected = ($javaAnonymous -eq 401 -and $pythonAnonymous -eq 401 -and $proxyAnonymous -eq 401)
+            pythonStreamConnected = ($pythonStream.status -eq 200 -and $pythonStream.contentType.StartsWith('text/event-stream') -and $pythonStream.chunk -eq $expectedChunk)
+            proxyStreamConnected = ($proxyStream.status -eq 200 -and $proxyStream.contentType.StartsWith('text/event-stream') -and $proxyStream.chunk -eq $expectedChunk)
+        }
+        statuses = [ordered]@{
+            anonymous = @($javaAnonymous, $pythonAnonymous, $proxyAnonymous)
+            pythonStream = $pythonStream
+            proxyStream = $proxyStream
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Notification SSE boundary check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNotificationSseBoundarySmokeVerification {
+    try {
+        Invoke-NotificationSseBoundaryTests
+        Start-Hybrid
+        Invoke-NotificationSseBoundaryContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -13866,7 +13971,7 @@ DO UPDATE SET enabled = EXCLUDED.enabled;
             duplicateRejected = ($javaDuplicate -eq 400 -and $pythonDuplicate -eq 400 -and $proxyDuplicate -eq 400)
             invalidChannelRejected = ($javaInvalidChannel -eq 400 -and $pythonInvalidChannel -eq 400 -and $proxyInvalidChannel -eq 400)
             anonymousRejected = ($anonymousProxy -eq 401)
-            sseStillJavaOwned = ($proxySseBoundary -eq 200)
+            sseBoundaryReachable = ($proxySseBoundary -eq 200)
             dbUpsertsPersisted = (
                 (Get-NotificationPreferenceEnabled -UserId $javaUser -Category 'PUBLISH') -eq 'f' -and
                 (Get-NotificationPreferenceEnabled -UserId $pythonUser -Category 'PUBLISH') -eq 'f' -and
@@ -18813,6 +18918,7 @@ switch ($Action) {
     'verify-skill-rating-smoke' { Invoke-HybridSkillRatingSmokeVerification }
     'verify-my-social-lists-smoke' { Invoke-HybridMySocialListsSmokeVerification }
     'verify-notification-read-smoke' { Invoke-HybridNotificationReadSmokeVerification }
+    'verify-notification-sse-boundary-smoke' { Invoke-HybridNotificationSseBoundarySmokeVerification }
     'verify-notification-preferences-smoke' { Invoke-HybridNotificationPreferencesSmokeVerification }
     'verify-my-skills-smoke' { Invoke-HybridMySkillsSmokeVerification }
     'verify-namespace-read-smoke' { Invoke-HybridNamespaceReadSmokeVerification }

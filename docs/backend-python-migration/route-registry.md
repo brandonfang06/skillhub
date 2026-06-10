@@ -200,8 +200,8 @@ deferred routes are still visible.
 | PUT | `/api/web/notifications/read-all` | python | Frontend alias for mark-all-read. |
 | DELETE | `/api/v1/notifications/{id}` | python | Delete-read notification moved to Python. Deletes only current-user `READ` notifications; otherwise returns `error.notification.readNotFound`. |
 | DELETE | `/api/web/notifications/{id}` | python | Frontend alias for delete-read notification. |
-| GET | `/api/v1/notifications/sse` | java | SSE stream remains Java-owned. |
-| GET | `/api/web/notifications/sse` | java | Frontend SSE stream remains Java-owned. |
+| GET | `/api/v1/notifications/sse` | python | Notification SSE connection boundary moved to Python. Requires auth, returns `text/event-stream`, emits Java-compatible `connected` event and heartbeat comments. Active notification fanout remains deferred. |
+| GET | `/api/web/notifications/sse` | python | Frontend SSE connection boundary moved to Python with the same connection behavior as `/api/v1/notifications/sse`. |
 | GET | `/api/v1/notification-preferences` | python | Current user's notification preferences moved to Python. Returns all Java notification categories in enum order with `IN_APP` channel and default `enabled = true` for missing rows. |
 | GET | `/api/web/notification-preferences` | python | Frontend alias for notification preference read. |
 | PUT | `/api/v1/notification-preferences` | python | Notification preference update moved to Python. Validates Java-compatible category/channel/duplicate rules, upserts `notification_preference`, and returns the full preference list. |

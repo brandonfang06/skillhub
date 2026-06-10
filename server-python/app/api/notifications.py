@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
@@ -24,6 +26,8 @@ from app.notifications.preferences import (
 
 
 router = APIRouter()
+
+SSE_HEARTBEAT_INTERVAL_SECONDS = 30
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -49,6 +53,51 @@ def _parse_non_negative_int(value: int, default: int) -> int:
 
 def _parse_positive_int(value: int, default: int) -> int:
     return value if value > 0 else default
+
+
+def _escape_sse_lines(value: str) -> str:
+    return str(value).replace("\r\n", "\n").replace("\r", "\n")
+
+
+def format_sse_event(event: str, data: str) -> str:
+    event_name = _escape_sse_lines(event).split("\n", 1)[0]
+    payload = "".join(f"data: {line}\n" for line in _escape_sse_lines(data).split("\n"))
+    return f"event: {event_name}\n{payload}\n"
+
+
+def format_sse_comment(comment: str) -> str:
+    line = _escape_sse_lines(comment).split("\n", 1)[0]
+    return f": {line}\n\n"
+
+
+async def default_notification_sse_stream(user_id: str, request: Request):
+    yield format_sse_event("connected", "ok")
+    while not await request.is_disconnected():
+        await asyncio.sleep(SSE_HEARTBEAT_INTERVAL_SECONDS)
+        yield format_sse_comment("ping")
+
+
+@router.get("/api/v1/notifications/sse")
+@router.get("/api/web/notifications/sse")
+async def notification_sse_route(
+    request: Request,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> StreamingResponse:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    stream_factory = getattr(request.app.state, "notification_sse_stream_factory", None)
+    stream = (
+        stream_factory(user_id)
+        if stream_factory is not None
+        else default_notification_sse_stream(user_id, request)
+    )
+    return StreamingResponse(
+        stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/api/v1/notifications")
