@@ -384,6 +384,11 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/auth\/local\/password-reset\/(?:request|confirm)(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/admin\/audit-logs(?:\?.*)?$/,
     target: 'http://localhost:8081',
@@ -733,6 +738,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '^/api/v1/tokens(?:/.*)?(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/v1/auth/local/password-reset/(?:request|confirm)(?:\\?.*)?$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },

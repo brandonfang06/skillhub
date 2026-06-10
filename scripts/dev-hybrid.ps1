@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -17571,6 +17571,312 @@ function Invoke-HybridApiTokenManagementSmokeVerification {
     }
 }
 
+function Invoke-LocalPasswordResetTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_local_password_reset.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-LocalPasswordResetJson {
+    param(
+        [string]$Url,
+        [object]$Body
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Post -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 20
+}
+
+function Invoke-LocalPasswordResetStatus {
+    param(
+        [string]$Url,
+        [object]$Body
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Post -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableLocalPasswordResetJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = $Response.data
+    }
+
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Ensure-LocalPasswordResetFixture {
+    param([string]$Suffix)
+
+    $codeHash = '$2b$10$n2qVs4uI7etAEeFxzi5YZ.jd0eR284bcjQjBmH.gNc2sY481pWX5O'
+    $sql = @"
+DO `$`$
+BEGIN
+    DELETE FROM password_reset_request WHERE user_id LIKE 'codex-local-reset-%';
+    DELETE FROM local_credential WHERE user_id LIKE 'codex-local-reset-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-local-reset-%';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at)
+    VALUES
+        ('codex-local-reset-request-java-$Suffix', 'Codex Local Reset Request Java', 'local-reset-request-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-request-python-$Suffix', 'Codex Local Reset Request Python', 'local-reset-request-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-request-proxy-$Suffix', 'Codex Local Reset Request Proxy', 'local-reset-request-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-confirm-java-$Suffix', 'Codex Local Reset Confirm Java', 'local-reset-confirm-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-confirm-python-$Suffix', 'Codex Local Reset Confirm Python', 'local-reset-confirm-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-confirm-proxy-$Suffix', 'Codex Local Reset Confirm Proxy', 'local-reset-confirm-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-weak-java-$Suffix', 'Codex Local Reset Weak Java', 'local-reset-weak-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-weak-python-$Suffix', 'Codex Local Reset Weak Python', 'local-reset-weak-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-reset-weak-proxy-$Suffix', 'Codex Local Reset Weak Proxy', 'local-reset-weak-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO local_credential (user_id, username, password_hash, failed_attempts, locked_until)
+    VALUES
+        ('codex-local-reset-request-java-$Suffix', 'local-reset-request-java-$Suffix', 'old-request-hash', 0, NULL),
+        ('codex-local-reset-request-python-$Suffix', 'local-reset-request-python-$Suffix', 'old-request-hash', 0, NULL),
+        ('codex-local-reset-request-proxy-$Suffix', 'local-reset-request-proxy-$Suffix', 'old-request-hash', 0, NULL),
+        ('codex-local-reset-confirm-java-$Suffix', 'local-reset-confirm-java-$Suffix', 'old-confirm-hash', 3, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+        ('codex-local-reset-confirm-python-$Suffix', 'local-reset-confirm-python-$Suffix', 'old-confirm-hash', 3, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+        ('codex-local-reset-confirm-proxy-$Suffix', 'local-reset-confirm-proxy-$Suffix', 'old-confirm-hash', 3, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+        ('codex-local-reset-weak-java-$Suffix', 'local-reset-weak-java-$Suffix', 'old-weak-hash', 0, NULL),
+        ('codex-local-reset-weak-python-$Suffix', 'local-reset-weak-python-$Suffix', 'old-weak-hash', 0, NULL),
+        ('codex-local-reset-weak-proxy-$Suffix', 'local-reset-weak-proxy-$Suffix', 'old-weak-hash', 0, NULL)
+    ON CONFLICT (user_id) DO UPDATE
+        SET username = EXCLUDED.username,
+            password_hash = EXCLUDED.password_hash,
+            failed_attempts = EXCLUDED.failed_attempts,
+            locked_until = EXCLUDED.locked_until,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO password_reset_request (user_id, email, code_hash, expires_at, requested_by_admin, requested_by_user_id)
+    VALUES
+        ('codex-local-reset-request-java-$Suffix', 'local-reset-request-java-$Suffix@example.test', 'old-request-java-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-request-python-$Suffix', 'local-reset-request-python-$Suffix@example.test', 'old-request-python-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-request-proxy-$Suffix', 'local-reset-request-proxy-$Suffix@example.test', 'old-request-proxy-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-java-$Suffix', 'local-reset-confirm-java-$Suffix@example.test', 'old-extra-confirm-java-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-java-$Suffix', 'local-reset-confirm-java-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-python-$Suffix', 'local-reset-confirm-python-$Suffix@example.test', 'old-extra-confirm-python-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-python-$Suffix', 'local-reset-confirm-python-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-proxy-$Suffix', 'local-reset-confirm-proxy-$Suffix@example.test', 'old-extra-confirm-proxy-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-confirm-proxy-$Suffix', 'local-reset-confirm-proxy-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-weak-java-$Suffix', 'local-reset-weak-java-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-weak-python-$Suffix', 'local-reset-weak-python-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL),
+        ('codex-local-reset-weak-proxy-$Suffix', 'local-reset-weak-proxy-$Suffix@example.test', '$codeHash', CURRENT_TIMESTAMP + INTERVAL '1 hour', FALSE, NULL);
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-LocalPasswordResetRequestState {
+    param([string]$UserId)
+
+    $unconsumed = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM password_reset_request WHERE user_id = '$UserId' AND consumed_at IS NULL AND requested_by_admin = FALSE AND requested_by_user_id IS NULL;"
+    $consumedOld = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM password_reset_request WHERE user_id = '$UserId' AND consumed_at IS NOT NULL AND code_hash LIKE 'old-request-%';"
+    $latestHash = Invoke-PostgresScalar -Sql "SELECT code_hash FROM password_reset_request WHERE user_id = '$UserId' ORDER BY id DESC LIMIT 1;"
+    $latestExpiryValid = Invoke-PostgresScalar -Sql "SELECT CASE WHEN expires_at > CURRENT_TIMESTAMP THEN 1 ELSE 0 END FROM password_reset_request WHERE user_id = '$UserId' ORDER BY id DESC LIMIT 1;"
+
+    return [ordered]@{
+        unconsumedRequests = [int]$unconsumed
+        consumedOldRequests = [int]$consumedOld
+        latestHashIsBcrypt = ($latestHash.StartsWith('$2'))
+        latestHashIsNotPlainCode = ($latestHash -ne '123456')
+        latestExpiryIsFuture = ($latestExpiryValid -eq '1')
+    }
+}
+
+function Get-LocalPasswordResetConfirmState {
+    param([string]$UserId)
+
+    $passwordChanged = Invoke-PostgresScalar -Sql "SELECT CASE WHEN password_hash NOT IN ('old-confirm-hash', 'old-weak-hash') THEN 1 ELSE 0 END FROM local_credential WHERE user_id = '$UserId';"
+    $failedAttemptsZero = Invoke-PostgresScalar -Sql "SELECT CASE WHEN failed_attempts = 0 THEN 1 ELSE 0 END FROM local_credential WHERE user_id = '$UserId';"
+    $lockedUntilNull = Invoke-PostgresScalar -Sql "SELECT CASE WHEN locked_until IS NULL THEN 1 ELSE 0 END FROM local_credential WHERE user_id = '$UserId';"
+    $pendingRequests = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM password_reset_request WHERE user_id = '$UserId' AND consumed_at IS NULL;"
+
+    return [ordered]@{
+        passwordChanged = ($passwordChanged -eq '1')
+        failedAttemptsZero = ($failedAttemptsZero -eq '1')
+        lockedUntilNull = ($lockedUntilNull -eq '1')
+        pendingRequests = [int]$pendingRequests
+    }
+}
+
+function Invoke-LocalPasswordResetContractComparison {
+    param([string]$ResultFileName = 'local-password-reset-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-LocalPasswordResetFixture -Suffix $suffix
+
+    $requestBody = @{ email = '' }
+    $confirmBody = @{ email = ''; code = '123456'; newPassword = 'Abcd123!' }
+    $weakBody = @{ email = ''; code = '123456'; newPassword = 'aaaaaaaa' }
+
+    $requestJavaUser = "codex-local-reset-request-java-$suffix"
+    $requestPythonUser = "codex-local-reset-request-python-$suffix"
+    $requestProxyUser = "codex-local-reset-request-proxy-$suffix"
+    $confirmJavaUser = "codex-local-reset-confirm-java-$suffix"
+    $confirmPythonUser = "codex-local-reset-confirm-python-$suffix"
+    $confirmProxyUser = "codex-local-reset-confirm-proxy-$suffix"
+    $weakJavaUser = "codex-local-reset-weak-java-$suffix"
+    $weakPythonUser = "codex-local-reset-weak-python-$suffix"
+    $weakProxyUser = "codex-local-reset-weak-proxy-$suffix"
+
+    $requestBody.email = "local-reset-request-java-$suffix@example.test"
+    $javaRequest = Invoke-LocalPasswordResetJson "$JavaUrl/api/v1/auth/local/password-reset/request" $requestBody
+    $requestBody.email = "local-reset-request-python-$suffix@example.test"
+    $pythonRequest = Invoke-LocalPasswordResetJson "$PythonUrl/api/v1/auth/local/password-reset/request" $requestBody
+    $requestBody.email = "local-reset-request-proxy-$suffix@example.test"
+    $proxyRequest = Invoke-LocalPasswordResetJson "$WebUrl/api/v1/auth/local/password-reset/request" $requestBody
+
+    $javaUnknown = Invoke-LocalPasswordResetStatus "$JavaUrl/api/v1/auth/local/password-reset/request" @{ email = "missing-local-reset-$suffix@example.test" }
+    $pythonUnknown = Invoke-LocalPasswordResetStatus "$PythonUrl/api/v1/auth/local/password-reset/request" @{ email = "missing-local-reset-$suffix@example.test" }
+    $proxyUnknown = Invoke-LocalPasswordResetStatus "$WebUrl/api/v1/auth/local/password-reset/request" @{ email = "missing-local-reset-$suffix@example.test" }
+
+    $javaInvalidEmail = Invoke-LocalPasswordResetStatus "$JavaUrl/api/v1/auth/local/password-reset/request" @{ email = 'not-an-email' }
+    $pythonInvalidEmail = Invoke-LocalPasswordResetStatus "$PythonUrl/api/v1/auth/local/password-reset/request" @{ email = 'not-an-email' }
+    $proxyInvalidEmail = Invoke-LocalPasswordResetStatus "$WebUrl/api/v1/auth/local/password-reset/request" @{ email = 'not-an-email' }
+
+    $confirmBody.email = "local-reset-confirm-java-$suffix@example.test"
+    $javaConfirm = Invoke-LocalPasswordResetJson "$JavaUrl/api/v1/auth/local/password-reset/confirm" $confirmBody
+    $confirmBody.email = "local-reset-confirm-python-$suffix@example.test"
+    $pythonConfirm = Invoke-LocalPasswordResetJson "$PythonUrl/api/v1/auth/local/password-reset/confirm" $confirmBody
+    $confirmBody.email = "local-reset-confirm-proxy-$suffix@example.test"
+    $proxyConfirm = Invoke-LocalPasswordResetJson "$WebUrl/api/v1/auth/local/password-reset/confirm" $confirmBody
+
+    $javaInvalidCode = Invoke-LocalPasswordResetStatus "$JavaUrl/api/v1/auth/local/password-reset/confirm" @{ email = "local-reset-confirm-java-$suffix@example.test"; code = '999999'; newPassword = 'Abcd123!' }
+    $pythonInvalidCode = Invoke-LocalPasswordResetStatus "$PythonUrl/api/v1/auth/local/password-reset/confirm" @{ email = "local-reset-confirm-python-$suffix@example.test"; code = '999999'; newPassword = 'Abcd123!' }
+    $proxyInvalidCode = Invoke-LocalPasswordResetStatus "$WebUrl/api/v1/auth/local/password-reset/confirm" @{ email = "local-reset-confirm-proxy-$suffix@example.test"; code = '999999'; newPassword = 'Abcd123!' }
+
+    $weakBody.email = "local-reset-weak-java-$suffix@example.test"
+    $javaWeak = Invoke-LocalPasswordResetStatus "$JavaUrl/api/v1/auth/local/password-reset/confirm" $weakBody
+    $weakBody.email = "local-reset-weak-python-$suffix@example.test"
+    $pythonWeak = Invoke-LocalPasswordResetStatus "$PythonUrl/api/v1/auth/local/password-reset/confirm" $weakBody
+    $weakBody.email = "local-reset-weak-proxy-$suffix@example.test"
+    $proxyWeak = Invoke-LocalPasswordResetStatus "$WebUrl/api/v1/auth/local/password-reset/confirm" $weakBody
+
+    $javaRequestState = Get-LocalPasswordResetRequestState -UserId $requestJavaUser
+    $pythonRequestState = Get-LocalPasswordResetRequestState -UserId $requestPythonUser
+    $proxyRequestState = Get-LocalPasswordResetRequestState -UserId $requestProxyUser
+    $javaConfirmState = Get-LocalPasswordResetConfirmState -UserId $confirmJavaUser
+    $pythonConfirmState = Get-LocalPasswordResetConfirmState -UserId $confirmPythonUser
+    $proxyConfirmState = Get-LocalPasswordResetConfirmState -UserId $confirmProxyUser
+
+    $stable = [ordered]@{
+        request = [ordered]@{
+            java = ConvertTo-StableLocalPasswordResetJson -Response $javaRequest
+            python = ConvertTo-StableLocalPasswordResetJson -Response $pythonRequest
+            proxy = ConvertTo-StableLocalPasswordResetJson -Response $proxyRequest
+        }
+        confirm = [ordered]@{
+            java = ConvertTo-StableLocalPasswordResetJson -Response $javaConfirm
+            python = ConvertTo-StableLocalPasswordResetJson -Response $pythonConfirm
+            proxy = ConvertTo-StableLocalPasswordResetJson -Response $proxyConfirm
+        }
+    }
+
+    $requestStateValid = {
+        param([object]$State)
+        return ($State.unconsumedRequests -eq 1 -and $State.consumedOldRequests -eq 1 -and $State.latestHashIsBcrypt -and $State.latestHashIsNotPlainCode -and $State.latestExpiryIsFuture)
+    }
+    $confirmStateValid = {
+        param([object]$State)
+        return ($State.passwordChanged -and $State.failedAttemptsZero -and $State.lockedUntilNull -and $State.pendingRequests -eq 0)
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/auth/local/password-reset/request',
+            '/api/v1/auth/local/password-reset/confirm'
+        )
+        checks = [ordered]@{
+            requestEnvelopeMatches = ($stable.request.java -eq $stable.request.python -and $stable.request.python -eq $stable.request.proxy)
+            confirmEnvelopeMatches = ($stable.confirm.java -eq $stable.confirm.python -and $stable.confirm.python -eq $stable.confirm.proxy)
+            unknownRequestParity = ($javaUnknown -eq 200 -and $pythonUnknown -eq 200 -and $proxyUnknown -eq 200)
+            invalidEmailParity = ($javaInvalidEmail -eq 400 -and $pythonInvalidEmail -eq 400 -and $proxyInvalidEmail -eq 400)
+            invalidCodeParity = ($javaInvalidCode -eq 400 -and $pythonInvalidCode -eq 400 -and $proxyInvalidCode -eq 400)
+            weakPasswordParity = ($javaWeak -eq 400 -and $pythonWeak -eq 400 -and $proxyWeak -eq 400)
+            javaRequestDbContract = (& $requestStateValid $javaRequestState)
+            pythonRequestDbContract = (& $requestStateValid $pythonRequestState)
+            proxyRequestDbContract = (& $requestStateValid $proxyRequestState)
+            javaConfirmDbContract = (& $confirmStateValid $javaConfirmState)
+            pythonConfirmDbContract = (& $confirmStateValid $pythonConfirmState)
+            proxyConfirmDbContract = (& $confirmStateValid $proxyConfirmState)
+        }
+        stable = $stable
+        db = [ordered]@{
+            request = [ordered]@{
+                java = $javaRequestState
+                python = $pythonRequestState
+                proxy = $proxyRequestState
+            }
+            confirm = [ordered]@{
+                java = $javaConfirmState
+                python = $pythonConfirmState
+                proxy = $proxyConfirmState
+            }
+        }
+        statuses = [ordered]@{
+            unknownRequest = @($javaUnknown, $pythonUnknown, $proxyUnknown)
+            invalidEmail = @($javaInvalidEmail, $pythonInvalidEmail, $proxyInvalidEmail)
+            invalidCode = @($javaInvalidCode, $pythonInvalidCode, $proxyInvalidCode)
+            weakPassword = @($javaWeak, $pythonWeak, $proxyWeak)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Local password reset contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridLocalPasswordResetSmokeVerification {
+    try {
+        Invoke-LocalPasswordResetTests
+        Start-Hybrid
+        Invoke-LocalPasswordResetContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -17651,6 +17957,7 @@ switch ($Action) {
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-admin-password-reset-smoke' { Invoke-HybridAdminPasswordResetSmokeVerification }
     'verify-api-token-management-smoke' { Invoke-HybridApiTokenManagementSmokeVerification }
+    'verify-local-password-reset-smoke' { Invoke-HybridLocalPasswordResetSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-governance-notification-mark-read-smoke' { Invoke-HybridGovernanceNotificationMarkReadSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }

@@ -109,6 +109,18 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes local password reset to Python while keeping local login on Java', () => {
+    expect(matchingProxyTarget('/api/v1/auth/local/password-reset/request')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingProxyTarget('/api/v1/auth/local/password-reset/confirm')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingProxyTarget('/api/v1/auth/local/login')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/auth/local/register')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/auth/local/change-password')).toBe('http://localhost:8080')
+  })
+
   it('routes review lifecycle POST actions to Python without taking over other review routes', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe(
       'http://localhost:8081',

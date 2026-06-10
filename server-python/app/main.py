@@ -12,6 +12,7 @@ from app.api.governance import router as governance_router
 from app.api.health import router as health_router
 from app.api.labels import router as labels_router
 from app.api.lifecycle import router as lifecycle_router
+from app.api.local_auth import router as local_auth_router
 from app.api.notifications import router as notifications_router
 from app.api.namespaces import router as namespaces_router
 from app.api.promotions import router as promotions_router
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(labels_router)
     app.include_router(lifecycle_router)
+    app.include_router(local_auth_router)
     app.include_router(namespaces_router)
     app.include_router(notifications_router)
     app.include_router(promotions_router)
