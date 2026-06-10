@@ -143,6 +143,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-admin-label-definition-smoke" in script
     assert "verify-admin-user-management-smoke" in script
     assert "verify-admin-password-reset-smoke" in script
+    assert "verify-api-token-management-smoke" in script
+    assert "api-token-management-contract-result.json" in script
     assert "verify-governance-workbench-smoke" in script
     assert "verify-governance-notification-mark-read-smoke" in script
     assert "verify-admin-audit-log-smoke" in script

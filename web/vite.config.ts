@@ -732,6 +732,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/tokens(?:/.*)?(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api/v1/labels': {
         target: 'http://localhost:8081',
         changeOrigin: true,

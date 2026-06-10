@@ -218,6 +218,7 @@ Still plan carefully when a group requires:
 | 84 | `POST /api/v1/governance/notifications/{id}/read`, `POST /api/web/governance/notifications/{id}/read` | python | Legacy governance notification mark-read moved to Python. Preserves Java `user_notification` ownership checks, not-found/forbidden errors, `READ`/`read_at` mutation, and `更新成功` envelope. |
 
 | 85 | `POST /api/v1/admin/users/{userId}/password-reset` | python | Admin-triggered local password reset moved to Python. Preserves admin role guard, Java eligibility errors, BCrypt-compatible code hashes, pending-request consumption, and admin metadata. |
+| 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token authentication filters remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1300,6 +1301,11 @@ Group E has started with review lifecycle write ownership:
 - Completed: admin password reset trigger API:
   `POST /api/v1/admin/users/{userId}/password-reset`. The route now writes Java-compatible
   BCrypt reset request rows and keeps anonymous local reset request/confirm routes Java-owned.
+- Completed: API token management APIs:
+  `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, and
+  `PUT /api/v1/tokens/{id}/expiration`. These move self-service token CRUD/storage behavior
+  to Python while keeping bearer-token authentication filters, scope enforcement, OAuth, and
+  device flow Java-owned.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,
@@ -1337,12 +1343,12 @@ Group E has started with review lifecycle write ownership:
   These share the existing Python v1 download implementation. Live gate now compares Java/Python/proxy
   web alias stream contracts and verifies published download counter deltas across v1 and web hits.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
+  portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces, anonymous local password reset request/confirm, and notification SSE.
 
 Recommended next choice:
 
-- Continue with final proxy cleanup or auth/token surfaces based on route
+- Continue with final proxy cleanup or remaining auth surfaces based on route
   ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.

@@ -101,6 +101,14 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes API token management to Python while keeping OAuth on Java', () => {
+    expect(matchingProxyTarget('/api/v1/tokens')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/tokens?page=1&size=10')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/tokens/7')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/tokens/7/expiration')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
+  })
+
   it('routes review lifecycle POST actions to Python without taking over other review routes', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe(
       'http://localhost:8081',

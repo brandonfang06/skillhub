@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -17259,6 +17259,318 @@ function Invoke-HybridAdminPasswordResetSmokeVerification {
     }
 }
 
+function Invoke-ApiTokenManagementTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_api_tokens.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-ApiTokenJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ 'X-Mock-User-Id' = $UserId }
+        ContentType = 'application/json'
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+    return Invoke-RestMethod @params
+}
+
+function Invoke-ApiTokenStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId = '',
+        [object]$Body = $null
+    )
+
+    $headers = @{}
+    if ($UserId -ne '') {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = $headers
+        ContentType = 'application/json'
+        UseBasicParsing = $true
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+
+    try {
+        $response = Invoke-WebRequest @params
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableApiTokenCreateJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            tokenStartsWithSk = "$($Response.data.token)".StartsWith('sk_')
+            idPresent = ($null -ne $Response.data.id)
+            name = $Response.data.name
+            tokenPrefixPresent = ("$($Response.data.tokenPrefix)" -ne '')
+            createdAtPresent = ("$($Response.data.createdAt)" -ne '')
+            expiresAt = $Response.data.expiresAt
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function ConvertTo-StableApiTokenSummaryJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            idPresent = ($null -ne $Response.data.id)
+            name = $Response.data.name
+            tokenPrefixPresent = ("$($Response.data.tokenPrefix)" -ne '')
+            createdAtPresent = ("$($Response.data.createdAt)" -ne '')
+            expiresAt = $Response.data.expiresAt
+            lastUsedAt = $Response.data.lastUsedAt
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function ConvertTo-StableApiTokenListJson {
+    param([object]$Response)
+
+    $items = @()
+    if ($Response.data -and $Response.data.items) {
+        $items = @($Response.data.items | ForEach-Object {
+            [ordered]@{
+                idPresent = ($null -ne $_.id)
+                name = $_.name
+                tokenPrefixPresent = ("$($_.tokenPrefix)" -ne '')
+                createdAtPresent = ("$($_.createdAt)" -ne '')
+                expiresAt = $_.expiresAt
+                lastUsedAt = $_.lastUsedAt
+            }
+        })
+    }
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            items = $items
+            total = [int]$Response.data.total
+            page = [int]$Response.data.page
+            size = [int]$Response.data.size
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-ApiTokenManagementFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DELETE FROM api_token WHERE user_id LIKE 'codex-token-%';
+DELETE FROM user_account WHERE id LIKE 'codex-token-%';
+
+INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+VALUES
+    ('codex-token-java-$Suffix', 'Codex Token Java', 'token-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('codex-token-python-$Suffix', 'Codex Token Python', 'token-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('codex-token-proxy-$Suffix', 'Codex Token Proxy', 'token-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    email = EXCLUDED.email,
+    avatar_url = EXCLUDED.avatar_url,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+VALUES
+    ('USER', 'codex-token-java-$Suffix', 'codex-token-java-$Suffix', 'Rotate $Suffix', 'sk_oldja', repeat('a', 64), jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 day'),
+    ('USER', 'codex-token-python-$Suffix', 'codex-token-python-$Suffix', 'Rotate $Suffix', 'sk_oldpy', repeat('b', 64), jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 day'),
+    ('USER', 'codex-token-proxy-$Suffix', 'codex-token-proxy-$Suffix', 'Rotate $Suffix', 'sk_oldpr', repeat('c', 64), jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 day');
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-ApiTokenDbState {
+    param(
+        [string]$UserId,
+        [string]$RawToken,
+        [string]$Name
+    )
+
+    $activeCount = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM api_token WHERE user_id = '$UserId' AND revoked_at IS NULL;"
+    $revokedRotateCount = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM api_token WHERE user_id = '$UserId' AND name = '$Name' AND revoked_at IS NOT NULL;"
+    $latestHashLength = Invoke-PostgresScalar -Sql "SELECT LENGTH(token_hash)::text FROM api_token WHERE user_id = '$UserId' AND name = '$Name' ORDER BY id DESC LIMIT 1;"
+    $rawStoredCount = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM api_token WHERE user_id = '$UserId' AND token_hash = '$RawToken';"
+    $hashHex = Invoke-PostgresScalar -Sql "SELECT CASE WHEN token_hash ~ '^[0-9a-f]{64}$' THEN 1 ELSE 0 END FROM api_token WHERE user_id = '$UserId' AND name = '$Name' ORDER BY id DESC LIMIT 1;"
+
+    return [ordered]@{
+        activeCount = [int]$activeCount
+        revokedRotateCount = [int]$revokedRotateCount
+        latestHashLength = [int]$latestHashLength
+        rawStoredCount = [int]$rawStoredCount
+        latestHashIsHexSha256 = ($hashHex -eq '1')
+    }
+}
+
+function Invoke-ApiTokenManagementContractComparison {
+    param([string]$ResultFileName = 'api-token-management-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-ApiTokenManagementFixture -Suffix $suffix
+
+    $name = "Rotate $suffix"
+    $createBody = @{ name = $name; expiresAt = '2036-06-11T12:00:00' }
+    $updateBody = @{ expiresAt = '2036-07-01T09:30' }
+
+    $javaUser = "codex-token-java-$suffix"
+    $pythonUser = "codex-token-python-$suffix"
+    $proxyUser = "codex-token-proxy-$suffix"
+
+    $javaCreate = Invoke-ApiTokenJson 'Post' "$JavaUrl/api/v1/tokens" $javaUser $createBody
+    $pythonCreate = Invoke-ApiTokenJson 'Post' "$PythonUrl/api/v1/tokens" $pythonUser $createBody
+    $proxyCreate = Invoke-ApiTokenJson 'Post' "$WebUrl/api/v1/tokens" $proxyUser $createBody
+
+    $javaList = Invoke-ApiTokenJson 'Get' "$JavaUrl/api/v1/tokens?page=0&size=10" $javaUser
+    $pythonList = Invoke-ApiTokenJson 'Get' "$PythonUrl/api/v1/tokens?page=0&size=10" $pythonUser
+    $proxyList = Invoke-ApiTokenJson 'Get' "$WebUrl/api/v1/tokens?page=0&size=10" $proxyUser
+
+    $javaUpdate = Invoke-ApiTokenJson 'Put' "$JavaUrl/api/v1/tokens/$($javaCreate.data.id)/expiration" $javaUser $updateBody
+    $pythonUpdate = Invoke-ApiTokenJson 'Put' "$PythonUrl/api/v1/tokens/$($pythonCreate.data.id)/expiration" $pythonUser $updateBody
+    $proxyUpdate = Invoke-ApiTokenJson 'Put' "$WebUrl/api/v1/tokens/$($proxyCreate.data.id)/expiration" $proxyUser $updateBody
+
+    $javaInvalidExpiration = Invoke-ApiTokenStatus 'Put' "$JavaUrl/api/v1/tokens/$($javaCreate.data.id)/expiration" $javaUser @{ expiresAt = '2000-01-01T00:00:00Z' }
+    $pythonInvalidExpiration = Invoke-ApiTokenStatus 'Put' "$PythonUrl/api/v1/tokens/$($pythonCreate.data.id)/expiration" $pythonUser @{ expiresAt = '2000-01-01T00:00:00Z' }
+    $proxyInvalidExpiration = Invoke-ApiTokenStatus 'Put' "$WebUrl/api/v1/tokens/$($proxyCreate.data.id)/expiration" $proxyUser @{ expiresAt = '2000-01-01T00:00:00Z' }
+
+    $javaMissingUpdate = Invoke-ApiTokenStatus 'Put' "$JavaUrl/api/v1/tokens/999999999/expiration" $javaUser $updateBody
+    $pythonMissingUpdate = Invoke-ApiTokenStatus 'Put' "$PythonUrl/api/v1/tokens/999999999/expiration" $pythonUser $updateBody
+    $proxyMissingUpdate = Invoke-ApiTokenStatus 'Put' "$WebUrl/api/v1/tokens/999999999/expiration" $proxyUser $updateBody
+
+    $javaNoAuth = Invoke-ApiTokenStatus 'Get' "$JavaUrl/api/v1/tokens"
+    $pythonNoAuth = Invoke-ApiTokenStatus 'Get' "$PythonUrl/api/v1/tokens"
+    $proxyNoAuth = Invoke-ApiTokenStatus 'Get' "$WebUrl/api/v1/tokens"
+
+    $javaRevoke = Invoke-ApiTokenStatus 'Delete' "$JavaUrl/api/v1/tokens/$($javaCreate.data.id)" $javaUser
+    $pythonRevoke = Invoke-ApiTokenStatus 'Delete' "$PythonUrl/api/v1/tokens/$($pythonCreate.data.id)" $pythonUser
+    $proxyRevoke = Invoke-ApiTokenStatus 'Delete' "$WebUrl/api/v1/tokens/$($proxyCreate.data.id)" $proxyUser
+
+    $javaState = Get-ApiTokenDbState -UserId $javaUser -RawToken $javaCreate.data.token -Name $name
+    $pythonState = Get-ApiTokenDbState -UserId $pythonUser -RawToken $pythonCreate.data.token -Name $name
+    $proxyState = Get-ApiTokenDbState -UserId $proxyUser -RawToken $proxyCreate.data.token -Name $name
+
+    $stable = [ordered]@{
+        create = [ordered]@{
+            java = ConvertTo-StableApiTokenCreateJson -Response $javaCreate
+            python = ConvertTo-StableApiTokenCreateJson -Response $pythonCreate
+            proxy = ConvertTo-StableApiTokenCreateJson -Response $proxyCreate
+        }
+        list = [ordered]@{
+            java = ConvertTo-StableApiTokenListJson -Response $javaList
+            python = ConvertTo-StableApiTokenListJson -Response $pythonList
+            proxy = ConvertTo-StableApiTokenListJson -Response $proxyList
+        }
+        update = [ordered]@{
+            java = ConvertTo-StableApiTokenSummaryJson -Response $javaUpdate
+            python = ConvertTo-StableApiTokenSummaryJson -Response $pythonUpdate
+            proxy = ConvertTo-StableApiTokenSummaryJson -Response $proxyUpdate
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/tokens',
+            '/api/v1/tokens/{id}',
+            '/api/v1/tokens/{id}/expiration'
+        )
+        checks = [ordered]@{
+            createEnvelopeMatches = ($stable.create.java -eq $stable.create.python -and $stable.create.python -eq $stable.create.proxy)
+            listEnvelopeMatches = ($stable.list.java -eq $stable.list.python -and $stable.list.python -eq $stable.list.proxy)
+            updateEnvelopeMatches = ($stable.update.java -eq $stable.update.python -and $stable.update.python -eq $stable.update.proxy)
+            invalidExpirationParity = ($javaInvalidExpiration -eq 400 -and $pythonInvalidExpiration -eq 400 -and $proxyInvalidExpiration -eq 400)
+            missingUpdateParity = ($javaMissingUpdate -eq 404 -and $pythonMissingUpdate -eq 404 -and $proxyMissingUpdate -eq 404)
+            noAuthParity = ($javaNoAuth -eq $pythonNoAuth -and $pythonNoAuth -eq $proxyNoAuth)
+            revokeStatusParity = ($javaRevoke -eq 204 -and $pythonRevoke -eq 204 -and $proxyRevoke -eq 204)
+            javaDbContract = ($javaState.revokedRotateCount -eq 2 -and $javaState.latestHashLength -eq 64 -and $javaState.rawStoredCount -eq 0 -and $javaState.latestHashIsHexSha256)
+            pythonDbContract = ($pythonState.revokedRotateCount -eq 2 -and $pythonState.latestHashLength -eq 64 -and $pythonState.rawStoredCount -eq 0 -and $pythonState.latestHashIsHexSha256)
+            proxyDbContract = ($proxyState.revokedRotateCount -eq 2 -and $proxyState.latestHashLength -eq 64 -and $proxyState.rawStoredCount -eq 0 -and $proxyState.latestHashIsHexSha256)
+        }
+        stable = $stable
+        db = [ordered]@{
+            java = $javaState
+            python = $pythonState
+            proxy = $proxyState
+        }
+        statuses = [ordered]@{
+            invalidExpiration = @($javaInvalidExpiration, $pythonInvalidExpiration, $proxyInvalidExpiration)
+            missingUpdate = @($javaMissingUpdate, $pythonMissingUpdate, $proxyMissingUpdate)
+            noAuth = @($javaNoAuth, $pythonNoAuth, $proxyNoAuth)
+            revoke = @($javaRevoke, $pythonRevoke, $proxyRevoke)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "API token management contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridApiTokenManagementSmokeVerification {
+    try {
+        Invoke-ApiTokenManagementTests
+        Start-Hybrid
+        Invoke-ApiTokenManagementContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -17338,6 +17650,7 @@ switch ($Action) {
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-admin-password-reset-smoke' { Invoke-HybridAdminPasswordResetSmokeVerification }
+    'verify-api-token-management-smoke' { Invoke-HybridApiTokenManagementSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-governance-notification-mark-read-smoke' { Invoke-HybridGovernanceNotificationMarkReadSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }

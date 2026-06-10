@@ -31,6 +31,10 @@ deferred routes are still visible.
 | GET | `/api/v1/download` | python | ClawHub compatibility download query route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/download/{canonicalSlug}` | python | ClawHub compatibility download path route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/auth/me` | python | Current local mock-user bridge for frontend auth context. Login, OAuth, token, and CLI auth remain Java-owned. |
+| POST | `/api/v1/tokens` | python | API token create/rotate moved to Python. Requires current user, trims and validates names, rotates active same-name tokens, stores SHA-256 hashes only, and returns raw `sk_` token once. |
+| GET | `/api/v1/tokens` | python | API token list moved to Python. Requires current user, returns active owner-scoped tokens ordered by `created_at DESC` with Java-compatible page envelope. |
+| DELETE | `/api/v1/tokens/{id}` | python | API token revoke moved to Python. Requires current user, idempotently revokes only owner-scoped tokens, and returns `204` empty body. |
+| PUT | `/api/v1/tokens/{id}/expiration` | python | API token expiration update moved to Python. Requires current user, updates only active owner-scoped tokens, accepts Java-compatible timestamp forms, and returns token summary. |
 | GET | `/api/v1/skills` | python | ClawHub compatibility list. Static exact-path proxy also carries root publish `POST /api/v1/skills`; canonical skill mutations remain Java-owned. |
 | POST | `/api/v1/skills` | python | ClawHub compatibility publish moved to Python. Accepts Java-compatible `payload` JSON plus repeated `files` parts and returns plain `{ ok, skillId, versionId }`. |
 | POST | `/api/v1/publish` | python | Legacy ClawHub compatibility publish moved to Python. Accepts multipart zip `file` plus `namespace` and returns plain `{ ok, skillId, versionId }`. |
