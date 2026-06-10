@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -14198,7 +14198,7 @@ END `$`$;
             shortSearchRejected = ($shortJava -eq 400 -and $shortPython -eq 400 -and $shortProxy -eq 400)
             globalImmutableRejected = ($globalJava -eq 400 -and $globalPython -eq 400 -and $globalProxy -eq 400)
             frozenReadonlyRejected = ($frozenJava -eq 400 -and $frozenPython -eq 400 -and $frozenProxy -eq 400)
-            postMemberStillJavaOwned = ($postJava -eq $postProxy -and $postPython -eq 405)
+            postMemberNowPythonOwned = ($postPython -eq $postProxy -and $postJava -ne $postProxy)
         }
         membersStable = $membersStable
         candidatesStable = $candidatesStable
@@ -14248,6 +14248,332 @@ function Invoke-HybridNamespaceMemberReadSmokeVerification {
         Invoke-NamespaceMemberReadTests
         Start-Hybrid
         Invoke-NamespaceMemberReadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-NamespaceMemberMutationTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_namespace_member_mutation.py', 'tests/test_namespace_member_read.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-NamespaceMemberJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $headers = @{ 'X-Mock-User-Id' = $UserId }
+    if ($null -eq $Body) {
+        return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers
+    }
+    return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20)
+}
+
+function Invoke-NamespaceMemberStatusJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $headers = if ($UserId) { @{ 'X-Mock-User-Id' = $UserId } } else { @{} }
+    try {
+        if ($null -eq $Body) {
+            Invoke-WebRequest -Method $Method -Uri $Url -Headers $headers -UseBasicParsing -TimeoutSec 15 | Out-Null
+        } else {
+            Invoke-WebRequest -Method $Method -Uri $Url -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20) -UseBasicParsing -TimeoutSec 15 | Out-Null
+        }
+        return 200
+    } catch {
+        if ($_.Exception.Response) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableNamespaceMemberMutationJson {
+    param([object]$Response)
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            userId = $Response.data.userId
+            displayName = $Response.data.displayName
+            email = $Response.data.email
+            role = $Response.data.role
+        }
+    } | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableNamespaceMemberMessageJson {
+    param([object]$Response)
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        message = $Response.data.message
+    } | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableNamespaceMemberBatchJson {
+    param([object]$Response)
+
+    $items = @()
+    foreach ($item in @($Response.data.results)) {
+        $items += [ordered]@{
+            userId = $item.userId
+            role = $item.role
+            success = [bool]$item.success
+            error = $item.error
+        }
+    }
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        totalCount = $Response.data.totalCount
+        successCount = $Response.data.successCount
+        failureCount = $Response.data.failureCount
+        results = $items
+    } | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-NamespaceMemberMutationContractComparison {
+    param([string]$ResultFileName = 'namespace-member-mutation-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $ownerId = "codex-ns-mut-owner-$suffix"
+    $adminId = "codex-ns-mut-admin-$suffix"
+    $memberId = "codex-ns-mut-member-$suffix"
+    $targetId = "codex-ns-mut-target-$suffix"
+    $batchNewId = "codex-ns-mut-batch-new-$suffix"
+    $batchExistingId = "codex-ns-mut-batch-existing-$suffix"
+    $teamSlug = "codex-ns-mut-$suffix"
+    $frozenSlug = "codex-ns-mut-frozen-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    team_id BIGINT;
+    frozen_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('$ownerId', 'Codex Mutation Owner', 'mut-owner-$suffix@example.test', '', 'ACTIVE'),
+        ('$adminId', 'Codex Mutation Admin', 'mut-admin-$suffix@example.test', '', 'ACTIVE'),
+        ('$memberId', 'Codex Mutation Member', 'mut-member-$suffix@example.test', '', 'ACTIVE'),
+        ('$targetId', 'Codex Mutation Target', 'mut-target-$suffix@example.test', '', 'ACTIVE'),
+        ('$batchNewId', 'Codex Batch New', 'mut-batch-new-$suffix@example.test', '', 'ACTIVE'),
+        ('$batchExistingId', 'Codex Batch Existing', 'mut-batch-existing-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, description, avatar_url, created_by)
+    VALUES ('$teamSlug', 'Codex Namespace Mutation', 'TEAM', 'ACTIVE', 'member mutation fixture', '', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        description = EXCLUDED.description,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_id;
+
+    INSERT INTO namespace (slug, display_name, type, status, description, avatar_url, created_by)
+    VALUES ('$frozenSlug', 'Codex Namespace Mutation Frozen', 'TEAM', 'FROZEN', 'member mutation readonly fixture', '', '$ownerId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        description = EXCLUDED.description,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO frozen_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_id, '$ownerId', 'OWNER'),
+        (team_id, '$adminId', 'ADMIN'),
+        (team_id, '$memberId', 'MEMBER'),
+        (team_id, '$batchExistingId', 'MEMBER'),
+        (frozen_id, '$ownerId', 'OWNER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+    SET role = EXCLUDED.role;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Reset-MemberFixture {
+        param(
+            [string]$UserId,
+            [string]$Role = $null
+        )
+        $resetSql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+BEGIN
+    SELECT id INTO ns_id FROM namespace WHERE slug = '$teamSlug';
+    DELETE FROM namespace_member WHERE namespace_id = ns_id AND user_id = '$UserId';
+    IF '$Role' <> '' THEN
+        INSERT INTO namespace_member (namespace_id, user_id, role)
+        VALUES (ns_id, '$UserId', '$Role');
+    END IF;
+END `$`$;
+"@
+        Invoke-PostgresSql -Sql $resetSql
+    }
+
+    $addBody = @{ userId = $targetId; role = 'ADMIN' }
+    Reset-MemberFixture -UserId $targetId
+    $javaAdd = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/members" $ownerId $addBody
+    Reset-MemberFixture -UserId $targetId
+    $pythonAdd = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/members" $ownerId $addBody
+    Reset-MemberFixture -UserId $targetId
+    $proxyAdd = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/members" $ownerId $addBody
+
+    $updateBody = @{ role = 'ADMIN' }
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $javaUpdate = Invoke-NamespaceMemberJson 'Put' "$JavaUrl/api/v1/namespaces/$teamSlug/members/$targetId/role" $ownerId $updateBody
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $pythonUpdate = Invoke-NamespaceMemberJson 'Put' "$PythonUrl/api/v1/namespaces/$teamSlug/members/$targetId/role" $ownerId $updateBody
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $proxyUpdate = Invoke-NamespaceMemberJson 'Put' "$WebUrl/api/web/namespaces/$teamSlug/members/$targetId/role" $ownerId $updateBody
+
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $javaRemove = Invoke-NamespaceMemberJson 'Delete' "$JavaUrl/api/v1/namespaces/$teamSlug/members/$targetId" $ownerId
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $pythonRemove = Invoke-NamespaceMemberJson 'Delete' "$PythonUrl/api/v1/namespaces/$teamSlug/members/$targetId" $ownerId
+    Reset-MemberFixture -UserId $targetId -Role 'MEMBER'
+    $proxyRemove = Invoke-NamespaceMemberJson 'Delete' "$WebUrl/api/web/namespaces/$teamSlug/members/$targetId" $ownerId
+
+    $batchBody = @{ members = @(@{ userId = $batchNewId; role = 'MEMBER' }, @{ userId = $batchExistingId; role = 'ADMIN' }, @{ userId = "codex-ns-mut-owner-direct-$suffix"; role = 'OWNER' }) }
+    Reset-MemberFixture -UserId $batchNewId
+    $javaBatch = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/members/batch" $ownerId $batchBody
+    Reset-MemberFixture -UserId $batchNewId
+    $pythonBatch = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/members/batch" $ownerId $batchBody
+    Reset-MemberFixture -UserId $batchNewId
+    $proxyBatch = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/members/batch" $ownerId $batchBody
+
+    $ownerDirectBody = @{ userId = "codex-ns-mut-owner-direct-$suffix"; role = 'OWNER' }
+    $ownerDirectJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/members" $ownerId $ownerDirectBody
+    $ownerDirectPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/members" $ownerId $ownerDirectBody
+    $ownerDirectProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/members" $ownerId $ownerDirectBody
+    $removeOwnerJava = Invoke-NamespaceMemberStatusJson 'Delete' "$JavaUrl/api/v1/namespaces/$teamSlug/members/$ownerId" $ownerId
+    $removeOwnerPython = Invoke-NamespaceMemberStatusJson 'Delete' "$PythonUrl/api/v1/namespaces/$teamSlug/members/$ownerId" $ownerId
+    $removeOwnerProxy = Invoke-NamespaceMemberStatusJson 'Delete' "$WebUrl/api/web/namespaces/$teamSlug/members/$ownerId" $ownerId
+    $memberOperatorJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/members" $memberId @{ userId = "codex-ns-mut-forbidden-$suffix"; role = 'MEMBER' }
+    $memberOperatorPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/members" $memberId @{ userId = "codex-ns-mut-forbidden-$suffix"; role = 'MEMBER' }
+    $memberOperatorProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$teamSlug/members" $memberId @{ userId = "codex-ns-mut-forbidden-$suffix"; role = 'MEMBER' }
+    $frozenJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
+    $frozenPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
+    $frozenProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$frozenSlug/members" $ownerId @{ userId = $targetId; role = 'MEMBER' }
+    $transferJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
+    $transferPython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
+    Reset-MemberFixture -UserId $ownerId -Role 'OWNER'
+    Reset-MemberFixture -UserId $adminId -Role 'ADMIN'
+    $transferProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/v1/namespaces/$teamSlug/transfer-ownership" $ownerId @{ newOwnerId = $adminId }
+
+    $addStable = [ordered]@{
+        java = ConvertTo-StableNamespaceMemberMutationJson -Response $javaAdd
+        python = ConvertTo-StableNamespaceMemberMutationJson -Response $pythonAdd
+        proxy = ConvertTo-StableNamespaceMemberMutationJson -Response $proxyAdd
+    }
+    $updateStable = [ordered]@{
+        java = ConvertTo-StableNamespaceMemberMutationJson -Response $javaUpdate
+        python = ConvertTo-StableNamespaceMemberMutationJson -Response $pythonUpdate
+        proxy = ConvertTo-StableNamespaceMemberMutationJson -Response $proxyUpdate
+    }
+    $removeStable = [ordered]@{
+        java = ConvertTo-StableNamespaceMemberMessageJson -Response $javaRemove
+        python = ConvertTo-StableNamespaceMemberMessageJson -Response $pythonRemove
+        proxy = ConvertTo-StableNamespaceMemberMessageJson -Response $proxyRemove
+    }
+    $batchStable = [ordered]@{
+        java = ConvertTo-StableNamespaceMemberBatchJson -Response $javaBatch
+        python = ConvertTo-StableNamespaceMemberBatchJson -Response $pythonBatch
+        proxy = ConvertTo-StableNamespaceMemberBatchJson -Response $proxyBatch
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            "/api/v1/namespaces/$teamSlug/members",
+            "/api/v1/namespaces/$teamSlug/members/$targetId/role",
+            "/api/v1/namespaces/$teamSlug/members/$targetId",
+            "/api/v1/namespaces/$teamSlug/members/batch"
+        )
+        checks = [ordered]@{
+            addMatches = ($addStable.java -eq $addStable.python -and $addStable.python -eq $addStable.proxy)
+            updateMatches = ($updateStable.java -eq $updateStable.python -and $updateStable.python -eq $updateStable.proxy)
+            removeMatches = ($removeStable.java -eq $removeStable.python -and $removeStable.python -eq $removeStable.proxy)
+            batchMatches = ($batchStable.java -eq $batchStable.python -and $batchStable.python -eq $batchStable.proxy)
+            batchPartialSuccess = ($javaBatch.data.successCount -eq 1 -and $javaBatch.data.failureCount -eq 2)
+            ownerDirectRejected = ($ownerDirectJava -eq 400 -and $ownerDirectPython -eq 400 -and $ownerDirectProxy -eq 400)
+            removeOwnerRejected = ($removeOwnerJava -eq 400 -and $removeOwnerPython -eq 400 -and $removeOwnerProxy -eq 400)
+            memberOperatorForbidden = ($memberOperatorJava -eq 403 -and $memberOperatorPython -eq 403 -and $memberOperatorProxy -eq 403)
+            frozenReadonlyRejected = ($frozenJava -eq 400 -and $frozenPython -eq 400 -and $frozenProxy -eq 400)
+            transferOwnershipStillJavaOwned = ($transferJava -eq $transferProxy -and $transferPython -eq 404)
+        }
+        addStable = $addStable
+        updateStable = $updateStable
+        removeStable = $removeStable
+        batchStable = $batchStable
+        routeBoundaries = [ordered]@{
+            ownerDirect = @($ownerDirectJava, $ownerDirectPython, $ownerDirectProxy)
+            removeOwner = @($removeOwnerJava, $removeOwnerPython, $removeOwnerProxy)
+            memberOperator = @($memberOperatorJava, $memberOperatorPython, $memberOperatorProxy)
+            frozenReadonly = @($frozenJava, $frozenPython, $frozenProxy)
+            transferOwnership = @($transferJava, $transferPython, $transferProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Namespace member mutation contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNamespaceMemberMutationSmokeVerification {
+    try {
+        Invoke-NamespaceMemberMutationTests
+        Start-Hybrid
+        Invoke-NamespaceMemberMutationContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -14333,6 +14659,7 @@ switch ($Action) {
     'verify-my-skills-smoke' { Invoke-HybridMySkillsSmokeVerification }
     'verify-namespace-read-smoke' { Invoke-HybridNamespaceReadSmokeVerification }
     'verify-namespace-member-read-smoke' { Invoke-HybridNamespaceMemberReadSmokeVerification }
+    'verify-namespace-member-mutation-smoke' { Invoke-HybridNamespaceMemberMutationSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

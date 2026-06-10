@@ -54,6 +54,46 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/members(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members\/batch(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/members\/batch(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['DELETE'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['DELETE'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/members\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members\/[^/?]+\/role(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/members\/[^/?]+\/role(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/namespaces\/[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',

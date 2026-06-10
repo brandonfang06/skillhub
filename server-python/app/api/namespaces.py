@@ -10,8 +10,12 @@ from app.api.auth import read_current_mock_user
 from app.core.response import ok
 from app.namespace.members import (
     NamespaceMemberReadError,
+    add_namespace_member,
+    batch_add_namespace_members,
     list_namespace_members,
+    remove_namespace_member,
     search_namespace_member_candidates,
+    update_namespace_member_role,
 )
 from app.namespace.read import NamespaceReadError, get_namespace, list_my_namespaces, list_namespaces
 
@@ -141,6 +145,114 @@ async def search_namespace_member_candidates_route(
     except NamespaceMemberReadError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/namespaces/{slug}/members")
+@router.post("/api/web/namespaces/{slug}/members")
+async def add_namespace_member_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_member_add_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, payload["userId"], payload["role"], user_id)
+            if writer is not None
+            else add_namespace_member(
+                request.app.state.db_engine,
+                slug=slug,
+                member_user_id=str(payload["userId"]),
+                role=str(payload["role"]),
+                operator_user_id=user_id,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u521b\u5efa\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/namespaces/{slug}/members/batch")
+@router.post("/api/web/namespaces/{slug}/members/batch")
+async def batch_add_namespace_members_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    members = list(payload.get("members") or [])
+    writer = getattr(request.app.state, "namespace_member_batch_add_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, members, user_id)
+            if writer is not None
+            else batch_add_namespace_members(
+                request.app.state.db_engine,
+                slug=slug,
+                members=members,
+                operator_user_id=user_id,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u521b\u5efa\u6210\u529f", data, request)
+
+
+@router.delete("/api/v1/namespaces/{slug}/members/{member_user_id}")
+@router.delete("/api/web/namespaces/{slug}/members/{member_user_id}")
+async def remove_namespace_member_route(
+    request: Request,
+    slug: str,
+    member_user_id: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_member_remove_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, member_user_id, user_id)
+            if writer is not None
+            else remove_namespace_member(
+                request.app.state.db_engine,
+                slug=slug,
+                member_user_id=member_user_id,
+                operator_user_id=user_id,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", data, request)
+
+
+@router.put("/api/v1/namespaces/{slug}/members/{member_user_id}/role")
+@router.put("/api/web/namespaces/{slug}/members/{member_user_id}/role")
+async def update_namespace_member_role_route(
+    request: Request,
+    slug: str,
+    member_user_id: str,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_member_update_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, member_user_id, payload["role"], user_id)
+            if writer is not None
+            else update_namespace_member_role(
+                request.app.state.db_engine,
+                slug=slug,
+                member_user_id=member_user_id,
+                role=str(payload["role"]),
+                operator_user_id=user_id,
+            )
+        )
+    except NamespaceMemberReadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
 @router.get("/api/v1/namespaces/{slug}")

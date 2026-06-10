@@ -389,10 +389,30 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/namespaces/team-a/member-candidates')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/members')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/namespaces/team-a/members/user-1')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/namespaces/team-a/members/user-1/role')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/members/batch')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/members')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/members')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/namespaces/team-a/members/user-1')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/namespaces/team-a/members/user-1')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/namespaces/team-a/members/user-1/role')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/namespaces/team-a/members/user-1/role')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/members/batch')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/members/batch')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/transfer-ownership')).toBeUndefined()
 
     expect(matchingDevProxyTarget('GET', '/api/v1/namespaces')).toBe('http://localhost:8081')
@@ -405,9 +425,18 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('POST', '/api/v1/namespaces/team-a/members')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('PUT', '/api/web/namespaces/team-a/members/user-1/role')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('DELETE', '/api/web/namespaces/team-a/members/user-1')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/namespaces/team-a/members/batch')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/namespaces/team-a/transfer-ownership')).toBe(
       'http://localhost:8080',
     )
   })

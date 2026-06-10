@@ -147,11 +147,16 @@ deferred routes are still visible.
 | GET | `/api/web/namespaces/{slug}/members` | python | Frontend alias for namespace member list. |
 | GET | `/api/v1/namespaces/{slug}/member-candidates` | python | Namespace member candidate search moved to Python. Requires namespace `OWNER` or `ADMIN`, rejects immutable/read-only namespaces, trims search, enforces Java size defaults/cap, filters ACTIVE users, and excludes existing members. |
 | GET | `/api/web/namespaces/{slug}/member-candidates` | python | Frontend alias for namespace member candidate search. |
-| POST | `/api/v1/namespaces/{slug}/members` | java | Namespace member mutation remains Java-owned. |
-| DELETE | `/api/v1/namespaces/{slug}/members/{userId}` | java | Namespace member mutation remains Java-owned. |
-| PUT | `/api/v1/namespaces/{slug}/members/{userId}/role` | java | Namespace member mutation remains Java-owned. |
-| POST | `/api/v1/namespaces/{slug}/members/batch` | java | Namespace member mutation remains Java-owned. |
+| POST | `/api/v1/namespaces/{slug}/members` | python | Namespace member add moved to Python. Preserves Java active-team/admin-or-owner checks, duplicate detection, and owner-direct assignment rejection. |
+| POST | `/api/web/namespaces/{slug}/members` | python | Frontend alias for namespace member add. |
+| DELETE | `/api/v1/namespaces/{slug}/members/{userId}` | python | Namespace member remove moved to Python. Preserves Java missing-member and owner-remove rejection. |
+| DELETE | `/api/web/namespaces/{slug}/members/{userId}` | python | Frontend alias for namespace member remove. |
+| PUT | `/api/v1/namespaces/{slug}/members/{userId}/role` | python | Namespace member role update moved to Python. Preserves Java owner-direct role update rejection. |
+| PUT | `/api/web/namespaces/{slug}/members/{userId}/role` | python | Frontend alias for namespace member role update. |
+| POST | `/api/v1/namespaces/{slug}/members/batch` | python | Namespace member batch add moved to Python. Preserves Java partial-success behavior and batch error mapping. |
+| POST | `/api/web/namespaces/{slug}/members/batch` | python | Frontend alias for namespace member batch add. |
 | POST | `/api/v1/namespaces/{slug}/transfer-ownership` | java | Namespace ownership transfer remains Java-owned. |
+| POST | `/api/web/namespaces/{slug}/transfer-ownership` | java | Namespace ownership transfer remains Java-owned. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
 | GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |

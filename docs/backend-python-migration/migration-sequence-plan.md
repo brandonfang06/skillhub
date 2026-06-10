@@ -205,6 +205,7 @@ Still plan carefully when a group requires:
 | 71 | `GET /api/v1/me/skills`, `GET /api/web/me/skills` | python | Current-user owned skill list moved to Python. Preserves Java `page=0&size=10`, filter/q/namespace behavior, owner summary lifecycle projection, default direct owner list including hidden/archived, and filter-path hidden/archived exclusion semantics. |
 | 72 | `GET /api/v1/namespaces`, `GET /api/web/namespaces`, `GET /api/v1/me/namespaces`, `GET /api/web/me/namespaces`, `GET /api/v1/namespaces/{slug}`, `GET /api/web/namespaces/{slug}` | python | Namespace read ownership moved to Python. Preserves membership-scoped active listing, current-user namespace capability flags, archived namespace member-only detail visibility, and keeps namespace lifecycle/mutation routes Java-owned. |
 | 73 | `GET /api/v1/namespaces/{slug}/members`, `GET /api/web/namespaces/{slug}/members`, `GET /api/v1/namespaces/{slug}/member-candidates`, `GET /api/web/namespaces/{slug}/member-candidates` | python | Namespace member read ownership moved to Python. Preserves membership/admin checks, Java candidate search normalization, ACTIVE user filtering, existing-member exclusion, and keeps namespace member mutations Java-owned. |
+| 74 | `POST /api/v1/namespaces/{slug}/members`, `POST /api/web/namespaces/{slug}/members`, `DELETE /api/v1/namespaces/{slug}/members/{userId}`, `DELETE /api/web/namespaces/{slug}/members/{userId}`, `PUT /api/v1/namespaces/{slug}/members/{userId}/role`, `PUT /api/web/namespaces/{slug}/members/{userId}/role`, `POST /api/v1/namespaces/{slug}/members/batch`, `POST /api/web/namespaces/{slug}/members/batch` | python | Namespace member mutation ownership moved to Python. Preserves Java active-team/admin-or-owner checks, owner role protections, duplicate/missing-member errors, and batch partial-success mapping. Transfer ownership remains Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1254,15 +1255,23 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/namespaces/{slug}/members`, `GET /api/web/namespaces/{slug}/members`,
   `GET /api/v1/namespaces/{slug}/member-candidates`, and
   `GET /api/web/namespaces/{slug}/member-candidates`.
+- Completed: namespace member mutation APIs:
+  `POST /api/v1/namespaces/{slug}/members`, `POST /api/web/namespaces/{slug}/members`,
+  `DELETE /api/v1/namespaces/{slug}/members/{userId}`,
+  `DELETE /api/web/namespaces/{slug}/members/{userId}`,
+  `PUT /api/v1/namespaces/{slug}/members/{userId}/role`,
+  `PUT /api/web/namespaces/{slug}/members/{userId}/role`,
+  `POST /api/v1/namespaces/{slug}/members/batch`, and
+  `POST /api/web/namespaces/{slug}/members/batch`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes, namespace mutations
-  and member-management mutation routes, and notification SSE.
+  portal review/promotion/skill lifecycle and admin skill governance routes, namespace ownership
+  transfer/profile/lifecycle mutations, and notification SSE.
 
 Recommended next choice:
 
-- Continue with the next dashboard/governance read group or namespace member-management mutation
-  group based on route ownership priority. Mutating namespace membership should get its own
-  transaction/audit/authorization plan before route ownership moves.
+- Continue with the next dashboard/governance read group or namespace ownership/profile/lifecycle
+  mutation group based on route ownership priority. Ownership transfer should get its own invariant
+  and live transaction plan before route ownership moves.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

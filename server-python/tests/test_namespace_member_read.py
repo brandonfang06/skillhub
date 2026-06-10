@@ -253,7 +253,7 @@ async def test_search_namespace_member_candidates_enforces_namespace_rules() -> 
     assert readonly.value.status_code == 400
 
 
-def test_namespace_member_routes_use_java_envelopes_and_keep_mutations_unimplemented() -> None:
+def test_namespace_member_routes_use_java_envelopes() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(user_id)
     app.state.namespace_member_reader = lambda slug, user_id, page, size: {
@@ -283,5 +283,3 @@ def test_namespace_member_routes_use_java_envelopes_and_keep_mutations_unimpleme
     )
     assert candidates.status_code == 200
     assert candidates.json()["data"][0]["displayName"] == "Candidate"
-
-    assert client.post("/api/v1/namespaces/team-a/members", headers={"X-Mock-User-Id": "owner"}).status_code == 405
