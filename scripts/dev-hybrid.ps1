@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -18104,6 +18104,268 @@ function Invoke-HybridApiTokenManagementSmokeVerification {
     }
 }
 
+function Invoke-LocalAuthCoreTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_local_auth_core.py', 'tests/test_local_password_reset.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-LocalAuthCoreJson {
+    param(
+        [string]$Url,
+        [object]$Body,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if ($UserId -ne '') {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -TimeoutSec 20
+}
+
+function Invoke-LocalAuthCoreStatus {
+    param(
+        [string]$Url,
+        [object]$Body,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if ($UserId -ne '') {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 20 -Compress) -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableLocalAuthCoreJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        hasUserId = -not [string]::IsNullOrWhiteSpace([string]$Response.data.userId)
+        displayName = $Response.data.displayName
+        email = $Response.data.email
+        avatarUrl = $Response.data.avatarUrl
+        oauthProvider = $Response.data.oauthProvider
+        platformRoles = @($Response.data.platformRoles | Sort-Object)
+    }
+
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function ConvertTo-StableLocalAuthVoidJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = $Response.data
+    }
+
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Ensure-LocalAuthCoreFixture {
+    param([string]$Suffix)
+
+    $passwordHash = '$2a$12$R3RVoLasFXOTW9PhnGDIueKa7wlzD/V08tsgXlWpBmygBDiEk2pny'
+    $sql = @"
+DO `$`$
+BEGIN
+    DELETE FROM namespace_member WHERE user_id LIKE 'codex-local-auth-%';
+    DELETE FROM local_credential WHERE user_id LIKE 'codex-local-auth-%' OR username LIKE 'local-auth-%-$Suffix';
+    DELETE FROM user_role_binding WHERE user_id LIKE 'codex-local-auth-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-local-auth-%';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at)
+    VALUES
+        ('codex-local-auth-login-java-$Suffix', 'Local Auth Login Java', 'local-auth-login-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-login-python-$Suffix', 'Local Auth Login Python', 'local-auth-login-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-login-proxy-$Suffix', 'Local Auth Login Proxy', 'local-auth-login-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-change-java-$Suffix', 'Local Auth Change Java', 'local-auth-change-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-change-python-$Suffix', 'Local Auth Change Python', 'local-auth-change-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-change-proxy-$Suffix', 'Local Auth Change Proxy', 'local-auth-change-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-local-auth-disabled-$Suffix', 'Local Auth Disabled', 'local-auth-disabled-$Suffix@example.test', '', 'DISABLED', CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO local_credential (user_id, username, password_hash, failed_attempts, locked_until)
+    VALUES
+        ('codex-local-auth-login-java-$Suffix', 'local-auth-login-java-$Suffix', '$passwordHash', 0, NULL),
+        ('codex-local-auth-login-python-$Suffix', 'local-auth-login-python-$Suffix', '$passwordHash', 0, NULL),
+        ('codex-local-auth-login-proxy-$Suffix', 'local-auth-login-proxy-$Suffix', '$passwordHash', 0, NULL),
+        ('codex-local-auth-change-java-$Suffix', 'local-auth-change-java-$Suffix', '$passwordHash', 4, CURRENT_TIMESTAMP + INTERVAL '15 minutes'),
+        ('codex-local-auth-change-python-$Suffix', 'local-auth-change-python-$Suffix', '$passwordHash', 4, CURRENT_TIMESTAMP + INTERVAL '15 minutes'),
+        ('codex-local-auth-change-proxy-$Suffix', 'local-auth-change-proxy-$Suffix', '$passwordHash', 4, CURRENT_TIMESTAMP + INTERVAL '15 minutes'),
+        ('codex-local-auth-disabled-$Suffix', 'local-auth-disabled-$Suffix', '$passwordHash', 0, NULL)
+    ON CONFLICT (user_id) DO UPDATE
+        SET username = EXCLUDED.username,
+            password_hash = EXCLUDED.password_hash,
+            failed_attempts = EXCLUDED.failed_attempts,
+            locked_until = EXCLUDED.locked_until,
+            updated_at = CURRENT_TIMESTAMP;
+END
+`$`$;
+"@
+    Invoke-PostgresSql $sql
+}
+
+function Get-LocalAuthCoreCredentialState {
+    param([string]$UserId)
+
+    $sql = "SELECT json_build_object('failedAttempts', failed_attempts, 'locked', locked_until IS NOT NULL, 'hashChanged', password_hash <> '`$2a`$12`$R3RVoLasFXOTW9PhnGDIueKa7wlzD/V08tsgXlWpBmygBDiEk2pny')::text FROM local_credential WHERE user_id = '$UserId';"
+    return Invoke-PostgresScalar $sql
+}
+
+function Get-LocalAuthCoreRegisteredState {
+    param([string]$Username)
+
+    $sql = "SELECT json_build_object('userExists', ua.id IS NOT NULL, 'credentialExists', lc.user_id IS NOT NULL, 'globalMember', nm.id IS NOT NULL)::text FROM local_credential lc JOIN user_account ua ON ua.id = lc.user_id LEFT JOIN namespace ns ON ns.slug = 'global' LEFT JOIN namespace_member nm ON nm.namespace_id = ns.id AND nm.user_id = ua.id WHERE lc.username = '$Username';"
+    return Invoke-PostgresScalar $sql
+}
+
+function Invoke-LocalAuthCoreContractComparison {
+    param([string]$ResultFileName = 'local-auth-core-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-LocalAuthCoreFixture -Suffix $suffix
+
+    $javaRegisterUser = "local_auth_register_java_$suffix"
+    $pythonRegisterUser = "local_auth_register_python_$suffix"
+    $proxyRegisterUser = "local_auth_register_proxy_$suffix"
+
+    $javaRegister = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$JavaUrl/api/v1/auth/local/register" @{ username = $javaRegisterUser; password = 'Abcd123!'; email = "$javaRegisterUser@example.test" })
+    $pythonRegister = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$PythonUrl/api/v1/auth/local/register" @{ username = $pythonRegisterUser; password = 'Abcd123!'; email = "$pythonRegisterUser@example.test" })
+    $proxyRegister = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$WebUrl/api/v1/auth/local/register" @{ username = $proxyRegisterUser; password = 'Abcd123!'; email = "$proxyRegisterUser@example.test" })
+
+    $javaLogin = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$JavaUrl/api/v1/auth/local/login" @{ username = "local-auth-login-java-$suffix"; password = 'Abcd123!' })
+    $pythonLogin = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$PythonUrl/api/v1/auth/local/login" @{ username = "local-auth-login-python-$suffix"; password = 'Abcd123!' })
+    $proxyLogin = ConvertTo-StableLocalAuthCoreJson -Response (Invoke-LocalAuthCoreJson "$WebUrl/api/v1/auth/local/login" @{ username = "local-auth-login-proxy-$suffix"; password = 'Abcd123!' })
+
+    $javaChange = ConvertTo-StableLocalAuthVoidJson -Response (Invoke-LocalAuthCoreJson "$JavaUrl/api/v1/auth/local/change-password" @{ currentPassword = 'Abcd123!'; newPassword = 'Newpass123!' } "codex-local-auth-change-java-$suffix")
+    $pythonChange = ConvertTo-StableLocalAuthVoidJson -Response (Invoke-LocalAuthCoreJson "$PythonUrl/api/v1/auth/local/change-password" @{ currentPassword = 'Abcd123!'; newPassword = 'Newpass123!' } "codex-local-auth-change-python-$suffix")
+    $proxyChange = ConvertTo-StableLocalAuthVoidJson -Response (Invoke-LocalAuthCoreJson "$WebUrl/api/v1/auth/local/change-password" @{ currentPassword = 'Abcd123!'; newPassword = 'Newpass123!' } "codex-local-auth-change-proxy-$suffix")
+
+    $javaWeakRegister = Invoke-LocalAuthCoreStatus "$JavaUrl/api/v1/auth/local/register" @{ username = "local_auth_weak_java_$suffix"; password = 'aaaaaaaa'; email = "local-auth-weak-java-$suffix@example.test" }
+    $pythonWeakRegister = Invoke-LocalAuthCoreStatus "$PythonUrl/api/v1/auth/local/register" @{ username = "local_auth_weak_python_$suffix"; password = 'aaaaaaaa'; email = "local-auth-weak-python-$suffix@example.test" }
+    $proxyWeakRegister = Invoke-LocalAuthCoreStatus "$WebUrl/api/v1/auth/local/register" @{ username = "local_auth_weak_proxy_$suffix"; password = 'aaaaaaaa'; email = "local-auth-weak-proxy-$suffix@example.test" }
+
+    $javaDuplicate = Invoke-LocalAuthCoreStatus "$JavaUrl/api/v1/auth/local/register" @{ username = $javaRegisterUser; password = 'Abcd123!'; email = "duplicate-java-$suffix@example.test" }
+    $pythonDuplicate = Invoke-LocalAuthCoreStatus "$PythonUrl/api/v1/auth/local/register" @{ username = $pythonRegisterUser; password = 'Abcd123!'; email = "duplicate-python-$suffix@example.test" }
+    $proxyDuplicate = Invoke-LocalAuthCoreStatus "$WebUrl/api/v1/auth/local/register" @{ username = $proxyRegisterUser; password = 'Abcd123!'; email = "duplicate-proxy-$suffix@example.test" }
+
+    $javaBadLogin = Invoke-LocalAuthCoreStatus "$JavaUrl/api/v1/auth/local/login" @{ username = "local-auth-login-java-$suffix"; password = 'wrong' }
+    $pythonBadLogin = Invoke-LocalAuthCoreStatus "$PythonUrl/api/v1/auth/local/login" @{ username = "local-auth-login-python-$suffix"; password = 'wrong' }
+    $proxyBadLogin = Invoke-LocalAuthCoreStatus "$WebUrl/api/v1/auth/local/login" @{ username = "local-auth-login-proxy-$suffix"; password = 'wrong' }
+
+    $javaDisabledLogin = Invoke-LocalAuthCoreStatus "$JavaUrl/api/v1/auth/local/login" @{ username = "local-auth-disabled-$suffix"; password = 'Abcd123!' }
+    $pythonDisabledLogin = Invoke-LocalAuthCoreStatus "$PythonUrl/api/v1/auth/local/login" @{ username = "local-auth-disabled-$suffix"; password = 'Abcd123!' }
+    $javaWrongCurrentWeakNew = Invoke-LocalAuthCoreStatus "$JavaUrl/api/v1/auth/local/change-password" @{ currentPassword = 'wrong'; newPassword = 'aaaaaaaa' } "codex-local-auth-change-java-$suffix"
+    $pythonWrongCurrentWeakNew = Invoke-LocalAuthCoreStatus "$PythonUrl/api/v1/auth/local/change-password" @{ currentPassword = 'wrong'; newPassword = 'aaaaaaaa' } "codex-local-auth-change-python-$suffix"
+    $proxyWrongCurrentWeakNew = Invoke-LocalAuthCoreStatus "$WebUrl/api/v1/auth/local/change-password" @{ currentPassword = 'wrong'; newPassword = 'aaaaaaaa' } "codex-local-auth-change-proxy-$suffix"
+
+    $missingAuthChange = Invoke-LocalAuthCoreStatus "$WebUrl/api/v1/auth/local/change-password" @{ currentPassword = 'Abcd123!'; newPassword = 'Newpass123!' }
+    $directLoginStatus = Invoke-ApiTokenStatus 'Post' "$WebUrl/api/v1/auth/direct/login" '' @{ provider = 'local'; username = 'missing'; password = 'bad' }
+    $sessionBootstrapStatus = Invoke-ApiTokenStatus 'Post' "$WebUrl/api/v1/auth/session/bootstrap" '' @{ provider = 'mock' }
+
+    $result = [ordered]@{
+        responses = [ordered]@{
+            register = @($javaRegister, $pythonRegister, $proxyRegister)
+            login = @($javaLogin, $pythonLogin, $proxyLogin)
+            change = @($javaChange, $pythonChange, $proxyChange)
+        }
+        states = [ordered]@{
+            javaRegister = Get-LocalAuthCoreRegisteredState -Username $javaRegisterUser
+            pythonRegister = Get-LocalAuthCoreRegisteredState -Username $pythonRegisterUser
+            proxyRegister = Get-LocalAuthCoreRegisteredState -Username $proxyRegisterUser
+            javaChange = Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-java-$suffix"
+            pythonChange = Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-python-$suffix"
+            proxyChange = Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-proxy-$suffix"
+        }
+        checks = [ordered]@{
+            registerEnvelopeShape = ($javaRegister -like '*"oauthProvider":"local"*' -and $pythonRegister -like '*"oauthProvider":"local"*' -and $proxyRegister -like '*"oauthProvider":"local"*')
+            loginEnvelopeShape = ($javaLogin -like '*"oauthProvider":"local"*' -and $pythonLogin -like '*"oauthProvider":"local"*' -and $proxyLogin -like '*"oauthProvider":"local"*')
+            changeEnvelopeMatches = ($javaChange -eq $pythonChange -and $pythonChange -eq $proxyChange)
+            registerDbStatePresent = ((Get-LocalAuthCoreRegisteredState -Username $javaRegisterUser) -like '*"globalMember" : true*' -or (Get-LocalAuthCoreRegisteredState -Username $javaRegisterUser) -like '*"globalMember":true*')
+            pythonRegisterDbStatePresent = ((Get-LocalAuthCoreRegisteredState -Username $pythonRegisterUser) -like '*"globalMember" : true*' -or (Get-LocalAuthCoreRegisteredState -Username $pythonRegisterUser) -like '*"globalMember":true*')
+            proxyRegisterDbStatePresent = ((Get-LocalAuthCoreRegisteredState -Username $proxyRegisterUser) -like '*"globalMember" : true*' -or (Get-LocalAuthCoreRegisteredState -Username $proxyRegisterUser) -like '*"globalMember":true*')
+            changeDbStatePresent = ((Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-java-$suffix") -like '*"failedAttempts" : 0*' -or (Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-java-$suffix") -like '*"failedAttempts":0*')
+            pythonChangeDbStatePresent = ((Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-python-$suffix") -like '*"failedAttempts" : 0*' -or (Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-python-$suffix") -like '*"failedAttempts":0*')
+            proxyChangeDbStatePresent = ((Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-proxy-$suffix") -like '*"failedAttempts" : 0*' -or (Get-LocalAuthCoreCredentialState -UserId "codex-local-auth-change-proxy-$suffix") -like '*"failedAttempts":0*')
+            weakRegisterParity = ($javaWeakRegister -eq $pythonWeakRegister -and $pythonWeakRegister -eq $proxyWeakRegister)
+            duplicateUsernameParity = ($javaDuplicate -eq $pythonDuplicate -and $pythonDuplicate -eq $proxyDuplicate)
+            badLoginParity = ($javaBadLogin -eq $pythonBadLogin -and $pythonBadLogin -eq $proxyBadLogin)
+            disabledLoginParity = ($javaDisabledLogin -eq $pythonDisabledLogin)
+            wrongCurrentBeforeWeakNewParity = ($javaWrongCurrentWeakNew -eq $pythonWrongCurrentWeakNew -and $pythonWrongCurrentWeakNew -eq $proxyWrongCurrentWeakNew)
+            missingAuthChangeRejected = ($missingAuthChange -eq 401)
+            directLoginStillJavaReachable = ($directLoginStatus -ne 404)
+            sessionBootstrapStillJavaReachable = ($sessionBootstrapStatus -ne 404)
+        }
+        statuses = [ordered]@{
+            weakRegister = @($javaWeakRegister, $pythonWeakRegister, $proxyWeakRegister)
+            duplicateUsername = @($javaDuplicate, $pythonDuplicate, $proxyDuplicate)
+            badLogin = @($javaBadLogin, $pythonBadLogin, $proxyBadLogin)
+            disabledLogin = @($javaDisabledLogin, $pythonDisabledLogin)
+            wrongCurrentWeakNew = @($javaWrongCurrentWeakNew, $pythonWrongCurrentWeakNew, $proxyWrongCurrentWeakNew)
+            missingAuthChange = $missingAuthChange
+            directLoginViaProxy = $directLoginStatus
+            sessionBootstrapViaProxy = $sessionBootstrapStatus
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Local auth core contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridLocalAuthCoreSmokeVerification {
+    try {
+        Invoke-LocalAuthCoreTests
+        Start-Hybrid
+        Invoke-LocalAuthCoreContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-LocalPasswordResetTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
@@ -18493,6 +18755,7 @@ switch ($Action) {
     'verify-admin-password-reset-smoke' { Invoke-HybridAdminPasswordResetSmokeVerification }
     'verify-api-token-management-smoke' { Invoke-HybridApiTokenManagementSmokeVerification }
     'verify-local-password-reset-smoke' { Invoke-HybridLocalPasswordResetSmokeVerification }
+    'verify-local-auth-core-smoke' { Invoke-HybridLocalAuthCoreSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-governance-notification-mark-read-smoke' { Invoke-HybridGovernanceNotificationMarkReadSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }

@@ -122,16 +122,19 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
-  it('routes local password reset to Python while keeping local login on Java', () => {
+  it('routes local auth core and password reset to Python while keeping direct/session/OAuth on Java', () => {
     expect(matchingProxyTarget('/api/v1/auth/local/password-reset/request')).toBe(
       'http://localhost:8081',
     )
     expect(matchingProxyTarget('/api/v1/auth/local/password-reset/confirm')).toBe(
       'http://localhost:8081',
     )
-    expect(matchingProxyTarget('/api/v1/auth/local/login')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/auth/local/register')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/auth/local/change-password')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/auth/local/login')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/auth/local/register')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/auth/local/change-password')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/auth/direct/login')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/auth/session/bootstrap')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
   it('routes skill report submit aliases to Python without changing nearby reads', () => {

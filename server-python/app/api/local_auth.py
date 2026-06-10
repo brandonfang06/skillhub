@@ -4,8 +4,9 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 
+from app.auth.local import LocalAuthError, change_local_password, login_local_user, register_local_user
 from app.auth.password_reset import (
     PasswordResetError,
     confirm_password_reset,
@@ -22,6 +23,68 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
     return result
+
+
+@router.post("/api/v1/auth/local/register")
+async def register_local_account_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
+    registrar = getattr(request.app.state, "local_auth_registrar", None)
+    try:
+        data = await _resolve_result(
+            registrar(payload)
+            if registrar is not None
+            else register_local_user(
+                request.app.state.db_engine,
+                username=payload.get("username"),
+                password=payload.get("password"),
+                email=payload.get("email"),
+            )
+        )
+    except LocalAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("response.success.created", data, request)
+
+
+@router.post("/api/v1/auth/local/login")
+async def login_local_account_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
+    login = getattr(request.app.state, "local_auth_login", None)
+    try:
+        data = await _resolve_result(
+            login(payload)
+            if login is not None
+            else login_local_user(
+                request.app.state.db_engine,
+                username=payload.get("username"),
+                password=payload.get("password"),
+            )
+        )
+    except LocalAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("response.success.read", data, request)
+
+
+@router.post("/api/v1/auth/local/change-password")
+async def change_local_password_route(
+    request: Request,
+    payload: dict[str, Any],
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    changer = getattr(request.app.state, "local_auth_password_changer", None)
+    try:
+        await _resolve_result(
+            changer(mock_user_id.strip(), payload)
+            if changer is not None
+            else change_local_password(
+                request.app.state.db_engine,
+                user_id=mock_user_id.strip(),
+                current_password=payload.get("currentPassword"),
+                new_password=payload.get("newPassword"),
+            )
+        )
+    except LocalAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("response.success.updated", None, request)
 
 
 @router.post("/api/v1/auth/local/password-reset/request")

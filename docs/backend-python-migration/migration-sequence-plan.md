@@ -221,8 +221,9 @@ Still plan carefully when a group requires:
 | 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token authentication filters remain Java-owned. |
 | 87 | `POST /api/v1/auth/local/password-reset/request`, `POST /api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset request/confirm moved to Python. Preserves Java normalization, validation, silent request success for unknown/ineligible users, BCrypt reset code storage, password policy, credential reset, and pending reset request consumption while local register/login/change-password remain Java-owned. |
 | 88 | `GET /api/v1/auth/providers`, `GET /api/v1/auth/methods` | python | Public auth catalog reads moved to Python. Preserves Java OAuth provider sorting, method ordering, default-disabled direct/session-bootstrap entries, authorization URLs, and safe `returnTo` sanitization while login/session/OAuth callbacks remain Java-owned. |
-| 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping login/session/OAuth callbacks and bearer-token authentication filters Java-owned. |
+| 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping session/OAuth callbacks and bearer-token authentication filters Java-owned. |
 | 90 | `POST /api/v1/skills/{namespace}/{slug}/reports`, `POST /api/web/skills/{namespace}/{slug}/reports` | python | Skill report submit moved to Python. Preserves Java published-preference target resolution, blank/self/duplicate/unavailable validation, pending report insert, `REPORT_SKILL` audit, and `REPORT_SUBMITTED` notification side effects. |
+| 91 | `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, `POST /api/v1/auth/local/change-password` | python | Local auth core moved to Python. Preserves Java local account normalization/validation, BCrypt credential handling, failed-attempt lockout/reset, password policy, global namespace membership on register, and hybrid mock-user change-password behavior while keeping Spring Session creation deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1315,6 +1316,11 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password
   reset confirmation to Python while keeping local register/login/change-password, OAuth, session
   bootstrap, device flow, bearer-token authentication, and scope enforcement Java-owned.
+- Completed: local auth core APIs:
+  `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, and
+  `POST /api/v1/auth/local/change-password`. These move local account creation, password login,
+  and password change to Python while preserving Java credential/password-policy/lockout DB
+  behavior. Spring Session creation remains deferred to the final auth/session replacement work.
 - Completed: public auth catalog read APIs:
   `GET /api/v1/auth/providers` and `GET /api/v1/auth/methods`. These move provider/method
   discovery to Python while keeping local register/login/change-password, direct login,
@@ -1369,8 +1375,9 @@ Group E has started with review lifecycle write ownership:
   web alias stream contracts and verifies published download counter deltas across v1 and web hits.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
-  surfaces outside migrated current-user/token/local-password-reset routes, local
-  register/login/change-password, and notification SSE.
+  surfaces outside migrated current-user/token/local-auth/password-reset routes, Spring Session
+  establishment, direct login/session bootstrap, device flow, bearer-token authentication filters,
+  scope enforcement, and notification SSE.
 
 Recommended next choice:
 

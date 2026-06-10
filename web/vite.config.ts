@@ -767,6 +767,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/auth/local/(?:register|login|change-password)(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api/v1/labels': {
         target: 'http://localhost:8081',
         changeOrigin: true,
