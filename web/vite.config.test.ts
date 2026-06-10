@@ -353,6 +353,41 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/me/skills')).toBe('http://localhost:8080')
   })
 
+  it('routes namespace read APIs to Python without taking over mutations or member routes', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/namespaces')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/namespaces?page=1')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/namespaces')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/namespaces')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/namespaces/team-a')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/namespaces/team-a?detail=true')).toBe(
+      'http://localhost:8081',
+    )
+
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/namespaces/team-a')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/namespaces/team-a')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/freeze')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/namespaces/team-a/members')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/namespaces/team-a/member-candidates')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/v1/namespaces')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/web/namespaces/team-a')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/namespaces')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('GET', '/api/v1/namespaces/team-a/members')).toBe(
+      'http://localhost:8080',
+    )
+  })
+
   it('routes notification read-state APIs to Python while SSE and preferences stay Java-owned', () => {
     for (const prefix of ['/api/v1', '/api/web']) {
       expect(resolveMethodAwareProxyTarget('GET', `${prefix}/notifications`)).toBe(

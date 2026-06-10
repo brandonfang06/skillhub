@@ -15,6 +15,36 @@ export type MethodAwareProxyRule = {
 export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   {
     methods: ['GET'],
+    pattern: /^\/api\/v1\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/me\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/me\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
     pattern: /^\/api\/v1\/skills(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

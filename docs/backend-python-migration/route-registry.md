@@ -137,6 +137,12 @@ deferred routes are still visible.
 | GET | `/api/web/me/subscriptions` | python | Frontend alias for current user's subscribed skill list. |
 | GET | `/api/v1/me/skills` | python | Current user's owned skill list moved to Python. Requires auth, preserves Java defaults `page=0&size=10`, filter/q/namespace behavior, owner lifecycle projection, and hidden/archived filter semantics. |
 | GET | `/api/web/me/skills` | python | Frontend alias for current user's owned skill list. |
+| GET | `/api/v1/namespaces` | python | Current user's active namespace list moved to Python. Requires auth, derives namespace scope from `namespace_member`, sorts by slug, and preserves Java `PageResponse`. |
+| GET | `/api/web/namespaces` | python | Frontend alias for current user's active namespace list. |
+| GET | `/api/v1/me/namespaces` | python | Current user's namespace membership list moved to Python. Includes Java-compatible lifecycle capability flags and dependency-sensitive `canDelete`. |
+| GET | `/api/web/me/namespaces` | python | Frontend alias for current user's namespace membership list. |
+| GET | `/api/v1/namespaces/{slug}` | python | Namespace detail read moved to Python. Requires namespace membership; archived namespaces remain visible only to members. |
+| GET | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace detail read. Member, lifecycle, and mutation subroutes remain Java-owned. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
 | GET | `/api/v1/notifications/unread-count` | python | Current user's unread notification count moved to Python. Returns Java-compatible `{ count }`. |
