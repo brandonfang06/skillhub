@@ -1282,13 +1282,19 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/admin/labels`, `POST /api/v1/admin/labels`,
   `PUT /api/v1/admin/labels/{slug}`, `DELETE /api/v1/admin/labels/{slug}`, and
   `PUT /api/v1/admin/labels/sort-order`. Skill label attach/detach remains Java-owned.
+- Completed: admin user management basic APIs:
+  `GET /api/v1/admin/users`, `PUT /api/v1/admin/users/{userId}/role`,
+  `PUT /api/v1/admin/users/{userId}/status`,
+  `POST /api/v1/admin/users/{userId}/approve`,
+  `POST /api/v1/admin/users/{userId}/disable`, and
+  `POST /api/v1/admin/users/{userId}/enable`. Password reset remains Java-owned.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
-  surfaces, admin user management, skill label attach/detach, and notification SSE.
+  surfaces, admin password reset, skill label attach/detach, and notification SSE.
 
 Recommended next choice:
 
-- Continue with admin user management, remaining dashboard/governance read groups, or auth/token
+- Continue with remaining dashboard/governance read groups, admin password reset, or auth/token
   surfaces based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.

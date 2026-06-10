@@ -1,0 +1,254 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.admin.users import (
+    AdminUserError,
+    list_admin_users,
+    update_admin_user_role,
+    update_admin_user_status,
+)
+from app.main import create_app
+
+
+class FakeMappings:
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self.rows = rows
+
+    def all(self) -> list[dict[str, Any]]:
+        return self.rows
+
+    def one_or_none(self) -> dict[str, Any] | None:
+        return self.rows[0] if self.rows else None
+
+
+class FakeResult:
+    def __init__(self, rows: list[dict[str, Any]] | None = None, row: dict[str, Any] | None = None) -> None:
+        self.rows = rows if rows is not None else ([row] if row is not None else [])
+
+    def mappings(self) -> FakeMappings:
+        return FakeMappings(self.rows)
+
+    def scalar_one(self) -> int:
+        return int(self.rows[0]["count"])
+
+
+class FakeTransaction:
+    def __init__(self, connection: "FakeAdminUserConnection") -> None:
+        self.connection = connection
+
+    async def __aenter__(self) -> "FakeAdminUserConnection":
+        return self.connection
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        return None
+
+
+class FakeEngine:
+    def __init__(self, connection: "FakeAdminUserConnection") -> None:
+        self.connection = connection
+
+    def connect(self) -> FakeTransaction:
+        return FakeTransaction(self.connection)
+
+    def begin(self) -> FakeTransaction:
+        return FakeTransaction(self.connection)
+
+
+class FakeAdminUserConnection:
+    def __init__(self) -> None:
+        self.users: dict[str, dict[str, Any]] = {
+            "user-1": user_row("user-1", "Alice Admin", "alice@example.test", "ACTIVE", 3),
+            "user-2": user_row("user-2", "Bob User", "bob@example.test", "ACTIVE", 2),
+            "user-3": user_row("user-3", "Disabled User", "disabled@example.test", "DISABLED", 1),
+        }
+        self.roles = {"USER_ADMIN": 10, "SUPER_ADMIN": 11, "SKILL_ADMIN": 12}
+        self.user_roles: dict[str, list[str]] = {"user-1": ["USER_ADMIN"], "user-3": ["SKILL_ADMIN", "USER_ADMIN"]}
+        self.statements: list[str] = []
+        self.params: list[dict[str, Any]] = []
+
+    async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
+        sql = str(statement)
+        bound = params or {}
+        self.statements.append(sql)
+        self.params.append(bound)
+        if "COUNT(*) AS count" in sql and "FROM user_account" in sql:
+            return FakeResult(row={"count": len(self._filtered_users(bound))})
+        if "FROM user_account" in sql and "ORDER BY created_at DESC" in sql:
+            rows = self._filtered_users(bound)
+            rows.sort(key=lambda row: row["created_at"], reverse=True)
+            offset = int(bound.get("offset", 0))
+            limit = int(bound.get("limit", len(rows)))
+            return FakeResult(rows=rows[offset : offset + limit])
+        if "FROM user_account" in sql and "WHERE id = :user_id" in sql:
+            row = self.users.get(str(bound["user_id"]))
+            return FakeResult(row=row) if row else FakeResult()
+        if "FROM user_role_binding" in sql and "r.code" in sql:
+            rows: list[dict[str, Any]] = []
+            for user_id in bound["user_ids"]:
+                rows.extend({"user_id": user_id, "code": code} for code in self.user_roles.get(user_id, []))
+            return FakeResult(rows=rows)
+        if "FROM role" in sql and "WHERE code = :role_code" in sql:
+            role_id = self.roles.get(str(bound["role_code"]))
+            return FakeResult(row={"id": role_id, "code": bound["role_code"]}) if role_id else FakeResult()
+        if "DELETE FROM user_role_binding" in sql:
+            self.user_roles[str(bound["user_id"])] = []
+            return FakeResult()
+        if "INSERT INTO user_role_binding" in sql:
+            role_code = next(code for code, role_id in self.roles.items() if role_id == int(bound["role_id"]))
+            self.user_roles.setdefault(str(bound["user_id"]), []).append(role_code)
+            return FakeResult()
+        if "UPDATE user_account" in sql:
+            self.users[str(bound["user_id"])]["status"] = bound["status"]
+            return FakeResult()
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+    def _filtered_users(self, bound: dict[str, Any]) -> list[dict[str, Any]]:
+        rows = list(self.users.values())
+        status = bound.get("status")
+        if status:
+            rows = [row for row in rows if row["status"] == status]
+        search = str(bound.get("search") or "").replace("%", "").lower()
+        if search:
+            rows = [
+                row
+                for row in rows
+                if search in row["id"].lower()
+                or search in row["display_name"].lower()
+                or search in str(row["email"]).lower()
+            ]
+        return [row.copy() for row in rows]
+
+
+def user_row(user_id: str, display_name: str, email: str, status: str, day: int) -> dict[str, Any]:
+    return {
+        "id": user_id,
+        "display_name": display_name,
+        "email": email,
+        "status": status,
+        "created_at": datetime(2026, 6, day, 8, 0, tzinfo=UTC),
+    }
+
+
+def auth_user(user_id: str, roles: list[str]) -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": roles,
+    }
+
+
+@pytest.mark.anyio
+async def test_list_admin_users_filters_sorts_and_adds_default_user_role() -> None:
+    connection = FakeAdminUserConnection()
+
+    response = await list_admin_users(
+        FakeEngine(connection),
+        search="user",
+        status="active",
+        page=0,
+        size=20,
+        platform_roles=["USER_ADMIN"],
+    )
+
+    assert response["total"] == 2
+    assert [item["id"] for item in response["items"]] == ["user-1", "user-2"]
+    assert response["items"][0]["platformRoles"] == ["USER_ADMIN"]
+    assert response["items"][1]["platformRoles"] == ["USER"]
+    assert response["page"] == 0
+    assert response["size"] == 20
+
+
+@pytest.mark.anyio
+async def test_update_role_replaces_bindings_and_protects_super_admin_assignment() -> None:
+    connection = FakeAdminUserConnection()
+
+    response = await update_admin_user_role(
+        FakeEngine(connection),
+        user_id="user-2",
+        role="skill_admin",
+        actor_platform_roles=["SUPER_ADMIN"],
+    )
+
+    assert response == {"userId": "user-2", "role": "SKILL_ADMIN", "status": "ACTIVE"}
+    assert connection.user_roles["user-2"] == ["SKILL_ADMIN"]
+
+    default_role = await update_admin_user_role(
+        FakeEngine(connection),
+        user_id="user-2",
+        role="USER",
+        actor_platform_roles=["USER_ADMIN"],
+    )
+
+    assert default_role == {"userId": "user-2", "role": "USER", "status": "ACTIVE"}
+    assert connection.user_roles["user-2"] == []
+
+    with pytest.raises(AdminUserError, match="error.admin.user.role.superAdmin.assignDenied") as forbidden:
+        await update_admin_user_role(
+            FakeEngine(connection),
+            user_id="user-2",
+            role="SUPER_ADMIN",
+            actor_platform_roles=["USER_ADMIN"],
+        )
+    assert forbidden.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_update_status_accepts_only_manageable_statuses() -> None:
+    connection = FakeAdminUserConnection()
+
+    response = await update_admin_user_status(FakeEngine(connection), user_id="user-2", status="disabled")
+
+    assert response == {"userId": "user-2", "role": None, "status": "DISABLED"}
+    assert connection.users["user-2"]["status"] == "DISABLED"
+
+    with pytest.raises(AdminUserError, match="error.admin.user.status.unsupported"):
+        await update_admin_user_status(FakeEngine(connection), user_id="user-2", status="PENDING")
+
+
+def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(
+        user_id,
+        ["USER_ADMIN"] if user_id == "admin" else ["USER"],
+    )
+    app.state.admin_user_reader = lambda payload, user: {"items": [{"id": "user-1"}], "total": 1, "page": 0, "size": 20}
+    app.state.admin_user_role_writer = lambda user_id, payload, user: {
+        "userId": user_id,
+        "role": payload["role"],
+        "status": "ACTIVE",
+    }
+    app.state.admin_user_status_writer = lambda user_id, payload, user: {
+        "userId": user_id,
+        "role": None,
+        "status": payload["status"],
+    }
+    client = TestClient(app)
+
+    assert client.get("/api/v1/admin/users").status_code == 401
+    assert client.get("/api/v1/admin/users", headers={"X-Mock-User-Id": "user"}).status_code == 403
+
+    listed = client.get("/api/v1/admin/users", headers={"X-Mock-User-Id": "admin"})
+    assert listed.status_code == 200
+    assert listed.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
+    assert listed.json()["data"]["items"] == [{"id": "user-1"}]
+
+    role = client.put(
+        "/api/v1/admin/users/user-1/role",
+        json={"role": "SKILL_ADMIN"},
+        headers={"X-Mock-User-Id": "admin"},
+    )
+    assert role.status_code == 200
+    assert role.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
+    assert role.json()["data"]["role"] == "SKILL_ADMIN"
+
+    disabled = client.post("/api/v1/admin/users/user-1/disable", headers={"X-Mock-User-Id": "admin"})
+    assert disabled.status_code == 200
+    assert disabled.json()["data"]["status"] == "DISABLED"

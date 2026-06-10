@@ -192,5 +192,12 @@ deferred routes are still visible.
 | PUT | `/api/v1/admin/labels/{slug}` | python | Admin label definition update moved to Python. Requires `SUPER_ADMIN`, replaces translations, updates type/visibility/sort order, and records `LABEL_UPDATE` audit. |
 | DELETE | `/api/v1/admin/labels/{slug}` | python | Admin label definition delete moved to Python. Requires `SUPER_ADMIN`, deletes the definition through DB cascade and records `LABEL_DELETE` audit. |
 | PUT | `/api/v1/admin/labels/sort-order` | python | Admin label definition sort update moved to Python. Requires `SUPER_ADMIN`, updates per-label sort order and records `LABEL_SORT_ORDER_UPDATE` audit. |
+| GET | `/api/v1/admin/users` | python | Admin user list moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves Java search/status/page behavior, created-at descending order, role fallback to `USER`, and page envelope. |
+| PUT | `/api/v1/admin/users/{userId}/role` | python | Admin user role update moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, deletes previous platform bindings, preserves `USER` as no binding, and keeps `SUPER_ADMIN` assignment restricted to super admins. |
+| PUT | `/api/v1/admin/users/{userId}/status` | python | Admin user status update moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, allows only Java-manageable `ACTIVE`/`DISABLED` transitions, and returns Java-compatible mutation envelope. |
+| POST | `/api/v1/admin/users/{userId}/approve` | python | Admin user approve alias moved to Python. Sets status to `ACTIVE` with the same mutation contract as Java. |
+| POST | `/api/v1/admin/users/{userId}/disable` | python | Admin user disable alias moved to Python. Sets status to `DISABLED` with the same mutation contract as Java. |
+| POST | `/api/v1/admin/users/{userId}/enable` | python | Admin user enable alias moved to Python. Sets status to `ACTIVE` with the same mutation contract as Java. |
+| POST | `/api/v1/admin/users/{userId}/password-reset` | java | Password reset remains Java-owned because it depends on local-auth reset token generation and email/operator behavior. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

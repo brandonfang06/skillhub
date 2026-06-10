@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -15437,6 +15437,305 @@ function Invoke-HybridAdminLabelDefinitionSmokeVerification {
     }
 }
 
+function Invoke-AdminUserManagementTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_user_management.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminUserPageJson {
+    param([object]$Response)
+
+    $items = @()
+    if ($Response.data -and $Response.data.items) {
+        $items = @($Response.data.items | Sort-Object id | ForEach-Object {
+            [ordered]@{
+                id = 'fixture'
+                username = $_.username
+                email = 'fixture@example.test'
+                status = $_.status
+                platformRoles = @($_.platformRoles | Sort-Object)
+            }
+        })
+    }
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            items = $items
+            total = [int]$Response.data.total
+            page = [int]$Response.data.page
+            size = [int]$Response.data.size
+        }
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableAdminUserMutationJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            userId = 'fixture'
+            role = $Response.data.role
+            status = $Response.data.status
+        }
+    }
+
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-AdminUserJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ 'X-Mock-User-Id' = $UserId }
+        ContentType = 'application/json'
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+    return Invoke-RestMethod @params
+}
+
+function Invoke-AdminUserStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ 'X-Mock-User-Id' = $UserId }
+        ContentType = 'application/json'
+        UseBasicParsing = $true
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+
+    try {
+        $response = Invoke-WebRequest @params
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-AdminUserManagementFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    super_admin_role_id BIGINT;
+    user_admin_role_id BIGINT;
+    skill_admin_role_id BIGINT;
+BEGIN
+    INSERT INTO role (code, name, description, is_system)
+    VALUES
+        ('SUPER_ADMIN', 'Super Admin', 'Super administrator', TRUE),
+        ('USER_ADMIN', 'User Admin', 'User administrator', TRUE),
+        ('SKILL_ADMIN', 'Skill Admin', 'Skill administrator', TRUE)
+    ON CONFLICT (code) DO UPDATE
+        SET name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            is_system = TRUE;
+
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+    SELECT id INTO user_admin_role_id FROM role WHERE code = 'USER_ADMIN';
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+
+    DELETE FROM user_role_binding WHERE user_id LIKE 'codex-admin-user-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-admin-user-%';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at)
+    VALUES
+        ('codex-admin-user-actor-$Suffix', 'Codex User Admin', 'actor-$Suffix@example.test', '', 'ACTIVE', '2026-06-10T08:00:00Z'::timestamptz),
+        ('codex-admin-user-list-a-$Suffix', 'Codex Listed A', 'list-a-$Suffix@example.test', '', 'ACTIVE', '2026-06-10T09:00:00Z'::timestamptz),
+        ('codex-admin-user-list-b-$Suffix', 'Codex Listed B', 'list-b-$Suffix@example.test', '', 'ACTIVE', '2026-06-10T07:00:00Z'::timestamptz),
+        ('codex-admin-user-list-disabled-$Suffix', 'Codex Listed Disabled', 'disabled-$Suffix@example.test', '', 'DISABLED', '2026-06-10T06:00:00Z'::timestamptz),
+        ('codex-admin-user-role-java-$Suffix', 'Codex Role Java', 'role-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-user-role-python-$Suffix', 'Codex Role Python', 'role-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-user-role-proxy-$Suffix', 'Codex Role Proxy', 'role-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-user-status-java-$Suffix', 'Codex Status Java', 'status-java-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-user-status-python-$Suffix', 'Codex Status Python', 'status-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-user-status-proxy-$Suffix', 'Codex Status Proxy', 'status-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = EXCLUDED.status,
+            created_at = EXCLUDED.created_at,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('codex-admin-user-actor-$Suffix', user_admin_role_id),
+        ('codex-admin-user-list-a-$Suffix', user_admin_role_id)
+    ON CONFLICT (user_id, role_id) DO NOTHING;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-AdminUserManagementContractComparison {
+    param([string]$ResultFileName = 'admin-user-management-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-AdminUserManagementFixture -Suffix $suffix
+
+    $adminId = 'local-admin'
+    $userAdminId = "codex-admin-user-actor-$suffix"
+    $query = "?search=$suffix&status=ACTIVE&page=0&size=20"
+    $javaList = Invoke-AdminUserJson 'Get' "$JavaUrl/api/v1/admin/users$query" $adminId
+    $pythonList = Invoke-AdminUserJson 'Get' "$PythonUrl/api/v1/admin/users$query" $adminId
+    $proxyList = Invoke-AdminUserJson 'Get' "$WebUrl/api/v1/admin/users$query" $adminId
+
+    $roleBody = @{ role = 'SKILL_ADMIN' }
+    $javaRoleTarget = "codex-admin-user-role-java-$suffix"
+    $pythonRoleTarget = "codex-admin-user-role-python-$suffix"
+    $proxyRoleTarget = "codex-admin-user-role-proxy-$suffix"
+    $javaRole = Invoke-AdminUserJson 'Put' "$JavaUrl/api/v1/admin/users/$javaRoleTarget/role" $adminId $roleBody
+    $pythonRole = Invoke-AdminUserJson 'Put' "$PythonUrl/api/v1/admin/users/$pythonRoleTarget/role" $adminId $roleBody
+    $proxyRole = Invoke-AdminUserJson 'Put' "$WebUrl/api/v1/admin/users/$proxyRoleTarget/role" $adminId $roleBody
+
+    $statusBody = @{ status = 'DISABLED' }
+    $javaStatusTarget = "codex-admin-user-status-java-$suffix"
+    $pythonStatusTarget = "codex-admin-user-status-python-$suffix"
+    $proxyStatusTarget = "codex-admin-user-status-proxy-$suffix"
+    $javaStatus = Invoke-AdminUserJson 'Put' "$JavaUrl/api/v1/admin/users/$javaStatusTarget/status" $adminId $statusBody
+    $pythonStatus = Invoke-AdminUserJson 'Put' "$PythonUrl/api/v1/admin/users/$pythonStatusTarget/status" $adminId $statusBody
+    $proxyStatus = Invoke-AdminUserJson 'Put' "$WebUrl/api/v1/admin/users/$proxyStatusTarget/status" $adminId $statusBody
+
+    $javaEnable = Invoke-AdminUserJson 'Post' "$JavaUrl/api/v1/admin/users/$javaStatusTarget/enable" $adminId
+    $pythonEnable = Invoke-AdminUserJson 'Post' "$PythonUrl/api/v1/admin/users/$pythonStatusTarget/enable" $adminId
+    $proxyEnable = Invoke-AdminUserJson 'Post' "$WebUrl/api/v1/admin/users/$proxyStatusTarget/enable" $adminId
+
+    $superAdminDeniedJava = Invoke-AdminUserStatus 'Put' "$JavaUrl/api/v1/admin/users/$javaRoleTarget/role" $userAdminId @{ role = 'SUPER_ADMIN' }
+    $superAdminDeniedPython = Invoke-AdminUserStatus 'Put' "$PythonUrl/api/v1/admin/users/$pythonRoleTarget/role" $userAdminId @{ role = 'SUPER_ADMIN' }
+    $superAdminDeniedProxy = Invoke-AdminUserStatus 'Put' "$WebUrl/api/v1/admin/users/$proxyRoleTarget/role" $userAdminId @{ role = 'SUPER_ADMIN' }
+    $forbiddenListJava = Invoke-AdminUserStatus 'Get' "$JavaUrl/api/v1/admin/users$query" 'local-user'
+    $forbiddenListPython = Invoke-AdminUserStatus 'Get' "$PythonUrl/api/v1/admin/users$query" 'local-user'
+    $forbiddenListProxy = Invoke-AdminUserStatus 'Get' "$WebUrl/api/v1/admin/users$query" 'local-user'
+    $passwordResetJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/missing-password-reset-$suffix/password-reset" $adminId
+    $passwordResetProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/missing-password-reset-$suffix/password-reset" $adminId
+
+    $roleRows = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM user_role_binding urb JOIN role r ON r.id = urb.role_id WHERE urb.user_id IN ('$javaRoleTarget', '$pythonRoleTarget', '$proxyRoleTarget') AND r.code = 'SKILL_ADMIN';"
+    $enabledRows = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM user_account WHERE id IN ('$javaStatusTarget', '$pythonStatusTarget', '$proxyStatusTarget') AND status = 'ACTIVE';"
+
+    $stable = [ordered]@{
+        list = [ordered]@{
+            java = ConvertTo-StableAdminUserPageJson -Response $javaList
+            python = ConvertTo-StableAdminUserPageJson -Response $pythonList
+            proxy = ConvertTo-StableAdminUserPageJson -Response $proxyList
+        }
+        role = [ordered]@{
+            java = ConvertTo-StableAdminUserMutationJson -Response $javaRole
+            python = ConvertTo-StableAdminUserMutationJson -Response $pythonRole
+            proxy = ConvertTo-StableAdminUserMutationJson -Response $proxyRole
+        }
+        status = [ordered]@{
+            java = ConvertTo-StableAdminUserMutationJson -Response $javaStatus
+            python = ConvertTo-StableAdminUserMutationJson -Response $pythonStatus
+            proxy = ConvertTo-StableAdminUserMutationJson -Response $proxyStatus
+        }
+        enable = [ordered]@{
+            java = ConvertTo-StableAdminUserMutationJson -Response $javaEnable
+            python = ConvertTo-StableAdminUserMutationJson -Response $pythonEnable
+            proxy = ConvertTo-StableAdminUserMutationJson -Response $proxyEnable
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/admin/users',
+            '/api/v1/admin/users/{userId}/role',
+            '/api/v1/admin/users/{userId}/status',
+            '/api/v1/admin/users/{userId}/approve',
+            '/api/v1/admin/users/{userId}/disable',
+            '/api/v1/admin/users/{userId}/enable'
+        )
+        checks = [ordered]@{
+            listEnvelopeMatches = ($stable.list.java -eq $stable.list.python -and $stable.list.python -eq $stable.list.proxy)
+            roleEnvelopeMatches = ($stable.role.java -eq $stable.role.python -and $stable.role.python -eq $stable.role.proxy)
+            statusEnvelopeMatches = ($stable.status.java -eq $stable.status.python -and $stable.status.python -eq $stable.status.proxy)
+            enableEnvelopeMatches = ($stable.enable.java -eq $stable.enable.python -and $stable.enable.python -eq $stable.enable.proxy)
+            rolePersisted = ($roleRows -eq '3')
+            enablePersisted = ($enabledRows -eq '3')
+            userAdminCannotAssignSuperAdmin = ($superAdminDeniedJava -eq 403 -and $superAdminDeniedPython -eq 403 -and $superAdminDeniedProxy -eq 403)
+            nonAdminForbidden = ($forbiddenListJava -eq 403 -and $forbiddenListPython -eq 403 -and $forbiddenListProxy -eq 403)
+            passwordResetStillJavaOwned = ($passwordResetJava -eq $passwordResetProxy)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            superAdminDenied = @($superAdminDeniedJava, $superAdminDeniedPython, $superAdminDeniedProxy)
+            forbiddenList = @($forbiddenListJava, $forbiddenListPython, $forbiddenListProxy)
+            passwordReset = @($passwordResetJava, $passwordResetProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin user management contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminUserManagementSmokeVerification {
+    try {
+        Invoke-AdminUserManagementTests
+        Start-Hybrid
+        Invoke-AdminUserManagementContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -15513,6 +15812,7 @@ switch ($Action) {
     'verify-namespace-transfer-ownership-smoke' { Invoke-HybridNamespaceTransferOwnershipSmokeVerification }
     'verify-namespace-profile-lifecycle-smoke' { Invoke-HybridNamespaceProfileLifecycleSmokeVerification }
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
+    'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
