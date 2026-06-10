@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -17063,6 +17063,202 @@ function Invoke-HybridAdminUserManagementSmokeVerification {
     }
 }
 
+function Invoke-AdminPasswordResetTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_user_management.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminPasswordResetJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $Response.data
+    }
+
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Ensure-AdminPasswordResetFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+BEGIN
+    DELETE FROM password_reset_request WHERE user_id LIKE 'codex-admin-reset-%';
+    DELETE FROM local_credential WHERE user_id LIKE 'codex-admin-reset-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-admin-reset-%';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at)
+    VALUES
+        ('codex-admin-reset-python-$Suffix', 'Codex Reset Python', 'reset-python-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-reset-proxy-$Suffix', 'Codex Reset Proxy', 'reset-proxy-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-reset-disabled-$Suffix', 'Codex Reset Disabled', 'reset-disabled-$Suffix@example.test', '', 'DISABLED', CURRENT_TIMESTAMP),
+        ('codex-admin-reset-no-email-$Suffix', 'Codex Reset No Email', '', '', 'ACTIVE', CURRENT_TIMESTAMP),
+        ('codex-admin-reset-no-credential-$Suffix', 'Codex Reset No Credential', 'reset-no-credential-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO local_credential (user_id, username, password_hash)
+    VALUES
+        ('codex-admin-reset-python-$Suffix', 'reset-python-$Suffix', '`$2a`$10`$fixturefixturefixturefixturefixturefixturefixturefixture'),
+        ('codex-admin-reset-proxy-$Suffix', 'reset-proxy-$Suffix', '`$2a`$10`$fixturefixturefixturefixturefixturefixturefixturefixture'),
+        ('codex-admin-reset-disabled-$Suffix', 'reset-disabled-$Suffix', '`$2a`$10`$fixturefixturefixturefixturefixturefixturefixturefixture'),
+        ('codex-admin-reset-no-email-$Suffix', 'reset-no-email-$Suffix', '`$2a`$10`$fixturefixturefixturefixturefixturefixturefixturefixture')
+    ON CONFLICT (user_id) DO UPDATE
+        SET username = EXCLUDED.username,
+            password_hash = EXCLUDED.password_hash,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO password_reset_request (user_id, email, code_hash, expires_at, requested_by_admin, requested_by_user_id)
+    VALUES
+        ('codex-admin-reset-python-$Suffix', 'reset-python-$Suffix@example.test', 'old-python-reset-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', TRUE, 'local-admin'),
+        ('codex-admin-reset-proxy-$Suffix', 'reset-proxy-$Suffix@example.test', 'old-proxy-reset-hash', CURRENT_TIMESTAMP + INTERVAL '1 hour', TRUE, 'local-admin');
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-AdminPasswordResetState {
+    param([string]$UserId)
+
+    $unconsumed = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM password_reset_request WHERE user_id = '$UserId' AND consumed_at IS NULL AND requested_by_admin = TRUE AND requested_by_user_id = 'local-admin';"
+    $consumedOld = Invoke-PostgresScalar -Sql "SELECT COUNT(*) FROM password_reset_request WHERE user_id = '$UserId' AND consumed_at IS NOT NULL AND code_hash LIKE 'old-%';"
+    $latestHash = Invoke-PostgresScalar -Sql "SELECT code_hash FROM password_reset_request WHERE user_id = '$UserId' ORDER BY id DESC LIMIT 1;"
+    $latestExpiryValid = Invoke-PostgresScalar -Sql "SELECT CASE WHEN expires_at > CURRENT_TIMESTAMP THEN 1 ELSE 0 END FROM password_reset_request WHERE user_id = '$UserId' ORDER BY id DESC LIMIT 1;"
+
+    return [ordered]@{
+        unconsumedAdminRequests = [int]$unconsumed
+        consumedOldRequests = [int]$consumedOld
+        latestHashIsBcrypt = ($latestHash.StartsWith('$2'))
+        latestHashIsNotPlainCode = ($latestHash -ne '123456')
+        latestExpiryIsFuture = ($latestExpiryValid -eq '1')
+    }
+}
+
+function Invoke-AdminPasswordResetContractComparison {
+    param([string]$ResultFileName = 'admin-password-reset-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-AdminPasswordResetFixture -Suffix $suffix
+
+    $adminId = 'local-admin'
+    $pythonTarget = "codex-admin-reset-python-$suffix"
+    $proxyTarget = "codex-admin-reset-proxy-$suffix"
+    $disabledTarget = "codex-admin-reset-disabled-$suffix"
+    $noEmailTarget = "codex-admin-reset-no-email-$suffix"
+    $noCredentialTarget = "codex-admin-reset-no-credential-$suffix"
+    $missingTarget = "codex-admin-reset-missing-$suffix"
+
+    $pythonSuccess = Invoke-AdminUserJson 'Post' "$PythonUrl/api/v1/admin/users/$pythonTarget/password-reset" $adminId
+    $proxySuccess = Invoke-AdminUserJson 'Post' "$WebUrl/api/v1/admin/users/$proxyTarget/password-reset" $adminId
+
+    $missingJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/$missingTarget/password-reset" $adminId
+    $missingPython = Invoke-AdminUserStatus 'Post' "$PythonUrl/api/v1/admin/users/$missingTarget/password-reset" $adminId
+    $missingProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/$missingTarget/password-reset" $adminId
+
+    $disabledJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/$disabledTarget/password-reset" $adminId
+    $disabledPython = Invoke-AdminUserStatus 'Post' "$PythonUrl/api/v1/admin/users/$disabledTarget/password-reset" $adminId
+    $disabledProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/$disabledTarget/password-reset" $adminId
+
+    $noEmailJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/$noEmailTarget/password-reset" $adminId
+    $noEmailPython = Invoke-AdminUserStatus 'Post' "$PythonUrl/api/v1/admin/users/$noEmailTarget/password-reset" $adminId
+    $noEmailProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/$noEmailTarget/password-reset" $adminId
+
+    $noCredentialJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/$noCredentialTarget/password-reset" $adminId
+    $noCredentialPython = Invoke-AdminUserStatus 'Post' "$PythonUrl/api/v1/admin/users/$noCredentialTarget/password-reset" $adminId
+    $noCredentialProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/$noCredentialTarget/password-reset" $adminId
+
+    $forbiddenJava = Invoke-AdminUserStatus 'Post' "$JavaUrl/api/v1/admin/users/$disabledTarget/password-reset" 'local-user'
+    $forbiddenPython = Invoke-AdminUserStatus 'Post' "$PythonUrl/api/v1/admin/users/$disabledTarget/password-reset" 'local-user'
+    $forbiddenProxy = Invoke-AdminUserStatus 'Post' "$WebUrl/api/v1/admin/users/$disabledTarget/password-reset" 'local-user'
+
+    $pythonState = Get-AdminPasswordResetState -UserId $pythonTarget
+    $proxyState = Get-AdminPasswordResetState -UserId $proxyTarget
+
+    $stable = [ordered]@{
+        success = [ordered]@{
+            python = ConvertTo-StableAdminPasswordResetJson -Response $pythonSuccess
+            proxy = ConvertTo-StableAdminPasswordResetJson -Response $proxySuccess
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @('/api/v1/admin/users/{userId}/password-reset')
+        checks = [ordered]@{
+            successEnvelopeMatches = ($stable.success.python -eq $stable.success.proxy)
+            pythonResetPersisted = ($pythonState.unconsumedAdminRequests -eq 1 -and $pythonState.consumedOldRequests -eq 1 -and $pythonState.latestHashIsBcrypt -and $pythonState.latestHashIsNotPlainCode -and $pythonState.latestExpiryIsFuture)
+            proxyResetPersisted = ($proxyState.unconsumedAdminRequests -eq 1 -and $proxyState.consumedOldRequests -eq 1 -and $proxyState.latestHashIsBcrypt -and $proxyState.latestHashIsNotPlainCode -and $proxyState.latestExpiryIsFuture)
+            missingUserParity = ($missingJava -eq 404 -and $missingPython -eq 404 -and $missingProxy -eq 404)
+            disabledUserParity = ($disabledJava -eq 400 -and $disabledPython -eq 400 -and $disabledProxy -eq 400)
+            noEmailParity = ($noEmailJava -eq 400 -and $noEmailPython -eq 400 -and $noEmailProxy -eq 400)
+            noCredentialParity = ($noCredentialJava -eq 400 -and $noCredentialPython -eq 400 -and $noCredentialProxy -eq 400)
+            nonAdminForbidden = ($forbiddenJava -eq 403 -and $forbiddenPython -eq 403 -and $forbiddenProxy -eq 403)
+            proxyRoutesToPython = ($stable.success.proxy -eq $stable.success.python -and $proxyState.unconsumedAdminRequests -eq 1)
+        }
+        stable = $stable
+        db = [ordered]@{
+            python = $pythonState
+            proxy = $proxyState
+        }
+        statuses = [ordered]@{
+            missing = @($missingJava, $missingPython, $missingProxy)
+            disabled = @($disabledJava, $disabledPython, $disabledProxy)
+            noEmail = @($noEmailJava, $noEmailPython, $noEmailProxy)
+            noCredential = @($noCredentialJava, $noCredentialPython, $noCredentialProxy)
+            forbidden = @($forbiddenJava, $forbiddenPython, $forbiddenProxy)
+        }
+        javaSuccessPath = 'deferred: Java success sends email and local hybrid has no SMTP mock'
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin password reset contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminPasswordResetSmokeVerification {
+    try {
+        Invoke-AdminPasswordResetTests
+        Start-Hybrid
+        Invoke-AdminPasswordResetContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -17141,6 +17337,7 @@ switch ($Action) {
     'verify-namespace-profile-lifecycle-smoke' { Invoke-HybridNamespaceProfileLifecycleSmokeVerification }
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
+    'verify-admin-password-reset-smoke' { Invoke-HybridAdminPasswordResetSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'verify-governance-notification-mark-read-smoke' { Invoke-HybridGovernanceNotificationMarkReadSmokeVerification }
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }

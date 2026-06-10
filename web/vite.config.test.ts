@@ -627,7 +627,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('PUT', '/api/web/skills/global/demo/labels/featured')).toBe('http://localhost:8081')
   })
 
-  it('routes admin user management APIs to Python while keeping password reset on Java', () => {
+  it('routes admin user management APIs and password reset to Python', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/users')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/users?page=0&size=20')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/admin/users/user-1/role')).toBe('http://localhost:8081')
@@ -635,11 +635,13 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/users/user-1/approve')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/users/user-1/disable')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/users/user-1/enable')).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/users/user-1/password-reset')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/users/user-1/password-reset')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/admin/users/user-1')).toBeUndefined()
 
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/users')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/admin/users/user-1/password-reset')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/users/user-1/password-reset')).toBe('http://localhost:8081')
   })
 
   it('routes skill labels aliases to Python without taking over all skill routes', () => {

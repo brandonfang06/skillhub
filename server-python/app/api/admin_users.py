@@ -10,6 +10,7 @@ from app.admin.users import (
     AdminUserError,
     list_admin_users,
     require_user_admin,
+    trigger_admin_password_reset,
     update_admin_user_role,
     update_admin_user_status,
 )
@@ -163,3 +164,29 @@ async def enable_admin_user_route(
 ) -> dict[str, Any]:
     user = await _require_admin_user(request, x_mock_user_id)
     return await _update_status_response(request, user_id, "ACTIVE", user)
+
+
+@router.post("/api/v1/admin/users/{user_id}/password-reset")
+async def trigger_admin_user_password_reset_route(
+    request: Request,
+    user_id: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user = await _require_admin_user(request, x_mock_user_id)
+    writer = getattr(request.app.state, "admin_user_password_reset_writer", None)
+    sender = getattr(request.app.state, "admin_password_reset_sender", None)
+    try:
+        await _resolve_result(
+            writer(user_id, user)
+            if writer is not None
+            else trigger_admin_password_reset(
+                request.app.state.db_engine,
+                user_id=user_id,
+                admin_user_id=str(user["userId"]),
+                actor_platform_roles=_roles(user),
+                sender=sender,
+            )
+        )
+    except AdminUserError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5982\u679c\u8d26\u53f7\u7b26\u5408\u6761\u4ef6\uff0c\u5bc6\u7801\u91cd\u7f6e\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u3002", None, request)

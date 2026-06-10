@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+import secrets
 from typing import Any
 
+import bcrypt
 from sqlalchemy import bindparam, text
 
 from app.api.skills import to_java_instant
@@ -10,6 +14,8 @@ from app.api.skills import to_java_instant
 ADMIN_ROLES = {"USER_ADMIN", "SUPER_ADMIN"}
 MANAGEABLE_STATUSES = {"ACTIVE", "DISABLED"}
 USER_STATUSES = {"ACTIVE", "DISABLED", "PENDING"}
+PASSWORD_RESET_CODE_DIGITS = 6
+PASSWORD_RESET_EXPIRY = timedelta(minutes=10)
 
 
 class AdminUserError(Exception):
@@ -51,6 +57,14 @@ def _page_size(size: int) -> int:
 
 def _page_number(page: int) -> int:
     return max(0, int(page))
+
+
+def generate_password_reset_code() -> str:
+    return f"{secrets.randbelow(10 ** PASSWORD_RESET_CODE_DIGITS):0{PASSWORD_RESET_CODE_DIGITS}d}"
+
+
+def bcrypt_reset_code(code: str) -> str:
+    return bcrypt.hashpw(code.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def _admin_user_list_filters(search: str | None, status: str | None) -> tuple[str, dict[str, Any]]:
@@ -217,3 +231,94 @@ async def update_admin_user_status(engine: Any, *, user_id: str, status: str) ->
             {"user_id": user_id, "status": normalized_status},
         )
     return {"userId": str(user["id"]), "role": None, "status": normalized_status}
+
+
+async def _has_local_credential(connection: Any, user_id: str) -> bool:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT user_id
+                FROM local_credential
+                WHERE user_id = :user_id
+                LIMIT 1
+                """
+            ),
+            {"user_id": user_id},
+        )
+    ).mappings().one_or_none()
+    return row is not None
+
+
+def _is_password_reset_eligible(user: dict[str, Any], has_credential: bool) -> bool:
+    return str(user["status"]) == "ACTIVE" and str(user.get("email") or "").strip() != "" and has_credential
+
+
+async def trigger_admin_password_reset(
+    engine: Any,
+    *,
+    user_id: str,
+    admin_user_id: str,
+    actor_platform_roles: list[str],
+    code_generator: Callable[[], str] = generate_password_reset_code,
+    code_hasher: Callable[[str], str] = bcrypt_reset_code,
+    sender: Callable[[str, str, bool], None] | None = None,
+) -> None:
+    require_user_admin(actor_platform_roles)
+    async with engine.begin() as connection:
+        user = await _read_user(connection, user_id)
+        has_credential = await _has_local_credential(connection, user_id)
+        if not _is_password_reset_eligible(user, has_credential):
+            raise AdminUserError("error.auth.password.reset.not.eligible", status_code=400)
+
+        now = datetime.now(UTC)
+        code = code_generator()
+        code_hash = code_hasher(code)
+        await connection.execute(
+            text(
+                """
+                UPDATE password_reset_request
+                SET consumed_at = :consumed_at
+                WHERE user_id = :user_id
+                  AND consumed_at IS NULL
+                  AND expires_at > :consumed_at
+                """
+            ),
+            {"user_id": user_id, "consumed_at": now},
+        )
+        await connection.execute(
+            text(
+                """
+                INSERT INTO password_reset_request (
+                    user_id,
+                    email,
+                    code_hash,
+                    expires_at,
+                    requested_by_admin,
+                    requested_by_user_id
+                )
+                VALUES (
+                    :user_id,
+                    :email,
+                    :code_hash,
+                    :expires_at,
+                    :requested_by_admin,
+                    :requested_by_user_id
+                )
+                """
+            ),
+            {
+                "user_id": user_id,
+                "email": str(user["email"]),
+                "code_hash": code_hash,
+                "expires_at": now + PASSWORD_RESET_EXPIRY,
+                "requested_by_admin": True,
+                "requested_by_user_id": admin_user_id,
+            },
+        )
+        if sender is not None:
+            try:
+                sender(str(user["email"]), code, True)
+            except Exception as exc:  # pragma: no cover - exercised through route-level behavior when configured.
+                raise AdminUserError("error.auth.password.reset.email.failed", status_code=500) from exc
+    return None

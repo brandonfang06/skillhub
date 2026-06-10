@@ -379,6 +379,11 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/users\/[^/?]+\/password-reset(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/admin\/audit-logs(?:\?.*)?$/,
     target: 'http://localhost:8081',

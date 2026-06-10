@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.admin.users import (
     AdminUserError,
     list_admin_users,
+    trigger_admin_password_reset,
     update_admin_user_role,
     update_admin_user_status,
 )
@@ -65,7 +66,21 @@ class FakeAdminUserConnection:
             "user-1": user_row("user-1", "Alice Admin", "alice@example.test", "ACTIVE", 3),
             "user-2": user_row("user-2", "Bob User", "bob@example.test", "ACTIVE", 2),
             "user-3": user_row("user-3", "Disabled User", "disabled@example.test", "DISABLED", 1),
+            "user-4": user_row("user-4", "No Credential", "no-credential@example.test", "ACTIVE", 4),
+            "user-5": user_row("user-5", "No Email", "", "ACTIVE", 5),
         }
+        self.local_credentials = {"user-1", "user-2", "user-3", "user-5"}
+        self.reset_requests: list[dict[str, Any]] = [
+            {
+                "user_id": "user-2",
+                "email": "bob@example.test",
+                "code_hash": "$2a$old",
+                "expires_at": datetime(2026, 6, 10, 8, 30, tzinfo=UTC),
+                "consumed_at": None,
+                "requested_by_admin": True,
+                "requested_by_user_id": "old-admin",
+            }
+        ]
         self.roles = {"USER_ADMIN": 10, "SUPER_ADMIN": 11, "SKILL_ADMIN": 12}
         self.user_roles: dict[str, list[str]] = {"user-1": ["USER_ADMIN"], "user-3": ["SKILL_ADMIN", "USER_ADMIN"]}
         self.statements: list[str] = []
@@ -87,6 +102,27 @@ class FakeAdminUserConnection:
         if "FROM user_account" in sql and "WHERE id = :user_id" in sql:
             row = self.users.get(str(bound["user_id"]))
             return FakeResult(row=row) if row else FakeResult()
+        if "FROM local_credential" in sql:
+            user_id = str(bound["user_id"])
+            return FakeResult(row={"user_id": user_id}) if user_id in self.local_credentials else FakeResult()
+        if "UPDATE password_reset_request" in sql:
+            for row in self.reset_requests:
+                if row["user_id"] == bound["user_id"] and row["consumed_at"] is None:
+                    row["consumed_at"] = bound["consumed_at"]
+            return FakeResult()
+        if "INSERT INTO password_reset_request" in sql:
+            self.reset_requests.append(
+                {
+                    "user_id": bound["user_id"],
+                    "email": bound["email"],
+                    "code_hash": bound["code_hash"],
+                    "expires_at": bound["expires_at"],
+                    "consumed_at": None,
+                    "requested_by_admin": bound["requested_by_admin"],
+                    "requested_by_user_id": bound["requested_by_user_id"],
+                }
+            )
+            return FakeResult()
         if "FROM user_role_binding" in sql and "r.code" in sql:
             rows: list[dict[str, Any]] = []
             for user_id in bound["user_ids"]:
@@ -151,17 +187,18 @@ async def test_list_admin_users_filters_sorts_and_adds_default_user_role() -> No
 
     response = await list_admin_users(
         FakeEngine(connection),
-        search="user",
+        search="example.test",
         status="active",
         page=0,
         size=20,
         platform_roles=["USER_ADMIN"],
     )
 
-    assert response["total"] == 2
-    assert [item["id"] for item in response["items"]] == ["user-1", "user-2"]
-    assert response["items"][0]["platformRoles"] == ["USER_ADMIN"]
-    assert response["items"][1]["platformRoles"] == ["USER"]
+    assert response["total"] == 3
+    assert [item["id"] for item in response["items"]] == ["user-4", "user-1", "user-2"]
+    assert response["items"][0]["platformRoles"] == ["USER"]
+    assert response["items"][1]["platformRoles"] == ["USER_ADMIN"]
+    assert response["items"][2]["platformRoles"] == ["USER"]
     assert response["page"] == 0
     assert response["size"] == 20
 
@@ -213,6 +250,62 @@ async def test_update_status_accepts_only_manageable_statuses() -> None:
         await update_admin_user_status(FakeEngine(connection), user_id="user-2", status="PENDING")
 
 
+@pytest.mark.anyio
+async def test_trigger_admin_password_reset_consumes_old_request_and_creates_admin_request() -> None:
+    connection = FakeAdminUserConnection()
+
+    result = await trigger_admin_password_reset(
+        FakeEngine(connection),
+        user_id="user-2",
+        admin_user_id="admin-1",
+        actor_platform_roles=["USER_ADMIN"],
+        code_generator=lambda: "123456",
+    )
+
+    assert result is None
+    assert connection.reset_requests[0]["consumed_at"] is not None
+    created = connection.reset_requests[-1]
+    assert created["user_id"] == "user-2"
+    assert created["email"] == "bob@example.test"
+    assert created["code_hash"].startswith("$2")
+    assert created["code_hash"] != "123456"
+    assert created["requested_by_admin"] is True
+    assert created["requested_by_user_id"] == "admin-1"
+
+
+@pytest.mark.anyio
+async def test_trigger_admin_password_reset_matches_java_error_cases() -> None:
+    connection = FakeAdminUserConnection()
+
+    with pytest.raises(AdminUserError, match="error.admin.user.notFound") as missing:
+        await trigger_admin_password_reset(
+            FakeEngine(connection),
+            user_id="missing",
+            admin_user_id="admin-1",
+            actor_platform_roles=["USER_ADMIN"],
+        )
+    assert missing.value.status_code == 404
+
+    for user_id in ["user-3", "user-4", "user-5"]:
+        with pytest.raises(AdminUserError, match="error.auth.password.reset.not.eligible") as ineligible:
+            await trigger_admin_password_reset(
+                FakeEngine(connection),
+                user_id=user_id,
+                admin_user_id="admin-1",
+                actor_platform_roles=["USER_ADMIN"],
+            )
+        assert ineligible.value.status_code == 400
+
+    with pytest.raises(AdminUserError, match="error.admin.userAdminRequired") as forbidden:
+        await trigger_admin_password_reset(
+            FakeEngine(connection),
+            user_id="user-2",
+            admin_user_id="regular",
+            actor_platform_roles=["USER"],
+        )
+    assert forbidden.value.status_code == 403
+
+
 def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(
@@ -230,6 +323,7 @@ def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:
         "role": None,
         "status": payload["status"],
     }
+    app.state.admin_user_password_reset_writer = lambda user_id, user: None
     client = TestClient(app)
 
     assert client.get("/api/v1/admin/users").status_code == 401
@@ -252,3 +346,8 @@ def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:
     disabled = client.post("/api/v1/admin/users/user-1/disable", headers={"X-Mock-User-Id": "admin"})
     assert disabled.status_code == 200
     assert disabled.json()["data"]["status"] == "DISABLED"
+
+    reset = client.post("/api/v1/admin/users/user-1/password-reset", headers={"X-Mock-User-Id": "admin"})
+    assert reset.status_code == 200
+    assert reset.json()["msg"] == "\u5982\u679c\u8d26\u53f7\u7b26\u5408\u6761\u4ef6\uff0c\u5bc6\u7801\u91cd\u7f6e\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u3002"
+    assert reset.json()["data"] is None

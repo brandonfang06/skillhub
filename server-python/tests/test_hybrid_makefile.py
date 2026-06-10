@@ -142,6 +142,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-namespace-profile-lifecycle-smoke" in script
     assert "verify-admin-label-definition-smoke" in script
     assert "verify-admin-user-management-smoke" in script
+    assert "verify-admin-password-reset-smoke" in script
     assert "verify-governance-workbench-smoke" in script
     assert "verify-governance-notification-mark-read-smoke" in script
     assert "verify-admin-audit-log-smoke" in script
@@ -347,6 +348,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_admin_label_definitions.py" in script
     assert "tests/test_skill_label_mutations.py" in script
     assert "admin-user-management-contract-result.json" in script
+    assert "admin-password-reset-contract-result.json" in script
     assert "tests/test_admin_user_management.py" in script
     assert "governance-workbench-contract-result.json" in script
     assert "governance-notification-mark-read-contract-result.json" in script
