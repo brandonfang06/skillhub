@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -14779,6 +14779,327 @@ function Invoke-HybridNamespaceTransferOwnershipSmokeVerification {
     }
 }
 
+function Invoke-NamespaceProfileLifecycleTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_namespace_profile_lifecycle.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableNamespaceProfileJson {
+    param([object]$Response)
+
+    return ([ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = [ordered]@{
+            slug = $Response.data.slug
+            displayName = $Response.data.displayName
+            status = $Response.data.status
+            description = $Response.data.description
+            type = $Response.data.type
+        }
+    } | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-NamespaceProfileLifecycleContractComparison {
+    param([string]$ResultFileName = 'namespace-profile-lifecycle-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $adminId = "codex-ns-life-admin-$suffix"
+    $ownerId = "codex-ns-life-owner-$suffix"
+    $memberId = "codex-ns-life-member-$suffix"
+
+    $sql = @"
+DO `$`$
+DECLARE
+    skill_admin_role BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('$adminId', 'Codex Namespace Admin', 'ns-life-admin-$suffix@example.test', '', 'ACTIVE'),
+        ('$ownerId', 'Codex Namespace Owner', 'ns-life-owner-$suffix@example.test', '', 'ACTIVE'),
+        ('$memberId', 'Codex Namespace Member', 'ns-life-member-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    SELECT id INTO skill_admin_role FROM role WHERE code = 'SKILL_ADMIN';
+    IF skill_admin_role IS NOT NULL THEN
+        INSERT INTO user_role_binding (user_id, role_id)
+        VALUES ('$adminId', skill_admin_role)
+        ON CONFLICT DO NOTHING;
+    END IF;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Ensure-LifeNamespace {
+        param(
+            [string]$Slug,
+            [string]$Status = 'ACTIVE',
+            [string]$Owner = $ownerId,
+            [bool]$WithMember = $true
+        )
+        $setupSql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+BEGIN
+    INSERT INTO namespace (slug, display_name, type, status, description, avatar_url, created_by)
+    VALUES ('$Slug', 'Codex Namespace Lifecycle', 'TEAM', '$Status', 'lifecycle fixture', '', '$Owner')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        description = EXCLUDED.description,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, '$Owner', 'OWNER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE SET role = EXCLUDED.role;
+
+    IF '$WithMember' = 'True' THEN
+        INSERT INTO namespace_member (namespace_id, user_id, role)
+        VALUES (ns_id, '$memberId', 'MEMBER')
+        ON CONFLICT (namespace_id, user_id) DO UPDATE SET role = EXCLUDED.role;
+    END IF;
+END `$`$;
+"@
+        Invoke-PostgresSql -Sql $setupSql
+    }
+
+    function Read-LifeNamespaceStatus {
+        param([string]$Slug)
+        return Invoke-PostgresScalar -Sql "SELECT status FROM namespace WHERE slug = '$Slug';"
+    }
+
+    function Read-LifeNamespaceExists {
+        param([string]$Slug)
+        return Invoke-PostgresScalar -Sql "SELECT CASE WHEN EXISTS (SELECT 1 FROM namespace WHERE slug = '$Slug') THEN 'true' ELSE 'false' END;"
+    }
+
+    function Read-LifeAudit {
+        param(
+            [string]$Slug,
+            [string]$Action
+        )
+        return Invoke-PostgresScalar -Sql "SELECT action || '|' || target_type || '|' || actor_user_id || '|' || COALESCE(detail_json::text, '') FROM audit_log WHERE target_type = 'NAMESPACE' AND target_id = (SELECT id FROM namespace WHERE slug = '$Slug') AND action = '$Action' ORDER BY created_at DESC LIMIT 1;"
+    }
+
+    $createJavaSlug = "codex-ns-life-create-java-$suffix"
+    $createPythonSlug = "codex-ns-life-create-python-$suffix"
+    $createProxySlug = "codex-ns-life-create-proxy-$suffix"
+    $javaCreate = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces" $adminId @{ slug = $createJavaSlug; displayName = 'Codex Created'; description = 'created' }
+    $pythonCreate = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces" $adminId @{ slug = $createPythonSlug; displayName = 'Codex Created'; description = 'created' }
+    $proxyCreate = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces" $adminId @{ slug = $createProxySlug; displayName = 'Codex Created'; description = 'created' }
+    $createMemberJava = Invoke-PostgresScalar -Sql "SELECT role FROM namespace_member WHERE namespace_id = (SELECT id FROM namespace WHERE slug = '$createJavaSlug') AND user_id = '$adminId';"
+    $createMemberPython = Invoke-PostgresScalar -Sql "SELECT role FROM namespace_member WHERE namespace_id = (SELECT id FROM namespace WHERE slug = '$createPythonSlug') AND user_id = '$adminId';"
+    $createMemberProxy = Invoke-PostgresScalar -Sql "SELECT role FROM namespace_member WHERE namespace_id = (SELECT id FROM namespace WHERE slug = '$createProxySlug') AND user_id = '$adminId';"
+
+    $updateJavaSlug = "codex-ns-life-update-java-$suffix"
+    $updatePythonSlug = "codex-ns-life-update-python-$suffix"
+    $updateProxySlug = "codex-ns-life-update-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $updateJavaSlug
+    Ensure-LifeNamespace -Slug $updatePythonSlug
+    Ensure-LifeNamespace -Slug $updateProxySlug
+    $javaUpdate = Invoke-NamespaceMemberJson 'Put' "$JavaUrl/api/v1/namespaces/$updateJavaSlug" $ownerId @{ displayName = 'Updated Name'; description = 'updated' }
+    $pythonUpdate = Invoke-NamespaceMemberJson 'Put' "$PythonUrl/api/v1/namespaces/$updatePythonSlug" $ownerId @{ displayName = 'Updated Name'; description = 'updated' }
+    $proxyUpdate = Invoke-NamespaceMemberJson 'Put' "$WebUrl/api/web/namespaces/$updateProxySlug" $ownerId @{ displayName = 'Updated Name'; description = 'updated' }
+
+    $deleteJavaSlug = "codex-ns-life-delete-java-$suffix"
+    $deletePythonSlug = "codex-ns-life-delete-python-$suffix"
+    $deleteProxySlug = "codex-ns-life-delete-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $deleteJavaSlug
+    Ensure-LifeNamespace -Slug $deletePythonSlug
+    Ensure-LifeNamespace -Slug $deleteProxySlug
+    $javaDelete = Invoke-NamespaceMemberJson 'Delete' "$JavaUrl/api/v1/namespaces/$deleteJavaSlug" $ownerId
+    $pythonDelete = Invoke-NamespaceMemberJson 'Delete' "$PythonUrl/api/v1/namespaces/$deletePythonSlug" $ownerId
+    $proxyDelete = Invoke-NamespaceMemberJson 'Delete' "$WebUrl/api/web/namespaces/$deleteProxySlug" $ownerId
+    $deleteExistsJava = Read-LifeNamespaceExists -Slug $deleteJavaSlug
+    $deleteExistsPython = Read-LifeNamespaceExists -Slug $deletePythonSlug
+    $deleteExistsProxy = Read-LifeNamespaceExists -Slug $deleteProxySlug
+
+    $freezeJavaSlug = "codex-ns-life-freeze-java-$suffix"
+    $freezePythonSlug = "codex-ns-life-freeze-python-$suffix"
+    $freezeProxySlug = "codex-ns-life-freeze-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $freezeJavaSlug
+    Ensure-LifeNamespace -Slug $freezePythonSlug
+    Ensure-LifeNamespace -Slug $freezeProxySlug
+    $javaFreeze = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$freezeJavaSlug/freeze" $ownerId @{ reason = 'maintenance' }
+    $pythonFreeze = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$freezePythonSlug/freeze" $ownerId @{ reason = 'maintenance' }
+    $proxyFreeze = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$freezeProxySlug/freeze" $ownerId @{ reason = 'maintenance' }
+    $freezeAuditJava = Read-LifeAudit -Slug $freezeJavaSlug -Action 'FREEZE_NAMESPACE'
+    $freezeAuditPython = Read-LifeAudit -Slug $freezePythonSlug -Action 'FREEZE_NAMESPACE'
+    $freezeAuditProxy = Read-LifeAudit -Slug $freezeProxySlug -Action 'FREEZE_NAMESPACE'
+
+    $unfreezeJavaSlug = "codex-ns-life-unfreeze-java-$suffix"
+    $unfreezePythonSlug = "codex-ns-life-unfreeze-python-$suffix"
+    $unfreezeProxySlug = "codex-ns-life-unfreeze-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $unfreezeJavaSlug -Status 'FROZEN'
+    Ensure-LifeNamespace -Slug $unfreezePythonSlug -Status 'FROZEN'
+    Ensure-LifeNamespace -Slug $unfreezeProxySlug -Status 'FROZEN'
+    $javaUnfreeze = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$unfreezeJavaSlug/unfreeze" $ownerId
+    $pythonUnfreeze = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$unfreezePythonSlug/unfreeze" $ownerId
+    $proxyUnfreeze = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$unfreezeProxySlug/unfreeze" $ownerId
+
+    $archiveJavaSlug = "codex-ns-life-archive-java-$suffix"
+    $archivePythonSlug = "codex-ns-life-archive-python-$suffix"
+    $archiveProxySlug = "codex-ns-life-archive-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $archiveJavaSlug
+    Ensure-LifeNamespace -Slug $archivePythonSlug
+    Ensure-LifeNamespace -Slug $archiveProxySlug
+    $javaArchive = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$archiveJavaSlug/archive" $ownerId @{ reason = 'retired' }
+    $pythonArchive = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$archivePythonSlug/archive" $ownerId @{ reason = 'retired' }
+    $proxyArchive = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$archiveProxySlug/archive" $ownerId @{ reason = 'retired' }
+
+    $restoreJavaSlug = "codex-ns-life-restore-java-$suffix"
+    $restorePythonSlug = "codex-ns-life-restore-python-$suffix"
+    $restoreProxySlug = "codex-ns-life-restore-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $restoreJavaSlug -Status 'ARCHIVED'
+    Ensure-LifeNamespace -Slug $restorePythonSlug -Status 'ARCHIVED'
+    Ensure-LifeNamespace -Slug $restoreProxySlug -Status 'ARCHIVED'
+    $javaRestore = Invoke-NamespaceMemberJson 'Post' "$JavaUrl/api/v1/namespaces/$restoreJavaSlug/restore" $ownerId
+    $pythonRestore = Invoke-NamespaceMemberJson 'Post' "$PythonUrl/api/v1/namespaces/$restorePythonSlug/restore" $ownerId
+    $proxyRestore = Invoke-NamespaceMemberJson 'Post' "$WebUrl/api/web/namespaces/$restoreProxySlug/restore" $ownerId
+
+    $memberUpdateJava = Invoke-NamespaceMemberStatusJson 'Put' "$JavaUrl/api/v1/namespaces/$updateJavaSlug" $memberId @{ displayName = 'Forbidden'; description = 'forbidden' }
+    $memberUpdatePython = Invoke-NamespaceMemberStatusJson 'Put' "$PythonUrl/api/v1/namespaces/$updatePythonSlug" $memberId @{ displayName = 'Forbidden'; description = 'forbidden' }
+    $memberUpdateProxy = Invoke-NamespaceMemberStatusJson 'Put' "$WebUrl/api/web/namespaces/$updateProxySlug" $memberId @{ displayName = 'Forbidden'; description = 'forbidden' }
+    $forbiddenArchiveJavaSlug = "codex-ns-life-archive-forbidden-java-$suffix"
+    $forbiddenArchivePythonSlug = "codex-ns-life-archive-forbidden-python-$suffix"
+    $forbiddenArchiveProxySlug = "codex-ns-life-archive-forbidden-proxy-$suffix"
+    Ensure-LifeNamespace -Slug $forbiddenArchiveJavaSlug
+    Ensure-LifeNamespace -Slug $forbiddenArchivePythonSlug
+    Ensure-LifeNamespace -Slug $forbiddenArchiveProxySlug
+    $memberArchiveJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces/$forbiddenArchiveJavaSlug/archive" $memberId @{ reason = 'forbidden' }
+    $memberArchivePython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces/$forbiddenArchivePythonSlug/archive" $memberId @{ reason = 'forbidden' }
+    $memberArchiveProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces/$forbiddenArchiveProxySlug/archive" $memberId @{ reason = 'forbidden' }
+    $badCreateJava = Invoke-NamespaceMemberStatusJson 'Post' "$JavaUrl/api/v1/namespaces" $memberId @{ slug = "codex-ns-life-bad-$suffix"; displayName = 'Bad'; description = 'bad' }
+    $badCreatePython = Invoke-NamespaceMemberStatusJson 'Post' "$PythonUrl/api/v1/namespaces" $memberId @{ slug = "codex-ns-life-bad-py-$suffix"; displayName = 'Bad'; description = 'bad' }
+    $badCreateProxy = Invoke-NamespaceMemberStatusJson 'Post' "$WebUrl/api/web/namespaces" $memberId @{ slug = "codex-ns-life-bad-proxy-$suffix"; displayName = 'Bad'; description = 'bad' }
+
+    $stable = [ordered]@{
+        create = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaCreate
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonCreate
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyCreate
+        }
+        update = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaUpdate
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonUpdate
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyUpdate
+        }
+        delete = [ordered]@{
+            java = ConvertTo-StableNamespaceMemberMessageJson -Response $javaDelete
+            python = ConvertTo-StableNamespaceMemberMessageJson -Response $pythonDelete
+            proxy = ConvertTo-StableNamespaceMemberMessageJson -Response $proxyDelete
+        }
+        freeze = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaFreeze
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonFreeze
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyFreeze
+        }
+        unfreeze = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaUnfreeze
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonUnfreeze
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyUnfreeze
+        }
+        archive = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaArchive
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonArchive
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyArchive
+        }
+        restore = [ordered]@{
+            java = ConvertTo-StableNamespaceProfileJson -Response $javaRestore
+            python = ConvertTo-StableNamespaceProfileJson -Response $pythonRestore
+            proxy = ConvertTo-StableNamespaceProfileJson -Response $proxyRestore
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            "/api/v1/namespaces",
+            "/api/web/namespaces",
+            "/api/v1/namespaces/{slug}",
+            "/api/web/namespaces/{slug}",
+            "/api/v1/namespaces/{slug}/freeze",
+            "/api/web/namespaces/{slug}/unfreeze",
+            "/api/v1/namespaces/{slug}/archive",
+            "/api/web/namespaces/{slug}/restore"
+        )
+        checks = [ordered]@{
+            createStatusShapeMatches = ($javaCreate.data.status -eq 'ACTIVE' -and $pythonCreate.data.status -eq 'ACTIVE' -and $proxyCreate.data.status -eq 'ACTIVE' -and $javaCreate.data.type -eq 'TEAM' -and $pythonCreate.data.type -eq 'TEAM' -and $proxyCreate.data.type -eq 'TEAM')
+            createOwnerMemberCreated = ($createMemberJava -eq 'OWNER' -and $createMemberPython -eq 'OWNER' -and $createMemberProxy -eq 'OWNER')
+            updateShapeMatches = ($javaUpdate.data.displayName -eq 'Updated Name' -and $pythonUpdate.data.displayName -eq 'Updated Name' -and $proxyUpdate.data.displayName -eq 'Updated Name')
+            deleteEnvelopeMatches = ($stable.delete.java -eq $stable.delete.python -and $stable.delete.python -eq $stable.delete.proxy)
+            deleteRemovesRows = ($deleteExistsJava -eq 'false' -and $deleteExistsPython -eq 'false' -and $deleteExistsProxy -eq 'false')
+            freezeStatusMatches = ($javaFreeze.data.status -eq 'FROZEN' -and $pythonFreeze.data.status -eq 'FROZEN' -and $proxyFreeze.data.status -eq 'FROZEN')
+            unfreezeStatusMatches = ($javaUnfreeze.data.status -eq 'ACTIVE' -and $pythonUnfreeze.data.status -eq 'ACTIVE' -and $proxyUnfreeze.data.status -eq 'ACTIVE')
+            archiveStatusMatches = ($javaArchive.data.status -eq 'ARCHIVED' -and $pythonArchive.data.status -eq 'ARCHIVED' -and $proxyArchive.data.status -eq 'ARCHIVED')
+            restoreStatusMatches = ($javaRestore.data.status -eq 'ACTIVE' -and $pythonRestore.data.status -eq 'ACTIVE' -and $proxyRestore.data.status -eq 'ACTIVE')
+            freezeAuditWritten = ($freezeAuditJava -like 'FREEZE_NAMESPACE|NAMESPACE|*' -and $freezeAuditPython -like 'FREEZE_NAMESPACE|NAMESPACE|*' -and $freezeAuditProxy -like 'FREEZE_NAMESPACE|NAMESPACE|*')
+            memberUpdateForbidden = ($memberUpdateJava -eq 403 -and $memberUpdatePython -eq 403 -and $memberUpdateProxy -eq 403)
+            memberArchiveForbidden = ($memberArchiveJava -eq 403 -and $memberArchivePython -eq 403 -and $memberArchiveProxy -eq 403)
+            createPlatformRoleRequired = ($badCreateJava -eq 403 -and $badCreatePython -eq 403 -and $badCreateProxy -eq 403)
+        }
+        stable = $stable
+        audits = [ordered]@{
+            freezeJava = $freezeAuditJava
+            freezePython = $freezeAuditPython
+            freezeProxy = $freezeAuditProxy
+        }
+        statusBoundaries = [ordered]@{
+            memberUpdate = @($memberUpdateJava, $memberUpdatePython, $memberUpdateProxy)
+            memberArchive = @($memberArchiveJava, $memberArchivePython, $memberArchiveProxy)
+            badCreate = @($badCreateJava, $badCreatePython, $badCreateProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Namespace profile lifecycle contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridNamespaceProfileLifecycleSmokeVerification {
+    try {
+        Invoke-NamespaceProfileLifecycleTests
+        Start-Hybrid
+        Invoke-NamespaceProfileLifecycleContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -14853,6 +15174,7 @@ switch ($Action) {
     'verify-namespace-member-read-smoke' { Invoke-HybridNamespaceMemberReadSmokeVerification }
     'verify-namespace-member-mutation-smoke' { Invoke-HybridNamespaceMemberMutationSmokeVerification }
     'verify-namespace-transfer-ownership-smoke' { Invoke-HybridNamespaceTransferOwnershipSmokeVerification }
+    'verify-namespace-profile-lifecycle-smoke' { Invoke-HybridNamespaceProfileLifecycleSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

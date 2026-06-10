@@ -18,6 +18,16 @@ from app.namespace.members import (
     transfer_namespace_ownership,
     update_namespace_member_role,
 )
+from app.namespace.mutations import (
+    NamespaceMutationError,
+    archive_namespace,
+    create_namespace,
+    delete_namespace,
+    freeze_namespace,
+    restore_namespace,
+    unfreeze_namespace,
+    update_namespace,
+)
 from app.namespace.read import NamespaceReadError, get_namespace, list_my_namespaces, list_namespaces
 
 
@@ -41,6 +51,17 @@ async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
     return str(data["userId"])
 
 
+async def _require_current_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
+    if mock_user_id is None or mock_user_id.strip() == "":
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    user_id = mock_user_id.strip()
+    reader = getattr(request.app.state, "auth_me_reader", None)
+    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
+    if data is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return dict(data)
+
+
 def _parse_non_negative_int(value: int, default: int) -> int:
     return value if value >= 0 else default
 
@@ -53,6 +74,33 @@ def _parse_candidate_size(value: int) -> int:
     if value <= 0:
         return 10
     return min(value, 20)
+
+
+@router.post("/api/v1/namespaces")
+@router.post("/api/web/namespaces")
+async def create_namespace_route(
+    request: Request,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user = await _require_current_user(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_create_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(payload, user)
+            if writer is not None
+            else create_namespace(
+                request.app.state.db_engine,
+                slug=str(payload.get("slug") or ""),
+                display_name=str(payload.get("displayName") or ""),
+                description=payload.get("description"),
+                actor_user_id=str(user["userId"]),
+                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+            )
+        )
+    except NamespaceMutationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u521b\u5efa\u6210\u529f", data, request)
 
 
 @router.get("/api/v1/namespaces")
@@ -254,6 +302,131 @@ async def update_namespace_member_role_route(
     except NamespaceMemberReadError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.put("/api/v1/namespaces/{slug}")
+@router.put("/api/web/namespaces/{slug}")
+async def update_namespace_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any],
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user = await _require_current_user(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_update_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, payload, user)
+            if writer is not None
+            else update_namespace(
+                request.app.state.db_engine,
+                slug=slug,
+                display_name=payload.get("displayName"),
+                description=payload.get("description"),
+                actor_user_id=str(user["userId"]),
+            )
+        )
+    except NamespaceMutationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.delete("/api/v1/namespaces/{slug}")
+@router.delete("/api/web/namespaces/{slug}")
+async def delete_namespace_route(
+    request: Request,
+    slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user = await _require_current_user(request, x_mock_user_id)
+    writer = getattr(request.app.state, "namespace_delete_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(slug, user)
+            if writer is not None
+            else delete_namespace(request.app.state.db_engine, slug=slug, actor_user_id=str(user["userId"]))
+        )
+    except NamespaceMutationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", data, request)
+
+
+async def _lifecycle_route(
+    *,
+    action: str,
+    request: Request,
+    slug: str,
+    payload: dict[str, Any] | None,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user = await _require_current_user(request, mock_user_id)
+    writer = getattr(request.app.state, "namespace_lifecycle_writer", None)
+    if writer is not None:
+        data = await _resolve_result(writer(action, slug, payload or {}, user, request))
+        return ok("\u66f4\u65b0\u6210\u529f", data, request)
+    kwargs = {
+        "slug": slug,
+        "actor_user_id": str(user["userId"]),
+        "request_id": request.state.request_id,
+        "client_ip": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent"),
+    }
+    try:
+        if action == "freeze":
+            data = await freeze_namespace(request.app.state.db_engine, reason=(payload or {}).get("reason"), **kwargs)
+        elif action == "unfreeze":
+            data = await unfreeze_namespace(request.app.state.db_engine, **kwargs)
+        elif action == "archive":
+            data = await archive_namespace(request.app.state.db_engine, reason=(payload or {}).get("reason"), **kwargs)
+        elif action == "restore":
+            data = await restore_namespace(request.app.state.db_engine, **kwargs)
+        else:
+            raise AssertionError(f"unknown namespace lifecycle action {action}")
+    except NamespaceMutationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/namespaces/{slug}/freeze")
+@router.post("/api/web/namespaces/{slug}/freeze")
+async def freeze_namespace_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any] | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _lifecycle_route(action="freeze", request=request, slug=slug, payload=payload, mock_user_id=x_mock_user_id)
+
+
+@router.post("/api/v1/namespaces/{slug}/unfreeze")
+@router.post("/api/web/namespaces/{slug}/unfreeze")
+async def unfreeze_namespace_route(
+    request: Request,
+    slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _lifecycle_route(action="unfreeze", request=request, slug=slug, payload=None, mock_user_id=x_mock_user_id)
+
+
+@router.post("/api/v1/namespaces/{slug}/archive")
+@router.post("/api/web/namespaces/{slug}/archive")
+async def archive_namespace_route(
+    request: Request,
+    slug: str,
+    payload: dict[str, Any] | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _lifecycle_route(action="archive", request=request, slug=slug, payload=payload, mock_user_id=x_mock_user_id)
+
+
+@router.post("/api/v1/namespaces/{slug}/restore")
+@router.post("/api/web/namespaces/{slug}/restore")
+async def restore_namespace_route(
+    request: Request,
+    slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _lifecycle_route(action="restore", request=request, slug=slug, payload=None, mock_user_id=x_mock_user_id)
 
 
 @router.post("/api/v1/namespaces/{slug}/transfer-ownership")

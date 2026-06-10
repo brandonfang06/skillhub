@@ -373,10 +373,22 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
 
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/namespaces/team-a')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/namespaces/team-a')).toBeUndefined()
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/freeze')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/web/namespaces/team-a')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/namespaces/team-a')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/freeze')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/unfreeze')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/namespaces/team-a/archive')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/restore')).toBe(
+      'http://localhost:8081',
+    )
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/namespaces/team-a/members')).toBe(
       'http://localhost:8081',
     )
@@ -419,14 +431,17 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/transfer-ownership')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/web/namespaces/team-a/archive')).toBeUndefined()
 
     expect(matchingDevProxyTarget('GET', '/api/v1/namespaces')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/namespaces/team-a')).toBe('http://localhost:8081')
-    expect(matchingDevProxyTarget('POST', '/api/v1/namespaces')).toBe('http://localhost:8080')
-    expect(matchingDevProxyTarget('PUT', '/api/web/namespaces/team-a')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/namespaces')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('PUT', '/api/web/namespaces/team-a')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/namespaces/team-a')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/namespaces/team-a/freeze')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/namespaces/team-a/restore')).toBe(
+      'http://localhost:8081',
     )
     expect(matchingDevProxyTarget('GET', '/api/v1/namespaces/team-a/members')).toBe(
       'http://localhost:8081',

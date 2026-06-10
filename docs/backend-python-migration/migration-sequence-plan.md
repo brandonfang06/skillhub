@@ -206,7 +206,8 @@ Still plan carefully when a group requires:
 | 72 | `GET /api/v1/namespaces`, `GET /api/web/namespaces`, `GET /api/v1/me/namespaces`, `GET /api/web/me/namespaces`, `GET /api/v1/namespaces/{slug}`, `GET /api/web/namespaces/{slug}` | python | Namespace read ownership moved to Python. Preserves membership-scoped active listing, current-user namespace capability flags, archived namespace member-only detail visibility, and keeps namespace lifecycle/mutation routes Java-owned. |
 | 73 | `GET /api/v1/namespaces/{slug}/members`, `GET /api/web/namespaces/{slug}/members`, `GET /api/v1/namespaces/{slug}/member-candidates`, `GET /api/web/namespaces/{slug}/member-candidates` | python | Namespace member read ownership moved to Python. Preserves membership/admin checks, Java candidate search normalization, ACTIVE user filtering, existing-member exclusion, and keeps namespace member mutations Java-owned. |
 | 74 | `POST /api/v1/namespaces/{slug}/members`, `POST /api/web/namespaces/{slug}/members`, `DELETE /api/v1/namespaces/{slug}/members/{userId}`, `DELETE /api/web/namespaces/{slug}/members/{userId}`, `PUT /api/v1/namespaces/{slug}/members/{userId}/role`, `PUT /api/web/namespaces/{slug}/members/{userId}/role`, `POST /api/v1/namespaces/{slug}/members/batch`, `POST /api/web/namespaces/{slug}/members/batch` | python | Namespace member mutation ownership moved to Python. Preserves Java active-team/admin-or-owner checks, owner role protections, duplicate/missing-member errors, and batch partial-success mapping. |
-| 75 | `POST /api/v1/namespaces/{slug}/transfer-ownership`, `POST /api/web/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Preserves Java `TEAM`/`ACTIVE` transferability, current-owner validation, new-owner membership validation, and role swap semantics. Namespace lifecycle/profile APIs remain Java-owned. |
+| 75 | `POST /api/v1/namespaces/{slug}/transfer-ownership`, `POST /api/web/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Preserves Java `TEAM`/`ACTIVE` transferability, current-owner validation, new-owner membership validation, and role swap semantics. |
+| 76 | `POST /api/v1/namespaces`, `POST /api/web/namespaces`, `PUT /api/v1/namespaces/{slug}`, `PUT /api/web/namespaces/{slug}`, `DELETE /api/v1/namespaces/{slug}`, `DELETE /api/web/namespaces/{slug}`, `POST /api/v1/namespaces/{slug}/freeze`, `POST /api/web/namespaces/{slug}/freeze`, `POST /api/v1/namespaces/{slug}/unfreeze`, `POST /api/web/namespaces/{slug}/unfreeze`, `POST /api/v1/namespaces/{slug}/archive`, `POST /api/web/namespaces/{slug}/archive`, `POST /api/v1/namespaces/{slug}/restore`, `POST /api/web/namespaces/{slug}/restore` | python | Namespace profile and lifecycle mutations moved to Python. Preserves platform-role create, owner/admin update, owner-only delete, dependency guard, lifecycle state transitions, and namespace audit logs. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1264,15 +1265,26 @@ Group E has started with review lifecycle write ownership:
   `PUT /api/web/namespaces/{slug}/members/{userId}/role`,
   `POST /api/v1/namespaces/{slug}/members/batch`, and
   `POST /api/web/namespaces/{slug}/members/batch`.
+- Completed: namespace ownership transfer APIs:
+  `POST /api/v1/namespaces/{slug}/transfer-ownership` and
+  `POST /api/web/namespaces/{slug}/transfer-ownership`.
+- Completed: namespace profile/lifecycle mutation APIs:
+  `POST /api/v1/namespaces`, `POST /api/web/namespaces`,
+  `PUT /api/v1/namespaces/{slug}`, `PUT /api/web/namespaces/{slug}`,
+  `DELETE /api/v1/namespaces/{slug}`, `DELETE /api/web/namespaces/{slug}`,
+  `POST /api/v1/namespaces/{slug}/freeze`, `POST /api/web/namespaces/{slug}/freeze`,
+  `POST /api/v1/namespaces/{slug}/unfreeze`, `POST /api/web/namespaces/{slug}/unfreeze`,
+  `POST /api/v1/namespaces/{slug}/archive`, `POST /api/web/namespaces/{slug}/archive`,
+  `POST /api/v1/namespaces/{slug}/restore`, and
+  `POST /api/web/namespaces/{slug}/restore`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes, namespace ownership
-  transfer/profile/lifecycle mutations, and notification SSE.
+  portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
+  surfaces, admin user/label management, and notification SSE.
 
 Recommended next choice:
 
-- Continue with the next dashboard/governance read group or namespace ownership/profile/lifecycle
-  mutation group based on route ownership priority. Ownership transfer should get its own invariant
-  and live transaction plan before route ownership moves.
+- Continue with admin user/label management, remaining dashboard/governance read groups, or auth/token
+  surfaces based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

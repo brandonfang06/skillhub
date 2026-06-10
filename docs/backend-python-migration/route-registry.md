@@ -142,7 +142,21 @@ deferred routes are still visible.
 | GET | `/api/v1/me/namespaces` | python | Current user's namespace membership list moved to Python. Includes Java-compatible lifecycle capability flags and dependency-sensitive `canDelete`. |
 | GET | `/api/web/me/namespaces` | python | Frontend alias for current user's namespace membership list. |
 | GET | `/api/v1/namespaces/{slug}` | python | Namespace detail read moved to Python. Requires namespace membership; archived namespaces remain visible only to members. |
-| GET | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace detail read. Lifecycle and mutation subroutes remain Java-owned. |
+| GET | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace detail read. Namespace management mutations are Python-owned below. |
+| POST | `/api/v1/namespaces` | python | Namespace create moved to Python. Requires `SKILL_ADMIN` or `SUPER_ADMIN`, validates slug, creates a TEAM/ACTIVE namespace, and grants creator OWNER. |
+| POST | `/api/web/namespaces` | python | Frontend alias for namespace create. |
+| PUT | `/api/v1/namespaces/{slug}` | python | Namespace profile update moved to Python. Requires namespace OWNER/ADMIN and active team namespace. |
+| PUT | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace profile update. |
+| DELETE | `/api/v1/namespaces/{slug}` | python | Namespace delete moved to Python. Requires namespace OWNER, rejects immutable/dependent namespaces, removes members, and deletes namespace row. |
+| DELETE | `/api/web/namespaces/{slug}` | python | Frontend alias for namespace delete. |
+| POST | `/api/v1/namespaces/{slug}/freeze` | python | Namespace freeze moved to Python. OWNER/ADMIN can transition ACTIVE to FROZEN and write `FREEZE_NAMESPACE` audit. |
+| POST | `/api/web/namespaces/{slug}/freeze` | python | Frontend alias for namespace freeze. |
+| POST | `/api/v1/namespaces/{slug}/unfreeze` | python | Namespace unfreeze moved to Python. OWNER/ADMIN can transition FROZEN to ACTIVE and write `UNFREEZE_NAMESPACE` audit. |
+| POST | `/api/web/namespaces/{slug}/unfreeze` | python | Frontend alias for namespace unfreeze. |
+| POST | `/api/v1/namespaces/{slug}/archive` | python | Namespace archive moved to Python. OWNER can transition non-archived team namespace to ARCHIVED and write `ARCHIVE_NAMESPACE` audit. |
+| POST | `/api/web/namespaces/{slug}/archive` | python | Frontend alias for namespace archive. |
+| POST | `/api/v1/namespaces/{slug}/restore` | python | Namespace restore moved to Python. OWNER can transition ARCHIVED to ACTIVE and write `RESTORE_NAMESPACE` audit. |
+| POST | `/api/web/namespaces/{slug}/restore` | python | Frontend alias for namespace restore. |
 | GET | `/api/v1/namespaces/{slug}/members` | python | Namespace member list moved to Python. Requires namespace membership and preserves Java `PageResponse<MemberResponse>` shape. |
 | GET | `/api/web/namespaces/{slug}/members` | python | Frontend alias for namespace member list. |
 | GET | `/api/v1/namespaces/{slug}/member-candidates` | python | Namespace member candidate search moved to Python. Requires namespace `OWNER` or `ADMIN`, rejects immutable/read-only namespaces, trims search, enforces Java size defaults/cap, filters ACTIVE users, and excludes existing members. |

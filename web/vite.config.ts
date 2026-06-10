@@ -34,6 +34,36 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/namespaces(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT', 'DELETE'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT', 'DELETE'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/namespaces\/[^/?]+\/(?:freeze|unfreeze|archive|restore)(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/namespaces\/[^/?]+\/(?:freeze|unfreeze|archive|restore)(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/namespaces\/[^/?]+\/members(?:\?.*)?$/,
     target: 'http://localhost:8081',
