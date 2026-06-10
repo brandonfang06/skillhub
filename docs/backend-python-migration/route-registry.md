@@ -31,6 +31,8 @@ deferred routes are still visible.
 | GET | `/api/v1/download` | python | ClawHub compatibility download query route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/download/{canonicalSlug}` | python | ClawHub compatibility download path route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/auth/me` | python | Current local mock-user bridge for frontend auth context. Login, OAuth, token, and CLI auth remain Java-owned. |
+| GET | `/api/v1/auth/providers` | python | Public OAuth provider catalog moved to Python. Preserves Java registration sorting, display-name fallback, OAuth authorization URL shape, and safe `returnTo` handling. |
+| GET | `/api/v1/auth/methods` | python | Public auth method catalog moved to Python. Preserves Java local-password first entry, sorted OAuth methods, default-disabled direct/session-bootstrap methods, and safe `returnTo` handling. |
 | POST | `/api/v1/auth/local/password-reset/request` | python | Anonymous local password reset request moved to Python. Preserves Java email normalization/validation, silent success for unknown or ineligible users, BCrypt reset code storage, old pending request consumption, and sender failure tolerance. |
 | POST | `/api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset confirm moved to Python. Preserves Java six-digit code validation, password policy, invalid-code behavior, credential update/reset, and pending reset request consumption. |
 | POST | `/api/v1/tokens` | python | API token create/rotate moved to Python. Requires current user, trims and validates names, rotates active same-name tokens, stores SHA-256 hashes only, and returns raw `sk_` token once. |

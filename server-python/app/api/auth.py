@@ -1,6 +1,8 @@
 from collections.abc import Awaitable
 from inspect import isawaitable
+import os
 from typing import Any
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import text
@@ -10,6 +12,10 @@ from app.core.response import ok
 router = APIRouter()
 
 DEFAULT_USER_ROLE = "USER"
+DEFAULT_OAUTH_REGISTRATIONS = [
+    {"id": "github", "clientName": "GitHub"},
+    {"id": "gitlab", "clientName": os.getenv("OAUTH2_GITLAB_DISPLAY_NAME", "GitLab")},
+]
 
 
 def normalize_platform_roles(role_codes: list[str]) -> list[str]:
@@ -26,6 +32,114 @@ def build_auth_me_response(user_row: dict[str, Any], role_codes: list[str]) -> d
         "oauthProvider": "mock",
         "platformRoles": normalize_platform_roles(role_codes),
     }
+
+
+def sanitize_return_to(candidate: str | None) -> str | None:
+    if candidate is None or candidate.strip() == "":
+        return None
+    trimmed = candidate.strip()
+    if not trimmed.startswith("/") or trimmed.startswith("//"):
+        return None
+    if "\r" in trimmed or "\n" in trimmed:
+        return None
+    return trimmed
+
+
+def _registration_id(registration: dict[str, object]) -> str:
+    return str(registration["id"])
+
+
+def _registration_name(registration: dict[str, object]) -> str:
+    client_name = str(registration.get("clientName") or "").strip()
+    return client_name if client_name else _registration_id(registration)
+
+
+def _authorization_url(registration_id: str, return_to: str | None) -> str:
+    base_url = f"/oauth2/authorization/{registration_id}"
+    sanitized_return_to = sanitize_return_to(return_to)
+    if sanitized_return_to is None:
+        return base_url
+    return f"{base_url}?returnTo={quote_plus(sanitized_return_to)}"
+
+
+def build_auth_providers(oauth_registrations: list[dict[str, object]], return_to: str | None = None) -> list[dict[str, str]]:
+    return [
+        {
+            "id": _registration_id(registration),
+            "name": _registration_name(registration),
+            "authorizationUrl": _authorization_url(_registration_id(registration), return_to),
+        }
+        for registration in sorted(oauth_registrations, key=_registration_id)
+    ]
+
+
+def build_auth_methods(
+    oauth_registrations: list[dict[str, object]],
+    *,
+    return_to: str | None = None,
+    direct_enabled: bool = False,
+    session_bootstrap_enabled: bool = False,
+) -> list[dict[str, str]]:
+    methods = [
+        {
+            "id": "local-password",
+            "methodType": "PASSWORD",
+            "provider": "local",
+            "displayName": "Local Account",
+            "actionUrl": "/api/v1/auth/local/login",
+        }
+    ]
+    for provider in build_auth_providers(oauth_registrations, return_to):
+        methods.append(
+            {
+                "id": f"oauth-{provider['id']}",
+                "methodType": "OAUTH_REDIRECT",
+                "provider": provider["id"],
+                "displayName": provider["name"],
+                "actionUrl": provider["authorizationUrl"],
+            }
+        )
+    if direct_enabled:
+        methods.append(
+            {
+                "id": "direct-local",
+                "methodType": "DIRECT_PASSWORD",
+                "provider": "local",
+                "displayName": "Local Account",
+                "actionUrl": "/api/v1/auth/direct/login",
+            }
+        )
+    if session_bootstrap_enabled:
+        methods.append(
+            {
+                "id": "bootstrap-mock",
+                "methodType": "SESSION_BOOTSTRAP",
+                "provider": "mock",
+                "displayName": "Mock Session",
+                "actionUrl": "/api/v1/auth/session/bootstrap",
+            }
+        )
+    return methods
+
+
+def _parse_bool_env(name: str) -> bool:
+    value = os.getenv(name)
+    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _oauth_registrations(request: Request) -> list[dict[str, object]]:
+    configured = getattr(request.app.state, "auth_oauth_registrations", None)
+    return configured if configured is not None else DEFAULT_OAUTH_REGISTRATIONS
+
+
+def _direct_enabled(request: Request) -> bool:
+    configured = getattr(request.app.state, "auth_direct_enabled", None)
+    return bool(configured) if configured is not None else _parse_bool_env("SKILLHUB_AUTH_DIRECT_ENABLED")
+
+
+def _session_bootstrap_enabled(request: Request) -> bool:
+    configured = getattr(request.app.state, "auth_session_bootstrap_enabled", None)
+    return bool(configured) if configured is not None else _parse_bool_env("SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED")
 
 
 async def read_current_mock_user(engine: Any, user_id: str) -> dict[str, object] | None:
@@ -93,3 +207,22 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="error.auth.required")
 
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get("/api/v1/auth/providers")
+async def get_auth_providers(request: Request, returnTo: str | None = None) -> dict[str, object]:
+    return ok("\u83b7\u53d6\u6210\u529f", build_auth_providers(_oauth_registrations(request), returnTo), request)
+
+
+@router.get("/api/v1/auth/methods")
+async def get_auth_methods(request: Request, returnTo: str | None = None) -> dict[str, object]:
+    return ok(
+        "\u83b7\u53d6\u6210\u529f",
+        build_auth_methods(
+            _oauth_registrations(request),
+            return_to=returnTo,
+            direct_enabled=_direct_enabled(request),
+            session_bootstrap_enabled=_session_bootstrap_enabled(request),
+        ),
+        request,
+    )

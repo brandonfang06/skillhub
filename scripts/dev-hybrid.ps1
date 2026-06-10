@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -2353,8 +2353,10 @@ function Invoke-AuthMeContractComparison {
     $proxyNoHeaderStatus = Invoke-HttpStatusWithHeaders "$WebUrl/api/v1/auth/me"
 
     $javaMethods = Invoke-RestMethod "$JavaUrl/api/v1/auth/methods"
+    $pythonMethods = Invoke-RestMethod "$PythonUrl/api/v1/auth/methods"
     $proxyMethods = Invoke-RestMethod "$WebUrl/api/v1/auth/methods"
     $javaMethodsStable = ConvertTo-StableContractJson -Response $javaMethods
+    $pythonMethodsStable = ConvertTo-StableContractJson -Response $pythonMethods
     $proxyMethodsStable = ConvertTo-StableContractJson -Response $proxyMethods
 
     $result = [ordered]@{
@@ -2367,7 +2369,7 @@ function Invoke-AuthMeContractComparison {
             proxy = $proxyNoHeaderStatus
         }
         noHeaderMatches = ($javaNoHeaderStatus -eq 401 -and $pythonNoHeaderStatus -eq 401 -and $proxyNoHeaderStatus -eq 401)
-        authMethodsRemainsJava = ($javaMethodsStable -eq $proxyMethodsStable)
+        authMethodsCatalogMatches = ($javaMethodsStable -eq $pythonMethodsStable -and $pythonMethodsStable -eq $proxyMethodsStable)
     }
 
     $resultPath = Join-Path $DevDir 'auth-me-contract-result.json'
@@ -2383,8 +2385,105 @@ function Invoke-AuthMeContractComparison {
     if (-not $result.noHeaderMatches) {
         throw 'Missing mock-user auth/me status behavior is not 401 across Java/Python/Vite. See .dev/auth-me-contract-result.json.'
     }
-    if (-not $result.authMethodsRemainsJava) {
-        throw 'Vite /api/v1/auth/methods no longer matches Java. See .dev/auth-me-contract-result.json.'
+    if (-not $result.authMethodsCatalogMatches) {
+        throw 'Auth method catalog does not match across Java/Python/Vite. See .dev/auth-me-contract-result.json.'
+    }
+}
+
+function Invoke-AuthMethodCatalogTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_auth_method_catalog.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-AuthMethodCatalogContractComparison {
+    param([string]$ResultFileName = 'auth-method-catalog-contract-result.json')
+
+    $cases = @(
+        @{ name = 'none'; query = '' },
+        @{ name = 'safeReturnTo'; query = '?returnTo=/dashboard/publish?tab=one%20two' },
+        @{ name = 'unsafeReturnTo'; query = '?returnTo=https://evil.example' }
+    )
+    $caseResults = @()
+    foreach ($case in $cases) {
+        $providersJava = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$JavaUrl/api/v1/auth/providers$($case.query)")
+        $providersPython = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$PythonUrl/api/v1/auth/providers$($case.query)")
+        $providersProxy = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$WebUrl/api/v1/auth/providers$($case.query)")
+        $methodsJava = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$JavaUrl/api/v1/auth/methods$($case.query)")
+        $methodsPython = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$PythonUrl/api/v1/auth/methods$($case.query)")
+        $methodsProxy = ConvertTo-StableContractJson -Response (Invoke-RestMethod "$WebUrl/api/v1/auth/methods$($case.query)")
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            providersMatch = ($providersJava -eq $providersPython -and $providersPython -eq $providersProxy)
+            methodsMatch = ($methodsJava -eq $methodsPython -and $methodsPython -eq $methodsProxy)
+            providers = [ordered]@{
+                java = $providersJava
+                python = $providersPython
+                proxy = $providersProxy
+            }
+            methods = [ordered]@{
+                java = $methodsJava
+                python = $methodsPython
+                proxy = $methodsProxy
+            }
+        }
+    }
+
+    $directLoginStatus = Invoke-ApiTokenStatus 'Post' "$WebUrl/api/v1/auth/direct/login" '' @{ provider = 'local'; username = 'missing'; password = 'bad' }
+    $sessionBootstrapStatus = Invoke-ApiTokenStatus 'Post' "$WebUrl/api/v1/auth/session/bootstrap" '' @{ provider = 'mock' }
+
+    $result = [ordered]@{
+        cases = $caseResults
+        checks = [ordered]@{
+            providersMatch = -not [bool]($caseResults | Where-Object { -not $_.providersMatch })
+            methodsMatch = -not [bool]($caseResults | Where-Object { -not $_.methodsMatch })
+            directLoginStillJavaReachable = ($directLoginStatus -ne 404)
+            sessionBootstrapStillJavaReachable = ($sessionBootstrapStatus -ne 404)
+        }
+        statuses = [ordered]@{
+            directLoginViaProxy = $directLoginStatus
+            sessionBootstrapViaProxy = $sessionBootstrapStatus
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Auth method catalog contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAuthMethodCatalogSmokeVerification {
+    try {
+        Invoke-AuthMethodCatalogTests
+        Start-Hybrid
+        Invoke-AuthMethodCatalogContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
     }
 }
 
@@ -17891,6 +17990,7 @@ switch ($Action) {
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
+    'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }
     'verify-owner-preview-version-smoke' { Invoke-HybridOwnerPreviewVersionSmokeVerification }

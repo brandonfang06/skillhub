@@ -220,6 +220,7 @@ Still plan carefully when a group requires:
 | 85 | `POST /api/v1/admin/users/{userId}/password-reset` | python | Admin-triggered local password reset moved to Python. Preserves admin role guard, Java eligibility errors, BCrypt-compatible code hashes, pending-request consumption, and admin metadata. |
 | 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token authentication filters remain Java-owned. |
 | 87 | `POST /api/v1/auth/local/password-reset/request`, `POST /api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset request/confirm moved to Python. Preserves Java normalization, validation, silent request success for unknown/ineligible users, BCrypt reset code storage, password policy, credential reset, and pending reset request consumption while local register/login/change-password remain Java-owned. |
+| 88 | `GET /api/v1/auth/providers`, `GET /api/v1/auth/methods` | python | Public auth catalog reads moved to Python. Preserves Java OAuth provider sorting, method ordering, default-disabled direct/session-bootstrap entries, authorization URLs, and safe `returnTo` sanitization while login/session/OAuth callbacks remain Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1312,6 +1313,11 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password
   reset confirmation to Python while keeping local register/login/change-password, OAuth, session
   bootstrap, device flow, bearer-token authentication, and scope enforcement Java-owned.
+- Completed: public auth catalog read APIs:
+  `GET /api/v1/auth/providers` and `GET /api/v1/auth/methods`. These move provider/method
+  discovery to Python while keeping local register/login/change-password, direct login,
+  session bootstrap, OAuth callbacks/authorization, bearer-token authentication, and scope
+  enforcement Java-owned.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,
