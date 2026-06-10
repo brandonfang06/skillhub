@@ -211,6 +211,7 @@ Still plan carefully when a group requires:
 | 77 | `GET /api/v1/admin/labels`, `POST /api/v1/admin/labels`, `PUT /api/v1/admin/labels/{slug}`, `DELETE /api/v1/admin/labels/{slug}`, `PUT /api/v1/admin/labels/sort-order` | python | Admin label definition management moved to Python. Preserves `SUPER_ADMIN` guard, slug/translation normalization, create/update/delete/sort DB effects, and admin label audit logs. Skill label attach/detach remains Java-owned. |
 | 78 | `GET /api/v1/admin/users`, `PUT /api/v1/admin/users/{userId}/role`, `PUT /api/v1/admin/users/{userId}/status`, `POST /api/v1/admin/users/{userId}/approve`, `POST /api/v1/admin/users/{userId}/disable`, `POST /api/v1/admin/users/{userId}/enable` | python | Admin user management basics moved to Python. Preserves `USER_ADMIN`/`SUPER_ADMIN` guard, list filters/page envelope, role replacement semantics, status aliases, and leaves password reset Java-owned. |
 | 79 | `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`, `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`, `GET /api/v1/governance/activity`, `GET /api/web/governance/activity`, `GET /api/v1/governance/notifications`, `GET /api/web/governance/notifications` | python | Governance workbench read APIs moved to Python. Preserves Java summary counts, inbox merge projections, activity visibility, legacy `user_notification` list behavior, and keeps governance notification mark-read Java-owned. |
+| 80 | `GET /api/v1/admin/audit-logs` | python | Admin audit log read moved to Python. Preserves `AUDITOR`/`SUPER_ADMIN` guard, dynamic filters, details fallback, UTC timestamp handling, and page envelope. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1296,14 +1297,16 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/governance/activity`, `GET /api/web/governance/activity`,
   `GET /api/v1/governance/notifications`, and `GET /api/web/governance/notifications`.
   Governance notification mark-read remains Java-owned.
+- Completed: admin audit log read API:
+  `GET /api/v1/admin/audit-logs`.
 - Still Java-owned: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth/token
-  surfaces, admin password reset, legacy governance notification mark-read, skill label
-  attach/detach, and notification SSE.
+  surfaces, admin password reset, legacy governance notification mark-read, admin skill
+  reports/profile reviews, skill label attach/detach, and notification SSE.
 
 Recommended next choice:
 
-- Continue with admin skill reports/profile reviews/audit-log reads, admin password reset, or
+- Continue with admin skill reports/profile reviews, admin password reset, or
   auth/token surfaces based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.

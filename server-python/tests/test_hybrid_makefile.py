@@ -142,6 +142,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-admin-label-definition-smoke" in script
     assert "verify-admin-user-management-smoke" in script
     assert "verify-governance-workbench-smoke" in script
+    assert "verify-admin-audit-log-smoke" in script
     assert "Push-Location (Join-Path $Root 'server-python')" in script
     assert "submitReviewBoundaryStillPythonOwned" in script
     assert "confirmPublishBoundaryStillPythonOwned" in script
@@ -340,6 +341,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_admin_user_management.py" in script
     assert "governance-workbench-contract-result.json" in script
     assert "tests/test_governance_workbench.py" in script
+    assert "admin-audit-log-contract-result.json" in script
+    assert "tests/test_admin_audit_logs.py" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script

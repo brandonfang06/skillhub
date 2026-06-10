@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'verify-admin-audit-log-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -15997,6 +15997,169 @@ function Invoke-HybridGovernanceWorkbenchSmokeVerification {
     }
 }
 
+function Invoke-AdminAuditLogTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_admin_audit_logs.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableAdminAuditLogJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $Response.data
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-AdminAuditLogJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -TimeoutSec 20
+}
+
+function Invoke-AdminAuditLogStatus {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-AdminAuditLogFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    auditor_role_id BIGINT;
+BEGIN
+    SELECT id INTO auditor_role_id FROM role WHERE code = 'AUDITOR';
+
+    DELETE FROM audit_log WHERE request_id LIKE 'codex-admin-audit-$Suffix%';
+    DELETE FROM user_role_binding WHERE user_id = 'codex-admin-audit-auditor-$Suffix';
+    DELETE FROM user_account WHERE id IN ('codex-admin-audit-auditor-$Suffix', 'codex-admin-audit-actor-$Suffix');
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES
+        ('codex-admin-audit-auditor-$Suffix', 'Codex Audit Reader', 'audit-reader-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 09:00:00', TIMESTAMP '2036-06-10 09:00:00'),
+        ('codex-admin-audit-actor-$Suffix', 'Codex Audit Actor', 'audit-actor-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 09:00:00', TIMESTAMP '2036-06-10 09:00:00');
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES ('codex-admin-audit-auditor-$Suffix', auditor_role_id);
+
+    INSERT INTO audit_log (actor_user_id, action, target_type, target_id, request_id, client_ip, user_agent, detail_json, created_at)
+    VALUES
+        ('codex-admin-audit-actor-$Suffix', 'REVIEW_APPROVE', 'REVIEW', 9001, 'codex-admin-audit-$Suffix-2', '127.0.0.22', 'codex-live-gate', NULL, TIMESTAMP '2036-06-10 09:02:00'),
+        ('codex-admin-audit-actor-$Suffix', 'HIDE_SKILL', 'SKILL', 9002, 'codex-admin-audit-$Suffix-1', '127.0.0.21', 'codex-live-gate', NULL, TIMESTAMP '2036-06-10 09:01:00');
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-AdminAuditLogContractComparison {
+    param([string]$ResultFileName = 'admin-audit-log-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-AdminAuditLogFixture -Suffix $suffix
+
+    $auditorId = "codex-admin-audit-auditor-$suffix"
+    $actorId = "codex-admin-audit-actor-$suffix"
+    $query = "?page=0&size=20&userId=$actorId&startTime=2036-06-10T09:00:00Z&endTime=2036-06-10T09:03:00Z"
+    $filteredQuery = "?page=0&size=20&userId=$actorId&action=REVIEW_APPROVE&requestId=codex-admin-audit-$suffix-2&ipAddress=127.0.0.22&resourceType=REVIEW&resourceId=9001"
+
+    $javaList = Invoke-AdminAuditLogJson "$JavaUrl/api/v1/admin/audit-logs$query" $auditorId
+    $pythonList = Invoke-AdminAuditLogJson "$PythonUrl/api/v1/admin/audit-logs$query" $auditorId
+    $proxyList = Invoke-AdminAuditLogJson "$WebUrl/api/v1/admin/audit-logs$query" $auditorId
+    $javaFiltered = Invoke-AdminAuditLogJson "$JavaUrl/api/v1/admin/audit-logs$filteredQuery" $auditorId
+    $pythonFiltered = Invoke-AdminAuditLogJson "$PythonUrl/api/v1/admin/audit-logs$filteredQuery" $auditorId
+    $proxyFiltered = Invoke-AdminAuditLogJson "$WebUrl/api/v1/admin/audit-logs$filteredQuery" $auditorId
+    $forbiddenJava = Invoke-AdminAuditLogStatus "$JavaUrl/api/v1/admin/audit-logs$query" 'local-user'
+    $forbiddenPython = Invoke-AdminAuditLogStatus "$PythonUrl/api/v1/admin/audit-logs$query" 'local-user'
+    $forbiddenProxy = Invoke-AdminAuditLogStatus "$WebUrl/api/v1/admin/audit-logs$query" 'local-user'
+
+    $stable = [ordered]@{
+        list = [ordered]@{
+            java = ConvertTo-StableAdminAuditLogJson -Response $javaList
+            python = ConvertTo-StableAdminAuditLogJson -Response $pythonList
+            proxy = ConvertTo-StableAdminAuditLogJson -Response $proxyList
+        }
+        filtered = [ordered]@{
+            java = ConvertTo-StableAdminAuditLogJson -Response $javaFiltered
+            python = ConvertTo-StableAdminAuditLogJson -Response $pythonFiltered
+            proxy = ConvertTo-StableAdminAuditLogJson -Response $proxyFiltered
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @('/api/v1/admin/audit-logs')
+        checks = [ordered]@{
+            listEnvelopeMatches = ($stable.list.java -eq $stable.list.python -and $stable.list.python -eq $stable.list.proxy)
+            filteredEnvelopeMatches = ($stable.filtered.java -eq $stable.filtered.python -and $stable.filtered.python -eq $stable.filtered.proxy)
+            nonAuditorForbidden = ($forbiddenJava -eq 403 -and $forbiddenPython -eq 403 -and $forbiddenProxy -eq 403)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            forbidden = @($forbiddenJava, $forbiddenPython, $forbiddenProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Admin audit log contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAdminAuditLogSmokeVerification {
+    try {
+        Invoke-AdminAuditLogTests
+        Start-Hybrid
+        Invoke-AdminAuditLogContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-HybridAdminUserManagementSmokeVerification {
     try {
         Invoke-AdminUserManagementTests
@@ -16093,6 +16256,7 @@ switch ($Action) {
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
+    'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }

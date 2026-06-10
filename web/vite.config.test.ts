@@ -909,4 +909,16 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8080',
     )
   })
+
+  it('routes admin audit log reads to Python', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/audit-logs')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/audit-logs?page=0&size=20')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/audit-logs')).toBeUndefined()
+    expect(matchingDevProxyTarget('GET', '/api/v1/admin/audit-logs')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('POST', '/api/v1/admin/audit-logs')).toBe('http://localhost:8080')
+  })
 })

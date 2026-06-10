@@ -199,6 +199,7 @@ deferred routes are still visible.
 | POST | `/api/v1/admin/users/{userId}/disable` | python | Admin user disable alias moved to Python. Sets status to `DISABLED` with the same mutation contract as Java. |
 | POST | `/api/v1/admin/users/{userId}/enable` | python | Admin user enable alias moved to Python. Sets status to `ACTIVE` with the same mutation contract as Java. |
 | POST | `/api/v1/admin/users/{userId}/password-reset` | java | Password reset remains Java-owned because it depends on local-auth reset token generation and email/operator behavior. |
+| GET | `/api/v1/admin/audit-logs` | python | Admin audit log read moved to Python. Requires `AUDITOR` or `SUPER_ADMIN`, preserves Java filters, details fallback, UTC timestamps, and page envelope. |
 | GET | `/api/v1/governance/summary` | python | Governance summary read moved to Python. Preserves Java platform/namespace-scoped pending counts and legacy `user_notification` unread count. |
 | GET | `/api/web/governance/summary` | python | Frontend alias for governance summary read. |
 | GET | `/api/v1/governance/inbox` | python | Governance inbox read moved to Python. Preserves Java review/promotion/report merge behavior, namespace/platform visibility, type filtering, and page envelope. |
