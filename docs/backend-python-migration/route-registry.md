@@ -220,6 +220,8 @@ deferred routes are still visible.
 | GET | `/api/v1/admin/profile-reviews` | python | Admin profile review list moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves Java status parsing, sort behavior, JSON snapshot fallback, reviewer projection, and page envelope. |
 | POST | `/api/v1/admin/profile-reviews/{id}/approve` | python | Admin profile review approve moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves pending-only transition, display-name application, and audit log. |
 | POST | `/api/v1/admin/profile-reviews/{id}/reject` | python | Admin profile review reject moved to Python. Requires `USER_ADMIN` or `SUPER_ADMIN`, preserves pending-only transition, review comment, and audit log detail JSON. |
+| POST | `/api/v1/skills/{namespace}/{slug}/reports` | python | Skill report submit moved to Python. Requires auth, resolves Java published-preference skill target, rejects blank/self/duplicate/unavailable reports, writes `skill_report`, `REPORT_SKILL` audit, and `REPORT_SUBMITTED` notifications. |
+| POST | `/api/web/skills/{namespace}/{slug}/reports` | python | Frontend alias for skill report submit with the same ownership boundary as `/api/v1/skills/{namespace}/{slug}/reports`. |
 | GET | `/api/v1/governance/summary` | python | Governance summary read moved to Python. Preserves Java platform/namespace-scoped pending counts and legacy `user_notification` unread count. |
 | GET | `/api/web/governance/summary` | python | Frontend alias for governance summary read. |
 | GET | `/api/v1/governance/inbox` | python | Governance inbox read moved to Python. Preserves Java review/promotion/report merge behavior, namespace/platform visibility, type filtering, and page envelope. |

@@ -151,6 +151,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "auth-method-catalog-contract-result.json" in script
     assert "verify-auth-whoami-smoke" in script
     assert "auth-whoami-contract-result.json" in script
+    assert "verify-skill-report-submit-smoke" in script
+    assert "skill-report-submit-contract-result.json" in script
     assert "verify-governance-workbench-smoke" in script
     assert "verify-governance-notification-mark-read-smoke" in script
     assert "verify-admin-audit-log-smoke" in script

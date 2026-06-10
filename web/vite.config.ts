@@ -14,6 +14,16 @@ export type MethodAwareProxyRule = {
 
 export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/reports(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/reports(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/namespaces(?:\?.*)?$/,
     target: 'http://localhost:8081',

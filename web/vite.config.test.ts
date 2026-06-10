@@ -134,6 +134,28 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/auth/local/change-password')).toBe('http://localhost:8080')
   })
 
+  it('routes skill report submit aliases to Python without changing nearby reads', () => {
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/team-ai/reported-skill/reports')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/web/skills/team-ai/reported-skill/reports')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/team-ai/reported-skill/reports')).toBeUndefined()
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/team-ai/reported-skill/reports')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/web/skills/team-ai/reported-skill/reports')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/team-ai/reported-skill')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('GET', '/api/web/skills/team-ai/reported-skill/download')).toBe(
+      'http://localhost:8081',
+    )
+  })
+
   it('routes review lifecycle POST actions to Python without taking over other review routes', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/reviews/701/approve')).toBe(
       'http://localhost:8081',

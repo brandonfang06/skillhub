@@ -18,6 +18,7 @@ from app.api.namespaces import router as namespaces_router
 from app.api.promotions import router as promotions_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
+from app.api.skill_reports import router as skill_reports_router
 from app.api.skills import router as skills_router
 from app.api.social import router as social_router
 from app.api.tokens import router as tokens_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(promotions_router)
     app.include_router(publish_router)
     app.include_router(social_router)
+    app.include_router(skill_reports_router)
     app.include_router(tokens_router)
     app.include_router(reviews_router)
     app.include_router(skills_router)

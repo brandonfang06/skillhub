@@ -222,6 +222,7 @@ Still plan carefully when a group requires:
 | 87 | `POST /api/v1/auth/local/password-reset/request`, `POST /api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset request/confirm moved to Python. Preserves Java normalization, validation, silent request success for unknown/ineligible users, BCrypt reset code storage, password policy, credential reset, and pending reset request consumption while local register/login/change-password remain Java-owned. |
 | 88 | `GET /api/v1/auth/providers`, `GET /api/v1/auth/methods` | python | Public auth catalog reads moved to Python. Preserves Java OAuth provider sorting, method ordering, default-disabled direct/session-bootstrap entries, authorization URLs, and safe `returnTo` sanitization while login/session/OAuth callbacks remain Java-owned. |
 | 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping login/session/OAuth callbacks and bearer-token authentication filters Java-owned. |
+| 90 | `POST /api/v1/skills/{namespace}/{slug}/reports`, `POST /api/web/skills/{namespace}/{slug}/reports` | python | Skill report submit moved to Python. Preserves Java published-preference target resolution, blank/self/duplicate/unavailable validation, pending report insert, `REPORT_SKILL` audit, and `REPORT_SUBMITTED` notification side effects. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1343,6 +1344,12 @@ Group E has started with review lifecycle write ownership:
   Live gate caught and fixed two parity details: profile review `reviewed_at` must use DB-compatible
   timestamp binding, and `HIDE_SKILL` audit reason preserves the raw Java comment while
   `skill_report.handle_comment` stores the trimmed comment.
+- Completed: skill report submit APIs:
+  `POST /api/v1/skills/{namespace}/{slug}/reports` and
+  `POST /api/web/skills/{namespace}/{slug}/reports`. These move the user-facing report
+  submission path to Python with Java-compatible published-preference target resolution,
+  blank/self/duplicate/unavailable validation, `REPORT_SKILL` audit, and `REPORT_SUBMITTED`
+  notification side effects.
 - Completed: skill label attach/detach APIs:
   `PUT /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}`,
   `PUT /api/web/skills/{namespace}/{slug}/labels/{labelSlug}`,

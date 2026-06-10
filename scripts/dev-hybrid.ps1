@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -16712,7 +16712,7 @@ DECLARE
     skill_admin_role_id BIGINT;
     user_admin_role_id BIGINT;
     super_admin_role_id BIGINT;
-    namespace_id BIGINT;
+    ns_id BIGINT;
     skill_id BIGINT;
     label TEXT;
 BEGIN
@@ -16956,6 +16956,292 @@ function Invoke-HybridAdminReviewReportMutationSmokeVerification {
         Invoke-AdminReviewReportMutationTests
         Start-Hybrid
         Invoke-AdminReviewReportMutationContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-SkillReportSubmitTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_report_submit.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableSkillReportSubmitJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        status = $Response.data.status
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Invoke-SkillReportSubmitJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body
+    )
+
+    $headers = @{
+        'X-Mock-User-Id' = $UserId
+        'X-Request-Id' = 'codex-skill-report-submit-live-gate'
+    }
+    $payload = if ($null -eq $Body) { '{}' } else { $Body | ConvertTo-Json -Depth 20 -Compress }
+    return Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body $payload -TimeoutSec 20
+}
+
+function Invoke-SkillReportSubmitStatus {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [object]$Body
+    )
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($UserId)) {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    $payload = if ($null -eq $Body) { '{}' } else { $Body | ConvertTo-Json -Depth 20 -Compress }
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Post -Headers $headers -ContentType 'application/json' -Body $payload -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-SkillReportSubmitFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    skill_admin_role_id BIGINT;
+    super_admin_role_id BIGINT;
+    ns_id BIGINT;
+    skill_id BIGINT;
+    version_id BIGINT;
+    label TEXT;
+BEGIN
+    SELECT id INTO skill_admin_role_id FROM role WHERE code = 'SKILL_ADMIN';
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES
+        ('codex-report-submit-owner-$Suffix', 'Codex Report Owner', 'codex-report-owner-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-11 08:00:00', TIMESTAMP '2036-06-11 08:00:00'),
+        ('codex-report-submit-reporter-$Suffix', 'Codex Report Reporter', 'codex-report-reporter-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-11 08:00:00', TIMESTAMP '2036-06-11 08:00:00'),
+        ('codex-report-submit-skill-admin-$Suffix', 'Codex Report Skill Admin', 'codex-report-skill-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-11 08:00:00', TIMESTAMP '2036-06-11 08:00:00'),
+        ('codex-report-submit-super-admin-$Suffix', 'Codex Report Super Admin', 'codex-report-super-admin-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-11 08:00:00', TIMESTAMP '2036-06-11 08:00:00')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            status = 'ACTIVE',
+            updated_at = EXCLUDED.updated_at;
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES
+        ('codex-report-submit-skill-admin-$Suffix', skill_admin_role_id),
+        ('codex-report-submit-super-admin-$Suffix', super_admin_role_id)
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO namespace (slug, display_name, type, description, status, created_by, created_at, updated_at)
+    VALUES ('codex-report-submit-$Suffix', 'Codex Report Submit', 'TEAM', 'report submit fixture', 'ACTIVE', 'codex-report-submit-owner-$Suffix', TIMESTAMP '2036-06-11 08:00:00', TIMESTAMP '2036-06-11 08:00:00')
+    RETURNING id INTO ns_id;
+
+    FOREACH label IN ARRAY ARRAY['java', 'python', 'proxy', 'duplicate', 'self', 'blank'] LOOP
+        INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, hidden, created_by, created_at, updated_by, updated_at)
+        VALUES (ns_id, 'reported-' || label || '-$Suffix', 'Reported Skill ' || label, 'report submit fixture', 'codex-report-submit-owner-$Suffix', 'PUBLIC', 'ACTIVE', FALSE, 'codex-report-submit-owner-$Suffix', TIMESTAMP '2036-06-11 08:01:00', 'codex-report-submit-owner-$Suffix', TIMESTAMP '2036-06-11 08:01:00')
+        RETURNING id INTO skill_id;
+
+        INSERT INTO skill_version (skill_id, version, status, file_count, total_size, published_at, created_by, created_at)
+        VALUES (skill_id, '1.0.0', 'PUBLISHED', 0, 0, TIMESTAMP '2036-06-11 08:02:00', 'codex-report-submit-owner-$Suffix', TIMESTAMP '2036-06-11 08:02:00')
+        RETURNING id INTO version_id;
+
+        UPDATE skill
+        SET latest_version_id = version_id,
+            updated_at = TIMESTAMP '2036-06-11 08:02:00'
+        WHERE id = skill_id;
+    END LOOP;
+
+    INSERT INTO skill_report (skill_id, namespace_id, reporter_id, reason, details, status, created_at)
+    SELECT s.id, ns_id, 'codex-report-submit-reporter-$Suffix', 'existing duplicate', NULL, 'PENDING', TIMESTAMP '2036-06-11 08:03:00'
+    FROM skill s
+    WHERE s.namespace_id = ns_id
+      AND s.slug = 'reported-duplicate-$Suffix';
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-SkillReportSubmitState {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE(sr.status || '|' || sr.reporter_id || '|' || sr.reason || '|' || COALESCE(sr.details, ''), '') FROM skill_report sr JOIN skill s ON s.id = sr.skill_id WHERE s.slug = 'reported-$Label-$Suffix' AND sr.reason = 'policy violation' ORDER BY sr.id DESC LIMIT 1"
+}
+
+function Get-SkillReportSubmitReportId {
+    param(
+        [string]$Suffix,
+        [string]$Label
+    )
+
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE((SELECT sr.id::text FROM skill_report sr JOIN skill s ON s.id = sr.skill_id WHERE s.slug = 'reported-$Label-$Suffix' AND sr.reason = 'policy violation' ORDER BY sr.id DESC LIMIT 1), '')"
+}
+
+function Get-SkillReportSubmitAudit {
+    param([string]$ReportId)
+
+    if ([string]::IsNullOrWhiteSpace($ReportId)) {
+        return ''
+    }
+    return Invoke-PostgresScalar -Sql "SELECT COALESCE((SELECT actor_user_id || '|' || action || '|' || target_type || '|' || (detail_json::text LIKE '%reportId%')::text FROM audit_log WHERE action = 'REPORT_SKILL' AND detail_json::text LIKE '%$ReportId%' ORDER BY id DESC LIMIT 1), '')"
+}
+
+function Get-SkillReportSubmitNotification {
+    param([string]$ReportId)
+
+    if ([string]::IsNullOrWhiteSpace($ReportId)) {
+        return ''
+    }
+    for ($attempt = 0; $attempt -lt 10; $attempt++) {
+        $value = Invoke-PostgresScalar -Sql "SELECT COALESCE((SELECT COUNT(*)::text || '|' || MIN(category) || '|' || MIN(event_type) || '|' || MIN(entity_type) || '|' || BOOL_AND((body_json::jsonb ->> 'reporterId') LIKE 'codex-report-submit-reporter-%')::text FROM notification WHERE event_type = 'REPORT_SUBMITTED' AND entity_id = $ReportId), '')"
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            return $value
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    return ''
+}
+
+function Invoke-SkillReportSubmitContractComparison {
+    param([string]$ResultFileName = 'skill-report-submit-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-SkillReportSubmitFixture -Suffix $suffix
+
+    $namespace = "codex-report-submit-$suffix"
+    $reporterId = "codex-report-submit-reporter-$suffix"
+    $ownerId = "codex-report-submit-owner-$suffix"
+    $body = @{ reason = ' policy violation '; details = ' suspicious prompt ' }
+
+    $java = Invoke-SkillReportSubmitJson "$JavaUrl/api/v1/skills/$namespace/reported-java-$suffix/reports" $reporterId $body
+    $python = Invoke-SkillReportSubmitJson "$PythonUrl/api/v1/skills/$namespace/reported-python-$suffix/reports" $reporterId $body
+    $proxy = Invoke-SkillReportSubmitJson "$WebUrl/api/web/skills/$namespace/reported-proxy-$suffix/reports" $reporterId $body
+
+    $javaReportId = Get-SkillReportSubmitReportId -Suffix $suffix -Label 'java'
+    $pythonReportId = Get-SkillReportSubmitReportId -Suffix $suffix -Label 'python'
+    $proxyReportId = Get-SkillReportSubmitReportId -Suffix $suffix -Label 'proxy'
+
+    $blankBody = @{ reason = ' '; details = 'ignored' }
+    $duplicateBody = @{ reason = 'duplicate'; details = '' }
+    $selfBody = @{ reason = 'self'; details = '' }
+    $javaBlank = Invoke-SkillReportSubmitStatus "$JavaUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" $reporterId $blankBody
+    $pythonBlank = Invoke-SkillReportSubmitStatus "$PythonUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" $reporterId $blankBody
+    $proxyBlank = Invoke-SkillReportSubmitStatus "$WebUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" $reporterId $blankBody
+    $javaDuplicate = Invoke-SkillReportSubmitStatus "$JavaUrl/api/v1/skills/$namespace/reported-duplicate-$suffix/reports" $reporterId $duplicateBody
+    $pythonDuplicate = Invoke-SkillReportSubmitStatus "$PythonUrl/api/v1/skills/$namespace/reported-duplicate-$suffix/reports" $reporterId $duplicateBody
+    $proxyDuplicate = Invoke-SkillReportSubmitStatus "$WebUrl/api/v1/skills/$namespace/reported-duplicate-$suffix/reports" $reporterId $duplicateBody
+    $javaSelf = Invoke-SkillReportSubmitStatus "$JavaUrl/api/v1/skills/$namespace/reported-self-$suffix/reports" $ownerId $selfBody
+    $pythonSelf = Invoke-SkillReportSubmitStatus "$PythonUrl/api/v1/skills/$namespace/reported-self-$suffix/reports" $ownerId $selfBody
+    $proxySelf = Invoke-SkillReportSubmitStatus "$WebUrl/api/v1/skills/$namespace/reported-self-$suffix/reports" $ownerId $selfBody
+    $javaNoAuth = Invoke-SkillReportSubmitStatus "$JavaUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" '' $body
+    $pythonNoAuth = Invoke-SkillReportSubmitStatus "$PythonUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" '' $body
+    $proxyNoAuth = Invoke-SkillReportSubmitStatus "$WebUrl/api/v1/skills/$namespace/reported-blank-$suffix/reports" '' $body
+
+    $stable = [ordered]@{
+        response = [ordered]@{
+            java = ConvertTo-StableSkillReportSubmitJson -Response $java
+            python = ConvertTo-StableSkillReportSubmitJson -Response $python
+            proxy = ConvertTo-StableSkillReportSubmitJson -Response $proxy
+        }
+        state = [ordered]@{
+            java = Get-SkillReportSubmitState -Suffix $suffix -Label 'java'
+            python = Get-SkillReportSubmitState -Suffix $suffix -Label 'python'
+            proxy = Get-SkillReportSubmitState -Suffix $suffix -Label 'proxy'
+        }
+        audit = [ordered]@{
+            java = Get-SkillReportSubmitAudit -ReportId $javaReportId
+            python = Get-SkillReportSubmitAudit -ReportId $pythonReportId
+            proxy = Get-SkillReportSubmitAudit -ReportId $proxyReportId
+        }
+        notification = [ordered]@{
+            java = Get-SkillReportSubmitNotification -ReportId $javaReportId
+            python = Get-SkillReportSubmitNotification -ReportId $pythonReportId
+            proxy = Get-SkillReportSubmitNotification -ReportId $proxyReportId
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/skills/{namespace}/{slug}/reports',
+            '/api/web/skills/{namespace}/{slug}/reports'
+        )
+        reportIds = @($javaReportId, $pythonReportId, $proxyReportId)
+        checks = [ordered]@{
+            envelopeMatches = ($stable.response.java -eq $stable.response.python -and $stable.response.python -eq $stable.response.proxy)
+            dbStateMatches = ($stable.state.java -eq $stable.state.python -and $stable.state.python -eq $stable.state.proxy)
+            auditMatches = ($stable.audit.java -eq $stable.audit.python -and $stable.audit.python -eq $stable.audit.proxy)
+            notificationMatches = ($stable.notification.java -eq $stable.notification.python -and $stable.notification.python -eq $stable.notification.proxy)
+            blankReasonRejected = ($javaBlank -eq 400 -and $pythonBlank -eq 400 -and $proxyBlank -eq 400)
+            duplicateRejected = ($javaDuplicate -eq 400 -and $pythonDuplicate -eq 400 -and $proxyDuplicate -eq 400)
+            selfReportRejected = ($javaSelf -eq 400 -and $pythonSelf -eq 400 -and $proxySelf -eq 400)
+            missingAuthRejected = ($javaNoAuth -eq 401 -and $pythonNoAuth -eq 401 -and $proxyNoAuth -eq 401)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            blank = @($javaBlank, $pythonBlank, $proxyBlank)
+            duplicate = @($javaDuplicate, $pythonDuplicate, $proxyDuplicate)
+            self = @($javaSelf, $pythonSelf, $proxySelf)
+            noAuth = @($javaNoAuth, $pythonNoAuth, $proxyNoAuth)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Skill report submit contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSkillReportSubmitSmokeVerification {
+    try {
+        Invoke-SkillReportSubmitTests
+        Start-Hybrid
+        Invoke-SkillReportSubmitContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -18212,6 +18498,7 @@ switch ($Action) {
     'verify-admin-audit-log-smoke' { Invoke-HybridAdminAuditLogSmokeVerification }
     'verify-admin-review-report-smoke' { Invoke-HybridAdminReviewReportSmokeVerification }
     'verify-admin-review-report-mutation-smoke' { Invoke-HybridAdminReviewReportMutationSmokeVerification }
+    'verify-skill-report-submit-smoke' { Invoke-HybridSkillReportSubmitSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
