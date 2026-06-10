@@ -118,7 +118,7 @@ Already Python-owned:
 - [x] Update route registry and migration sequence plan.
 - [x] Run narrow Python tests, Vite proxy tests, Windows live gate, `git diff --name-only -- server`, and `git diff --check`.
 - [x] Write the result document.
-- [ ] Commit and push to `origin/dev`.
+- [x] Commit and push to `origin/dev`.
 
 ## Verification Commands
 
