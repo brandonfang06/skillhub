@@ -199,5 +199,15 @@ deferred routes are still visible.
 | POST | `/api/v1/admin/users/{userId}/disable` | python | Admin user disable alias moved to Python. Sets status to `DISABLED` with the same mutation contract as Java. |
 | POST | `/api/v1/admin/users/{userId}/enable` | python | Admin user enable alias moved to Python. Sets status to `ACTIVE` with the same mutation contract as Java. |
 | POST | `/api/v1/admin/users/{userId}/password-reset` | java | Password reset remains Java-owned because it depends on local-auth reset token generation and email/operator behavior. |
+| GET | `/api/v1/governance/summary` | python | Governance summary read moved to Python. Preserves Java platform/namespace-scoped pending counts and legacy `user_notification` unread count. |
+| GET | `/api/web/governance/summary` | python | Frontend alias for governance summary read. |
+| GET | `/api/v1/governance/inbox` | python | Governance inbox read moved to Python. Preserves Java review/promotion/report merge behavior, namespace/platform visibility, type filtering, and page envelope. |
+| GET | `/api/web/governance/inbox` | python | Frontend alias for governance inbox read. |
+| GET | `/api/v1/governance/activity` | python | Governance activity read moved to Python. Platform governance roles and `AUDITOR` can read audit-derived activity; other users receive Java-compatible empty pages. |
+| GET | `/api/web/governance/activity` | python | Frontend alias for governance activity read. |
+| GET | `/api/v1/governance/notifications` | python | Legacy governance notification list moved to Python. Reads `user_notification` rather than the newer `notification` table to match Java. |
+| GET | `/api/web/governance/notifications` | python | Frontend alias for legacy governance notification list. |
+| POST | `/api/v1/governance/notifications/{id}/read` | java | Legacy governance notification mark-read remains Java-owned during this milestone. |
+| POST | `/api/web/governance/notifications/{id}/read` | java | Frontend alias for legacy governance notification mark-read remains Java-owned. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

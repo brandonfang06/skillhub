@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-governance-workbench-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -15718,6 +15718,285 @@ function Invoke-AdminUserManagementContractComparison {
     }
 }
 
+function Invoke-GovernanceWorkbenchTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_governance_workbench.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableGovernanceJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $Response.data
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-GovernanceJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method $Method -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -TimeoutSec 20
+}
+
+function Invoke-GovernanceStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$UserId
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method $Method -Headers @{ 'X-Mock-User-Id' = $UserId } -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-GovernanceWorkbenchFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_id BIGINT;
+    version_id BIGINT;
+    review_id BIGINT;
+    global_ns_id BIGINT;
+BEGIN
+    SELECT id INTO global_ns_id FROM namespace WHERE slug = 'global';
+
+    DELETE FROM audit_log WHERE request_id LIKE 'codex-governance-%';
+    DELETE FROM user_notification WHERE title LIKE 'Codex Governance Notification %';
+    DELETE FROM skill_report sr
+    WHERE sr.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
+    DELETE FROM promotion_request pr
+    WHERE pr.source_skill_id IN (
+        SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug LIKE 'codex-governance-%'
+    );
+    DELETE FROM review_task rt
+    WHERE rt.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
+    UPDATE skill s SET latest_version_id = NULL
+    WHERE s.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
+    DELETE FROM skill_version sv
+    WHERE sv.skill_id IN (
+        SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug LIKE 'codex-governance-%'
+    );
+    DELETE FROM skill s
+    WHERE s.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
+    DELETE FROM namespace_member nm
+    WHERE nm.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%')
+       OR nm.user_id LIKE 'codex-governance-%';
+    DELETE FROM namespace WHERE slug LIKE 'codex-governance-%';
+    DELETE FROM user_account WHERE id LIKE 'codex-governance-%';
+
+    INSERT INTO user_account (id, display_name, email, status, created_at, updated_at)
+    VALUES
+        ('codex-governance-manager-$Suffix', 'Codex Governance Manager', 'governance-manager-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 08:00:00', TIMESTAMP '2036-06-10 08:00:00'),
+        ('codex-governance-submitter-$Suffix', 'Codex Governance Submitter', 'governance-submitter-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 08:00:00', TIMESTAMP '2036-06-10 08:00:00'),
+        ('codex-governance-reporter-$Suffix', 'Codex Governance Reporter', 'governance-reporter-$Suffix@example.test', 'ACTIVE', TIMESTAMP '2036-06-10 08:00:00', TIMESTAMP '2036-06-10 08:00:00')
+    ON CONFLICT (id) DO UPDATE SET
+        display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, description, status, created_by, created_at, updated_at)
+    VALUES ('codex-governance-$Suffix', 'Codex Governance $Suffix', 'TEAM', 'Governance workbench fixture', 'ACTIVE', 'local-admin', TIMESTAMP '2036-06-10 08:00:00', TIMESTAMP '2036-06-10 08:00:00')
+    ON CONFLICT (slug) DO UPDATE SET
+        display_name = EXCLUDED.display_name,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role, created_at, updated_at)
+    VALUES (ns_id, 'codex-governance-manager-$Suffix', 'ADMIN', TIMESTAMP '2036-06-10 08:00:00', TIMESTAMP '2036-06-10 08:00:00')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE SET role = EXCLUDED.role, updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, download_count, star_count, rating_avg, rating_count, created_by, created_at, updated_by, updated_at)
+    VALUES (ns_id, 'codex-governance-skill-$Suffix', 'Codex Governance Skill', 'Governance fixture', 'codex-governance-submitter-$Suffix', 'PUBLIC', 'ACTIVE', 0, 0, 0.00, 0, 'codex-governance-submitter-$Suffix', TIMESTAMP '2036-06-10 08:01:00', 'codex-governance-submitter-$Suffix', TIMESTAMP '2036-06-10 08:01:00')
+    RETURNING id INTO skill_id;
+
+    INSERT INTO skill_version (skill_id, version, status, changelog, file_count, total_size, created_by, created_at)
+    VALUES (skill_id, '9.9.$Suffix', 'UPLOADED', 'Governance fixture', 0, 0, 'codex-governance-submitter-$Suffix', TIMESTAMP '2036-06-10 08:02:00')
+    RETURNING id INTO version_id;
+
+    UPDATE skill SET latest_version_id = version_id WHERE id = skill_id;
+
+    INSERT INTO review_task (skill_version_id, namespace_id, status, version, submitted_by, submitted_at)
+    VALUES (version_id, ns_id, 'PENDING', 1, 'codex-governance-submitter-$Suffix', TIMESTAMP '2036-06-10 08:03:00')
+    RETURNING id INTO review_id;
+
+    INSERT INTO promotion_request (source_skill_id, source_version_id, target_namespace_id, status, version, submitted_by, submitted_at)
+    VALUES (skill_id, version_id, global_ns_id, 'PENDING', 1, 'codex-governance-submitter-$Suffix', TIMESTAMP '2036-06-10 08:04:00');
+
+    INSERT INTO skill_report (skill_id, namespace_id, reporter_id, reason, details, status, created_at)
+    VALUES (skill_id, ns_id, 'codex-governance-reporter-$Suffix', 'governance fixture report', 'governance fixture details', 'PENDING', TIMESTAMP '2036-06-10 08:05:00');
+
+    INSERT INTO user_notification (user_id, category, entity_type, entity_id, title, body_json, status, created_at)
+    VALUES ('local-admin', 'REVIEW', 'REVIEW', review_id, 'Codex Governance Notification $Suffix', '{"suffix":"$Suffix"}', 'UNREAD', TIMESTAMPTZ '2036-06-10 08:06:00+00');
+
+    INSERT INTO audit_log (actor_user_id, action, target_type, target_id, request_id, client_ip, user_agent, detail_json, created_at)
+    VALUES ('local-admin', 'REVIEW_APPROVE', 'REVIEW', review_id, 'codex-governance-$Suffix', '127.0.0.1', 'codex-live-gate', NULL, TIMESTAMP '2036-06-10 08:07:00');
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-GovernanceWorkbenchContractComparison {
+    param([string]$ResultFileName = 'governance-workbench-contract-result.json')
+
+    Ensure-AuthContractFixture
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-GovernanceWorkbenchFixture -Suffix $suffix
+
+    $adminId = 'local-admin'
+    $managerId = "codex-governance-manager-$suffix"
+
+    $javaSummary = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/summary" $adminId
+    $pythonSummary = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/summary" $adminId
+    $proxySummary = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/summary" $adminId
+    $javaManagerSummary = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/summary" $managerId
+    $pythonManagerSummary = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/summary" $managerId
+    $proxyManagerSummary = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/summary" $managerId
+
+    $javaInbox = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/inbox?page=0&size=20" $managerId
+    $pythonInbox = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/inbox?page=0&size=20" $managerId
+    $proxyInbox = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/inbox?page=0&size=20" $managerId
+    $javaReportInbox = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/inbox?type=REPORT&page=0&size=1" $adminId
+    $pythonReportInbox = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/inbox?type=REPORT&page=0&size=1" $adminId
+    $proxyReportInbox = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/inbox?type=REPORT&page=0&size=1" $adminId
+
+    $javaActivity = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/activity?page=0&size=1" $adminId
+    $pythonActivity = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/activity?page=0&size=1" $adminId
+    $proxyActivity = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/activity?page=0&size=1" $adminId
+    $javaManagerActivity = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/activity?page=1&size=5" $managerId
+    $pythonManagerActivity = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/activity?page=1&size=5" $managerId
+    $proxyManagerActivity = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/activity?page=1&size=5" $managerId
+
+    $javaNotifications = Invoke-GovernanceJson 'Get' "$JavaUrl/api/v1/governance/notifications?page=0&size=20" $adminId
+    $pythonNotifications = Invoke-GovernanceJson 'Get' "$PythonUrl/api/v1/governance/notifications?page=0&size=20" $adminId
+    $proxyNotifications = Invoke-GovernanceJson 'Get' "$WebUrl/api/v1/governance/notifications?page=0&size=20" $adminId
+    $markReadJava = Invoke-GovernanceStatus 'Post' "$JavaUrl/api/v1/governance/notifications/999999999/read" $adminId
+    $markReadProxy = Invoke-GovernanceStatus 'Post' "$WebUrl/api/v1/governance/notifications/999999999/read" $adminId
+
+    $stable = [ordered]@{
+        summary = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaSummary
+            python = ConvertTo-StableGovernanceJson -Response $pythonSummary
+            proxy = ConvertTo-StableGovernanceJson -Response $proxySummary
+        }
+        managerSummary = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaManagerSummary
+            python = ConvertTo-StableGovernanceJson -Response $pythonManagerSummary
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyManagerSummary
+        }
+        inbox = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaInbox
+            python = ConvertTo-StableGovernanceJson -Response $pythonInbox
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyInbox
+        }
+        reportInbox = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaReportInbox
+            python = ConvertTo-StableGovernanceJson -Response $pythonReportInbox
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyReportInbox
+        }
+        activity = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaActivity
+            python = ConvertTo-StableGovernanceJson -Response $pythonActivity
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyActivity
+        }
+        managerActivity = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaManagerActivity
+            python = ConvertTo-StableGovernanceJson -Response $pythonManagerActivity
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyManagerActivity
+        }
+        notifications = [ordered]@{
+            java = ConvertTo-StableGovernanceJson -Response $javaNotifications
+            python = ConvertTo-StableGovernanceJson -Response $pythonNotifications
+            proxy = ConvertTo-StableGovernanceJson -Response $proxyNotifications
+        }
+    }
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @(
+            '/api/v1/governance/summary',
+            '/api/web/governance/summary',
+            '/api/v1/governance/inbox',
+            '/api/web/governance/inbox',
+            '/api/v1/governance/activity',
+            '/api/web/governance/activity',
+            '/api/v1/governance/notifications',
+            '/api/web/governance/notifications'
+        )
+        checks = [ordered]@{
+            summaryEnvelopeMatches = ($stable.summary.java -eq $stable.summary.python -and $stable.summary.python -eq $stable.summary.proxy)
+            managerSummaryEnvelopeMatches = ($stable.managerSummary.java -eq $stable.managerSummary.python -and $stable.managerSummary.python -eq $stable.managerSummary.proxy)
+            inboxEnvelopeMatches = ($stable.inbox.java -eq $stable.inbox.python -and $stable.inbox.python -eq $stable.inbox.proxy)
+            reportInboxEnvelopeMatches = ($stable.reportInbox.java -eq $stable.reportInbox.python -and $stable.reportInbox.python -eq $stable.reportInbox.proxy)
+            activityEnvelopeMatches = ($stable.activity.java -eq $stable.activity.python -and $stable.activity.python -eq $stable.activity.proxy)
+            managerActivityEnvelopeMatches = ($stable.managerActivity.java -eq $stable.managerActivity.python -and $stable.managerActivity.python -eq $stable.managerActivity.proxy)
+            notificationEnvelopeMatches = ($stable.notifications.java -eq $stable.notifications.python -and $stable.notifications.python -eq $stable.notifications.proxy)
+            markReadStillJavaOwned = ($markReadJava -eq $markReadProxy)
+        }
+        stable = $stable
+        statuses = [ordered]@{
+            markRead = @($markReadJava, $markReadProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Governance workbench contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridGovernanceWorkbenchSmokeVerification {
+    try {
+        Invoke-GovernanceWorkbenchTests
+        Start-Hybrid
+        Invoke-GovernanceWorkbenchContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-HybridAdminUserManagementSmokeVerification {
     try {
         Invoke-AdminUserManagementTests
@@ -15813,6 +16092,7 @@ switch ($Action) {
     'verify-namespace-profile-lifecycle-smoke' { Invoke-HybridNamespaceProfileLifecycleSmokeVerification }
     'verify-admin-label-definition-smoke' { Invoke-HybridAdminLabelDefinitionSmokeVerification }
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
+    'verify-governance-workbench-smoke' { Invoke-HybridGovernanceWorkbenchSmokeVerification }
     'e2e-smoke' { Invoke-HybridE2E -Config 'playwright.smoke.config.ts' }
     'e2e' { Invoke-HybridE2E -Config 'playwright.config.ts' }
 }
