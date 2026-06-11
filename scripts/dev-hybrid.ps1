@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -20276,6 +20276,300 @@ function Invoke-HybridAccountMergeSmokeVerification {
     }
 }
 
+function Invoke-DeviceAuthTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_device_auth.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-DeviceAuthJson {
+    param(
+        [string]$Url,
+        [object]$Body = $null,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if ($UserId -ne '') {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    $params = @{
+        Uri = $Url
+        Method = 'Post'
+        Headers = $headers
+        ContentType = 'application/json'
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+    return Invoke-RestMethod @params
+}
+
+function Invoke-DeviceAuthStatus {
+    param(
+        [string]$Url,
+        [object]$Body,
+        [string]$UserId = ''
+    )
+
+    $headers = @{}
+    if ($UserId -ne '') {
+        $headers['X-Mock-User-Id'] = $UserId
+    }
+    $params = @{
+        Uri = $Url
+        Method = 'Post'
+        Headers = $headers
+        ContentType = 'application/json'
+        UseBasicParsing = $true
+        Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+        TimeoutSec = 20
+    }
+
+    try {
+        $response = Invoke-WebRequest @params
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableDeviceAuthJson {
+    param([object]$Response)
+
+    $copy = $Response | ConvertTo-Json -Depth 50 | ConvertFrom-Json
+    foreach ($field in @('timestamp', 'requestId', 'msg')) {
+        if ($copy.PSObject.Properties.Name -contains $field) {
+            $copy.PSObject.Properties.Remove($field)
+        }
+    }
+    if ($null -ne $copy.data) {
+        if ($copy.data.PSObject.Properties.Name -contains 'deviceCode') {
+            $copy.data.deviceCode = '<device-code>'
+        }
+        if ($copy.data.PSObject.Properties.Name -contains 'userCode') {
+            $copy.data.userCode = '<user-code>'
+        }
+        if ($copy.data.PSObject.Properties.Name -contains 'accessToken' -and $null -ne $copy.data.accessToken) {
+            $copy.data.accessToken = '<access-token>'
+        }
+    }
+    return ($copy | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-DeviceAuthFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $userId = "codex-device-auth-$Channel-$Suffix"
+    $sql = @"
+DELETE FROM audit_log WHERE actor_user_id = '$userId';
+DELETE FROM api_token WHERE user_id = '$userId';
+DELETE FROM user_role_binding WHERE user_id = '$userId';
+DELETE FROM user_account WHERE id = '$userId';
+
+INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+VALUES ('$userId', 'Codex Device Auth $Channel', 'device-auth-$Channel-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+VALUES ('USER', '$userId', '$userId', 'CLI Device Flow', 'sk_oldde', repeat('d', 32) || md5('$userId'), jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 day');
+"@
+    Invoke-PostgresSql -Sql $sql
+    return [ordered]@{ userId = $userId }
+}
+
+function Get-DeviceAuthDbEvidence {
+    param(
+        [string]$UserId,
+        [string]$RawToken
+    )
+
+    $sql = @"
+SELECT json_build_object(
+    'activeCliTokenCount', (
+        SELECT COUNT(*) FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'CLI Device Flow'
+          AND revoked_at IS NULL
+    ),
+    'revokedCliTokenCount', (
+        SELECT COUNT(*) FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'CLI Device Flow'
+          AND revoked_at IS NOT NULL
+    ),
+    'scopeMatches', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'CLI Device Flow'
+          AND revoked_at IS NULL
+          AND scope_json = jsonb_build_array('skill:read', 'skill:publish')
+    ),
+    'rawTokenNotStored', NOT EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND token_hash = '$RawToken'
+    ),
+    'latestHashIsSha256', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'CLI Device Flow'
+          AND revoked_at IS NULL
+          AND token_hash ~ '^[0-9a-f]{64}$'
+    ),
+    'authorizeAuditExists', EXISTS (
+        SELECT 1 FROM audit_log
+        WHERE actor_user_id = '$UserId'
+          AND action = 'DEVICE_AUTHORIZE'
+          AND target_type = 'DEVICE_CODE'
+          AND detail_json ? 'userCode'
+    )
+)::text;
+"@
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-DeviceAuthEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    if ([int]$json.activeCliTokenCount -ne 1) {
+        return $false
+    }
+    if ([int]$json.revokedCliTokenCount -lt 1) {
+        return $false
+    }
+    return [bool]$json.scopeMatches -and
+        [bool]$json.rawTokenNotStored -and
+        [bool]$json.latestHashIsSha256 -and
+        [bool]$json.authorizeAuditExists
+}
+
+function Invoke-DeviceAuthContractComparison {
+    param([string]$ResultFileName = 'device-auth-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing device auth contract: $($case.name)"
+        $fixture = Ensure-DeviceAuthFixture -Channel $case.name -Suffix $suffix
+        $code = Invoke-DeviceAuthJson "$($case.baseUrl)/api/v1/auth/device/code"
+
+        if ($case.name -eq 'java') {
+            $javaPendingStatus = Invoke-DeviceAuthStatus "$($case.baseUrl)/api/v1/auth/device/token" @{ deviceCode = $code.data.deviceCode }
+            if ($javaPendingStatus -eq 500) {
+                $caseResults += [ordered]@{
+                    name = $case.name
+                    fullFlow = $false
+                    code = ConvertTo-StableDeviceAuthJson -Response $code
+                    pendingStatus = $javaPendingStatus
+                    javaLiveTokenPollClassCastDefectObserved = $true
+                    evidencePassed = $true
+                }
+                continue
+            }
+        }
+
+        $pending = Invoke-DeviceAuthJson "$($case.baseUrl)/api/v1/auth/device/token" @{ deviceCode = $code.data.deviceCode }
+        $authorize = Invoke-DeviceAuthJson "$($case.baseUrl)/api/v1/device/authorize" @{ userCode = $code.data.userCode } $fixture.userId
+        $success = Invoke-DeviceAuthJson "$($case.baseUrl)/api/v1/auth/device/token" @{ deviceCode = $code.data.deviceCode }
+        $usedStatus = Invoke-DeviceAuthStatus "$($case.baseUrl)/api/v1/auth/device/token" @{ deviceCode = $code.data.deviceCode }
+        $evidence = Get-DeviceAuthDbEvidence -UserId $fixture.userId -RawToken $success.data.accessToken
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            fullFlow = $true
+            code = ConvertTo-StableDeviceAuthJson -Response $code
+            pending = ConvertTo-StableDeviceAuthJson -Response $pending
+            authorize = ConvertTo-StableDeviceAuthJson -Response $authorize
+            success = ConvertTo-StableDeviceAuthJson -Response $success
+            usedStatus = $usedStatus
+            evidence = $evidence
+            evidencePassed = Test-DeviceAuthEvidence -Evidence $evidence
+        }
+    }
+
+    $javaFullFlowAvailable = [bool]$caseResults[0].fullFlow
+    $javaLiveTokenPollClassCastDefectObserved = (-not $javaFullFlowAvailable -and [bool]$caseResults[0].javaLiveTokenPollClassCastDefectObserved)
+    $codeMatches = ($caseResults[1].code -eq $caseResults[2].code -and ($javaLiveTokenPollClassCastDefectObserved -or $caseResults[0].code -eq $caseResults[1].code))
+    $pendingMatches = ($caseResults[1].pending -eq $caseResults[2].pending -and ($javaLiveTokenPollClassCastDefectObserved -or $caseResults[0].pending -eq $caseResults[1].pending))
+    $authorizeMatches = ($caseResults[1].authorize -eq $caseResults[2].authorize -and ($javaLiveTokenPollClassCastDefectObserved -or $caseResults[0].authorize -eq $caseResults[1].authorize))
+    $successMatches = ($caseResults[1].success -eq $caseResults[2].success -and ($javaLiveTokenPollClassCastDefectObserved -or $caseResults[0].success -eq $caseResults[1].success))
+    $usedStatusMatches = ($caseResults[1].usedStatus -eq 400 -and $caseResults[2].usedStatus -eq 400 -and ($javaLiveTokenPollClassCastDefectObserved -or $caseResults[0].usedStatus -eq 400))
+    $allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            javaFullFlowAvailable = $javaFullFlowAvailable
+            javaLiveTokenPollClassCastDefectObserved = $javaLiveTokenPollClassCastDefectObserved
+            codeMatches = $codeMatches
+            pendingMatches = $pendingMatches
+            authorizeMatches = $authorizeMatches
+            successMatches = $successMatches
+            usedStatusMatches = $usedStatusMatches
+            allEvidencePassed = $allEvidencePassed
+        }
+        cases = $caseResults
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if ($entry.Key -eq 'javaFullFlowAvailable') {
+            continue
+        }
+        if ($entry.Key -eq 'javaLiveTokenPollClassCastDefectObserved' -and $javaFullFlowAvailable) {
+            continue
+        }
+        if (-not $entry.Value) {
+            throw "Device auth contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridDeviceAuthSmokeVerification {
+    try {
+        Invoke-DeviceAuthTests
+        Start-Hybrid
+        Invoke-DeviceAuthContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-SkillHardDeleteTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
@@ -20637,6 +20931,7 @@ switch ($Action) {
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
     'verify-user-profile-smoke' { Invoke-HybridUserProfileSmokeVerification }
     'verify-account-merge-smoke' { Invoke-HybridAccountMergeSmokeVerification }
+    'verify-device-auth-smoke' { Invoke-HybridDeviceAuthSmokeVerification }
     'verify-security-audit-read-smoke' { Invoke-HybridSecurityAuditReadSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }

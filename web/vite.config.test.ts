@@ -131,6 +131,29 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes device auth flow to Python while keeping OAuth on Java', () => {
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/auth/device/code')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/auth/device/token')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/device/authorize')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/auth/device/code')).toBeUndefined()
+    expect(matchingDevProxyTarget('POST', '/api/v1/auth/device/code')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/device/authorize')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/auth/device/token')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
+  })
+
   it('routes numeric skill version security audit reads to Python only', () => {
     expect(matchingProxyTarget('/api/v1/skills/8/versions/42/security-audit')).toBe(
       'http://localhost:8081',

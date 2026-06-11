@@ -25,6 +25,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['POST'],
+    pattern: /^\/api\/v1\/auth\/device\/(?:code|token)(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/device\/authorize(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
     pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/reports(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

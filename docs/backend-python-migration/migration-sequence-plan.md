@@ -231,6 +231,7 @@ Still plan carefully when a group requires:
 | 95 | `GET /api/v1/skills/{namespace}/{slug}/tags`, `GET /api/web/skills/{namespace}/{slug}/tags`, `PUT /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `PUT /api/web/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag management moved to Python. Preserves Java visibility checks, virtual `latest` list tag, namespace `OWNER`/`ADMIN` write guard, reserved `latest` rejection, published-target requirement, and live Java success messages. |
 | 96 | `DELETE /api/v1/skills/id/{skillId}`, `DELETE /api/v1/skills/{namespace}/{slug}`, `DELETE /api/web/skills/id/{skillId}`, `DELETE /api/web/skills/{namespace}/{slug}` | python | Whole-skill hard delete moved to Python. Preserves v1 `SUPER_ADMIN` guard, web owner-or-super-admin guard, slug idempotent `deleted=false`, DB artifact cleanup, `DELETE_SKILL_HARD` audit, local storage deletion, and ClawHub delete/undelete Java ownership. |
 | 97 | `POST /api/v1/account/merge/initiate`, `POST /api/v1/account/merge/verify`, `POST /api/v1/account/merge/confirm` | python | Account merge workflow moved to Python. Preserves mock-user auth requirement, local username/provider-subject secondary resolution, pending/local-credential conflict checks, BCrypt token hashing/verification, and atomic confirm side effects for bindings, tokens, roles, namespace memberships, credentials, primary email fill, secondary `MERGED`, and request completion. |
+| 98 | `POST /api/v1/auth/device/code`, `POST /api/v1/device/authorize`, `POST /api/v1/auth/device/token` | python | CLI/browser device authorization flow moved to Python. Preserves Java code payload shape, Redis key/TTL semantics, user-code authorization state machine, `DEVICE_AUTHORIZE` audit, one-time token redemption, `CLI Device Flow` API token rotation, and `skill:read`/`skill:publish` scopes. Windows live gate also records the current Java runtime token-poll `ClassCastException` as a pre-existing reference defect while Python/proxy full flow passes. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -754,7 +755,7 @@ Candidate areas:
 - Label creation/update/delete.
 - Namespace management.
 - API token management.
-- OAuth/device flow if the organization still needs it.
+- OAuth flow if the organization still needs it.
 
 Bridge design required before implementation:
 
@@ -1154,8 +1155,7 @@ Deferred routes:
 
 - `/api/v1/auth/**`
 - `/oauth2/**`
-- CLI auth/device flow
-- API token management
+- bearer-token authentication filters and scope enforcement
 
 Reason:
 
@@ -1317,13 +1317,13 @@ Group E has started with review lifecycle write ownership:
 - Completed: API token management APIs:
   `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, and
   `PUT /api/v1/tokens/{id}/expiration`. These move self-service token CRUD/storage behavior
-  to Python while keeping bearer-token authentication filters, scope enforcement, OAuth, and
-  device flow Java-owned.
+  to Python while keeping bearer-token authentication filters, scope enforcement, and OAuth
+  Java-owned.
 - Completed: anonymous local password reset APIs:
   `POST /api/v1/auth/local/password-reset/request` and
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password
   reset confirmation to Python while keeping local register/login/change-password, OAuth, session
-  bootstrap, device flow, bearer-token authentication, and scope enforcement Java-owned.
+  bootstrap, bearer-token authentication, and scope enforcement Java-owned.
 - Completed: local auth core APIs:
   `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, and
   `POST /api/v1/auth/local/change-password`. These move local account creation, password login,
@@ -1337,7 +1337,7 @@ Group E has started with review lifecycle write ownership:
   `POST /api/v1/auth/direct/login` and `POST /api/v1/auth/session/bootstrap`. These move the
   default-disabled route boundary to Python, preserve Java 403 disabled behavior and
   unsupported-provider ordering, and keep final cookie/session persistence, passive bootstrap
-  success, device flow, bearer-token authentication, and scope enforcement deferred.
+  success, bearer-token authentication, and scope enforcement deferred.
 - Completed: current-principal whoami read APIs:
   `GET /api/v1/whoami` and `GET /api/cli/v1/auth/whoami`. These move ClawHub and CLI
   whoami reads to Python while keeping OAuth callbacks/authorization, bearer-token authentication
@@ -1417,12 +1417,12 @@ Group E has started with review lifecycle write ownership:
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
-  boundary routes, Spring Session establishment, device flow, bearer-token authentication filters,
+  and device-auth boundary routes, Spring Session establishment, bearer-token authentication filters,
   scope enforcement, active SSE notification fanout, and final proxy cleanup.
 
 Recommended next choice:
 
-- Continue with remaining auth/session/device/bearer-token surfaces or final proxy cleanup based on
+- Continue with remaining auth/session/bearer-token surfaces or final proxy cleanup based on
   route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
