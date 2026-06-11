@@ -459,6 +459,38 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('POST', '/api/v1/me/skills')).toBe('http://localhost:8080')
   })
 
+  it('routes CLI skill read and download APIs to Python without taking over delete', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/cli/v1/skills/search?q=agent')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/resolve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/download')).toBe(
+      'http://localhost:8081',
+    )
+    expect(
+      resolveMethodAwareProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/versions/1.2.0/download'),
+    ).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/cli/v1/skills/global/agent-helper')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('GET', '/api/cli/v1/skills/search?q=agent')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/resolve')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/download')).toBe(
+      'http://localhost:8081',
+    )
+    expect(
+      matchingDevProxyTarget('GET', '/api/cli/v1/skills/global/agent-helper/versions/1.2.0/download'),
+    ).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/cli/v1/skills/global/agent-helper')).toBe(
+      'http://localhost:8080',
+    )
+  })
+
   it('routes namespace read APIs to Python without taking over mutations', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/namespaces')).toBe(
       'http://localhost:8081',

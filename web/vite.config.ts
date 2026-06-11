@@ -485,6 +485,26 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   },
   {
     methods: ['GET'],
+    pattern: /^\/api\/cli\/v1\/skills\/search(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/cli\/v1\/skills\/[^/?]+\/[^/?]+\/resolve(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/cli\/v1\/skills\/[^/?]+\/[^/?]+\/download(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/cli\/v1\/skills\/[^/?]+\/[^/?]+\/versions\/[^/?]+\/download(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
     pattern: /^\/api\/web\/me\/skills(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },

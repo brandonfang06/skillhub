@@ -428,6 +428,22 @@ def build_clawhub_search_response(search_response: dict[str, object]) -> dict[st
     return {"results": results}
 
 
+def build_cli_search_response(search_response: dict[str, object], limit: int) -> dict[str, object]:
+    items = []
+    for item in search_response["items"]:  # type: ignore[index]
+        summary = dict(item)  # type: ignore[arg-type]
+        published_version = summary.get("publishedVersion")
+        items.append(
+            {
+                "namespace": str(summary["namespace"]),
+                "slug": str(summary["slug"]),
+                "latestVersion": published_version["version"] if published_version is not None else None,  # type: ignore[index]
+                "summary": summary.get("summary"),
+            }
+        )
+    return {"items": items, "total": int(search_response["total"]), "limit": limit}
+
+
 def build_clawhub_skills_list_response(search_response: dict[str, object]) -> dict[str, object]:
     items = []
     for item in search_response["items"]:  # type: ignore[index]
@@ -474,6 +490,17 @@ def build_clawhub_resolve_response(resolve_response: dict[str, object]) -> dict[
     version = resolve_response.get("version")
     version_info = {"version": version} if version is not None else None
     return {"match": version_info, "latestVersion": version_info}
+
+
+def build_cli_resolve_response(resolve_response: dict[str, object]) -> dict[str, object]:
+    return {
+        "namespace": str(resolve_response["namespace"]),
+        "slug": str(resolve_response["slug"]),
+        "version": resolve_response.get("version"),
+        "versionId": resolve_response.get("versionId"),
+        "fingerprint": resolve_response.get("fingerprint"),
+        "downloadUrl": resolve_response.get("downloadUrl"),
+    }
 
 
 def build_clawhub_skill_detail_response(detail_response: dict[str, object]) -> dict[str, object]:
@@ -2398,6 +2425,41 @@ async def search_clawhub_skills(
     return build_clawhub_search_response(data)
 
 
+@router.get("/api/cli/v1/skills/search")
+async def search_cli_skills(
+    request: Request,
+    q: str | None = None,
+    limit: int = 20,
+) -> dict[str, object]:
+    normalized_limit = limit if limit > 0 else 20
+    reader = getattr(request.app.state, "cli_skill_search_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(
+                reader(
+                    keyword=q,
+                    namespace=None,
+                    labels=[],
+                    sort="newest",
+                    page=0,
+                    size=normalized_limit,
+                )
+            )
+        else:
+            data = await read_skill_search(
+                request.app.state.db_engine,
+                keyword=q,
+                namespace=None,
+                labels=[],
+                sort="newest",
+                page=0,
+                size=normalized_limit,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", build_cli_search_response(data, normalized_limit), request)
+
+
 @router.get("/api/v1/resolve")
 async def resolve_clawhub_skill_by_query(
     request: Request,
@@ -2442,6 +2504,34 @@ async def resolve_clawhub_skill_by_query(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return build_clawhub_resolve_response(data)
+
+
+@router.get("/api/cli/v1/skills/{namespace}/{slug}/resolve")
+async def resolve_cli_skill(
+    request: Request,
+    namespace: str,
+    slug: str,
+    version: str | None = None,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    current_user_id = normalized_current_user_id(mock_user_id)
+    reader = getattr(request.app.state, "skill_resolve_reader", None)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, version, None, None, current_user_id))
+        else:
+            data = await read_skill_resolve(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                version,
+                None,
+                None,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", build_cli_resolve_response(data), request)
 
 
 @router.get("/api/v1/resolve/{canonicalSlug}")
@@ -2817,6 +2907,27 @@ async def download_skill_version(
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return build_download_response(result)
+
+
+@router.get("/api/cli/v1/skills/{namespace}/{slug}/download")
+async def download_cli_skill_latest(
+    namespace: str,
+    slug: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    return await download_skill_latest(namespace, slug, request, mock_user_id)
+
+
+@router.get("/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download")
+async def download_cli_skill_version(
+    namespace: str,
+    slug: str,
+    version: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> Response:
+    return await download_skill_version(namespace, slug, version, request, mock_user_id)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download")

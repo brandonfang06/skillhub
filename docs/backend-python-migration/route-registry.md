@@ -86,6 +86,11 @@ deferred routes are still visible.
 | POST | `/api/web/skills/{namespace}/publish` | python | Frontend publish upload alias moved to Python and reuses the Python publish write service. |
 | POST | `/api/cli/v1/skills/{namespace}/publish/validate` | python | CLI publish validate-only dry-run route. Multipart adapter over Python dry-run model; no DB/storage publish writes. |
 | POST | `/api/cli/v1/skills/{namespace}/publish` | python | CLI publish write moved to Python after publish foundation, replacement, pending-review auto-withdraw, scanner handoff, and rollback live gates. |
+| GET | `/api/cli/v1/skills/search` | python | CLI skill search read moved to Python. Preserves Java `ApiResponse` envelope with `{ items, total, limit }`, `page=0`, `sort=newest`, and public catalog search behavior. |
+| GET | `/api/cli/v1/skills/{namespace}/{slug}/resolve` | python | CLI skill resolve read moved to Python. Preserves Java `ApiResponse` envelope with flat `{ namespace, slug, version, versionId, fingerprint, downloadUrl }`. |
+| GET | `/api/cli/v1/skills/{namespace}/{slug}/download` | python | CLI latest package download moved to Python. Reuses the migrated portal download stream, headers, visibility behavior, and published counter increment logic. |
+| GET | `/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI explicit version package download moved to Python. Reuses the migrated portal version download stream, headers, visibility behavior, and published counter increment logic. |
+| DELETE | `/api/cli/v1/skills/{namespace}/{slug}` | java | Destructive CLI delete remains Java-owned until the final destructive-route/auth parity milestone. |
 | POST | `/api/v1/reviews` | python | Review submit write moved to Python. Moves `DRAFT`/`UPLOADED` versions to `PENDING_REVIEW`, creates a pending review task, and writes `REVIEW_SUBMIT` audit. Detail and file/download remain Java-owned. |
 | POST | `/api/web/reviews` | python | Frontend review submit alias moved to Python with the same exact-POST ownership boundary as `/api/v1/reviews`. |
 | GET | `/api/v1/reviews` | python | Review task global/namespace list moved to Python. Exact GET route only; detail and file/download remain Java-owned. |

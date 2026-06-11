@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -12918,6 +12918,182 @@ function Invoke-HybridClawHubStarSmokeVerification {
     }
 }
 
+function Invoke-CliSkillReadDownloadTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_cli_skills.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function ConvertTo-StableCliSkillApiJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        msg = $Response.msg
+        data = $Response.data
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-CliSkillStatus {
+    param(
+        [string]$Method,
+        [string]$Url
+    )
+
+    try {
+        Invoke-WebRequest -Uri $Url -Method $Method -UseBasicParsing -TimeoutSec 10 | Out-Null
+        return 200
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Ensure-CliSkillReadDownloadFixture {
+    Ensure-DownloadContractFixture
+    $sql = @'
+INSERT INTO skill_search_document (
+    skill_id, namespace_id, namespace_slug, owner_id, title, summary, keywords,
+    search_text, visibility, status, updated_at
+)
+SELECT
+    s.id,
+    n.id,
+    n.slug,
+    s.owner_id,
+    'Codex CLI Download Unique Fixture',
+    'codex-cli-download-unique summary',
+    'codex-cli-download-unique',
+    'codex-cli-download-unique codex-download-20260608',
+    s.visibility,
+    s.status,
+    CURRENT_TIMESTAMP
+FROM skill s
+JOIN namespace n ON n.id = s.namespace_id
+WHERE n.slug = 'codex-download-team'
+  AND s.slug = 'codex-download-20260608'
+ON CONFLICT (skill_id) DO UPDATE
+SET namespace_id = EXCLUDED.namespace_id,
+    namespace_slug = EXCLUDED.namespace_slug,
+    owner_id = EXCLUDED.owner_id,
+    title = EXCLUDED.title,
+    summary = EXCLUDED.summary,
+    keywords = EXCLUDED.keywords,
+    search_text = EXCLUDED.search_text,
+    visibility = EXCLUDED.visibility,
+    status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+'@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-CliSkillReadDownloadContractComparison {
+    param([string]$ResultFileName = 'cli-skill-read-download-contract-result.json')
+
+    Ensure-CliSkillReadDownloadFixture
+    $searchPath = '/api/cli/v1/skills/search?q=codex-cli-download-unique&limit=5'
+    $resolvePath = '/api/cli/v1/skills/codex-download-team/codex-download-20260608/resolve?version=1.1.0'
+    $latestDownloadPath = '/api/cli/v1/skills/codex-download-team/codex-download-20260608/download'
+    $versionDownloadPath = '/api/cli/v1/skills/codex-download-team/codex-download-20260608/versions/1.1.0/download'
+    $deletePath = '/api/cli/v1/skills/codex-download-team/codex-download-20260608'
+
+    $javaSearch = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$JavaUrl$searchPath")
+    $pythonSearch = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$PythonUrl$searchPath")
+    $proxySearch = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$WebUrl$searchPath")
+
+    $javaResolve = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$JavaUrl$resolvePath")
+    $pythonResolve = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$PythonUrl$resolvePath")
+    $proxyResolve = ConvertTo-StableCliSkillApiJson -Response (Invoke-RestMethod "$WebUrl$resolvePath")
+
+    $javaLatest = Invoke-HttpDownloadContract "$JavaUrl$latestDownloadPath"
+    $pythonLatest = Invoke-HttpDownloadContract "$PythonUrl$latestDownloadPath"
+    $proxyLatest = Invoke-HttpDownloadContract "$WebUrl$latestDownloadPath"
+
+    $javaVersion = Invoke-HttpDownloadContract "$JavaUrl$versionDownloadPath"
+    $pythonVersion = Invoke-HttpDownloadContract "$PythonUrl$versionDownloadPath"
+    $proxyVersion = Invoke-HttpDownloadContract "$WebUrl$versionDownloadPath"
+
+    $deleteStatus = [ordered]@{
+        java = Invoke-CliSkillStatus 'Delete' "$JavaUrl$deletePath"
+        python = Invoke-CliSkillStatus 'Delete' "$PythonUrl$deletePath"
+        proxy = Invoke-CliSkillStatus 'Delete' "$WebUrl$deletePath"
+    }
+
+    $result = [ordered]@{
+        routes = [ordered]@{
+            search = $searchPath
+            resolve = $resolvePath
+            latestDownload = $latestDownloadPath
+            versionDownload = $versionDownloadPath
+            deleteBoundary = $deletePath
+        }
+        checks = [ordered]@{
+            searchEnvelopeMatches = ($javaSearch -eq $pythonSearch -and $pythonSearch -eq $proxySearch)
+            resolveEnvelopeMatches = ($javaResolve -eq $pythonResolve -and $pythonResolve -eq $proxyResolve)
+            latestDownloadMatches = (
+                (Test-DownloadContractsMatch -Left $javaLatest -Right $pythonLatest) -and
+                (Test-DownloadContractsMatch -Left $pythonLatest -Right $proxyLatest)
+            )
+            versionDownloadMatches = (
+                (Test-DownloadContractsMatch -Left $javaVersion -Right $pythonVersion -CompareZipEntries $true) -and
+                (Test-DownloadContractsMatch -Left $pythonVersion -Right $proxyVersion -CompareZipEntries $true)
+            )
+            deleteRemainsJavaOwned = ($deleteStatus.proxy -eq $deleteStatus.java -and $deleteStatus.python -ne $deleteStatus.proxy)
+        }
+        stable = [ordered]@{
+            search = @($javaSearch, $pythonSearch, $proxySearch)
+            resolve = @($javaResolve, $pythonResolve, $proxyResolve)
+        }
+        downloads = [ordered]@{
+            latest = @($javaLatest, $pythonLatest, $proxyLatest)
+            version = @($javaVersion, $pythonVersion, $proxyVersion)
+        }
+        deleteStatus = $deleteStatus
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "CLI skill read/download contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridCliSkillReadDownloadSmokeVerification {
+    try {
+        Invoke-CliSkillReadDownloadTests
+        Start-Hybrid
+        Invoke-CliSkillReadDownloadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-SkillStarRequest {
     param(
         [string]$Method,
@@ -19517,6 +19693,7 @@ switch ($Action) {
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
     'verify-clawhub-star-smoke' { Invoke-HybridClawHubStarSmokeVerification }
+    'verify-cli-skill-read-download-smoke' { Invoke-HybridCliSkillReadDownloadSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
