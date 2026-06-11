@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -19060,6 +19060,224 @@ function Invoke-HybridLocalPasswordResetSmokeVerification {
     }
 }
 
+function Invoke-SecurityAuditReadTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_security_audit.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-SecurityAuditReadGetJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Uri $Url -Method Get -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -TimeoutSec 20
+}
+
+function Invoke-SecurityAuditReadStatus {
+    param([string]$Url)
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Get -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableSecurityAuditReadJson {
+    param([object]$Response)
+
+    return ($Response | Select-Object code,msg,data | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-SecurityAuditReadFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    v_skill_id BIGINT;
+    v_version_id BIGINT;
+    v_empty_version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at)
+    VALUES ('codex-security-audit-owner-$Suffix', 'Codex Security Audit Owner', 'security-audit-owner-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, description, avatar_url, status, created_by)
+    VALUES ('security-audit-$Suffix', 'Security Audit $Suffix', 'TEAM', '', '', 'ACTIVE', 'codex-security-audit-owner-$Suffix')
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES (ns_id, 'codex-security-audit-owner-$Suffix', 'OWNER')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by)
+    VALUES (ns_id, 'audit-skill-$Suffix', 'Audit Skill $Suffix', 'Security audit read fixture', 'codex-security-audit-owner-$Suffix', 'PUBLIC', 'ACTIVE', 'codex-security-audit-owner-$Suffix', 'codex-security-audit-owner-$Suffix')
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            owner_id = EXCLUDED.owner_id,
+            visibility = EXCLUDED.visibility,
+            status = EXCLUDED.status,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO v_skill_id;
+
+    INSERT INTO skill_version (skill_id, version, status, changelog, parsed_metadata_json, manifest_json, file_count, total_size, published_at, created_by)
+    VALUES (v_skill_id, '1.0.0', 'PUBLISHED', 'initial', '{}'::jsonb, '{}'::jsonb, 1, 10, TIMESTAMP '2026-06-11 08:00:00', 'codex-security-audit-owner-$Suffix')
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = EXCLUDED.status,
+            published_at = EXCLUDED.published_at,
+            file_count = EXCLUDED.file_count,
+            total_size = EXCLUDED.total_size
+    RETURNING id INTO v_version_id;
+
+    INSERT INTO skill_version (skill_id, version, status, changelog, parsed_metadata_json, manifest_json, file_count, total_size, published_at, created_by)
+    VALUES (v_skill_id, '1.0.1', 'PUBLISHED', 'empty audit', '{}'::jsonb, '{}'::jsonb, 1, 10, TIMESTAMP '2026-06-11 08:10:00', 'codex-security-audit-owner-$Suffix')
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = EXCLUDED.status,
+            published_at = EXCLUDED.published_at
+    RETURNING id INTO v_empty_version_id;
+
+    UPDATE skill
+    SET latest_version_id = v_version_id,
+        updated_by = 'codex-security-audit-owner-$Suffix',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = v_skill_id;
+
+    DELETE FROM security_audit WHERE skill_version_id IN (v_version_id, v_empty_version_id);
+    INSERT INTO security_audit (
+        skill_version_id, scan_id, scanner_type, verdict, is_safe, max_severity,
+        findings_count, findings, scan_duration_seconds, scanned_at, created_at
+    )
+    VALUES
+        (v_version_id, 'old-scan-$Suffix', 'SKILL_SCANNER', 'SUSPICIOUS', FALSE, 'MEDIUM', 0, '[]'::jsonb, 0.5, TIMESTAMP '2026-06-11 08:00:00', TIMESTAMP '2026-06-11 08:01:00'),
+        (v_version_id, 'latest-scan-$Suffix', 'SKILL_SCANNER', 'DANGEROUS', FALSE, 'HIGH', 0, '[]'::jsonb, 1.25, TIMESTAMP '2026-06-11 08:02:00', TIMESTAMP '2026-06-11 08:03:00'),
+        (v_version_id, 'custom-scan-$Suffix', 'CUSTOM', 'SAFE', TRUE, 'LOW', 0, '[]'::jsonb, 0.25, TIMESTAMP '2026-06-11 08:04:00', TIMESTAMP '2026-06-11 08:05:00');
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Get-SecurityAuditFixtureIds {
+    param([string]$Suffix)
+
+    $sql = "SELECT s.id || '|' || sv.id || '|' || ev.id FROM skill s JOIN namespace n ON n.id = s.namespace_id JOIN skill_version sv ON sv.skill_id = s.id AND sv.version = '1.0.0' JOIN skill_version ev ON ev.skill_id = s.id AND ev.version = '1.0.1' WHERE n.slug = 'security-audit-$Suffix' AND s.slug = 'audit-skill-$Suffix';"
+    $parts = (Invoke-PostgresScalar -Sql $sql).Split('|')
+    return [ordered]@{
+        skillId = [int64]$parts[0]
+        versionId = [int64]$parts[1]
+        emptyVersionId = [int64]$parts[2]
+    }
+}
+
+function Invoke-SecurityAuditReadContractComparison {
+    param([string]$ResultFileName = 'security-audit-read-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-SecurityAuditReadFixture -Suffix $suffix
+    $ids = Get-SecurityAuditFixtureIds -Suffix $suffix
+    $userId = "codex-security-audit-owner-$suffix"
+    $path = "/api/v1/skills/$($ids.skillId)/versions/$($ids.versionId)/security-audit"
+    $emptyPath = "/api/v1/skills/$($ids.skillId)/versions/$($ids.emptyVersionId)/security-audit"
+
+    $javaAll = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$JavaUrl$path" $userId)
+    $pythonAll = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$PythonUrl$path" $userId)
+    $proxyAll = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$WebUrl$path" $userId)
+
+    $filterPath = "$path`?scannerType=skill-scanner"
+    $javaFiltered = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$JavaUrl$filterPath" $userId)
+    $pythonFiltered = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$PythonUrl$filterPath" $userId)
+    $proxyFiltered = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$WebUrl$filterPath" $userId)
+
+    $javaEmpty = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$JavaUrl$emptyPath" $userId)
+    $pythonEmpty = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$PythonUrl$emptyPath" $userId)
+    $proxyEmpty = ConvertTo-StableSecurityAuditReadJson -Response (Invoke-SecurityAuditReadGetJson "$WebUrl$emptyPath" $userId)
+
+    $noAuthJava = Invoke-SecurityAuditReadStatus "$JavaUrl$path"
+    $noAuthPython = Invoke-SecurityAuditReadStatus "$PythonUrl$path"
+    $noAuthProxy = Invoke-SecurityAuditReadStatus "$WebUrl$path"
+
+    $result = [ordered]@{
+        suffix = $suffix
+        route = $path
+        checks = [ordered]@{
+            allAuditsEnvelopeMatches = ($javaAll -eq $pythonAll -and $pythonAll -eq $proxyAll)
+            scannerFilterEnvelopeMatches = ($javaFiltered -eq $pythonFiltered -and $pythonFiltered -eq $proxyFiltered)
+            missingAuditEnvelopeMatches = ($javaEmpty -eq $pythonEmpty -and $pythonEmpty -eq $proxyEmpty)
+            latestSkillScannerSelected = ($pythonAll -like "*latest-scan-$suffix*" -and $pythonAll -notlike "*old-scan-$suffix*")
+            customScannerIncluded = ($pythonAll -like "*custom-scan-$suffix*")
+            scannerFilterExcludesCustom = ($pythonFiltered -like "*latest-scan-$suffix*" -and $pythonFiltered -notlike "*custom-scan-$suffix*")
+            noAuthRejected = ($noAuthJava -eq 401 -and $noAuthPython -eq 401 -and $noAuthProxy -eq 401)
+        }
+        stable = [ordered]@{
+            all = @($javaAll, $pythonAll, $proxyAll)
+            filtered = @($javaFiltered, $pythonFiltered, $proxyFiltered)
+            empty = @($javaEmpty, $pythonEmpty, $proxyEmpty)
+        }
+        statuses = [ordered]@{
+            noAuth = @($noAuthJava, $noAuthPython, $noAuthProxy)
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Security audit read contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridSecurityAuditReadSmokeVerification {
+    try {
+        Invoke-SecurityAuditReadTests
+        Start-Hybrid
+        Invoke-SecurityAuditReadContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -19077,6 +19295,7 @@ switch ($Action) {
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
     'verify-user-profile-smoke' { Invoke-HybridUserProfileSmokeVerification }
+    'verify-security-audit-read-smoke' { Invoke-HybridSecurityAuditReadSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }
     'verify-owner-preview-version-smoke' { Invoke-HybridOwnerPreviewVersionSmokeVerification }

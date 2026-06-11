@@ -115,6 +115,19 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes numeric skill version security audit reads to Python only', () => {
+    expect(matchingProxyTarget('/api/v1/skills/8/versions/42/security-audit')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingProxyTarget('/api/v1/skills/8/versions/42/security-audit?scannerType=skill-scanner')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.0.0/security-audit')).toBe(
+      'http://localhost:8080',
+    )
+    expect(matchingProxyTarget('/api/v1/skills/8/versions/42')).toBe('http://localhost:8080')
+  })
+
   it('routes whoami reads to Python while keeping OAuth on Java', () => {
     expect(matchingProxyTarget('/api/v1/whoami')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/cli/v1/auth/whoami')).toBe('http://localhost:8081')

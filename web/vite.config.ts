@@ -759,6 +759,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/v1/skills/\\d+/versions/\\d+/security-audit(?:\\?.*)?$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/whoami(?:\\?.*)?$': {
         target: 'http://localhost:8081',
         changeOrigin: true,

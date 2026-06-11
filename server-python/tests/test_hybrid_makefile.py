@@ -158,6 +158,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "auth-whoami-contract-result.json" in script
     assert "verify-user-profile-smoke" in script
     assert "user-profile-contract-result.json" in script
+    assert "verify-security-audit-read-smoke" in script
+    assert "security-audit-read-contract-result.json" in script
     assert "verify-skill-report-submit-smoke" in script
     assert "skill-report-submit-contract-result.json" in script
     assert "verify-governance-workbench-smoke" in script
@@ -178,6 +180,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-ClawHubListContractComparison" in script
     assert "Invoke-AuthMeContractComparison" in script
     assert "Invoke-UserProfileContractComparison" in script
+    assert "Invoke-SecurityAuditReadContractComparison" in script
     assert "Invoke-AuthenticatedDetailContractComparison" in script
     assert "Invoke-OwnerPreviewDetailContractComparison" in script
     assert "Invoke-OwnerPreviewVersionContractComparison" in script
@@ -378,6 +381,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_admin_review_reports.py" in script
     assert "admin-review-report-mutation-contract-result.json" in script
     assert "tests/test_admin_review_report_mutations.py" in script
+    assert "tests/test_security_audit.py" in script
     assert "tests/test_publish_package.py" in script
     assert "tests/test_publish_dry_run.py" in script
     assert "tests/test_publish_storage.py" in script

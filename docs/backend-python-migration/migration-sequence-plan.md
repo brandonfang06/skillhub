@@ -1343,6 +1343,11 @@ Group E has started with review lifecycle write ownership:
   PENDING/REJECTED change request projection, PENDING self-view overlay, default human-review
   queueing, and immediate-apply audit behavior. Spring Session refresh remains deferred to final
   session replacement.
+- Completed: security audit read API:
+  `GET /api/v1/skills/{skillId}/versions/{versionId}/security-audit`. This moves the
+  authenticated audit read boundary to Python, preserving Java version/skill mismatch handling,
+  visibility checks, latest active audit selection per scanner type, optional `scannerType`,
+  empty-list response for versions without audits, and Java response envelope.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,
