@@ -234,6 +234,7 @@ Still plan carefully when a group requires:
 | 98 | `POST /api/v1/auth/device/code`, `POST /api/v1/device/authorize`, `POST /api/v1/auth/device/token` | python | CLI/browser device authorization flow moved to Python. Preserves Java code payload shape, Redis key/TTL semantics, user-code authorization state machine, `DEVICE_AUTHORIZE` audit, one-time token redemption, `CLI Device Flow` API token rotation, and `skill:read`/`skill:publish` scopes. Windows live gate also records the current Java runtime token-poll `ClassCastException` as a pre-existing reference defect while Python/proxy full flow passes. |
 | 99 | Bearer-token current-principal bridge for `GET /api/v1/auth/me`, `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Existing Python-owned current-principal routes now accept Java-compatible bearer tokens after `X-Mock-User-Id` precedence. Preserves SHA-256 token lookup, active token/user checks, `api_token` provider projection, platform-role fallback/projection, and `last_used_at` touch. Global bearer scope enforcement remains deferred. |
 | 100 | Bearer-token `token:manage` scope enforcement for `/api/v1/tokens*` | python | Already Python-owned token management routes now reject bearer `api_token` principals without `token:manage` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
+| 101 | Bearer-token `skill:publish` scope enforcement for publish routes | python | Already Python-owned publish routes now reject bearer `api_token` principals without `skill:publish` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1322,6 +1323,13 @@ Group E has started with review lifecycle write ownership:
   to Python. Current-principal bearer-token reads now work in Python, and these token management
   routes now enforce Java-compatible bearer `token:manage` scope. Broader route-policy scope
   enforcement and OAuth remain deferred.
+- Completed: publish bearer-token `skill:publish` scope enforcement:
+  `POST /api/cli/v1/skills/{namespace}/publish/validate`,
+  `POST /api/cli/v1/skills/{namespace}/publish`,
+  `POST /api/v1/skills/{namespace}/publish`, `POST /api/web/skills/{namespace}/publish`,
+  `POST /api/v1/skills`, and `POST /api/v1/publish`. These already Python-owned publish
+  routes now accept Java-compatible bearer principals and reject missing publish scope with `403`
+  while keeping mock-user precedence.
 - Completed: anonymous local password reset APIs:
   `POST /api/v1/auth/local/password-reset/request` and
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password

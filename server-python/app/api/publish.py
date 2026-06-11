@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 
-from app.api.auth import read_current_mock_user
+from app.api.auth import _read_current_user_or_401
 from app.core.config import get_settings
 from app.core.response import ok
 from app.publish.dry_run import (
@@ -97,22 +97,11 @@ async def extract_multipart_files(files: list[UploadFile]) -> list[PackageEntry]
     return entries
 
 
-async def resolve_current_user(request: Request, mock_user_id: str | None) -> dict[str, object]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    if reader is not None:
-        data = reader(user_id)
-        if isawaitable(data):
-            data = await data
-    else:
-        data = await read_current_mock_user(request.app.state.db_engine, user_id)
-
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return dict(data)
+async def resolve_current_user(request: Request, mock_user_id: str | None, authorization: str | None) -> dict[str, object]:
+    data = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
+    if data.get("oauthProvider") == "api_token" and "skill:publish" not in set(data.get("tokenScopes") or []):
+        raise HTTPException(status_code=403, detail="Missing API token scope: skill:publish")
+    return data
 
 
 async def resolve_publish_validate_result(result: PublishDryRunResult | Awaitable[PublishDryRunResult]) -> PublishDryRunResult:
@@ -229,12 +218,13 @@ async def publish_entries(
     namespace: str,
     entries: list[PackageEntry],
     mock_user_id: str | None,
+    authorization: str | None,
     visibility: str | None,
     *,
     compat_namespace: str | None = None,
     compat_slug: str | None = None,
 ) -> tuple[PublishDryRunResult, PublishWriteResult, str]:
-    user = await resolve_current_user(request, mock_user_id)
+    user = await resolve_current_user(request, mock_user_id, authorization)
     resolved_visibility = normalize_visibility(visibility)
     platform_roles = {str(role) for role in user.get("platformRoles", [])}
     publisher_id = str(user["userId"])
@@ -307,8 +297,9 @@ async def validate_cli_publish(
     file: UploadFile = File(...),
     visibility: str | None = Form(default=None),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    user = await resolve_current_user(request, mock_user_id)
+    user = await resolve_current_user(request, mock_user_id, authorization)
     resolved_visibility = normalize_visibility(visibility)
 
     try:
@@ -336,13 +327,14 @@ async def publish_cli_skill(
     file: UploadFile = File(...),
     visibility: str | None = Form(default=None),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     try:
         entries = extract_package(await file.read())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
 
-    dry_run, _, resolved_visibility = await publish_entries(request, namespace, entries, mock_user_id, visibility)
+    dry_run, _, resolved_visibility = await publish_entries(request, namespace, entries, mock_user_id, authorization, visibility)
 
     return ok(
         "response.success.published",
@@ -358,6 +350,7 @@ async def publish_legacy_skill(
     namespace: str = Form(...),
     confirm_warnings: bool = Form(default=False, alias="confirmWarnings"),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     _ = confirm_warnings
     normalized_namespace = normalize_namespace(namespace)
@@ -371,6 +364,7 @@ async def publish_legacy_skill(
         normalized_namespace,
         entries,
         mock_user_id,
+        authorization,
         "PUBLIC",
         compat_namespace=normalized_namespace,
     )
@@ -384,6 +378,7 @@ async def publish_clawhub_root_skill(
     files: list[UploadFile] = File(...),
     confirm_warnings: bool = Form(default=False, alias="confirmWarnings"),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     _ = confirm_warnings
     try:
@@ -401,6 +396,7 @@ async def publish_clawhub_root_skill(
         namespace,
         entries,
         mock_user_id,
+        authorization,
         "PUBLIC",
         compat_namespace=namespace,
         compat_slug=compat_slug if isinstance(compat_slug, str) else None,

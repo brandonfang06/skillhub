@@ -39,6 +39,42 @@ def auth_user(platform_roles: list[str] | None = None) -> dict[str, object]:
     }
 
 
+def bearer_user(scopes: list[str] | None = None, platform_roles: list[str] | None = None) -> dict[str, object]:
+    return {
+        "userId": "token-user",
+        "displayName": "Token User",
+        "email": "token-user@example.com",
+        "avatarUrl": "",
+        "oauthProvider": "api_token",
+        "platformRoles": platform_roles or ["USER"],
+        "tokenScopes": scopes if scopes is not None else ["skill:publish"],
+    }
+
+
+def install_publish_validate_reader(app: object, seen: dict[str, object] | None = None) -> None:
+    async def reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        if seen is not None:
+            seen["namespace"] = namespace
+            seen["publisher_id"] = publisher_id
+            seen["visibility"] = visibility
+            seen["platform_roles"] = sorted(platform_roles)
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    app.state.publish_validate_reader = reader
+
+
 def test_cli_publish_validate_requires_mock_user() -> None:
     app = create_app()
     client = TestClient(app)
@@ -121,6 +157,122 @@ def test_cli_publish_validate_returns_java_compatible_dry_run_envelope() -> None
         "visibility": "PRIVATE",
         "platform_roles": ["SUPER_ADMIN"],
     }
+
+
+def test_cli_publish_validate_accepts_bearer_with_publish_scope() -> None:
+    app = create_app()
+    seen: dict[str, object] = {}
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user(["skill:read", "skill:publish"], ["SUPER_ADMIN"])
+    install_publish_validate_reader(app, seen)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish/validate",
+        headers={"Authorization": "Bearer sk_publish"},
+        data={"visibility": "private"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["valid"] is True
+    assert seen == {
+        "namespace": "global",
+        "publisher_id": "token-user",
+        "visibility": "PRIVATE",
+        "platform_roles": ["SUPER_ADMIN"],
+    }
+
+
+def test_publish_routes_reject_bearer_without_publish_scope_before_service_call() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user(["skill:read"], ["SUPER_ADMIN"])
+    app.state.publish_validate_reader = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("publish service should not be called")
+    )
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer sk_readonly"}
+
+    cases = [
+        (
+            "/api/cli/v1/skills/global/publish/validate",
+            {"visibility": "PUBLIC"},
+            {"file": ("skill.zip", skill_zip(), "application/zip")},
+        ),
+        (
+            "/api/cli/v1/skills/global/publish",
+            {"visibility": "PUBLIC"},
+            {"file": ("skill.zip", skill_zip(), "application/zip")},
+        ),
+        (
+            "/api/v1/skills/global/publish",
+            {"visibility": "PUBLIC"},
+            {"file": ("skill.zip", skill_zip(), "application/zip")},
+        ),
+        (
+            "/api/web/skills/global/publish",
+            {"visibility": "PUBLIC"},
+            {"file": ("skill.zip", skill_zip(), "application/zip")},
+        ),
+        (
+            "/api/v1/publish",
+            {"namespace": "global"},
+            {"file": ("skill.zip", skill_zip(), "application/zip")},
+        ),
+    ]
+    for path, data, files in cases:
+        response = client.post(path, headers=headers, data=data, files=files)
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Missing API token scope: skill:publish"
+
+    response = client.post(
+        "/api/v1/skills",
+        headers=headers,
+        data={"payload": json.dumps({"slug": "agent-helper"})},
+        files=[("files", ("SKILL.md", b"---\nname: Agent Helper\ndescription: Helps\n---\n# Skill\n", "text/markdown"))],
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing API token scope: skill:publish"
+
+
+def test_publish_routes_reject_bad_bearer() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda raw_token: None
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish/validate",
+        headers={"Authorization": "Bearer sk_missing"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+def test_publish_routes_keep_mock_precedence_over_bearer_scope() -> None:
+    app = create_app()
+    seen_bearer_tokens: list[str] = []
+    seen: dict[str, object] = {}
+
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+
+    def bearer_reader(raw_token: str) -> dict[str, object]:
+        seen_bearer_tokens.append(raw_token)
+        return bearer_user(["skill:read"])
+
+    app.state.auth_bearer_reader = bearer_reader
+    install_publish_validate_reader(app, seen)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish/validate",
+        headers={"X-Mock-User-Id": "local-user", "Authorization": "Bearer sk_readonly"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert seen["publisher_id"] == "local-user"
+    assert seen_bearer_tokens == []
 
 
 def test_cli_publish_write_attaches_replaceable_version_before_write() -> None:

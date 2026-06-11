@@ -101,6 +101,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-publish-replacement-foundation-smoke" in script
     assert "verify-publish-transaction-split-smoke" in script
     assert "verify-publish-orchestration-foundation-smoke" in script
+    assert "verify-publish-token-scope-smoke" in script
     assert "verify-publish-scanner-handoff-smoke" in script
     assert "verify-publish-cli-replacement-lookup-smoke" in script
     assert "verify-publish-pending-auto-withdraw-smoke" in script
@@ -217,6 +218,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-PublishReplacementFoundationTests" in script
     assert "Invoke-PublishTransactionSplitTests" in script
     assert "Invoke-PublishOrchestrationFoundationTests" in script
+    assert "Invoke-PublishTokenScopeTests" in script
+    assert "Invoke-PublishTokenScopeContractComparison" in script
     assert "Invoke-PublishScannerHandoffTests" in script
     assert "Invoke-PublishScannerHandoffContractComparison" in script
     assert "Invoke-PublishCliReplacementLookupTests" in script
@@ -349,6 +352,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "publish-transaction-split-contract-result.json" in script
     assert "publish-orchestration-foundation-contract-result.json" in script
     assert "publish-http-validate-contract-result.json" in script
+    assert "publish-token-scope-contract-result.json" in script
     assert "publish-cli-write-direct-contract-result.json" in script
     assert "publish-scanner-handoff-contract-result.json" in script
     assert "publish-cli-replacement-lookup-contract-result.json" in script

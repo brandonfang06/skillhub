@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-api-token-scope-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-token-scope-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-api-token-scope-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -6335,6 +6335,223 @@ function Invoke-PublishHttpValidateContractComparison {
 
     if (-not $result.validate.javaMatchesPython -or -not $result.validate.pythonMatchesProxy -or -not $result.unmigratedMutationRoutesRemainJavaOwned) {
         throw "Publish validate contract check failed. See .dev/$ResultFileName."
+    }
+}
+
+function Invoke-PublishTokenScopeTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_publish_http_validate.py',
+            'tests/test_auth_bearer.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Ensure-PublishTokenScopeFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $userId = "codex-publish-scope-$Channel-$Suffix"
+    $publishRawToken = "sk_codex_publish_scope_$Channel`_$Suffix"
+    $readRawToken = "sk_codex_publish_read_$Channel`_$Suffix"
+    $publishHash = Get-Sha256Hex -Value $publishRawToken
+    $readHash = Get-Sha256Hex -Value $readRawToken
+
+    $sql = @"
+DO `$`$
+DECLARE
+    super_admin_role_id BIGINT;
+BEGIN
+    SELECT id INTO super_admin_role_id FROM role WHERE code = 'SUPER_ADMIN';
+
+    DELETE FROM api_token WHERE user_id = '$userId' OR token_hash IN ('$publishHash', '$readHash');
+    DELETE FROM user_role_binding WHERE user_id = '$userId';
+    DELETE FROM user_account WHERE id = '$userId';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+    VALUES ('$userId', 'Codex Publish Scope User', 'publish-scope-$Channel-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    INSERT INTO user_role_binding (user_id, role_id)
+    VALUES ('$userId', super_admin_role_id);
+
+    INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+    VALUES
+        ('USER', '$userId', '$userId', 'Publish Scope', 'sk_pub', '$publishHash', jsonb_build_array('skill:publish', 'skill:read'), CURRENT_TIMESTAMP - INTERVAL '2 minutes'),
+        ('USER', '$userId', '$userId', 'Read Scope', 'sk_read', '$readHash', jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 minutes');
+END
+`$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+    return [ordered]@{ userId = $userId; publishRawToken = $publishRawToken; readRawToken = $readRawToken }
+}
+
+function Get-PublishTokenScopeEvidence {
+    param([string]$UserId)
+
+    $sql = @"
+SELECT json_build_object(
+    'publishLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Publish Scope'
+          AND last_used_at IS NOT NULL
+    ),
+    'readLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Read Scope'
+          AND last_used_at IS NOT NULL
+    ),
+    'activeTokenCount', (
+        SELECT COUNT(*) FROM api_token
+        WHERE user_id = '$UserId'
+          AND revoked_at IS NULL
+    )
+)::text;
+"@
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-PublishTokenScopeEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    return [bool]$json.publishLastUsedTouched -and [bool]$json.readLastUsedTouched -and [int]$json.activeTokenCount -eq 2
+}
+
+function ConvertTo-StablePublishValidateScopeJson {
+    param([object]$Response)
+
+    $data = $Response.body.data
+    $stable = [ordered]@{
+        status = $Response.status
+        code = $Response.body.code
+        valid = $data.valid
+        errors = @($data.errors)
+        warnings = @($data.warnings)
+        resolvedSlugPresent = ("$($data.resolvedSlug)" -ne '')
+        resolvedVersion = $data.resolvedVersion
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Invoke-PublishTokenScopeDeniedCases {
+    param(
+        [string]$BaseUrl,
+        [string]$ReadToken,
+        [string]$ZipPath,
+        [string]$FixtureDir,
+        [string]$PayloadJson
+    )
+
+    $headers = @{ Authorization = "Bearer $ReadToken" }
+    return [ordered]@{
+        cliValidate = (Invoke-MultipartPostJson "$BaseUrl/api/cli/v1/skills/global/publish/validate" -FilePath $ZipPath -Headers $headers).status
+        cliPublish = (Invoke-MultipartPostJson "$BaseUrl/api/cli/v1/skills/global/publish" -FilePath $ZipPath -Headers $headers).status
+        portalV1Publish = (Invoke-MultipartPostJson "$BaseUrl/api/v1/skills/global/publish" -FilePath $ZipPath -Headers $headers).status
+        portalWebPublish = (Invoke-MultipartPostJson "$BaseUrl/api/web/skills/global/publish" -FilePath $ZipPath -Headers $headers).status
+        legacyPublish = (Invoke-LegacyPublishPostJson "$BaseUrl/api/v1/publish" -FilePath $ZipPath -Namespace 'global' -Headers $headers).status
+        clawHubRootPublish = (Invoke-ClawHubRootPublishPostJson "$BaseUrl/api/v1/skills" -FixtureDir $FixtureDir -PayloadJson $PayloadJson -Headers $headers).status
+    }
+}
+
+function Test-AllPublishTokenDeniedStatuses {
+    param([object]$Statuses)
+
+    foreach ($entry in $Statuses.GetEnumerator()) {
+        if ([int]$entry.Value -ne 403) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Invoke-PublishTokenScopeContractComparison {
+    param([string]$ResultFileName = 'publish-token-scope-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $zipPath = New-PublishValidateFixtureZip -SkillName "Codex Publish Scope $suffix" -Version '1.0.0' -FilePrefix "publish-token-scope-$suffix"
+    $fixtureDir = New-ClawHubMultipartFixtureDirectory -SkillName "Codex Publish Scope $suffix" -Version '1.0.0' -FilePrefix "clawhub-publish-scope-$suffix"
+    $payloadJson = (@{ slug = "global--codex-publish-scope-$suffix"; displayName = "Codex Publish Scope $suffix"; version = '1.0.0' } | ConvertTo-Json -Compress)
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing publish API token scope contract: $($case.name)"
+        $fixture = Ensure-PublishTokenScopeFixture -Channel $case.name -Suffix $suffix
+        $allowValidate = Invoke-MultipartPostJson "$($case.baseUrl)/api/cli/v1/skills/global/publish/validate" -FilePath $zipPath -Headers @{ Authorization = "Bearer $($fixture.publishRawToken)" }
+        $denied = Invoke-PublishTokenScopeDeniedCases -BaseUrl $case.baseUrl -ReadToken $fixture.readRawToken -ZipPath $zipPath -FixtureDir $fixtureDir -PayloadJson $payloadJson
+        $missing = (Invoke-MultipartPostJson "$($case.baseUrl)/api/cli/v1/skills/global/publish/validate" -FilePath $zipPath -Headers @{ Authorization = "Bearer sk_missing_publish_scope_$($case.name)_$suffix" }).status
+        $evidence = Get-PublishTokenScopeEvidence -UserId $fixture.userId
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            allowValidate = ConvertTo-StablePublishValidateScopeJson -Response $allowValidate
+            denied = $denied
+            allDenied = Test-AllPublishTokenDeniedStatuses -Statuses $denied
+            missingStatus = $missing
+            evidence = $evidence
+            evidencePassed = Test-PublishTokenScopeEvidence -Evidence $evidence
+        }
+    }
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            allowValidateMatches = ($caseResults[0].allowValidate -eq $caseResults[1].allowValidate -and $caseResults[1].allowValidate -eq $caseResults[2].allowValidate)
+            allDeniedAre403 = -not [bool]($caseResults | Where-Object { -not $_.allDenied })
+            missingBearerRejected = -not [bool]($caseResults | Where-Object { $_.missingStatus -ne 401 })
+            allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+        }
+        cases = $caseResults
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Publish API token scope contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridPublishTokenScopeSmokeVerification {
+    try {
+        Invoke-PublishTokenScopeTests
+        Start-Hybrid
+        Invoke-PublishTokenScopeContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
     }
 }
 
@@ -21444,6 +21661,7 @@ switch ($Action) {
     'verify-publish-transaction-split-smoke' { Invoke-HybridPublishTransactionSplitSmokeVerification }
     'verify-publish-orchestration-foundation-smoke' { Invoke-HybridPublishOrchestrationFoundationSmokeVerification }
     'verify-publish-http-validate-smoke' { Invoke-HybridPublishHttpValidateSmokeVerification }
+    'verify-publish-token-scope-smoke' { Invoke-HybridPublishTokenScopeSmokeVerification }
     'verify-publish-cli-write-direct-smoke' { Invoke-HybridPublishCliWriteDirectSmokeVerification }
     'verify-publish-scanner-handoff-smoke' { Invoke-HybridPublishScannerHandoffSmokeVerification }
     'verify-publish-cli-replacement-lookup-smoke' { Invoke-HybridPublishCliReplacementLookupSmokeVerification }
