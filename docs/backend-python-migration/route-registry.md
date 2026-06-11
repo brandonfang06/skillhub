@@ -49,7 +49,7 @@ deferred routes are still visible.
 | GET | `/api/v1/tokens` | python | API token list moved to Python. Requires current user; bearer `api_token` principals must include `token:manage`; mock-user development auth keeps precedence. Returns active owner-scoped tokens ordered by `created_at DESC` with Java-compatible page envelope. |
 | DELETE | `/api/v1/tokens/{id}` | python | API token revoke moved to Python. Requires current user; bearer `api_token` principals must include `token:manage`; mock-user development auth keeps precedence. Idempotently revokes only owner-scoped tokens and returns `204` empty body. |
 | PUT | `/api/v1/tokens/{id}/expiration` | python | API token expiration update moved to Python. Requires current user; bearer `api_token` principals must include `token:manage`; mock-user development auth keeps precedence. Updates only active owner-scoped tokens, accepts Java-compatible timestamp forms, and returns token summary. |
-| GET | `/api/v1/skills` | python | ClawHub compatibility list. Static exact-path proxy also carries root publish `POST /api/v1/skills`; canonical skill mutations remain Java-owned. |
+| GET | `/api/v1/skills` | python | ClawHub compatibility list. Static exact-path proxy also carries root publish `POST /api/v1/skills`; unsupported canonical skill methods now use Python/FastAPI fallback behavior. |
 | POST | `/api/v1/skills` | python | ClawHub compatibility publish moved to Python. Bearer `api_token` principals must include `skill:publish`; mock-user development auth keeps precedence. Accepts Java-compatible `payload` JSON plus repeated `files` parts and returns plain `{ ok, skillId, versionId }`. |
 | POST | `/api/v1/publish` | python | Legacy ClawHub compatibility publish moved to Python. Bearer `api_token` principals must include `skill:publish`; mock-user development auth keeps precedence. Accepts multipart zip `file` plus `namespace` and returns plain `{ ok, skillId, versionId }`. |
 | GET | `/api/v1/skills/{canonicalSlug}` | python | ClawHub compatibility skill detail. |
@@ -268,14 +268,5 @@ deferred routes are still visible.
 | POST | `/api/v1/auth/device/token` | python | Device token polling moved to Python. Preserves `authorization_pending`, one-time claim semantics, `CLI Device Flow` API token rotation, `skill:read`/`skill:publish` scopes, hash-only token storage, used-code rejection, and user-code cleanup. |
 | DELETE | `/api/v1/skills/{canonicalSlug}` | python | ClawHub placeholder delete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
 | POST | `/api/v1/skills/{canonicalSlug}/undelete` | python | ClawHub placeholder undelete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
-| POST | `/api/v1/skills/{canonicalSlug}` | java | Explicit Vite Java exception for the remaining one-segment non-placeholder skill mutation holdout. |
-| POST | `/api/v1/skills/{namespace}/{slug}` | java | Explicit Vite Java exception for remaining post-publish lifecycle holdouts not yet represented by Python route-specific methods. |
-| POST | `/api/web/skills/{namespace}/{slug}` | java | Explicit Vite Java exception for remaining frontend post-publish lifecycle holdouts not yet represented by Python route-specific methods. |
-| GET | `/api/v1/skills/{skillId}/versions/{versionId}` | java | Explicit Vite Java exception for the numeric skill-version holdout; migrated numeric security-audit reads remain Python-owned. |
-| GET | `/api/v1/stars/{canonicalSlug}` | java | Explicit Vite Java exception for the remaining ClawHub star read holdout. |
-| POST | `/api/v1/me/skills` | java | Explicit Vite Java exception for the remaining current-user owned-skill mutation holdout. |
-| POST | `/api/v1/admin/audit-logs` | java | Explicit Vite Java exception for the unsupported admin audit-log mutation holdout. |
-| POST | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}` | java | Explicit Vite Java exception for unsupported skill tag POST while GET/PUT/DELETE tag routes remain Python-owned. |
-| POST | `/api/web/skills/{namespace}/{slug}/tags/{tagName}` | java | Explicit Vite Java exception for unsupported frontend skill tag POST while GET/PUT/DELETE tag routes remain Python-owned. |
-| * | `/api/**` unmatched paths | python | Vite dev proxy fallback now routes unmatched API paths to Python by default after explicit Java exceptions. |
+| * | `/api/**` unmatched paths | python | Vite dev proxy now routes every API path to Python; unsupported or method-mismatched paths use Python/FastAPI fallback behavior. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

@@ -237,14 +237,15 @@ Still plan carefully when a group requires:
 | 101 | Bearer-token `skill:publish` scope enforcement for publish routes | python | Already Python-owned publish routes now reject bearer `api_token` principals without `skill:publish` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 | 102 | Bearer-token `skill:delete` scope enforcement for v1 hard-delete routes | python | Already Python-owned v1 hard-delete routes now reject bearer `api_token` principals without `skill:delete` with Java-compatible `403`, keep bad bearer tokens at `401`, reject web hard-delete bearer principals as Java-compatible unsupported `403`, and preserve mock-user precedence. |
 | 103 | `DELETE /api/cli/v1/skills/{namespace}/{slug}` | python | CLI destructive skill delete moved to Python. Reuses the whole-skill hard-delete workflow, preserves Java CLI `{ ok, scope, action, namespace, slug }` response data, and requires bearer `skill:delete` for API-token principals. |
-| 104 | Explicit Java proxy exceptions | n/a | ClawHub delete/undelete and unmatched `/api/**` paths are explicitly documented as Java-owned so final proxy cleanup cannot accidentally route them to Python. Runtime proxy behavior is unchanged. |
+| 104 | Explicit Java proxy exceptions | n/a | Historical checkpoint: ClawHub delete/undelete and unmatched `/api/**` paths were explicitly documented as Java-owned so final proxy cleanup could not accidentally route them to Python. Superseded by milestones 111 and 112. |
 | 105 | `DELETE /api/v1/skills/{canonicalSlug}`, `POST /api/v1/skills/{canonicalSlug}/undelete` | python | ClawHub delete/undelete placeholders moved to Python. Preserves Java plain `{ ok: true }` placeholder response and current-user route boundary without adding real delete/restore side effects. |
 | 106 | `GET /api/web/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/file` | python | Web single-file content aliases moved to Python. They reuse the migrated v1 file-content readers and preserve Java raw `application/octet-stream` response behavior. |
 | 107 | `POST /api/v1/admin/search/rebuild` | python | Admin search-index rebuild moved to Python. Preserves SUPER_ADMIN guard, rebuilds ACTIVE skill search documents, and records `REBUILD_SEARCH_INDEX` audit. |
 | 108 | Admin search rebuild bearer route-policy enforcement | python | The already Python-owned admin search rebuild route now rejects valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
 | 109 | Admin label definition bearer route-policy enforcement | python | Already Python-owned admin label definition routes now reject valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
 | 110 | Admin route bearer policy cutover | python | Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence. |
-| 111 | Vite API default Python cutover | python | Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit Java-owned exceptions, while `/oauth2/**` remains Java-owned. |
+| 111 | Vite API default Python cutover | python | Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit Java-owned exceptions, while `/oauth2/**` remains Java-owned. Superseded by milestone 112 for API exceptions. |
+| 112 | API Java exception removal | python | Local Vite dev proxy now sends all `/api/**` traffic to Python; `/oauth2/**` is the only remaining Java-owned proxy family. Unsupported API paths use Python/FastAPI fallback behavior. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1452,7 +1453,8 @@ Group E has started with review lifecycle write ownership:
 - Completed: ClawHub delete/undelete placeholder APIs:
   `DELETE /api/v1/skills/{canonicalSlug}` and `POST /api/v1/skills/{canonicalSlug}/undelete` now
   route to Python and preserve Java's plain `{ ok: true }` placeholder behavior without DB/storage
-  side effects. Unmatched `/api/**` and `/oauth2/**` remain Java-owned.
+  side effects. This older checkpoint's unmatched `/api/**` Java fallback was superseded by the
+  Vite API default Python cutover and API Java exception removal milestones.
 - Completed: web skill single-file content aliases:
   `GET /api/web/skills/{namespace}/{slug}/versions/{version}/file` and
   `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/file` now route to Python and reuse the
@@ -1473,17 +1475,21 @@ Group E has started with review lifecycle write ownership:
   unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence.
 - Completed: Vite API default Python cutover:
   Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit
-  Java-owned exceptions. `/oauth2/**` and the remaining documented holdout routes stay Java-owned.
+  Java-owned exceptions. This checkpoint was superseded by API Java exception removal, which removed
+  the remaining `/api/**` Java proxy exceptions.
+- Completed: API Java exception removal:
+  Local Vite dev proxy no longer contains any `/api/**` Java target. All API paths now reach
+  Python, and unsupported or method-mismatched paths use Python/FastAPI fallback behavior.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
   device-auth, and bearer current-principal boundary routes, Spring Session establishment,
-  any remaining route-policy scope enforcement, and active SSE notification fanout.
+  any remaining route-policy scope enforcement, active SSE notification fanout, and `/oauth2/**`.
 
 Recommended next choice:
 
-- Continue with remaining auth/session/global bearer-scope surfaces or migrate the documented Java
-  exception holdouts based on route ownership priority.
+- Continue with remaining auth/session/global bearer-scope surfaces, OAuth/session replacement, or
+  active SSE notification fanout based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 
