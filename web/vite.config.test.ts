@@ -106,6 +106,15 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
+  it('routes current user profile reads and writes to Python without taking over account merge', () => {
+    expect(matchingProxyTarget('/api/v1/user/profile')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/user/profile?fresh=true')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/account/merge/initiate')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/account/merge/verify')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/account/merge/confirm')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
+  })
+
   it('routes whoami reads to Python while keeping OAuth on Java', () => {
     expect(matchingProxyTarget('/api/v1/whoami')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/cli/v1/auth/whoami')).toBe('http://localhost:8081')

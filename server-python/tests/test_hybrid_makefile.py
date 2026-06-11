@@ -156,6 +156,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "auth-method-catalog-contract-result.json" in script
     assert "verify-auth-whoami-smoke" in script
     assert "auth-whoami-contract-result.json" in script
+    assert "verify-user-profile-smoke" in script
+    assert "user-profile-contract-result.json" in script
     assert "verify-skill-report-submit-smoke" in script
     assert "skill-report-submit-contract-result.json" in script
     assert "verify-governance-workbench-smoke" in script
@@ -175,6 +177,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-ClawHubSkillContractComparison" in script
     assert "Invoke-ClawHubListContractComparison" in script
     assert "Invoke-AuthMeContractComparison" in script
+    assert "Invoke-UserProfileContractComparison" in script
     assert "Invoke-AuthenticatedDetailContractComparison" in script
     assert "Invoke-OwnerPreviewDetailContractComparison" in script
     assert "Invoke-OwnerPreviewVersionContractComparison" in script

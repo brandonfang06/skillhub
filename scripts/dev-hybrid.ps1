@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -2622,6 +2622,219 @@ function Invoke-HybridAuthWhoamiSmokeVerification {
         Invoke-AuthWhoamiTests
         Start-Hybrid
         Invoke-AuthWhoamiContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-UserProfileTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_user_profile.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Ensure-UserProfileContractFixture {
+    param([string]$Suffix)
+
+    $sql = @"
+DO `$`$
+BEGIN
+    DELETE FROM profile_change_request
+    WHERE user_id IN (
+        'codex-profile-java-$Suffix',
+        'codex-profile-python-$Suffix',
+        'codex-profile-proxy-$Suffix'
+    );
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        ('codex-profile-java-$Suffix', 'Profile Before', 'profile-java-$Suffix@example.test', 'https://example.test/before.png', 'ACTIVE'),
+        ('codex-profile-python-$Suffix', 'Profile Before', 'profile-python-$Suffix@example.test', 'https://example.test/before.png', 'ACTIVE'),
+        ('codex-profile-proxy-$Suffix', 'Profile Before', 'profile-proxy-$Suffix@example.test', 'https://example.test/before.png', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+END `$`$;
+"@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function Invoke-UserProfilePatchJson {
+    param(
+        [string]$Url,
+        [string]$UserId,
+        [string]$DisplayName
+    )
+
+    $body = @{ displayName = $DisplayName } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Method Patch -Uri $Url -Headers @{ 'X-Mock-User-Id' = $UserId } -ContentType 'application/json' -Body $body -TimeoutSec 20
+}
+
+function Invoke-UserProfileGetJson {
+    param(
+        [string]$Url,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod -Method Get -Uri $Url -Headers @{ 'X-Mock-User-Id' = $UserId } -TimeoutSec 20
+}
+
+function ConvertTo-StableUserProfilePatchJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            status = $Response.data.status
+            message = $Response.data.message
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function ConvertTo-StableUserProfileGetJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            displayName = $Response.data.displayName
+            avatarUrl = $Response.data.avatarUrl
+            pendingStatus = $Response.data.pendingChanges.status
+            pendingDisplayName = $Response.data.pendingChanges.changes.displayName
+            displayNameEditable = $Response.data.fieldPolicies.displayName.editable
+            displayNameRequiresReview = $Response.data.fieldPolicies.displayName.requiresReview
+            emailEditable = $Response.data.fieldPolicies.email.editable
+            emailRequiresReview = $Response.data.fieldPolicies.email.requiresReview
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Get-UserProfileDbState {
+    param([string]$UserId)
+
+    $displayName = Invoke-PostgresScalar -Sql "SELECT display_name FROM user_account WHERE id = '$UserId';"
+    $requestStatus = Invoke-PostgresScalar -Sql "SELECT status FROM profile_change_request WHERE user_id = '$UserId' ORDER BY created_at DESC LIMIT 1;"
+    $machineResult = Invoke-PostgresScalar -Sql "SELECT machine_result FROM profile_change_request WHERE user_id = '$UserId' ORDER BY created_at DESC LIMIT 1;"
+
+    return [ordered]@{
+        displayName = $displayName
+        latestRequestStatus = $requestStatus
+        latestMachineResult = $machineResult
+    }
+}
+
+function Invoke-UserProfileStatus {
+    param([string]$Url)
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function Invoke-UserProfileContractComparison {
+    param([string]$ResultFileName = 'user-profile-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    Ensure-UserProfileContractFixture -Suffix $suffix
+
+    $displayName = "Profile Next $suffix"
+    $javaUserId = "codex-profile-java-$suffix"
+    $pythonUserId = "codex-profile-python-$suffix"
+    $proxyUserId = "codex-profile-proxy-$suffix"
+
+    $javaPatch = ConvertTo-StableUserProfilePatchJson -Response (Invoke-UserProfilePatchJson "$JavaUrl/api/v1/user/profile" $javaUserId $displayName)
+    $pythonPatch = ConvertTo-StableUserProfilePatchJson -Response (Invoke-UserProfilePatchJson "$PythonUrl/api/v1/user/profile" $pythonUserId $displayName)
+    $proxyPatch = ConvertTo-StableUserProfilePatchJson -Response (Invoke-UserProfilePatchJson "$WebUrl/api/v1/user/profile" $proxyUserId $displayName)
+
+    $javaGet = ConvertTo-StableUserProfileGetJson -Response (Invoke-UserProfileGetJson "$JavaUrl/api/v1/user/profile" $javaUserId)
+    $pythonGet = ConvertTo-StableUserProfileGetJson -Response (Invoke-UserProfileGetJson "$PythonUrl/api/v1/user/profile" $pythonUserId)
+    $proxyGet = ConvertTo-StableUserProfileGetJson -Response (Invoke-UserProfileGetJson "$WebUrl/api/v1/user/profile" $proxyUserId)
+
+    $javaNoAuth = Invoke-UserProfileStatus "$JavaUrl/api/v1/user/profile"
+    $pythonNoAuth = Invoke-UserProfileStatus "$PythonUrl/api/v1/user/profile"
+    $proxyNoAuth = Invoke-UserProfileStatus "$WebUrl/api/v1/user/profile"
+
+    $result = [ordered]@{
+        suffix = $suffix
+        routes = @('/api/v1/user/profile')
+        checks = [ordered]@{
+            patchEnvelopeMatches = ($javaPatch -eq $pythonPatch -and $pythonPatch -eq $proxyPatch)
+            getEnvelopeMatches = ($javaGet -eq $pythonGet -and $pythonGet -eq $proxyGet)
+            noAuthParity = ($javaNoAuth -eq 401 -and $pythonNoAuth -eq 401 -and $proxyNoAuth -eq 401)
+        }
+        stable = [ordered]@{
+            patch = [ordered]@{ java = $javaPatch; python = $pythonPatch; proxy = $proxyPatch }
+            get = [ordered]@{ java = $javaGet; python = $pythonGet; proxy = $proxyGet }
+        }
+        db = [ordered]@{
+            java = Get-UserProfileDbState -UserId $javaUserId
+            python = Get-UserProfileDbState -UserId $pythonUserId
+            proxy = Get-UserProfileDbState -UserId $proxyUserId
+        }
+        statuses = [ordered]@{
+            noAuth = @($javaNoAuth, $pythonNoAuth, $proxyNoAuth)
+        }
+    }
+
+    $result.checks.dbPendingParity = (
+        $result.db.java.displayName -eq 'Profile Before' -and
+        $result.db.python.displayName -eq 'Profile Before' -and
+        $result.db.proxy.displayName -eq 'Profile Before' -and
+        $result.db.java.latestRequestStatus -eq 'PENDING' -and
+        $result.db.python.latestRequestStatus -eq 'PENDING' -and
+        $result.db.proxy.latestRequestStatus -eq 'PENDING' -and
+        $result.db.java.latestMachineResult -eq 'PASS' -and
+        $result.db.python.latestMachineResult -eq 'PASS' -and
+        $result.db.proxy.latestMachineResult -eq 'PASS'
+    )
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "User profile contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridUserProfileSmokeVerification {
+    try {
+        Invoke-UserProfileTests
+        Start-Hybrid
+        Invoke-UserProfileContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -18863,6 +19076,7 @@ switch ($Action) {
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
+    'verify-user-profile-smoke' { Invoke-HybridUserProfileSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }
     'verify-owner-preview-version-smoke' { Invoke-HybridOwnerPreviewVersionSmokeVerification }

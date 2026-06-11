@@ -22,6 +22,7 @@ from app.api.skill_reports import router as skill_reports_router
 from app.api.skills import router as skills_router
 from app.api.social import router as social_router
 from app.api.tokens import router as tokens_router
+from app.api.user_profile import router as user_profile_router
 from app.api.well_known import router as well_known_router
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(social_router)
     app.include_router(skill_reports_router)
     app.include_router(tokens_router)
+    app.include_router(user_profile_router)
     app.include_router(reviews_router)
     app.include_router(skills_router)
     app.include_router(well_known_router)

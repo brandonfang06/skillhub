@@ -1337,6 +1337,12 @@ Group E has started with review lifecycle write ownership:
   `GET /api/v1/whoami` and `GET /api/cli/v1/auth/whoami`. These move ClawHub and CLI
   whoami reads to Python while keeping OAuth callbacks/authorization, bearer-token authentication
   filters, and scope enforcement Java-owned.
+- Completed: current-user profile APIs:
+  `GET /api/v1/user/profile` and `PATCH /api/v1/user/profile`. These move the self-service
+  profile read/update boundary to Python, preserving Java display-name validation, latest
+  PENDING/REJECTED change request projection, PENDING self-view overlay, default human-review
+  queueing, and immediate-apply audit behavior. Spring Session refresh remains deferred to final
+  session replacement.
 - Completed: governance workbench read APIs:
   `GET /api/v1/governance/summary`, `GET /api/web/governance/summary`,
   `GET /api/v1/governance/inbox`, `GET /api/web/governance/inbox`,
