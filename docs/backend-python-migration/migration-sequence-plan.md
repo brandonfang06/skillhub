@@ -235,6 +235,7 @@ Still plan carefully when a group requires:
 | 99 | Bearer-token current-principal bridge for `GET /api/v1/auth/me`, `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Existing Python-owned current-principal routes now accept Java-compatible bearer tokens after `X-Mock-User-Id` precedence. Preserves SHA-256 token lookup, active token/user checks, `api_token` provider projection, platform-role fallback/projection, and `last_used_at` touch. Global bearer scope enforcement remains deferred. |
 | 100 | Bearer-token `token:manage` scope enforcement for `/api/v1/tokens*` | python | Already Python-owned token management routes now reject bearer `api_token` principals without `token:manage` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 | 101 | Bearer-token `skill:publish` scope enforcement for publish routes | python | Already Python-owned publish routes now reject bearer `api_token` principals without `skill:publish` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
+| 102 | Bearer-token `skill:delete` scope enforcement for v1 hard-delete routes | python | Already Python-owned v1 hard-delete routes now reject bearer `api_token` principals without `skill:delete` with Java-compatible `403`, keep bad bearer tokens at `401`, reject web hard-delete bearer principals as Java-compatible unsupported `403`, and preserve mock-user precedence. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1425,11 +1426,17 @@ Group E has started with review lifecycle write ownership:
   deletion, and ClawHub delete/undelete Java-owned boundary preservation. The live fixture also
   caught one Java enum compatibility issue: `security_audit.scanner_type` fixture rows must use
   `SKILL_SCANNER` so Java JPA can read them.
+- Completed: hard-delete bearer-token `skill:delete` scope enforcement:
+  `DELETE /api/v1/skills/id/{skillId}` and `DELETE /api/v1/skills/{namespace}/{slug}` now
+  accept Java-compatible bearer principals only when they include `skill:delete`; bad bearer
+  tokens stay `401`, missing scope is `403`, web hard-delete bearer access remains unsupported
+  `403`, and mock-user precedence is unchanged.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
   device-auth, and bearer current-principal boundary routes, Spring Session establishment,
-  global bearer-token scope enforcement, active SSE notification fanout, and final proxy cleanup.
+  any remaining route-policy scope enforcement, active SSE notification fanout, and final proxy
+  cleanup.
 
 Recommended next choice:
 

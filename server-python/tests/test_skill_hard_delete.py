@@ -279,3 +279,78 @@ def test_skill_hard_delete_routes_return_java_envelopes(tmp_path: Path) -> None:
 
     assert client.delete("/api/v1/skills/team/demo", headers={"X-Mock-User-Id": "owner"}).status_code == 403
     assert client.delete("/api/web/skills/team/demo").status_code == 401
+
+
+def test_skill_hard_delete_routes_enforce_bearer_delete_scope(tmp_path: Path) -> None:
+    app = create_app()
+    seen: list[SkillHardDeleteInput] = []
+
+    def bearer_user(raw_token: str) -> dict[str, object] | None:
+        if raw_token == "delete-token":
+            return {
+                "userId": "admin",
+                "displayName": "Admin",
+                "email": "admin@example.com",
+                "avatarUrl": "",
+                "oauthProvider": "api_token",
+                "platformRoles": ["SUPER_ADMIN"],
+                "tokenScopes": ["skill:delete"],
+            }
+        if raw_token == "read-token":
+            return {
+                "userId": "admin",
+                "displayName": "Admin",
+                "email": "admin@example.com",
+                "avatarUrl": "",
+                "oauthProvider": "api_token",
+                "platformRoles": ["SUPER_ADMIN"],
+                "tokenScopes": ["skill:read"],
+            }
+        return None
+
+    def mock_user(user_id: str) -> dict[str, object]:
+        return {
+            "userId": user_id,
+            "displayName": user_id,
+            "email": f"{user_id}@example.com",
+            "avatarUrl": "",
+            "platformRoles": ["SUPER_ADMIN"],
+        }
+
+    async def writer(delete_input: SkillHardDeleteInput) -> dict[str, Any]:
+        seen.append(delete_input)
+        return {
+            "skillId": delete_input.skill_id or 10,
+            "namespace": delete_input.namespace or "team",
+            "slug": delete_input.slug or "demo",
+            "deleted": True,
+        }
+
+    app.state.auth_bearer_reader = bearer_user
+    app.state.auth_me_reader = mock_user
+    app.state.skill_hard_delete_writer = writer
+    app.state.storage_base_path = str(tmp_path)
+    client = TestClient(app)
+
+    allowed = client.delete("/api/v1/skills/team/demo", headers={"Authorization": "Bearer delete-token"})
+    assert allowed.status_code == 200
+    assert seen[-1].actor_user_id == "admin"
+
+    missing_scope = client.delete("/api/v1/skills/team/demo", headers={"Authorization": "Bearer read-token"})
+    assert missing_scope.status_code == 403
+    assert missing_scope.json()["detail"] == "Missing API token scope: skill:delete"
+    assert len(seen) == 1
+
+    unknown = client.delete("/api/v1/skills/team/demo", headers={"Authorization": "Bearer bad-token"})
+    assert unknown.status_code == 401
+
+    web_unsupported = client.delete("/api/web/skills/team/demo", headers={"Authorization": "Bearer delete-token"})
+    assert web_unsupported.status_code == 403
+    assert web_unsupported.json()["detail"] == "API token cannot access endpoint: /api/web/skills/team/demo"
+
+    mock_precedence = client.delete(
+        "/api/v1/skills/team/demo",
+        headers={"X-Mock-User-Id": "mock-admin", "Authorization": "Bearer read-token"},
+    )
+    assert mock_precedence.status_code == 200
+    assert seen[-1].actor_user_id == "mock-admin"

@@ -83,6 +83,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-cli-skill-read-download-smoke" in script
     assert "verify-skill-tag-management-smoke" in script
     assert "verify-skill-hard-delete-smoke" in script
+    assert "verify-hard-delete-token-scope-smoke" in script
     assert "verify-auth-me-smoke" in script
     assert "verify-auth-detail-smoke" in script
     assert "verify-owner-preview-detail-smoke" in script
@@ -282,6 +283,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-SkillRereleaseContractComparison" in script
     assert "Invoke-SkillHardDeleteTests" in script
     assert "Invoke-SkillHardDeleteContractComparison" in script
+    assert "Invoke-HardDeleteTokenScopeTests" in script
+    assert "Invoke-HardDeleteTokenScopeContractComparison" in script
     assert "Invoke-AccountMergeTests" in script
     assert "Invoke-AccountMergeContractComparison" in script
     assert "Invoke-BearerCurrentPrincipalTests" in script
@@ -384,6 +387,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "skill-submit-review-contract-result.json" in script
     assert "skill-rerelease-contract-result.json" in script
     assert "skill-hard-delete-contract-result.json" in script
+    assert "hard-delete-token-scope-contract-result.json" in script
     assert "admin-skill-hide-unhide-contract-result.json" in script
     assert "admin-version-yank-contract-result.json" in script
     assert "skill-star-contract-result.json" in script

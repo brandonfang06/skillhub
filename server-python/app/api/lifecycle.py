@@ -8,7 +8,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core.response import ok
-from app.api.auth import read_current_mock_user
+from app.api.auth import _read_current_user_or_401, read_current_mock_user
 from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
     SkillArchiveInput,
@@ -69,6 +69,21 @@ async def _read_current_user(request: Request, mock_user_id: str | None) -> dict
     if data is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
     return dict(data)
+
+
+async def _read_hard_delete_user(
+    request: Request,
+    route_scope: str,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, object]:
+    user = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
+    if user.get("oauthProvider") == "api_token":
+        if route_scope != "v1":
+            raise HTTPException(status_code=403, detail=f"API token cannot access endpoint: {request.url.path}")
+        if "skill:delete" not in set(user.get("tokenScopes") or []):
+            raise HTTPException(status_code=403, detail="Missing API token scope: skill:delete")
+    return user
 
 
 def _settings_storage_base_path(request: Request) -> str:
@@ -178,8 +193,9 @@ async def hard_delete_skill_route_data(
     slug: str | None,
     owner_id: str | None,
     mock_user_id: str | None,
+    authorization: str | None,
 ) -> dict[str, Any]:
-    user = await _read_current_user(request, mock_user_id)
+    user = await _read_hard_delete_user(request, route_scope, mock_user_id, authorization)
     if route_scope == "v1" and "SUPER_ADMIN" not in {str(role) for role in user.get("platformRoles", [])}:
         raise HTTPException(status_code=403, detail="error.admin.superAdminRequired")
     delete_input = SkillHardDeleteInput(
@@ -378,6 +394,7 @@ async def hard_delete_skill_by_id_v1(
     request: Request,
     skill_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     return await hard_delete_skill_route_data(
         request,
@@ -387,6 +404,7 @@ async def hard_delete_skill_by_id_v1(
         slug=None,
         owner_id=None,
         mock_user_id=x_mock_user_id,
+        authorization=authorization,
     )
 
 
@@ -395,6 +413,7 @@ async def hard_delete_skill_by_id_web(
     request: Request,
     skill_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     return await hard_delete_skill_route_data(
         request,
@@ -404,6 +423,7 @@ async def hard_delete_skill_by_id_web(
         slug=None,
         owner_id=None,
         mock_user_id=x_mock_user_id,
+        authorization=authorization,
     )
 
 
@@ -414,6 +434,7 @@ async def hard_delete_skill_v1(
     slug: str,
     ownerId: str | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     return await hard_delete_skill_route_data(
         request,
@@ -423,6 +444,7 @@ async def hard_delete_skill_v1(
         slug=slug,
         owner_id=ownerId,
         mock_user_id=x_mock_user_id,
+        authorization=authorization,
     )
 
 
@@ -433,6 +455,7 @@ async def hard_delete_skill_web(
     slug: str,
     ownerId: str | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     return await hard_delete_skill_route_data(
         request,
@@ -442,6 +465,7 @@ async def hard_delete_skill_web(
         slug=slug,
         owner_id=ownerId,
         mock_user_id=x_mock_user_id,
+        authorization=authorization,
     )
 
 

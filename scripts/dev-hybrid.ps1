@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-token-scope-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-api-token-scope-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-hard-delete-token-scope-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-token-scope-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-api-token-scope-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -21618,6 +21618,203 @@ function Invoke-HybridSkillHardDeleteSmokeVerification {
     }
 }
 
+function Invoke-HardDeleteTokenScopeTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_skill_hard_delete.py',
+            'tests/test_auth_bearer.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Ensure-HardDeleteTokenScopeFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $fixtureSlug = "codex-hard-delete-token-$Channel-$Suffix"
+    $deleteRawToken = "sk_codex_delete_scope_$Channel`_$Suffix"
+    $readRawToken = "sk_codex_delete_read_$Channel`_$Suffix"
+    $deleteHash = Get-Sha256Hex -Value $deleteRawToken
+    $readHash = Get-Sha256Hex -Value $readRawToken
+
+    $sql = @"
+DO `$`$
+DECLARE
+    super_role_id BIGINT;
+BEGIN
+    SELECT id INTO super_role_id FROM role WHERE code = 'SUPER_ADMIN';
+
+    DELETE FROM api_token WHERE user_id = 'local-admin' AND token_hash IN ('$deleteHash', '$readHash');
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+    VALUES ('local-admin', 'Local Admin', 'local-admin@example.com', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    IF super_role_id IS NOT NULL THEN
+        INSERT INTO user_role_binding (user_id, role_id)
+        VALUES ('local-admin', super_role_id)
+        ON CONFLICT (user_id, role_id) DO NOTHING;
+    END IF;
+
+    INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+    VALUES
+        ('USER', 'local-admin', 'local-admin', 'Hard Delete Scope $Channel $Suffix', 'sk_del', '$deleteHash', jsonb_build_array('skill:delete', 'skill:read'), CURRENT_TIMESTAMP - INTERVAL '2 minutes'),
+        ('USER', 'local-admin', 'local-admin', 'Hard Delete Read $Channel $Suffix', 'sk_read', '$readHash', jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 minutes');
+END
+`$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    $skill = Ensure-SkillHardDeleteFixture -Slug $fixtureSlug
+    return [ordered]@{
+        userId = 'local-admin'
+        slug = $fixtureSlug
+        skillId = $skill.skillId
+        versionIds = $skill.versionIds
+        deleteRawToken = $deleteRawToken
+        readRawToken = $readRawToken
+        deleteTokenName = "Hard Delete Scope $Channel $Suffix"
+        readTokenName = "Hard Delete Read $Channel $Suffix"
+    }
+}
+
+function Get-HardDeleteTokenScopeEvidence {
+    param(
+        [long]$SkillId,
+        [long[]]$VersionIds,
+        [string]$DeleteTokenName,
+        [string]$ReadTokenName
+    )
+
+    $versionList = ($VersionIds -join ',')
+    $sql = @"
+SELECT json_build_object(
+    'skillMissing', NOT EXISTS (SELECT 1 FROM skill WHERE id = $SkillId),
+    'versionMissing', NOT EXISTS (SELECT 1 FROM skill_version WHERE skill_id = $SkillId),
+    'fileMissing', NOT EXISTS (SELECT 1 FROM skill_file WHERE version_id IN ($versionList)),
+    'auditExists', EXISTS (SELECT 1 FROM audit_log WHERE action = 'DELETE_SKILL_HARD' AND target_id = $SkillId),
+    'deleteLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = 'local-admin'
+          AND name = '$DeleteTokenName'
+          AND last_used_at IS NOT NULL
+    ),
+    'readLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = 'local-admin'
+          AND name = '$ReadTokenName'
+          AND last_used_at IS NOT NULL
+    )
+)::text;
+"@
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-HardDeleteTokenScopeEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    return [bool]$json.skillMissing -and
+        [bool]$json.versionMissing -and
+        [bool]$json.fileMissing -and
+        [bool]$json.auditExists -and
+        [bool]$json.deleteLastUsedTouched -and
+        [bool]$json.readLastUsedTouched
+}
+
+function Invoke-HardDeleteTokenScopeContractComparison {
+    param([string]$ResultFileName = 'hard-delete-token-scope-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing hard-delete API token scope contract: $($case.name)"
+        $fixture = Ensure-HardDeleteTokenScopeFixture -Channel $case.name -Suffix $suffix
+        $deletePath = "/api/v1/skills/codex-hard-delete-team/$($fixture.slug)"
+        $deleteResponse = Invoke-RestMethod -Method Delete -Uri "$($case.baseUrl)$deletePath" -Headers @{ Authorization = "Bearer $($fixture.deleteRawToken)" } -TimeoutSec 20
+        $missingScopeStatus = Invoke-ApiTokenBearerStatus 'Delete' "$($case.baseUrl)/api/v1/skills/codex-hard-delete-team/$($fixture.slug)" $fixture.readRawToken
+        $unknownStatus = Invoke-ApiTokenBearerStatus 'Delete' "$($case.baseUrl)/api/v1/skills/codex-hard-delete-team/$($fixture.slug)" "sk_missing_delete_scope_$($case.name)_$suffix"
+        $webUnsupportedStatus = Invoke-ApiTokenBearerStatus 'Delete' "$($case.baseUrl)/api/web/skills/codex-hard-delete-team/$($fixture.slug)" $fixture.deleteRawToken
+        $evidence = Get-HardDeleteTokenScopeEvidence -SkillId $fixture.skillId -VersionIds $fixture.versionIds -DeleteTokenName $fixture.deleteTokenName -ReadTokenName $fixture.readTokenName
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            delete = ConvertTo-StableSkillHardDeleteJson -Response $deleteResponse
+            missingScopeStatus = $missingScopeStatus
+            unknownStatus = $unknownStatus
+            webUnsupportedStatus = $webUnsupportedStatus
+            evidence = $evidence
+            evidencePassed = Test-HardDeleteTokenScopeEvidence -Evidence $evidence
+        }
+    }
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            deleteEnvelopeMatches = ($caseResults[0].delete -eq $caseResults[1].delete -and $caseResults[1].delete -eq $caseResults[2].delete)
+            missingScopeDenied = -not [bool]($caseResults | Where-Object { $_.missingScopeStatus -ne 403 })
+            unknownBearerRejected = -not [bool]($caseResults | Where-Object { $_.unknownStatus -ne 401 })
+            webBearerUnsupported = -not [bool]($caseResults | Where-Object { $_.webUnsupportedStatus -ne 403 })
+            allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+        }
+        cases = $caseResults
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Hard-delete API token scope contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridHardDeleteTokenScopeSmokeVerification {
+    try {
+        Invoke-HardDeleteTokenScopeTests
+        Start-Hybrid
+        Invoke-HardDeleteTokenScopeContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -21635,6 +21832,7 @@ switch ($Action) {
     'verify-cli-skill-read-download-smoke' { Invoke-HybridCliSkillReadDownloadSmokeVerification }
     'verify-skill-tag-management-smoke' { Invoke-HybridSkillTagManagementSmokeVerification }
     'verify-skill-hard-delete-smoke' { Invoke-HybridSkillHardDeleteSmokeVerification }
+    'verify-hard-delete-token-scope-smoke' { Invoke-HybridHardDeleteTokenScopeSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
