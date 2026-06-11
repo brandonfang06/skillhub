@@ -8,6 +8,8 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core.response import ok
+from app.api.auth import read_current_mock_user
+from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
     SkillArchiveInput,
     SkillConfirmPublishInput,
@@ -58,6 +60,22 @@ def _require_mock_user(mock_user_id: str | None) -> str:
     if mock_user_id is None or mock_user_id.strip() == "":
         raise HTTPException(status_code=401, detail="error.auth.required")
     return mock_user_id.strip()
+
+
+async def _read_current_user(request: Request, mock_user_id: str | None) -> dict[str, object]:
+    user_id = _require_mock_user(mock_user_id)
+    reader = getattr(request.app.state, "auth_me_reader", None)
+    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
+    if data is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return dict(data)
+
+
+def _settings_storage_base_path(request: Request) -> str:
+    settings = getattr(request.app.state, "settings", None)
+    if settings is not None:
+        return str(settings.storage_base_path)
+    return str(getattr(request.app.state, "storage_base_path", ""))
 
 
 def _build_input(
@@ -149,6 +167,44 @@ async def delete_skill_version_route_data(
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u5220\u9664\u6210\u529f", result.response, request)
+
+
+async def hard_delete_skill_route_data(
+    request: Request,
+    route_scope: str,
+    *,
+    skill_id: int | None,
+    namespace: str | None,
+    slug: str | None,
+    owner_id: str | None,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user = await _read_current_user(request, mock_user_id)
+    if route_scope == "v1" and "SUPER_ADMIN" not in {str(role) for role in user.get("platformRoles", [])}:
+        raise HTTPException(status_code=403, detail="error.admin.superAdminRequired")
+    delete_input = SkillHardDeleteInput(
+        route_scope=route_scope,
+        skill_id=skill_id,
+        namespace=namespace,
+        slug=slug,
+        owner_id=owner_id,
+        actor_user_id=str(user["userId"]),
+        actor_platform_roles=[str(role) for role in user.get("platformRoles", [])],
+        storage_base_path=_settings_storage_base_path(request),
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_hard_delete_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(delete_input)
+            if writer is not None
+            else hard_delete_skill(request.app.state.db_engine, delete_input)
+        )
+    except SkillHardDeleteError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", data, request)
 
 
 async def withdraw_skill_version_review_route_data(
@@ -315,6 +371,78 @@ async def unarchive_skill_web(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await unarchive_skill_route_data(request, namespace, slug, x_mock_user_id)
+
+
+@router.delete("/api/v1/skills/id/{skill_id}")
+async def hard_delete_skill_by_id_v1(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await hard_delete_skill_route_data(
+        request,
+        "v1",
+        skill_id=skill_id,
+        namespace=None,
+        slug=None,
+        owner_id=None,
+        mock_user_id=x_mock_user_id,
+    )
+
+
+@router.delete("/api/web/skills/id/{skill_id}")
+async def hard_delete_skill_by_id_web(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await hard_delete_skill_route_data(
+        request,
+        "web",
+        skill_id=skill_id,
+        namespace=None,
+        slug=None,
+        owner_id=None,
+        mock_user_id=x_mock_user_id,
+    )
+
+
+@router.delete("/api/v1/skills/{namespace}/{slug}")
+async def hard_delete_skill_v1(
+    request: Request,
+    namespace: str,
+    slug: str,
+    ownerId: str | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await hard_delete_skill_route_data(
+        request,
+        "v1",
+        skill_id=None,
+        namespace=namespace,
+        slug=slug,
+        owner_id=ownerId,
+        mock_user_id=x_mock_user_id,
+    )
+
+
+@router.delete("/api/web/skills/{namespace}/{slug}")
+async def hard_delete_skill_web(
+    request: Request,
+    namespace: str,
+    slug: str,
+    ownerId: str | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await hard_delete_skill_route_data(
+        request,
+        "web",
+        skill_id=None,
+        namespace=namespace,
+        slug=slug,
+        owner_id=ownerId,
+        mock_user_id=x_mock_user_id,
+    )
 
 
 @router.delete("/api/v1/skills/{namespace}/{slug}/versions/{version}")

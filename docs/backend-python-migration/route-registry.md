@@ -253,5 +253,9 @@ deferred routes are still visible.
 | GET | `/api/web/governance/notifications` | python | Frontend alias for legacy governance notification list. |
 | POST | `/api/v1/governance/notifications/{id}/read` | python | Legacy governance notification mark-read moved to Python. Reads and updates `user_notification`, preserves Java owner guard, `error.notification.notFound`, `error.notification.noPermission`, and `更新成功` response. |
 | POST | `/api/web/governance/notifications/{id}/read` | python | Frontend alias for legacy governance notification mark-read. |
+| DELETE | `/api/v1/skills/id/{skillId}` | python | Whole-skill hard delete by id moved to Python. Requires `SUPER_ADMIN`, deletes search document, related review/promotion/social/report/version/file/security rows, records `DELETE_SKILL_HARD`, and deletes local storage with compensation on failure. |
+| DELETE | `/api/v1/skills/{namespace}/{slug}` | python | Whole-skill hard delete by namespace/slug moved to Python. Requires `SUPER_ADMIN`, normalizes leading `@`, preserves Java idempotent `deleted=false` for missing or ambiguous slug targets, and keeps ClawHub one-segment delete Java-owned. |
+| DELETE | `/api/web/skills/id/{skillId}` | python | Frontend whole-skill hard delete by id moved to Python. Allows `SUPER_ADMIN` or skill owner and shares the same side-effect contract as the v1 id route. |
+| DELETE | `/api/web/skills/{namespace}/{slug}` | python | Frontend whole-skill hard delete by namespace/slug moved to Python. Allows `SUPER_ADMIN` or skill owner and preserves Java idempotent `deleted=false` for missing or ambiguous slug targets. |
 | * | `/api/**` | java | Default owner for all routes not listed as Python-owned. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

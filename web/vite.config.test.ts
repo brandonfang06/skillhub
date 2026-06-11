@@ -407,6 +407,39 @@ describe('Vite dev proxy route ownership', () => {
     )
   })
 
+  it('routes whole-skill hard delete to Python while keeping ClawHub delete placeholders on Java', () => {
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/id/10')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/id/10')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/global/demo')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/global/demo')).toBe(
+      'http://localhost:8081',
+    )
+
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/id/10')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/id/10')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/web/skills/global/demo')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/agent-helper')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/agent-helper/undelete')).toBe(
+      'http://localhost:8080',
+    )
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/versions/1.0.0')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/tags/stable')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/global/demo/labels/featured')).toBe(
+      'http://localhost:8081',
+    )
+  })
+
   it('routes skill subscription viewer-state actions to Python including unsubscribe', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/subscription')).toBe(
       'http://localhost:8081',

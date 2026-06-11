@@ -82,6 +82,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-clawhub-star-smoke" in script
     assert "verify-cli-skill-read-download-smoke" in script
     assert "verify-skill-tag-management-smoke" in script
+    assert "verify-skill-hard-delete-smoke" in script
     assert "verify-auth-me-smoke" in script
     assert "verify-auth-detail-smoke" in script
     assert "verify-owner-preview-detail-smoke" in script
@@ -268,6 +269,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-SkillSubmitReviewContractComparison" in script
     assert "Invoke-SkillRereleaseTests" in script
     assert "Invoke-SkillRereleaseContractComparison" in script
+    assert "Invoke-SkillHardDeleteTests" in script
+    assert "Invoke-SkillHardDeleteContractComparison" in script
     assert "Invoke-AdminSkillHideUnhideTests" in script
     assert "Invoke-AdminSkillHideUnhideContractComparison" in script
     assert "Invoke-AdminVersionYankTests" in script
@@ -360,6 +363,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "skill-confirm-publish-contract-result.json" in script
     assert "skill-submit-review-contract-result.json" in script
     assert "skill-rerelease-contract-result.json" in script
+    assert "skill-hard-delete-contract-result.json" in script
     assert "admin-skill-hide-unhide-contract-result.json" in script
     assert "admin-version-yank-contract-result.json" in script
     assert "skill-star-contract-result.json" in script
@@ -419,6 +423,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "tests/test_skill_lifecycle_confirm_publish.py" in script
     assert "tests/test_skill_lifecycle_submit_review.py" in script
     assert "tests/test_skill_lifecycle_rerelease.py" in script
+    assert "tests/test_skill_hard_delete.py" in script
     assert "tests/test_admin_skill_governance.py" in script
     assert "tests/test_skill_star.py" in script
     assert "tests/test_skill_subscription.py" in script
