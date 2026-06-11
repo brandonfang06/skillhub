@@ -106,12 +106,28 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 
-  it('routes current user profile reads and writes to Python without taking over account merge', () => {
+  it('routes current user profile reads and writes plus account merge to Python', () => {
     expect(matchingProxyTarget('/api/v1/user/profile')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/user/profile?fresh=true')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/account/merge/initiate')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/account/merge/verify')).toBe('http://localhost:8080')
-    expect(matchingProxyTarget('/api/v1/account/merge/confirm')).toBe('http://localhost:8080')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/account/merge/initiate')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/account/merge/verify')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/account/merge/confirm')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/account/merge/initiate')).toBeUndefined()
+    expect(matchingDevProxyTarget('POST', '/api/v1/account/merge/initiate')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/account/merge/verify')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('POST', '/api/v1/account/merge/confirm')).toBe(
+      'http://localhost:8081',
+    )
     expect(matchingProxyTarget('/oauth2/authorization/github')).toBe('http://localhost:8080')
   })
 

@@ -230,6 +230,7 @@ Still plan carefully when a group requires:
 | 94 | `GET /api/cli/v1/skills/search`, `GET /api/cli/v1/skills/{namespace}/{slug}/resolve`, `GET /api/cli/v1/skills/{namespace}/{slug}/download`, `GET /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI skill read/download compatibility moved to Python. Preserves Java `ApiResponse` search/resolve envelopes, download stream/header behavior, and explicitly keeps destructive `DELETE /api/cli/v1/skills/{namespace}/{slug}` Java-owned. |
 | 95 | `GET /api/v1/skills/{namespace}/{slug}/tags`, `GET /api/web/skills/{namespace}/{slug}/tags`, `PUT /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `PUT /api/web/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag management moved to Python. Preserves Java visibility checks, virtual `latest` list tag, namespace `OWNER`/`ADMIN` write guard, reserved `latest` rejection, published-target requirement, and live Java success messages. |
 | 96 | `DELETE /api/v1/skills/id/{skillId}`, `DELETE /api/v1/skills/{namespace}/{slug}`, `DELETE /api/web/skills/id/{skillId}`, `DELETE /api/web/skills/{namespace}/{slug}` | python | Whole-skill hard delete moved to Python. Preserves v1 `SUPER_ADMIN` guard, web owner-or-super-admin guard, slug idempotent `deleted=false`, DB artifact cleanup, `DELETE_SKILL_HARD` audit, local storage deletion, and ClawHub delete/undelete Java ownership. |
+| 97 | `POST /api/v1/account/merge/initiate`, `POST /api/v1/account/merge/verify`, `POST /api/v1/account/merge/confirm` | python | Account merge workflow moved to Python. Preserves mock-user auth requirement, local username/provider-subject secondary resolution, pending/local-credential conflict checks, BCrypt token hashing/verification, and atomic confirm side effects for bindings, tokens, roles, namespace memberships, credentials, primary email fill, secondary `MERGED`, and request completion. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1415,14 +1416,14 @@ Group E has started with review lifecycle write ownership:
   `SKILL_SCANNER` so Java JPA can read them.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
-  surfaces outside migrated current-user/token/local-auth/password-reset/direct-session boundary
-  routes, Spring Session establishment, device flow, bearer-token authentication filters, scope
-  enforcement, active SSE notification fanout, and final proxy cleanup.
+  surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
+  boundary routes, Spring Session establishment, device flow, bearer-token authentication filters,
+  scope enforcement, active SSE notification fanout, and final proxy cleanup.
 
 Recommended next choice:
 
-- Continue with final proxy cleanup or remaining auth surfaces based on route
-  ownership priority.
+- Continue with remaining auth/session/device/bearer-token surfaces or final proxy cleanup based on
+  route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

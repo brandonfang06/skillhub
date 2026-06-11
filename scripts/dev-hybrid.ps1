@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -19973,6 +19973,309 @@ function Invoke-HybridSkillTagManagementSmokeVerification {
     }
 }
 
+function Invoke-AccountMergeTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_account_merge.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-AccountMergeJson {
+    param(
+        [string]$Url,
+        [object]$Body,
+        [string]$UserId
+    )
+
+    return Invoke-RestMethod `
+        -Uri $Url `
+        -Method Post `
+        -Headers @{ 'X-Mock-User-Id' = $UserId } `
+        -ContentType 'application/json' `
+        -Body ($Body | ConvertTo-Json -Depth 20 -Compress) `
+        -TimeoutSec 20
+}
+
+function ConvertTo-StableAccountMergeJson {
+    param([object]$Response)
+
+    $copy = $Response | ConvertTo-Json -Depth 50 | ConvertFrom-Json
+    if ($copy.PSObject.Properties.Name -contains 'timestamp') {
+        $copy.PSObject.Properties.Remove('timestamp')
+    }
+    if ($copy.PSObject.Properties.Name -contains 'requestId') {
+        $copy.PSObject.Properties.Remove('requestId')
+    }
+    if ($copy.PSObject.Properties.Name -contains 'msg') {
+        $copy.PSObject.Properties.Remove('msg')
+    }
+    if ($null -ne $copy.data) {
+        if ($copy.data.PSObject.Properties.Name -contains 'mergeRequestId') {
+            $copy.data.mergeRequestId = '<merge-request-id>'
+        }
+        if ($copy.data.PSObject.Properties.Name -contains 'secondaryUserId') {
+            $copy.data.secondaryUserId = '<secondary-user-id>'
+        }
+        if ($copy.data.PSObject.Properties.Name -contains 'verificationToken') {
+            $copy.data.verificationToken = '<verification-token>'
+        }
+        if ($copy.data.PSObject.Properties.Name -contains 'expiresAt') {
+            $copy.data.expiresAt = '<expires-at>'
+        }
+    }
+    return ($copy | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-AccountMergeFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $primaryUserId = "codex-merge-primary-$Channel-$Suffix"
+    $secondaryUserId = "codex-merge-secondary-$Channel-$Suffix"
+    $secondaryUsername = "codex-merge-secondary-$Channel-$Suffix"
+    $secondaryEmail = "codex-merge-secondary-$Channel-$Suffix@example.test"
+    $sharedNamespaceSlug = "codex-merge-shared-$Channel-$Suffix"
+    $movedNamespaceSlug = "codex-merge-moved-$Channel-$Suffix"
+    $sql = @"
+DO `$`$
+DECLARE
+    v_primary_user_id text := '$primaryUserId';
+    v_secondary_user_id text := '$secondaryUserId';
+    shared_namespace_id bigint;
+    moved_namespace_id bigint;
+    auditor_role_id bigint;
+BEGIN
+    DELETE FROM account_merge_request WHERE primary_user_id IN (v_primary_user_id, v_secondary_user_id) OR secondary_user_id IN (v_primary_user_id, v_secondary_user_id);
+    DELETE FROM namespace_member WHERE user_id IN (v_primary_user_id, v_secondary_user_id);
+    DELETE FROM api_token WHERE user_id IN (v_primary_user_id, v_secondary_user_id);
+    DELETE FROM identity_binding WHERE user_id IN (v_primary_user_id, v_secondary_user_id);
+    DELETE FROM local_credential WHERE user_id IN (v_primary_user_id, v_secondary_user_id) OR username = '$secondaryUsername';
+    DELETE FROM user_role_binding WHERE user_id IN (v_primary_user_id, v_secondary_user_id);
+    DELETE FROM namespace WHERE slug IN ('$sharedNamespaceSlug', '$movedNamespaceSlug');
+    DELETE FROM user_account WHERE id IN (v_primary_user_id, v_secondary_user_id);
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+    VALUES
+        (v_primary_user_id, 'Codex Merge Primary $Channel', '', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+        (v_secondary_user_id, 'Codex Merge Secondary $Channel', '$secondaryEmail', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    INSERT INTO local_credential (user_id, username, password_hash)
+    VALUES (v_secondary_user_id, '$secondaryUsername', '`$2a`$12`$R3RVoLasFXOTW9PhnGDIueKa7wlzD/V08tsgXlWpBmygBDiEk2pny');
+
+    INSERT INTO identity_binding (user_id, provider_code, subject, login_name, extra_json)
+    VALUES (v_secondary_user_id, 'github', 'codex-merge-gh-$Channel-$Suffix', 'codex-merge-gh-$Channel', '{}'::jsonb);
+
+    INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json)
+    VALUES ('USER', v_secondary_user_id, v_secondary_user_id, 'Merge CLI', 'merge', 'codex-merge-hash-$Channel-$Suffix', jsonb_build_array('skill:read'));
+
+    SELECT id INTO auditor_role_id FROM role WHERE code = 'AUDITOR';
+    INSERT INTO user_role_binding (user_id, role_id) VALUES (v_secondary_user_id, auditor_role_id);
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$sharedNamespaceSlug', 'Codex Merge Shared $Channel', 'TEAM', 'ACTIVE', v_primary_user_id)
+    RETURNING id INTO shared_namespace_id;
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('$movedNamespaceSlug', 'Codex Merge Moved $Channel', 'TEAM', 'ACTIVE', v_secondary_user_id)
+    RETURNING id INTO moved_namespace_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role) VALUES (shared_namespace_id, v_primary_user_id, 'MEMBER');
+    INSERT INTO namespace_member (namespace_id, user_id, role) VALUES (shared_namespace_id, v_secondary_user_id, 'OWNER');
+    INSERT INTO namespace_member (namespace_id, user_id, role) VALUES (moved_namespace_id, v_secondary_user_id, 'ADMIN');
+END
+`$`$;
+"@
+
+    Invoke-PostgresSql -Sql $sql
+    return [ordered]@{
+        primaryUserId = $primaryUserId
+        secondaryUserId = $secondaryUserId
+        secondaryUsername = $secondaryUsername
+        secondaryEmail = $secondaryEmail
+        sharedNamespaceSlug = $sharedNamespaceSlug
+        movedNamespaceSlug = $movedNamespaceSlug
+    }
+}
+
+function Get-AccountMergeDbEvidence {
+    param([object]$Fixture)
+
+    $primaryUserId = $Fixture.primaryUserId
+    $secondaryUserId = $Fixture.secondaryUserId
+    $secondaryEmail = $Fixture.secondaryEmail
+    $sharedNamespaceSlug = $Fixture.sharedNamespaceSlug
+    $movedNamespaceSlug = $Fixture.movedNamespaceSlug
+    $sql = @"
+SELECT json_build_object(
+    'secondaryMerged', EXISTS (
+        SELECT 1 FROM user_account
+        WHERE id = '$secondaryUserId'
+          AND status = 'MERGED'
+          AND merged_to_user_id = '$primaryUserId'
+    ),
+    'primaryEmailFilled', EXISTS (
+        SELECT 1 FROM user_account
+        WHERE id = '$primaryUserId'
+          AND email = '$secondaryEmail'
+    ),
+    'identityMoved', EXISTS (
+        SELECT 1 FROM identity_binding
+        WHERE user_id = '$primaryUserId'
+          AND provider_code = 'github'
+    ),
+    'tokenMoved', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$primaryUserId'
+          AND subject_type = 'USER'
+          AND subject_id = '$primaryUserId'
+    ),
+    'credentialMoved', EXISTS (
+        SELECT 1 FROM local_credential
+        WHERE user_id = '$primaryUserId'
+    ),
+    'auditorMerged', EXISTS (
+        SELECT 1
+        FROM user_role_binding urb
+        JOIN role r ON r.id = urb.role_id
+        WHERE urb.user_id = '$primaryUserId'
+          AND r.code = 'AUDITOR'
+    ),
+    'secondaryRolesRemoved', NOT EXISTS (
+        SELECT 1 FROM user_role_binding WHERE user_id = '$secondaryUserId'
+    ),
+    'sharedRolePromoted', EXISTS (
+        SELECT 1
+        FROM namespace_member nm
+        JOIN namespace n ON n.id = nm.namespace_id
+        WHERE n.slug = '$sharedNamespaceSlug'
+          AND nm.user_id = '$primaryUserId'
+          AND nm.role = 'OWNER'
+    ),
+    'sharedSecondaryRemoved', NOT EXISTS (
+        SELECT 1
+        FROM namespace_member nm
+        JOIN namespace n ON n.id = nm.namespace_id
+        WHERE n.slug = '$sharedNamespaceSlug'
+          AND nm.user_id = '$secondaryUserId'
+    ),
+    'movedNamespaceMemberMoved', EXISTS (
+        SELECT 1
+        FROM namespace_member nm
+        JOIN namespace n ON n.id = nm.namespace_id
+        WHERE n.slug = '$movedNamespaceSlug'
+          AND nm.user_id = '$primaryUserId'
+          AND nm.role = 'ADMIN'
+    ),
+    'requestCompleted', EXISTS (
+        SELECT 1 FROM account_merge_request
+        WHERE primary_user_id = '$primaryUserId'
+          AND secondary_user_id = '$secondaryUserId'
+          AND status = 'COMPLETED'
+          AND completed_at IS NOT NULL
+          AND verification_token IS NULL
+    )
+)::text;
+"@
+
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-AccountMergeEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    foreach ($property in $json.PSObject.Properties) {
+        if (-not [bool]$property.Value) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Invoke-AccountMergeContractComparison {
+    param([string]$ResultFileName = 'account-merge-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing account merge contract: $($case.name)"
+        $fixture = Ensure-AccountMergeFixture -Channel $case.name -Suffix $suffix
+        $initiate = Invoke-AccountMergeJson "$($case.baseUrl)/api/v1/account/merge/initiate" @{ secondaryIdentifier = $fixture.secondaryUsername } $fixture.primaryUserId
+        $verify = Invoke-AccountMergeJson "$($case.baseUrl)/api/v1/account/merge/verify" @{ mergeRequestId = $initiate.data.mergeRequestId; verificationToken = $initiate.data.verificationToken } $fixture.primaryUserId
+        $confirm = Invoke-AccountMergeJson "$($case.baseUrl)/api/v1/account/merge/confirm" @{ mergeRequestId = $initiate.data.mergeRequestId } $fixture.primaryUserId
+        $evidence = Get-AccountMergeDbEvidence -Fixture $fixture
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            initiate = ConvertTo-StableAccountMergeJson -Response $initiate
+            verify = ConvertTo-StableAccountMergeJson -Response $verify
+            confirm = ConvertTo-StableAccountMergeJson -Response $confirm
+            evidence = $evidence
+            evidencePassed = Test-AccountMergeEvidence -Evidence $evidence
+        }
+    }
+
+    $initiateMatches = ($caseResults[0].initiate -eq $caseResults[1].initiate -and $caseResults[1].initiate -eq $caseResults[2].initiate)
+    $verifyMatches = ($caseResults[0].verify -eq $caseResults[1].verify -and $caseResults[1].verify -eq $caseResults[2].verify)
+    $confirmMatches = ($caseResults[0].confirm -eq $caseResults[1].confirm -and $caseResults[1].confirm -eq $caseResults[2].confirm)
+    $allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            initiateMatches = $initiateMatches
+            verifyMatches = $verifyMatches
+            confirmMatches = $confirmMatches
+            allEvidencePassed = $allEvidencePassed
+        }
+        cases = $caseResults
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Account merge contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridAccountMergeSmokeVerification {
+    try {
+        Invoke-AccountMergeTests
+        Start-Hybrid
+        Invoke-AccountMergeContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-SkillHardDeleteTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
@@ -20333,6 +20636,7 @@ switch ($Action) {
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
     'verify-user-profile-smoke' { Invoke-HybridUserProfileSmokeVerification }
+    'verify-account-merge-smoke' { Invoke-HybridAccountMergeSmokeVerification }
     'verify-security-audit-read-smoke' { Invoke-HybridSecurityAuditReadSmokeVerification }
     'verify-auth-detail-smoke' { Invoke-HybridAuthenticatedDetailSmokeVerification }
     'verify-owner-preview-detail-smoke' { Invoke-HybridOwnerPreviewDetailSmokeVerification }
