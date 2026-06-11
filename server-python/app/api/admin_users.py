@@ -14,6 +14,7 @@ from app.admin.users import (
     update_admin_user_role,
     update_admin_user_status,
 )
+from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 
@@ -59,7 +60,9 @@ async def list_admin_users_route(
     page: int = Query(default=0),
     size: int = Query(default=20),
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     reader = getattr(request.app.state, "admin_user_reader", None)
     payload = {"search": search, "status": status, "page": page, "size": size}
@@ -87,7 +90,9 @@ async def update_admin_user_role_route(
     user_id: str,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_user_role_writer", None)
     try:
@@ -131,7 +136,9 @@ async def update_admin_user_status_route(
     user_id: str,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     return await _update_status_response(request, user_id, str(payload.get("status") or ""), user)
 
@@ -141,7 +148,9 @@ async def approve_admin_user_route(
     request: Request,
     user_id: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     return await _update_status_response(request, user_id, "ACTIVE", user)
 
@@ -151,7 +160,9 @@ async def disable_admin_user_route(
     request: Request,
     user_id: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     return await _update_status_response(request, user_id, "DISABLED", user)
 
@@ -161,7 +172,9 @@ async def enable_admin_user_route(
     request: Request,
     user_id: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     return await _update_status_response(request, user_id, "ACTIVE", user)
 
@@ -171,7 +184,9 @@ async def trigger_admin_user_password_reset_route(
     request: Request,
     user_id: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_user_password_reset_writer", None)
     sender = getattr(request.app.state, "admin_password_reset_sender", None)

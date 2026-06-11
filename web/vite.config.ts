@@ -179,6 +179,16 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['DELETE'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/undelete(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/skills\/[^/?]+\/(?!undelete(?:\?.*)?$)[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',
@@ -459,6 +469,11 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/search\/rebuild(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['GET'],
     pattern: /^\/api\/v1\/admin\/skill-reports(?:\?.*)?$/,
     target: 'http://localhost:8081',
@@ -556,6 +571,11 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   {
     methods: ['GET'],
     pattern: /^\/api\/cli\/v1\/skills\/[^/?]+\/[^/?]+\/versions\/[^/?]+\/download(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['DELETE'],
+    pattern: /^\/api\/cli\/v1\/skills\/[^/?]+\/[^/?]+(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
   {
@@ -923,7 +943,15 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '^/api/web/skills/[^/]+/[^/]+/versions/[^/]+/file$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '^/api/v1/skills/[^/]+/[^/]+/tags/[^/]+/file$': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '^/api/web/skills/[^/]+/[^/]+/tags/[^/]+/file$': {
         target: 'http://localhost:8081',
         changeOrigin: true,
       },

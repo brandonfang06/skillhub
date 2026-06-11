@@ -17,6 +17,7 @@ from app.admin.review_reports import (
     require_skill_report_reader,
     resolve_admin_skill_report,
 )
+from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 
@@ -101,7 +102,9 @@ async def list_admin_skill_reports_route(
     page: int = Query(default=0),
     size: int = Query(default=20),
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_skill_report_user(request, x_mock_user_id)
     payload = {"status": status, "page": page, "size": size}
     reader = getattr(request.app.state, "admin_skill_report_reader", None)
@@ -128,7 +131,9 @@ async def resolve_admin_skill_report_route(
     report_id: int,
     body: dict[str, Any] | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_skill_report_user(request, x_mock_user_id)
     payload = _payload(body)
     meta = _request_meta(request)
@@ -160,7 +165,9 @@ async def dismiss_admin_skill_report_route(
     report_id: int,
     body: dict[str, Any] | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_skill_report_user(request, x_mock_user_id)
     payload = _payload(body)
     meta = _request_meta(request)
@@ -193,7 +200,9 @@ async def list_admin_profile_reviews_route(
     size: int = Query(default=20),
     sortDirection: str = "DESC",
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_profile_review_user(request, x_mock_user_id)
     payload = {"status": status, "page": page, "size": size, "sortDirection": sortDirection}
     reader = getattr(request.app.state, "admin_profile_review_reader", None)
@@ -220,7 +229,9 @@ async def approve_admin_profile_review_route(
     request: Request,
     request_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_profile_review_user(request, x_mock_user_id)
     meta = _request_meta(request)
     writer = getattr(request.app.state, "admin_profile_review_approver", None)
@@ -249,7 +260,9 @@ async def reject_admin_profile_review_route(
     request_id: int,
     body: dict[str, Any] | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_profile_review_user(request, x_mock_user_id)
     payload = _payload(body)
     comment = payload.get("comment")

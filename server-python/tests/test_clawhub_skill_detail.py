@@ -50,7 +50,7 @@ def test_clawhub_skill_detail_route_parses_canonical_slug() -> None:
     assert response.json()["skill"]["slug"] == "team-ai--demo"
 
 
-def test_clawhub_skill_detail_keeps_mutation_paths_unowned() -> None:
+def test_clawhub_delete_undelete_placeholders_require_auth_and_return_plain_json() -> None:
     app = create_app()
     app.state.clawhub_skills_list_reader = lambda **kwargs: {
         "items": [],
@@ -63,7 +63,37 @@ def test_clawhub_skill_detail_keeps_mutation_paths_unowned() -> None:
     client = TestClient(app)
 
     assert client.get("/api/v1/skills").status_code == 200
-    assert client.post("/api/v1/skills/demo/undelete").status_code == 405
+
+    assert client.delete("/api/v1/skills/demo").status_code == 401
+
+    delete_response = client.delete("/api/v1/skills/demo", headers={"X-Mock-User-Id": "user-1"})
+    undelete_response = client.post("/api/v1/skills/team-ai--demo/undelete", headers={"X-Mock-User-Id": "user-1"})
+
+    assert delete_response.status_code == 200
+    assert delete_response.json() == {"ok": True}
+    assert undelete_response.status_code == 200
+    assert undelete_response.json() == {"ok": True}
+
+
+def test_clawhub_delete_placeholder_does_not_replace_two_segment_hard_delete(tmp_path) -> None:
+    app = create_app()
+    seen = []
+
+    async def writer(delete_input):
+        seen.append(delete_input)
+        return {"skillId": 31, "namespace": delete_input.namespace, "slug": delete_input.slug, "deleted": True}
+
+    app.state.auth_me_reader = lambda user_id: {"userId": user_id, "platformRoles": ["SUPER_ADMIN"]}
+    app.state.skill_hard_delete_writer = writer
+    app.state.storage_base_path = str(tmp_path)
+
+    client = TestClient(app)
+    response = client.delete("/api/v1/skills/global/demo", headers={"X-Mock-User-Id": "admin"})
+
+    assert response.status_code == 200
+    assert response.json()["data"]["namespace"] == "global"
+    assert response.json()["data"]["slug"] == "demo"
+    assert seen[-1].route_scope == "v1"
 
 
 def test_nested_skillhub_detail_route_keeps_envelope_shape() -> None:

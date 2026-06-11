@@ -2890,6 +2890,28 @@ async def get_clawhub_skill_detail(request: Request, canonicalSlug: str) -> dict
     return build_clawhub_skill_detail_response(data)
 
 
+def clawhub_delete_placeholder_response(mock_user_id: str | None) -> dict[str, bool]:
+    if normalized_current_user_id(mock_user_id) is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return {"ok": True}
+
+
+@router.delete("/api/v1/skills/{canonicalSlug}")
+async def delete_clawhub_skill_placeholder(
+    canonicalSlug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, bool]:
+    return clawhub_delete_placeholder_response(x_mock_user_id)
+
+
+@router.post("/api/v1/skills/{canonicalSlug}/undelete")
+async def undelete_clawhub_skill_placeholder(
+    canonicalSlug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, bool]:
+    return clawhub_delete_placeholder_response(x_mock_user_id)
+
+
 @router.get("/api/v1/skills/{namespace}/{slug}")
 @router.get("/api/web/skills/{namespace}/{slug}")
 async def get_skill_detail(
@@ -3157,6 +3179,7 @@ async def delete_skill_tag_route(
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/file")
+@router.get("/api/web/skills/{namespace}/{slug}/versions/{version}/file")
 async def get_skill_version_file_content(
     namespace: str,
     slug: str,
@@ -3186,6 +3209,7 @@ async def get_skill_version_file_content(
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file")
+@router.get("/api/web/skills/{namespace}/{slug}/tags/{tagName}/file")
 async def get_skill_tag_file_content(
     namespace: str,
     slug: str,

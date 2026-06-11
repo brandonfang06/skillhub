@@ -176,6 +176,13 @@ def auth_user(user_id: str = "admin", roles: list[str] | None = None) -> dict[st
     }
 
 
+def bearer_user(user_id: str = "token-admin", roles: list[str] | None = None) -> dict[str, object]:
+    data = auth_user(user_id, roles or ["SUPER_ADMIN"])
+    data["oauthProvider"] = "api_token"
+    data["tokenScopes"] = ["skill:read", "skill:publish", "skill:delete", "token:manage"]
+    return data
+
+
 @pytest.mark.anyio
 async def test_create_label_normalizes_translations_and_writes_audit() -> None:
     connection = FakeLabelConnection()
@@ -335,3 +342,27 @@ def test_admin_label_routes_use_java_envelopes_and_auth() -> None:
     assert deleted.status_code == 200
     assert deleted.json()["msg"] == "删除成功"
     assert deleted.json()["data"]["message"] == "Label deleted"
+
+
+def test_admin_label_routes_reject_api_token_principals_as_unsupported() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(user_id, ["SUPER_ADMIN"])
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user() if raw_token == "sk_valid" else None
+    app.state.admin_label_reader = lambda user: [{"slug": "featured"}]
+    app.state.admin_label_create_writer = lambda payload, user, request: {"slug": payload["slug"]}
+    client = TestClient(app)
+
+    unsupported = client.get("/api/v1/admin/labels", headers={"Authorization": "Bearer sk_valid"})
+    assert unsupported.status_code == 403
+    assert unsupported.json()["detail"] == "API token cannot access endpoint: /api/v1/admin/labels"
+
+    invalid = client.get("/api/v1/admin/labels", headers={"Authorization": "Bearer sk_missing"})
+    assert invalid.status_code == 401
+    assert invalid.json()["detail"] == "error.auth.required"
+
+    mock_precedence = client.post(
+        "/api/v1/admin/labels",
+        json={"slug": "featured", "type": "SYSTEM", "visibleInFilter": True, "sortOrder": 1, "translations": []},
+        headers={"X-Mock-User-Id": "admin", "Authorization": "Bearer sk_valid"},
+    )
+    assert mock_precedence.status_code == 200

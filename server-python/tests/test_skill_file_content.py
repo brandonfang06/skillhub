@@ -110,6 +110,23 @@ def test_skill_version_file_content_route_returns_raw_bytes() -> None:
     assert response.content == b"version bytes"
 
 
+def test_skill_version_file_content_web_alias_returns_raw_bytes() -> None:
+    app = create_app()
+    app.state.skill_version_file_content_reader = (
+        lambda namespace, slug, version, file_path, current_user_id: b"web version bytes"
+    )
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/global/demo/versions/1.0.0/file",
+        params={"path": "SKILL.md"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.content == b"web version bytes"
+
+
 def test_skill_tag_file_content_route_returns_raw_bytes() -> None:
     app = create_app()
     app.state.skill_tag_file_content_reader = (
@@ -125,6 +142,23 @@ def test_skill_tag_file_content_route_returns_raw_bytes() -> None:
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/octet-stream"
     assert response.content == b"tag bytes"
+
+
+def test_skill_tag_file_content_web_alias_returns_raw_bytes() -> None:
+    app = create_app()
+    app.state.skill_tag_file_content_reader = (
+        lambda namespace, slug, tag, file_path, current_user_id: b"web tag bytes"
+    )
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/global/demo/tags/stable/file",
+        params={"path": "README.md"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.content == b"web tag bytes"
 
 
 def test_skill_version_file_content_route_forwards_params_and_current_user() -> None:
@@ -154,6 +188,33 @@ def test_skill_version_file_content_route_forwards_params_and_current_user() -> 
     assert seen == [("team", "demo", "1.1.0", "src/app.py", "owner-1")]
 
 
+def test_skill_version_file_content_web_alias_forwards_params_and_current_user() -> None:
+    seen: list[tuple[str, str, str, str, str | None]] = []
+    app = create_app()
+
+    def reader(
+        namespace: str,
+        slug: str,
+        version: str,
+        file_path: str,
+        current_user_id: str | None,
+    ) -> bytes:
+        seen.append((namespace, slug, version, file_path, current_user_id))
+        return b"ok"
+
+    app.state.skill_version_file_content_reader = reader
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/team/demo/versions/1.1.0/file",
+        params={"path": "src/app.py"},
+        headers={"X-Mock-User-Id": " owner-1 "},
+    )
+
+    assert response.status_code == 200
+    assert seen == [("team", "demo", "1.1.0", "src/app.py", "owner-1")]
+
+
 def test_skill_tag_file_content_route_forwards_params_and_current_user() -> None:
     seen: list[tuple[str, str, str, str, str | None]] = []
     app = create_app()
@@ -173,6 +234,33 @@ def test_skill_tag_file_content_route_forwards_params_and_current_user() -> None
     client = TestClient(app)
     response = client.get(
         "/api/v1/skills/team/demo/tags/stable/file",
+        params={"path": "docs/guide.md"},
+        headers={"X-Mock-User-Id": " local-admin "},
+    )
+
+    assert response.status_code == 200
+    assert seen == [("team", "demo", "stable", "docs/guide.md", "local-admin")]
+
+
+def test_skill_tag_file_content_web_alias_forwards_params_and_current_user() -> None:
+    seen: list[tuple[str, str, str, str, str | None]] = []
+    app = create_app()
+
+    def reader(
+        namespace: str,
+        slug: str,
+        tag: str,
+        file_path: str,
+        current_user_id: str | None,
+    ) -> bytes:
+        seen.append((namespace, slug, tag, file_path, current_user_id))
+        return b"ok"
+
+    app.state.skill_tag_file_content_reader = reader
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skills/team/demo/tags/stable/file",
         params={"path": "docs/guide.md"},
         headers={"X-Mock-User-Id": " local-admin "},
     )

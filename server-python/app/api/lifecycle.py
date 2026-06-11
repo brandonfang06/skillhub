@@ -79,7 +79,7 @@ async def _read_hard_delete_user(
 ) -> dict[str, object]:
     user = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
     if user.get("oauthProvider") == "api_token":
-        if route_scope != "v1":
+        if route_scope not in {"v1", "cli"}:
             raise HTTPException(status_code=403, detail=f"API token cannot access endpoint: {request.url.path}")
         if "skill:delete" not in set(user.get("tokenScopes") or []):
             raise HTTPException(status_code=403, detail="Missing API token scope: skill:delete")
@@ -221,6 +221,37 @@ async def hard_delete_skill_route_data(
     except SkillHardDeleteError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u5220\u9664\u6210\u529f", data, request)
+
+
+def _cli_delete_response(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ok": bool(data.get("deleted")),
+        "scope": "remote",
+        "action": "delete",
+        "namespace": data.get("namespace"),
+        "slug": data.get("slug"),
+    }
+
+
+async def cli_delete_skill_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    response = await hard_delete_skill_route_data(
+        request,
+        "cli",
+        skill_id=None,
+        namespace=namespace,
+        slug=slug,
+        owner_id=None,
+        mock_user_id=mock_user_id,
+        authorization=authorization,
+    )
+    response["data"] = _cli_delete_response(dict(response["data"]))
+    return response
 
 
 async def withdraw_skill_version_review_route_data(
@@ -467,6 +498,17 @@ async def hard_delete_skill_web(
         mock_user_id=x_mock_user_id,
         authorization=authorization,
     )
+
+
+@router.delete("/api/cli/v1/skills/{namespace}/{slug}")
+async def cli_delete_skill(
+    request: Request,
+    namespace: str,
+    slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    return await cli_delete_skill_route_data(request, namespace, slug, x_mock_user_id, authorization)
 
 
 @router.delete("/api/v1/skills/{namespace}/{slug}/versions/{version}")

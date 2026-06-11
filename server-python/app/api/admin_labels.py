@@ -14,6 +14,7 @@ from app.admin.labels import (
     update_label_definition,
     update_label_sort_order,
 )
+from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 
@@ -52,7 +53,9 @@ def _request_context(request: Request) -> dict[str, str | None]:
 async def list_admin_labels_route(
     request: Request,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_super_admin_user(request, x_mock_user_id)
     reader = getattr(request.app.state, "admin_label_reader", None)
     try:
@@ -71,7 +74,9 @@ async def create_admin_label_route(
     request: Request,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_super_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_label_create_writer", None)
     try:
@@ -100,7 +105,9 @@ async def update_admin_label_sort_order_route(
     request: Request,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_super_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_label_sort_writer", None)
     try:
@@ -126,7 +133,9 @@ async def update_admin_label_route(
     slug: str,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_super_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_label_update_writer", None)
     try:
@@ -155,7 +164,9 @@ async def delete_admin_label_route(
     request: Request,
     slug: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     user = await _require_super_admin_user(request, x_mock_user_id)
     writer = getattr(request.app.state, "admin_label_delete_writer", None)
     try:

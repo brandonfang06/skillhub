@@ -14,6 +14,7 @@ from app.admin.skill import (
     unhide_skill_as_admin,
     yank_skill_version_as_admin,
 )
+from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 
@@ -138,7 +139,9 @@ async def hide_skill(
     skill_id: int,
     body: AdminSkillActionRequest | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     return await hide_skill_route_data(request, skill_id, body, x_mock_user_id)
 
 
@@ -147,7 +150,9 @@ async def unhide_skill(
     request: Request,
     skill_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     return await unhide_skill_route_data(request, skill_id, x_mock_user_id)
 
 
@@ -157,5 +162,7 @@ async def yank_skill_version(
     version_id: int,
     body: AdminSkillActionRequest | None = None,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     return await yank_skill_version_route_data(request, version_id, body, x_mock_user_id)

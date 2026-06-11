@@ -227,15 +227,23 @@ Still plan carefully when a group requires:
 | 91 | `POST /api/v1/auth/local/register`, `POST /api/v1/auth/local/login`, `POST /api/v1/auth/local/change-password` | python | Local auth core moved to Python. Preserves Java local account normalization/validation, BCrypt credential handling, failed-attempt lockout/reset, password policy, global namespace membership on register, and hybrid mock-user change-password behavior while keeping Spring Session creation deferred. |
 | 92 | `POST /api/v1/auth/direct/login`, `POST /api/v1/auth/session/bootstrap` | python | Direct login and session bootstrap boundaries moved to Python. Preserves Java default-disabled 403 behavior and unsupported-provider ordering. Direct local can reuse migrated local login response, while final cookie/session persistence and passive bootstrap success remain deferred. |
 | 93 | `GET /api/v1/notifications/sse`, `GET /api/web/notifications/sse` | python | Notification SSE connection boundary moved to Python. Preserves auth rejection, `text/event-stream`, connected event, and heartbeat comment shape. Active notification fanout remains deferred to a Python dispatcher/refactor milestone. |
-| 94 | `GET /api/cli/v1/skills/search`, `GET /api/cli/v1/skills/{namespace}/{slug}/resolve`, `GET /api/cli/v1/skills/{namespace}/{slug}/download`, `GET /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI skill read/download compatibility moved to Python. Preserves Java `ApiResponse` search/resolve envelopes, download stream/header behavior, and explicitly keeps destructive `DELETE /api/cli/v1/skills/{namespace}/{slug}` Java-owned. |
+| 94 | `GET /api/cli/v1/skills/search`, `GET /api/cli/v1/skills/{namespace}/{slug}/resolve`, `GET /api/cli/v1/skills/{namespace}/{slug}/download`, `GET /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI skill read/download compatibility moved to Python. Preserves Java `ApiResponse` search/resolve envelopes and download stream/header behavior. |
 | 95 | `GET /api/v1/skills/{namespace}/{slug}/tags`, `GET /api/web/skills/{namespace}/{slug}/tags`, `PUT /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `PUT /api/web/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag management moved to Python. Preserves Java visibility checks, virtual `latest` list tag, namespace `OWNER`/`ADMIN` write guard, reserved `latest` rejection, published-target requirement, and live Java success messages. |
-| 96 | `DELETE /api/v1/skills/id/{skillId}`, `DELETE /api/v1/skills/{namespace}/{slug}`, `DELETE /api/web/skills/id/{skillId}`, `DELETE /api/web/skills/{namespace}/{slug}` | python | Whole-skill hard delete moved to Python. Preserves v1 `SUPER_ADMIN` guard, web owner-or-super-admin guard, slug idempotent `deleted=false`, DB artifact cleanup, `DELETE_SKILL_HARD` audit, local storage deletion, and ClawHub delete/undelete Java ownership. |
+| 96 | `DELETE /api/v1/skills/id/{skillId}`, `DELETE /api/v1/skills/{namespace}/{slug}`, `DELETE /api/web/skills/id/{skillId}`, `DELETE /api/web/skills/{namespace}/{slug}` | python | Whole-skill hard delete moved to Python. Preserves v1 `SUPER_ADMIN` guard, web owner-or-super-admin guard, slug idempotent `deleted=false`, DB artifact cleanup, `DELETE_SKILL_HARD` audit, and local storage deletion. |
 | 97 | `POST /api/v1/account/merge/initiate`, `POST /api/v1/account/merge/verify`, `POST /api/v1/account/merge/confirm` | python | Account merge workflow moved to Python. Preserves mock-user auth requirement, local username/provider-subject secondary resolution, pending/local-credential conflict checks, BCrypt token hashing/verification, and atomic confirm side effects for bindings, tokens, roles, namespace memberships, credentials, primary email fill, secondary `MERGED`, and request completion. |
 | 98 | `POST /api/v1/auth/device/code`, `POST /api/v1/device/authorize`, `POST /api/v1/auth/device/token` | python | CLI/browser device authorization flow moved to Python. Preserves Java code payload shape, Redis key/TTL semantics, user-code authorization state machine, `DEVICE_AUTHORIZE` audit, one-time token redemption, `CLI Device Flow` API token rotation, and `skill:read`/`skill:publish` scopes. Windows live gate also records the current Java runtime token-poll `ClassCastException` as a pre-existing reference defect while Python/proxy full flow passes. |
 | 99 | Bearer-token current-principal bridge for `GET /api/v1/auth/me`, `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Existing Python-owned current-principal routes now accept Java-compatible bearer tokens after `X-Mock-User-Id` precedence. Preserves SHA-256 token lookup, active token/user checks, `api_token` provider projection, platform-role fallback/projection, and `last_used_at` touch. Global bearer scope enforcement remains deferred. |
 | 100 | Bearer-token `token:manage` scope enforcement for `/api/v1/tokens*` | python | Already Python-owned token management routes now reject bearer `api_token` principals without `token:manage` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 | 101 | Bearer-token `skill:publish` scope enforcement for publish routes | python | Already Python-owned publish routes now reject bearer `api_token` principals without `skill:publish` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 | 102 | Bearer-token `skill:delete` scope enforcement for v1 hard-delete routes | python | Already Python-owned v1 hard-delete routes now reject bearer `api_token` principals without `skill:delete` with Java-compatible `403`, keep bad bearer tokens at `401`, reject web hard-delete bearer principals as Java-compatible unsupported `403`, and preserve mock-user precedence. |
+| 103 | `DELETE /api/cli/v1/skills/{namespace}/{slug}` | python | CLI destructive skill delete moved to Python. Reuses the whole-skill hard-delete workflow, preserves Java CLI `{ ok, scope, action, namespace, slug }` response data, and requires bearer `skill:delete` for API-token principals. |
+| 104 | Explicit Java proxy exceptions | n/a | ClawHub delete/undelete and unmatched `/api/**` paths are explicitly documented as Java-owned so final proxy cleanup cannot accidentally route them to Python. Runtime proxy behavior is unchanged. |
+| 105 | `DELETE /api/v1/skills/{canonicalSlug}`, `POST /api/v1/skills/{canonicalSlug}/undelete` | python | ClawHub delete/undelete placeholders moved to Python. Preserves Java plain `{ ok: true }` placeholder response and current-user route boundary without adding real delete/restore side effects. |
+| 106 | `GET /api/web/skills/{namespace}/{slug}/versions/{version}/file`, `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/file` | python | Web single-file content aliases moved to Python. They reuse the migrated v1 file-content readers and preserve Java raw `application/octet-stream` response behavior. |
+| 107 | `POST /api/v1/admin/search/rebuild` | python | Admin search-index rebuild moved to Python. Preserves SUPER_ADMIN guard, rebuilds ACTIVE skill search documents, and records `REBUILD_SEARCH_INDEX` audit. |
+| 108 | Admin search rebuild bearer route-policy enforcement | python | The already Python-owned admin search rebuild route now rejects valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
+| 109 | Admin label definition bearer route-policy enforcement | python | Already Python-owned admin label definition routes now reject valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
+| 110 | Admin route bearer policy cutover | python | Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1431,6 +1439,37 @@ Group E has started with review lifecycle write ownership:
   accept Java-compatible bearer principals only when they include `skill:delete`; bad bearer
   tokens stay `401`, missing scope is `403`, web hard-delete bearer access remains unsupported
   `403`, and mock-user precedence is unchanged.
+- Completed: CLI destructive skill delete API:
+  `DELETE /api/cli/v1/skills/{namespace}/{slug}` now routes to Python, reuses whole-skill
+  hard-delete side effects, returns Java-compatible `{ ok, scope, action, namespace, slug }` CLI
+  delete response data, and enforces bearer `skill:delete` scope. Dedicated live smoke now compares
+  Java, direct Python, and Vite proxy contracts.
+- Completed: explicit Java proxy exception registry:
+  ClawHub delete/undelete and unmatched `/api/**` paths are explicitly documented as Java-owned.
+  Final proxy cleanup remains blocked until those exceptions are migrated, intentionally preserved
+  behind a Java sidecar/fallback, or removed from the compatibility contract.
+- Completed: ClawHub delete/undelete placeholder APIs:
+  `DELETE /api/v1/skills/{canonicalSlug}` and `POST /api/v1/skills/{canonicalSlug}/undelete` now
+  route to Python and preserve Java's plain `{ ok: true }` placeholder behavior without DB/storage
+  side effects. Unmatched `/api/**` and `/oauth2/**` remain Java-owned.
+- Completed: web skill single-file content aliases:
+  `GET /api/web/skills/{namespace}/{slug}/versions/{version}/file` and
+  `GET /api/web/skills/{namespace}/{slug}/tags/{tagName}/file` now route to Python and reuse the
+  already migrated v1 raw byte readers.
+- Completed: admin search rebuild API:
+  `POST /api/v1/admin/search/rebuild` now routes to Python, rebuilds ACTIVE skill search documents,
+  and writes Java-compatible `REBUILD_SEARCH_INDEX` audit metadata.
+- Completed: admin search rebuild bearer route-policy enforcement:
+  valid bearer API-token principals now receive Java-compatible unsupported admin-route `403` on
+  `POST /api/v1/admin/search/rebuild`, invalid bearer tokens remain `401`, and `X-Mock-User-Id`
+  keeps precedence for local development.
+- Completed: admin label definition bearer route-policy enforcement:
+  `GET/POST/PUT/DELETE /api/v1/admin/labels*` now reject valid bearer API-token principals as
+  Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and
+  `X-Mock-User-Id` precedence.
+- Completed: admin route bearer policy cutover:
+  Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token
+  unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge

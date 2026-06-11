@@ -81,6 +81,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-clawhub-list-smoke" in script
     assert "verify-clawhub-star-smoke" in script
     assert "verify-cli-skill-read-download-smoke" in script
+    assert "verify-cli-skill-delete-smoke" in script
     assert "verify-skill-tag-management-smoke" in script
     assert "verify-skill-hard-delete-smoke" in script
     assert "verify-hard-delete-token-scope-smoke" in script
@@ -196,6 +197,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-ClawHubListContractComparison" in script
     assert "Invoke-ClawHubStarContractComparison" in script
     assert "Invoke-CliSkillReadDownloadContractComparison" in script
+    assert "Invoke-CliSkillDeleteTests" in script
+    assert "Invoke-CliSkillDeleteContractComparison" in script
     assert "Invoke-AuthMeContractComparison" in script
     assert "Invoke-UserProfileContractComparison" in script
     assert "Invoke-SecurityAuditReadContractComparison" in script
@@ -336,6 +339,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "clawhub-list-contract-result.json" in script
     assert "clawhub-star-contract-result.json" in script
     assert "cli-skill-read-download-contract-result.json" in script
+    assert "cli-skill-delete-contract-result.json" in script
     assert "auth-me-contract-result.json" in script
     assert "auth-detail-contract-result.json" in script
     assert "owner-preview-detail-contract-result.json" in script

@@ -354,3 +354,126 @@ def test_skill_hard_delete_routes_enforce_bearer_delete_scope(tmp_path: Path) ->
     )
     assert mock_precedence.status_code == 200
     assert seen[-1].actor_user_id == "mock-admin"
+
+
+def test_cli_skill_delete_route_returns_java_cli_envelope(tmp_path: Path) -> None:
+    app = create_app()
+
+    def auth_user(user_id: str) -> dict[str, object]:
+        return {
+            "userId": user_id,
+            "displayName": user_id,
+            "email": f"{user_id}@example.com",
+            "avatarUrl": "",
+            "platformRoles": ["USER"],
+        }
+
+    seen: list[SkillHardDeleteInput] = []
+
+    async def writer(delete_input: SkillHardDeleteInput) -> dict[str, Any]:
+        seen.append(delete_input)
+        return {
+            "skillId": 10,
+            "namespace": delete_input.namespace or "team",
+            "slug": delete_input.slug or "demo",
+            "deleted": True,
+        }
+
+    app.state.auth_me_reader = auth_user
+    app.state.skill_hard_delete_writer = writer
+    app.state.storage_base_path = str(tmp_path)
+    client = TestClient(app)
+
+    response = client.delete(
+        "/api/cli/v1/skills/team/demo",
+        headers={"X-Mock-User-Id": "owner-1", "X-Request-Id": "cli-delete"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["msg"] == "\u5220\u9664\u6210\u529f"
+    assert response.json()["requestId"] == "cli-delete"
+    assert response.json()["data"] == {
+        "ok": True,
+        "scope": "remote",
+        "action": "delete",
+        "namespace": "team",
+        "slug": "demo",
+    }
+    assert seen[-1].route_scope == "cli"
+    assert seen[-1].namespace == "team"
+    assert seen[-1].slug == "demo"
+    assert seen[-1].owner_id is None
+    assert seen[-1].actor_user_id == "owner-1"
+
+
+def test_cli_skill_delete_route_enforces_bearer_delete_scope(tmp_path: Path) -> None:
+    app = create_app()
+    seen: list[SkillHardDeleteInput] = []
+
+    def bearer_user(raw_token: str) -> dict[str, object] | None:
+        if raw_token == "delete-token":
+            return {
+                "userId": "token-owner",
+                "displayName": "Token Owner",
+                "email": "token-owner@example.com",
+                "avatarUrl": "",
+                "oauthProvider": "api_token",
+                "platformRoles": ["USER"],
+                "tokenScopes": ["skill:delete"],
+            }
+        if raw_token == "read-token":
+            return {
+                "userId": "token-owner",
+                "displayName": "Token Owner",
+                "email": "token-owner@example.com",
+                "avatarUrl": "",
+                "oauthProvider": "api_token",
+                "platformRoles": ["USER"],
+                "tokenScopes": ["skill:read"],
+            }
+        return None
+
+    def mock_user(user_id: str) -> dict[str, object]:
+        return {
+            "userId": user_id,
+            "displayName": user_id,
+            "email": f"{user_id}@example.com",
+            "avatarUrl": "",
+            "platformRoles": ["USER"],
+        }
+
+    async def writer(delete_input: SkillHardDeleteInput) -> dict[str, Any]:
+        seen.append(delete_input)
+        return {
+            "skillId": 10,
+            "namespace": delete_input.namespace or "team",
+            "slug": delete_input.slug or "demo",
+            "deleted": True,
+        }
+
+    app.state.auth_bearer_reader = bearer_user
+    app.state.auth_me_reader = mock_user
+    app.state.skill_hard_delete_writer = writer
+    app.state.storage_base_path = str(tmp_path)
+    client = TestClient(app)
+
+    allowed = client.delete("/api/cli/v1/skills/team/demo", headers={"Authorization": "Bearer delete-token"})
+    assert allowed.status_code == 200
+    assert allowed.json()["data"]["scope"] == "remote"
+    assert allowed.json()["data"]["action"] == "delete"
+    assert seen[-1].actor_user_id == "token-owner"
+
+    missing_scope = client.delete("/api/cli/v1/skills/team/demo", headers={"Authorization": "Bearer read-token"})
+    assert missing_scope.status_code == 403
+    assert missing_scope.json()["detail"] == "Missing API token scope: skill:delete"
+    assert len(seen) == 1
+
+    unknown = client.delete("/api/cli/v1/skills/team/demo", headers={"Authorization": "Bearer bad-token"})
+    assert unknown.status_code == 401
+
+    mock_precedence = client.delete(
+        "/api/cli/v1/skills/team/demo",
+        headers={"X-Mock-User-Id": "mock-owner", "Authorization": "Bearer read-token"},
+    )
+    assert mock_precedence.status_code == 200
+    assert seen[-1].actor_user_id == "mock-owner"
