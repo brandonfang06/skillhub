@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -19679,6 +19679,300 @@ function Invoke-HybridSecurityAuditReadSmokeVerification {
     }
 }
 
+function Invoke-SkillTagManagementTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_tags.py', 'tests/test_hybrid_makefile.py', '-q')
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Ensure-SkillTagManagementFixture {
+    $sql = @'
+DO $$
+DECLARE
+    local_user_id VARCHAR(128) := 'local-user';
+    local_admin_id VARCHAR(128) := 'local-admin';
+    team_ns_id BIGINT;
+    fixture_skill_id BIGINT;
+    published_v1_id BIGINT;
+    published_v2_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES
+        (local_user_id, 'Local User', 'local-user@example.com', '', 'ACTIVE'),
+        (local_admin_id, 'Local Admin', 'local-admin@example.com', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            avatar_url = EXCLUDED.avatar_url,
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('codex-tag-team', 'Codex Tag Team', 'TEAM', 'ACTIVE', local_user_id)
+    ON CONFLICT (slug) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            type = 'TEAM',
+            status = 'ACTIVE',
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO team_ns_id;
+
+    INSERT INTO namespace_member (namespace_id, user_id, role)
+    VALUES
+        (team_ns_id, local_user_id, 'OWNER'),
+        (team_ns_id, local_admin_id, 'ADMIN')
+    ON CONFLICT (namespace_id, user_id) DO UPDATE
+        SET role = EXCLUDED.role,
+            updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO skill (
+        namespace_id, slug, display_name, summary, owner_id, visibility, status,
+        download_count, star_count, subscription_count, rating_avg, rating_count,
+        created_by, updated_by, hidden
+    )
+    VALUES (
+        team_ns_id, 'codex-tag-20260611', 'Codex Tag Skill',
+        'Tag management contract fixture', local_user_id, 'PUBLIC', 'ACTIVE',
+        0, 0, 0, 0.00, 0, local_user_id, local_user_id, FALSE
+    )
+    ON CONFLICT (namespace_id, slug, owner_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name,
+            summary = EXCLUDED.summary,
+            visibility = 'PUBLIC',
+            status = 'ACTIVE',
+            hidden = FALSE,
+            updated_by = local_user_id,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO fixture_skill_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.0', 'PUBLISHED', 'tag fixture v1',
+        jsonb_build_object('name', 'tag-fixture', 'version', '1.0.0'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 100, '2026-06-11T00:00:00Z'::timestamptz, local_user_id,
+        '2026-06-11T00:00:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            published_at = EXCLUDED.published_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO published_v1_id;
+
+    INSERT INTO skill_version (
+        skill_id, version, status, changelog, parsed_metadata_json, manifest_json,
+        file_count, total_size, published_at, created_by, created_at, bundle_ready,
+        download_ready, requested_visibility
+    )
+    VALUES (
+        fixture_skill_id, '1.0.1', 'PUBLISHED', 'tag fixture v2',
+        jsonb_build_object('name', 'tag-fixture', 'version', '1.0.1'),
+        jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+        1, 110, '2026-06-11T00:10:00Z'::timestamptz, local_user_id,
+        '2026-06-11T00:10:00Z'::timestamptz, TRUE, TRUE, 'PUBLIC'
+    )
+    ON CONFLICT (skill_id, version) DO UPDATE
+        SET status = 'PUBLISHED',
+            published_at = EXCLUDED.published_at,
+            bundle_ready = TRUE,
+            download_ready = TRUE,
+            requested_visibility = 'PUBLIC'
+    RETURNING id INTO published_v2_id;
+
+    UPDATE skill
+    SET latest_version_id = published_v2_id,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = fixture_skill_id;
+
+    DELETE FROM skill_tag
+    WHERE skill_id = fixture_skill_id
+      AND tag_name IN ('stable', 'release');
+
+    INSERT INTO skill_tag (skill_id, tag_name, version_id, created_by, created_at, updated_at)
+    VALUES (
+        fixture_skill_id, 'stable', published_v1_id, local_user_id,
+        '2026-06-11T00:20:00Z'::timestamp,
+        '2026-06-11T00:20:00Z'::timestamp
+    )
+    ON CONFLICT (skill_id, tag_name) DO UPDATE
+        SET version_id = EXCLUDED.version_id,
+            created_at = EXCLUDED.created_at,
+            updated_at = EXCLUDED.updated_at;
+END $$;
+'@
+
+    Invoke-PostgresSql -Sql $sql
+}
+
+function ConvertTo-StableSkillTagApiJson {
+    param([object]$Response)
+
+    $copy = $Response | ConvertTo-Json -Depth 50 | ConvertFrom-Json
+    if ($copy.PSObject.Properties.Name -contains 'timestamp') {
+        $copy.PSObject.Properties.Remove('timestamp')
+    }
+    if ($copy.PSObject.Properties.Name -contains 'requestId') {
+        $copy.PSObject.Properties.Remove('requestId')
+    }
+    if ($null -ne $copy.data) {
+        if ($copy.data -is [array]) {
+            foreach ($tag in $copy.data) {
+                if ($tag.PSObject.Properties.Name -contains 'id') {
+                    $tag.PSObject.Properties.Remove('id')
+                }
+                if ($null -ne $tag.createdAt) {
+                    $tag.createdAt = '<instant>'
+                }
+            }
+        } else {
+            if ($copy.data.PSObject.Properties.Name -contains 'id') {
+                $copy.data.PSObject.Properties.Remove('id')
+            }
+            if ($copy.data.PSObject.Properties.Name -contains 'createdAt' -and $null -ne $copy.data.createdAt) {
+                $copy.data.createdAt = '<instant>'
+            }
+        }
+    }
+    return ($copy | ConvertTo-Json -Depth 50)
+}
+
+function Invoke-SkillTagCreateOrMove {
+    param(
+        [string]$BaseUrl,
+        [string]$TagName,
+        [string]$TargetVersion
+    )
+
+    $body = @{ tagName = $TagName; targetVersion = $TargetVersion } | ConvertTo-Json -Compress
+    return Invoke-RestMethod -Method Put -Uri "$BaseUrl/api/v1/skills/codex-tag-team/codex-tag-20260611/tags/$TagName" -Headers @{ 'X-Mock-User-Id' = 'local-user' } -ContentType 'application/json' -Body $body -TimeoutSec 20
+}
+
+function Invoke-SkillTagDelete {
+    param(
+        [string]$BaseUrl,
+        [string]$TagName
+    )
+
+    return Invoke-RestMethod -Method Delete -Uri "$BaseUrl/api/v1/skills/codex-tag-team/codex-tag-20260611/tags/$TagName" -Headers @{ 'X-Mock-User-Id' = 'local-user' } -TimeoutSec 20
+}
+
+function Invoke-SkillTagManagementContractComparison {
+    $basePath = '/api/v1/skills/codex-tag-team/codex-tag-20260611/tags'
+    Ensure-SkillTagManagementFixture
+
+    Write-Host 'Comparing skill tag list contract'
+    $javaList = Invoke-RestMethod "$JavaUrl$basePath" -Headers @{ 'X-Mock-User-Id' = 'local-user' }
+    $pythonList = Invoke-RestMethod "$PythonUrl$basePath" -Headers @{ 'X-Mock-User-Id' = 'local-user' }
+    $proxyV1List = Invoke-RestMethod "$WebUrl$basePath" -Headers @{ 'X-Mock-User-Id' = 'local-user' }
+    $proxyWebList = Invoke-RestMethod "$WebUrl$($basePath -replace '^/api/v1/', '/api/web/')" -Headers @{ 'X-Mock-User-Id' = 'local-user' }
+
+    Ensure-SkillTagManagementFixture
+    Write-Host 'Comparing skill tag create contract'
+    $javaCreate = Invoke-SkillTagCreateOrMove -BaseUrl $JavaUrl -TagName 'release' -TargetVersion '1.0.1'
+    Ensure-SkillTagManagementFixture
+    $pythonCreate = Invoke-SkillTagCreateOrMove -BaseUrl $PythonUrl -TagName 'release' -TargetVersion '1.0.1'
+    Ensure-SkillTagManagementFixture
+    $proxyCreate = Invoke-SkillTagCreateOrMove -BaseUrl $WebUrl -TagName 'release' -TargetVersion '1.0.1'
+
+    Ensure-SkillTagManagementFixture
+    Write-Host 'Comparing skill tag move contract'
+    $javaMove = Invoke-SkillTagCreateOrMove -BaseUrl $JavaUrl -TagName 'stable' -TargetVersion '1.0.1'
+    Ensure-SkillTagManagementFixture
+    $pythonMove = Invoke-SkillTagCreateOrMove -BaseUrl $PythonUrl -TagName 'stable' -TargetVersion '1.0.1'
+    Ensure-SkillTagManagementFixture
+    $proxyMove = Invoke-SkillTagCreateOrMove -BaseUrl $WebUrl -TagName 'stable' -TargetVersion '1.0.1'
+
+    Ensure-SkillTagManagementFixture
+    Write-Host 'Comparing skill tag delete contract'
+    $javaDelete = Invoke-SkillTagDelete -BaseUrl $JavaUrl -TagName 'stable'
+    Ensure-SkillTagManagementFixture
+    $pythonDelete = Invoke-SkillTagDelete -BaseUrl $PythonUrl -TagName 'stable'
+    Ensure-SkillTagManagementFixture
+    $proxyDelete = Invoke-SkillTagDelete -BaseUrl $WebUrl -TagName 'stable'
+
+    $postJavaStatus = Invoke-HttpStatusNoRedirect "$JavaUrl$basePath/stable" 'POST'
+    $postProxyStatus = Invoke-HttpStatusNoRedirect "$WebUrl$basePath/stable" 'POST'
+
+    $listStable = ConvertTo-StableSkillTagApiJson -Response $javaList
+    $pythonListStable = ConvertTo-StableSkillTagApiJson -Response $pythonList
+    $proxyV1ListStable = ConvertTo-StableSkillTagApiJson -Response $proxyV1List
+    $proxyWebListStable = ConvertTo-StableSkillTagApiJson -Response $proxyWebList
+
+    $createStable = ConvertTo-StableSkillTagApiJson -Response $javaCreate
+    $pythonCreateStable = ConvertTo-StableSkillTagApiJson -Response $pythonCreate
+    $proxyCreateStable = ConvertTo-StableSkillTagApiJson -Response $proxyCreate
+
+    $moveStable = ConvertTo-StableSkillTagApiJson -Response $javaMove
+    $pythonMoveStable = ConvertTo-StableSkillTagApiJson -Response $pythonMove
+    $proxyMoveStable = ConvertTo-StableSkillTagApiJson -Response $proxyMove
+
+    $deleteStable = ConvertTo-StableSkillTagApiJson -Response $javaDelete
+    $pythonDeleteStable = ConvertTo-StableSkillTagApiJson -Response $pythonDelete
+    $proxyDeleteStable = ConvertTo-StableSkillTagApiJson -Response $proxyDelete
+
+    $result = [ordered]@{
+        listMatches = ($listStable -eq $pythonListStable -and $pythonListStable -eq $proxyV1ListStable -and $proxyV1ListStable -eq $proxyWebListStable)
+        createMatches = ($createStable -eq $pythonCreateStable -and $pythonCreateStable -eq $proxyCreateStable)
+        moveMatches = ($moveStable -eq $pythonMoveStable -and $pythonMoveStable -eq $proxyMoveStable)
+        deleteMatches = ($deleteStable -eq $pythonDeleteStable -and $pythonDeleteStable -eq $proxyDeleteStable)
+        postBoundaryRemainsJavaOwned = ($postJavaStatus -eq $postProxyStatus)
+        postStatus = [ordered]@{ java = $postJavaStatus; proxy = $postProxyStatus }
+        listTagNames = @($pythonList.data | ForEach-Object { $_.tagName })
+        comparedFields = @('code', 'msg', 'data.tagName', 'data.versionId', 'data.message')
+    }
+
+    $resultPath = Join-Path $DevDir 'skill-tag-management-contract-result.json'
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    if (-not $result.listMatches) {
+        throw 'Skill tag list contract differs. See .dev/skill-tag-management-contract-result.json.'
+    }
+    if (-not $result.createMatches -or -not $result.moveMatches -or -not $result.deleteMatches) {
+        throw 'Skill tag mutation contract differs. See .dev/skill-tag-management-contract-result.json.'
+    }
+    if (-not $result.postBoundaryRemainsJavaOwned) {
+        throw 'Skill tag method boundary check failed. See .dev/skill-tag-management-contract-result.json.'
+    }
+    if (-not ($result.listTagNames -contains 'latest')) {
+        throw 'Skill tag list did not include Java-compatible latest tag. See .dev/skill-tag-management-contract-result.json.'
+    }
+}
+
+function Invoke-HybridSkillTagManagementSmokeVerification {
+    try {
+        Invoke-SkillTagManagementTests
+        Start-Hybrid
+        Invoke-SkillTagManagementContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 switch ($Action) {
     'up' { Start-Hybrid }
     'down' { Stop-Hybrid }
@@ -19694,6 +19988,7 @@ switch ($Action) {
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
     'verify-clawhub-star-smoke' { Invoke-HybridClawHubStarSmokeVerification }
     'verify-cli-skill-read-download-smoke' { Invoke-HybridCliSkillReadDownloadSmokeVerification }
+    'verify-skill-tag-management-smoke' { Invoke-HybridSkillTagManagementSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }

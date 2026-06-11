@@ -174,6 +174,26 @@ export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
     target: 'http://localhost:8081',
   },
   {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/tags(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/tags(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT', 'DELETE'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/tags\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
+    methods: ['PUT', 'DELETE'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/tags\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8081',
+  },
+  {
     methods: ['POST'],
     pattern: /^\/api\/v1\/reviews\/[^/?]+\/approve(?:\?.*)?$/,
     target: 'http://localhost:8081',

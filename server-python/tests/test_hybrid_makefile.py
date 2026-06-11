@@ -81,6 +81,7 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-clawhub-list-smoke" in script
     assert "verify-clawhub-star-smoke" in script
     assert "verify-cli-skill-read-download-smoke" in script
+    assert "verify-skill-tag-management-smoke" in script
     assert "verify-auth-me-smoke" in script
     assert "verify-auth-detail-smoke" in script
     assert "verify-owner-preview-detail-smoke" in script
@@ -162,6 +163,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "user-profile-contract-result.json" in script
     assert "verify-security-audit-read-smoke" in script
     assert "security-audit-read-contract-result.json" in script
+    assert "skill-tag-management-contract-result.json" in script
+    assert "tests/test_skill_tags.py" in script
     assert "verify-skill-report-submit-smoke" in script
     assert "skill-report-submit-contract-result.json" in script
     assert "verify-governance-workbench-smoke" in script

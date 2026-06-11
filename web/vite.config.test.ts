@@ -980,6 +980,25 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/web/skills/global/demo/versions/1.2.0/download')).toBe('http://localhost:8081')
   })
 
+  it('routes skill tag management methods to Python while keeping unrelated methods on Java', () => {
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/global/demo/tags')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/web/skills/global/demo/tags')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('PUT', '/api/v1/skills/global/demo/tags/stable')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/global/demo/tags/stable')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/global/demo/tags/stable')).toBeUndefined()
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/demo/tags/stable')).toBe(
+      'http://localhost:8080',
+    )
+  })
+
   it('routes planned v1 and web download paths to Python while keeping mutations on Java', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)

@@ -228,6 +228,7 @@ Still plan carefully when a group requires:
 | 92 | `POST /api/v1/auth/direct/login`, `POST /api/v1/auth/session/bootstrap` | python | Direct login and session bootstrap boundaries moved to Python. Preserves Java default-disabled 403 behavior and unsupported-provider ordering. Direct local can reuse migrated local login response, while final cookie/session persistence and passive bootstrap success remain deferred. |
 | 93 | `GET /api/v1/notifications/sse`, `GET /api/web/notifications/sse` | python | Notification SSE connection boundary moved to Python. Preserves auth rejection, `text/event-stream`, connected event, and heartbeat comment shape. Active notification fanout remains deferred to a Python dispatcher/refactor milestone. |
 | 94 | `GET /api/cli/v1/skills/search`, `GET /api/cli/v1/skills/{namespace}/{slug}/resolve`, `GET /api/cli/v1/skills/{namespace}/{slug}/download`, `GET /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI skill read/download compatibility moved to Python. Preserves Java `ApiResponse` search/resolve envelopes, download stream/header behavior, and explicitly keeps destructive `DELETE /api/cli/v1/skills/{namespace}/{slug}` Java-owned. |
+| 95 | `GET /api/v1/skills/{namespace}/{slug}/tags`, `GET /api/web/skills/{namespace}/{slug}/tags`, `PUT /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `PUT /api/web/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, `DELETE /api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag management moved to Python. Preserves Java visibility checks, virtual `latest` list tag, namespace `OWNER`/`ADMIN` write guard, reserved `latest` rejection, published-target requirement, and live Java success messages. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1381,6 +1382,15 @@ Group E has started with review lifecycle write ownership:
   `DELETE /api/v1/skills/{namespace}/{slug}/labels/{labelSlug}`, and
   `DELETE /api/web/skills/{namespace}/{slug}/labels/{labelSlug}`.
   These close the skill-label mutation gap after admin label definitions and label reads moved to Python.
+- Completed: skill tag management APIs:
+  `GET /api/v1/skills/{namespace}/{slug}/tags`,
+  `GET /api/web/skills/{namespace}/{slug}/tags`,
+  `PUT /api/v1/skills/{namespace}/{slug}/tags/{tagName}`,
+  `PUT /api/web/skills/{namespace}/{slug}/tags/{tagName}`,
+  `DELETE /api/v1/skills/{namespace}/{slug}/tags/{tagName}`, and
+  `DELETE /api/web/skills/{namespace}/{slug}/tags/{tagName}`.
+  Live gate caught and fixed one parity detail: tag management success messages must use the
+  live Java localized messages (`获取成功`, `更新成功`, `删除成功`) instead of raw message keys.
 - Completed: legacy governance notification mark-read APIs:
   `POST /api/v1/governance/notifications/{id}/read` and
   `POST /api/web/governance/notifications/{id}/read`.

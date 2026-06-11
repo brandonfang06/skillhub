@@ -282,6 +282,15 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
     }
 
 
+def build_tag_response(row: dict[str, Any]) -> dict[str, object]:
+    return {
+        "id": int(row["id"]) if row.get("id") is not None else None,
+        "tagName": str(row["tag_name"]),
+        "versionId": int(row["version_id"]),
+        "createdAt": to_java_instant(row.get("created_at")),
+    }
+
+
 def to_lifecycle_version(
     row: dict[str, Any],
     *,
@@ -1941,6 +1950,275 @@ async def read_skill_tag_files(
     ]
 
 
+async def list_skill_tags(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    current_user_id: str | None = None,
+) -> list[dict[str, object]]:
+    async with engine.connect() as connection:
+        skill_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE n.slug = :namespace
+                      AND n.status = 'ACTIVE'
+                      AND s.slug = :slug
+                      AND (
+                          (CAST(:current_user_id AS varchar) IS NOT NULL AND s.owner_id = CAST(:current_user_id AS varchar))
+                          OR (s.latest_version_id IS NOT NULL AND s.hidden = false)
+                      )
+                    ORDER BY
+                      CASE
+                        WHEN CAST(:current_user_id AS varchar) IS NOT NULL AND s.owner_id = CAST(:current_user_id AS varchar) THEN 0
+                        ELSE 1
+                      END,
+                      CASE
+                        WHEN s.latest_version_id IS NOT NULL AND s.hidden = false THEN 0
+                        ELSE 1
+                      END,
+                      s.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"namespace": namespace, "slug": slug, "current_user_id": current_user_id},
+            )
+        ).mappings().one_or_none()
+
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+
+        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+
+        tag_rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, tag_name, version_id, created_at
+                    FROM skill_tag
+                    WHERE skill_id = :skill_id
+                    ORDER BY tag_name ASC
+                    """
+                ),
+                {"skill_id": skill_row["id"]},
+            )
+        ).mappings().all()
+
+    tags = [build_tag_response(dict(row)) for row in tag_rows]
+    if skill_row.get("latest_version_id") is not None:
+        tags.append(
+            {
+                "id": None,
+                "tagName": "latest",
+                "versionId": int(skill_row["latest_version_id"]),
+                "createdAt": None,
+            }
+        )
+    return tags
+
+
+async def read_namespace_row_for_tag_write(connection: Any, namespace: str) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT n.id, n.status
+                FROM namespace n
+                WHERE n.slug = :namespace
+                LIMIT 1
+                """
+            ),
+            {"namespace": namespace},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise SkillResolveError("error.namespace.slug.notFound")
+    return dict(row)
+
+
+async def assert_namespace_tag_admin(connection: Any, namespace_id: int, user_id: str) -> None:
+    role = await read_namespace_role(connection, namespace_id, user_id)
+    if role is None:
+        raise SkillResolveError("error.namespace.membership.required", status_code=403)
+    if role not in {"OWNER", "ADMIN"}:
+        raise SkillResolveError("error.namespace.admin.required", status_code=403)
+
+
+async def read_skill_row_for_tag_write(connection: Any, namespace_id: int, slug: str, current_user_id: str) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
+                FROM skill s
+                WHERE s.namespace_id = :namespace_id
+                  AND s.slug = :slug
+                  AND (
+                      s.owner_id = :current_user_id
+                      OR (s.latest_version_id IS NOT NULL AND s.hidden = false)
+                  )
+                ORDER BY
+                  CASE
+                    WHEN s.owner_id = :current_user_id THEN 0
+                    ELSE 1
+                  END,
+                  CASE
+                    WHEN s.latest_version_id IS NOT NULL AND s.hidden = false THEN 0
+                    ELSE 1
+                  END,
+                  s.id ASC
+                LIMIT 1
+                """
+            ),
+            {"namespace_id": namespace_id, "slug": slug, "current_user_id": current_user_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise SkillResolveError("error.skill.notFound")
+    return dict(row)
+
+
+async def create_or_move_skill_tag(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    tag_name: str,
+    target_version: str,
+    user_id: str,
+) -> dict[str, object]:
+    if tag_name.lower() == "latest":
+        raise SkillResolveError("error.skill.tag.latest.reserved")
+
+    async with engine.begin() as connection:
+        namespace_row = await read_namespace_row_for_tag_write(connection, namespace)
+        await assert_namespace_tag_admin(connection, int(namespace_row["id"]), user_id)
+        skill_row = await read_skill_row_for_tag_write(connection, int(namespace_row["id"]), slug, user_id)
+
+        version_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, status
+                    FROM skill_version
+                    WHERE skill_id = :skill_id
+                      AND version = :target_version
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_row["id"], "target_version": target_version},
+            )
+        ).mappings().one_or_none()
+        if version_row is None:
+            raise SkillResolveError("error.skill.version.notFound")
+        if str(version_row["status"]) != "PUBLISHED":
+            raise SkillResolveError("error.skill.tag.targetVersion.notPublished")
+
+        existing_tag = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, skill_id, tag_name, version_id
+                    FROM skill_tag
+                    WHERE skill_id = :skill_id
+                      AND tag_name = :tag_name
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_row["id"], "tag_name": tag_name},
+            )
+        ).mappings().one_or_none()
+
+        if existing_tag is None:
+            saved_row = (
+                await connection.execute(
+                    text(
+                        """
+                        INSERT INTO skill_tag (skill_id, tag_name, version_id, created_by)
+                        VALUES (:skill_id, :tag_name, :version_id, :created_by)
+                        RETURNING id, tag_name, version_id, created_at
+                        """
+                    ),
+                    {
+                        "skill_id": int(skill_row["id"]),
+                        "tag_name": tag_name,
+                        "version_id": int(version_row["id"]),
+                        "created_by": user_id,
+                    },
+                )
+            ).mappings().one()
+        else:
+            saved_row = (
+                await connection.execute(
+                    text(
+                        """
+                        UPDATE skill_tag
+                        SET version_id = :version_id,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE skill_id = :skill_id
+                          AND tag_name = :tag_name
+                        RETURNING id, tag_name, version_id, created_at
+                        """
+                    ),
+                    {
+                        "skill_id": int(skill_row["id"]),
+                        "tag_name": tag_name,
+                        "version_id": int(version_row["id"]),
+                    },
+                )
+            ).mappings().one()
+
+    return build_tag_response(dict(saved_row))
+
+
+async def delete_skill_tag(
+    engine: AsyncEngine,
+    namespace: str,
+    slug: str,
+    tag_name: str,
+    user_id: str,
+) -> dict[str, str]:
+    if tag_name.lower() == "latest":
+        raise SkillResolveError("error.skill.tag.latest.delete")
+
+    async with engine.begin() as connection:
+        namespace_row = await read_namespace_row_for_tag_write(connection, namespace)
+        await assert_namespace_tag_admin(connection, int(namespace_row["id"]), user_id)
+        skill_row = await read_skill_row_for_tag_write(connection, int(namespace_row["id"]), slug, user_id)
+        tag_row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT id, skill_id, tag_name, version_id
+                    FROM skill_tag
+                    WHERE skill_id = :skill_id
+                      AND tag_name = :tag_name
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_row["id"], "tag_name": tag_name},
+            )
+        ).mappings().one_or_none()
+        if tag_row is None:
+            raise SkillResolveError("error.skill.tag.notFound")
+
+        await connection.execute(
+            text(
+                """
+                DELETE FROM skill_tag
+                WHERE skill_id = :skill_id
+                  AND tag_name = :tag_name
+                """
+            ),
+            {"skill_id": skill_row["id"], "tag_name": tag_name},
+        )
+
+    return {"message": "Tag deleted"}
+
+
 async def read_skill_version_file_content(
     engine: AsyncEngine,
     storage_base_path: str,
@@ -2795,6 +3073,87 @@ async def list_skill_tag_files(
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
+
+
+@router.get("/api/v1/skills/{namespace}/{slug}/tags")
+@router.get("/api/web/skills/{namespace}/{slug}/tags")
+async def list_skill_tags_route(
+    namespace: str,
+    slug: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_tags_reader", None)
+    current_user_id = normalized_current_user_id(mock_user_id)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(namespace, slug, current_user_id))
+        else:
+            data = await list_skill_tags(request.app.state.db_engine, namespace, slug, current_user_id)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.put("/api/v1/skills/{namespace}/{slug}/tags/{tagName}")
+@router.put("/api/web/skills/{namespace}/{slug}/tags/{tagName}")
+async def create_or_move_skill_tag_route(
+    namespace: str,
+    slug: str,
+    tagName: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    current_user_id = normalized_current_user_id(mock_user_id)
+    if current_user_id is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="error.validation")
+    body_tag_name = str(payload.get("tagName") or "").strip()
+    target_version = str(payload.get("targetVersion") or "").strip()
+    if body_tag_name == "" or target_version == "":
+        raise HTTPException(status_code=400, detail="error.validation")
+
+    writer = getattr(request.app.state, "skill_tag_writer", None)
+    try:
+        if writer is not None:
+            data = await _resolve_reader_result(writer(namespace, slug, tagName, target_version, current_user_id))
+        else:
+            data = await create_or_move_skill_tag(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                tagName,
+                target_version,
+                current_user_id,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.delete("/api/v1/skills/{namespace}/{slug}/tags/{tagName}")
+@router.delete("/api/web/skills/{namespace}/{slug}/tags/{tagName}")
+async def delete_skill_tag_route(
+    namespace: str,
+    slug: str,
+    tagName: str,
+    request: Request,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, object]:
+    current_user_id = normalized_current_user_id(mock_user_id)
+    if current_user_id is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    writer = getattr(request.app.state, "skill_tag_delete_writer", None)
+    try:
+        if writer is not None:
+            data = await _resolve_reader_result(writer(namespace, slug, tagName, current_user_id))
+        else:
+            data = await delete_skill_tag(request.app.state.db_engine, namespace, slug, tagName, current_user_id)
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u5220\u9664\u6210\u529f", data, request)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/file")

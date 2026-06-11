@@ -74,6 +74,12 @@ deferred routes are still visible.
 | GET | `/api/web/skills/{namespace}/{slug}/versions/{version}/files` | python | Frontend alias for public published version files metadata list with manager-only owner preview access for non-published versions. |
 | GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Public published tag files metadata list with authenticated context forwarding. Non-published tag targets remain rejected to match Java. |
 | GET | `/api/web/skills/{namespace}/{slug}/tags/{tagName}/files` | python | Frontend alias for public published tag files metadata list with authenticated context forwarding. Non-published tag targets remain rejected to match Java. |
+| GET | `/api/v1/skills/{namespace}/{slug}/tags` | python | Skill tag list moved to Python. Preserves Java visibility checks, persisted tags, virtual `latest` tag, and live Java success message. |
+| GET | `/api/web/skills/{namespace}/{slug}/tags` | python | Frontend alias for skill tag list. |
+| PUT | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag create/move moved to Python. Requires namespace `OWNER`/`ADMIN`, rejects reserved `latest`, and requires target version `PUBLISHED`. |
+| PUT | `/api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Frontend alias for skill tag create/move. |
+| DELETE | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}` | python | Skill tag delete moved to Python. Requires namespace `OWNER`/`ADMIN`, rejects reserved `latest`, returns Java-compatible `{ message: "Tag deleted" }`. |
+| DELETE | `/api/web/skills/{namespace}/{slug}/tags/{tagName}` | python | Frontend alias for skill tag delete. |
 | GET | `/api/v1/skills/{namespace}/{slug}/versions/{version}/file` | python | Single file content bytes with manager-only owner-preview access for non-published versions. |
 | GET | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file` | python | Single file content bytes for published tag targets only. Non-published tag targets remain rejected to match Java. |
 | GET | `/api/v1/skills/{namespace}/{slug}/download` | python | Latest portal download stream. Supports Java-compatible redirects upstream, headers, local bundle stream, fallback zip, and published counter increments. |
