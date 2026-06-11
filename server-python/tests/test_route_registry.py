@@ -52,7 +52,11 @@ def test_route_registry_lists_clawhub_placeholders_and_remaining_java_fallbacks(
         in registry
     )
     assert (
-        "| * | `/api/**` unmatched paths | java | Default owner for unregistered or intentionally unmigrated API paths"
+        "| POST | `/api/v1/admin/audit-logs` | java | Explicit Vite Java exception for the unsupported admin audit-log mutation holdout."
+        in registry
+    )
+    assert (
+        "| * | `/api/**` unmatched paths | python | Vite dev proxy fallback now routes unmatched API paths to Python by default after explicit Java exceptions."
         in registry
     )
     assert "| * | `/oauth2/**` | java | OAuth remains Java-owned." in registry
@@ -69,7 +73,9 @@ def test_migration_sequence_records_clawhub_placeholder_and_java_fallback_milest
     assert "| 108 | Admin search rebuild bearer route-policy enforcement | python |" in plan
     assert "| 109 | Admin label definition bearer route-policy enforcement | python |" in plan
     assert "| 110 | Admin route bearer policy cutover | python |" in plan
+    assert "| 111 | Vite API default Python cutover | python |" in plan
     assert (
         "Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token unsupported handling"
         in plan
     )
+    assert "Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default" in plan

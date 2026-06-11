@@ -268,5 +268,14 @@ deferred routes are still visible.
 | POST | `/api/v1/auth/device/token` | python | Device token polling moved to Python. Preserves `authorization_pending`, one-time claim semantics, `CLI Device Flow` API token rotation, `skill:read`/`skill:publish` scopes, hash-only token storage, used-code rejection, and user-code cleanup. |
 | DELETE | `/api/v1/skills/{canonicalSlug}` | python | ClawHub placeholder delete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
 | POST | `/api/v1/skills/{canonicalSlug}/undelete` | python | ClawHub placeholder undelete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
-| * | `/api/**` unmatched paths | java | Default owner for unregistered or intentionally unmigrated API paths until final cutover. |
+| POST | `/api/v1/skills/{canonicalSlug}` | java | Explicit Vite Java exception for the remaining one-segment non-placeholder skill mutation holdout. |
+| POST | `/api/v1/skills/{namespace}/{slug}` | java | Explicit Vite Java exception for remaining post-publish lifecycle holdouts not yet represented by Python route-specific methods. |
+| POST | `/api/web/skills/{namespace}/{slug}` | java | Explicit Vite Java exception for remaining frontend post-publish lifecycle holdouts not yet represented by Python route-specific methods. |
+| GET | `/api/v1/skills/{skillId}/versions/{versionId}` | java | Explicit Vite Java exception for the numeric skill-version holdout; migrated numeric security-audit reads remain Python-owned. |
+| GET | `/api/v1/stars/{canonicalSlug}` | java | Explicit Vite Java exception for the remaining ClawHub star read holdout. |
+| POST | `/api/v1/me/skills` | java | Explicit Vite Java exception for the remaining current-user owned-skill mutation holdout. |
+| POST | `/api/v1/admin/audit-logs` | java | Explicit Vite Java exception for the unsupported admin audit-log mutation holdout. |
+| POST | `/api/v1/skills/{namespace}/{slug}/tags/{tagName}` | java | Explicit Vite Java exception for unsupported skill tag POST while GET/PUT/DELETE tag routes remain Python-owned. |
+| POST | `/api/web/skills/{namespace}/{slug}/tags/{tagName}` | java | Explicit Vite Java exception for unsupported frontend skill tag POST while GET/PUT/DELETE tag routes remain Python-owned. |
+| * | `/api/**` unmatched paths | python | Vite dev proxy fallback now routes unmatched API paths to Python by default after explicit Java exceptions. |
 | * | `/oauth2/**` | java | OAuth remains Java-owned. |

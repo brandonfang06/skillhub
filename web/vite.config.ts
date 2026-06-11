@@ -15,6 +15,51 @@ export type MethodAwareProxyRule = {
 export const METHOD_AWARE_PROXY_RULES: MethodAwareProxyRule[] = [
   {
     methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/(?!(?:publish|undelete)(?:\?.*)?$)[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/(?!publish(?:\?.*)?$)[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/skills\/\d+\/versions\/\d+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['GET'],
+    pattern: /^\/api\/v1\/stars\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/me\/skills(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/admin\/audit-logs(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/tags\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
+    pattern: /^\/api\/web\/skills\/[^/?]+\/[^/?]+\/tags\/[^/?]+(?:\?.*)?$/,
+    target: 'http://localhost:8080',
+  },
+  {
+    methods: ['POST'],
     pattern: /^\/api\/v1\/skills\/[^/?]+\/[^/?]+\/reports(?:\?.*)?$/,
     target: 'http://localhost:8081',
   },
@@ -1020,7 +1065,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
       '/oauth2': {

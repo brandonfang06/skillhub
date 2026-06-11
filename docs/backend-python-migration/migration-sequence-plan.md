@@ -244,6 +244,7 @@ Still plan carefully when a group requires:
 | 108 | Admin search rebuild bearer route-policy enforcement | python | The already Python-owned admin search rebuild route now rejects valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
 | 109 | Admin label definition bearer route-policy enforcement | python | Already Python-owned admin label definition routes now reject valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
 | 110 | Admin route bearer policy cutover | python | Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence. |
+| 111 | Vite API default Python cutover | python | Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit Java-owned exceptions, while `/oauth2/**` remains Java-owned. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1470,17 +1471,19 @@ Group E has started with review lifecycle write ownership:
 - Completed: admin route bearer policy cutover:
   Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token
   unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence.
+- Completed: Vite API default Python cutover:
+  Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit
+  Java-owned exceptions. `/oauth2/**` and the remaining documented holdout routes stay Java-owned.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
   device-auth, and bearer current-principal boundary routes, Spring Session establishment,
-  any remaining route-policy scope enforcement, active SSE notification fanout, and final proxy
-  cleanup.
+  any remaining route-policy scope enforcement, and active SSE notification fanout.
 
 Recommended next choice:
 
-- Continue with remaining auth/session/global bearer-scope surfaces or final proxy cleanup based on
-  route ownership priority.
+- Continue with remaining auth/session/global bearer-scope surfaces or migrate the documented Java
+  exception holdouts based on route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

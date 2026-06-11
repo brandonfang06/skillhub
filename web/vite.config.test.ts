@@ -62,24 +62,27 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo')).toBe('http://localhost:8080')
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo/undelete')).toBe('http://localhost:8081')
 
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/demo')).toBe('http://localhost:8081')
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/demo')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/demo/undelete')).toBe('http://localhost:8081')
   })
 
-  it('routes Python-owned health before the Java API fallback', () => {
+  it('routes API fallback to Python after explicit Java exceptions', () => {
     const proxy = config.server?.proxy as Record<string, ProxyTarget>
     const keys = Object.keys(proxy)
 
     expect(proxy['/api/v1/health']?.target).toBe('http://localhost:8081')
-    expect(proxy['/api']?.target).toBe('http://localhost:8080')
+    expect(proxy['/api']?.target).toBe('http://localhost:8081')
     expect(keys.indexOf('/api/v1/health')).toBeLessThan(keys.indexOf('/api'))
+    expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8081')
+    expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8081')
   })
 
   it('keeps OAuth owned by Java', () => {
@@ -164,9 +167,10 @@ describe('Vite dev proxy route ownership', () => {
       'http://localhost:8081',
     )
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions/1.0.0/security-audit')).toBe(
-      'http://localhost:8080',
+      'http://localhost:8081',
     )
-    expect(matchingProxyTarget('/api/v1/skills/8/versions/42')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/8/versions/42')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('GET', '/api/v1/skills/8/versions/42')).toBe('http://localhost:8080')
   })
 
   it('routes whoami reads to Python while keeping OAuth on Java', () => {
@@ -435,7 +439,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/stars/team-ai--agent-helper')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/stars/agent-helper')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/stars/agent-helper')).toBe('http://localhost:8080')
 
     expect(matchingDevProxyTarget('POST', '/api/v1/stars/agent-helper')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('DELETE', '/api/v1/stars/team-ai--agent-helper')).toBe(
@@ -524,7 +528,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/stars')).toBeUndefined()
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/me/skills')).toBe('http://localhost:8081')
     expect(resolveMethodAwareProxyTarget('GET', '/api/web/me/skills')).toBe('http://localhost:8081')
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/skills')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/me/skills')).toBe('http://localhost:8080')
 
     expect(matchingDevProxyTarget('GET', '/api/v1/me/stars?page=0&size=12')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/web/me/subscriptions')).toBe('http://localhost:8081')
@@ -901,7 +905,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/web/skills')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/skills/demo/undelete')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/skills/demo/undelete')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/labels')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/resolve')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/skills/global/demo/versions')).toBe('http://localhost:8081')
@@ -947,7 +951,7 @@ describe('Vite dev proxy route ownership', () => {
 
     expect(matchingProxyTarget('/api/v1/search')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/search?q=agent')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/search/extra')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
@@ -967,7 +971,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingProxyTarget('/api/v1/resolve?slug=demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/resolve/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/resolve/team-ai--demo?version=1.0.0')).toBe('http://localhost:8081')
-    expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8080')
+    expect(matchingProxyTarget('/api/v1/resolve/team-ai/demo')).toBe('http://localhost:8081')
     expect(matchingProxyTarget('/api/v1/download/demo')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('GET', '/api/v1/skills')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/skills')).toBe('http://localhost:8081')
@@ -1072,7 +1076,9 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('DELETE', '/api/web/skills/global/demo/tags/stable')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/global/demo/tags/stable')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/skills/global/demo/tags/stable')).toBe(
+      'http://localhost:8080',
+    )
     expect(matchingDevProxyTarget('POST', '/api/v1/skills/global/demo/tags/stable')).toBe(
       'http://localhost:8080',
     )
@@ -1177,7 +1183,7 @@ describe('Vite dev proxy route ownership', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/admin/audit-logs?page=0&size=20')).toBe(
       'http://localhost:8081',
     )
-    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/audit-logs')).toBeUndefined()
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/admin/audit-logs')).toBe('http://localhost:8080')
     expect(matchingDevProxyTarget('GET', '/api/v1/admin/audit-logs')).toBe('http://localhost:8081')
     expect(matchingDevProxyTarget('POST', '/api/v1/admin/audit-logs')).toBe('http://localhost:8080')
   })
