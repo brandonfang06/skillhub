@@ -160,6 +160,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "auth-method-catalog-contract-result.json" in script
     assert "verify-auth-whoami-smoke" in script
     assert "auth-whoami-contract-result.json" in script
+    assert "verify-bearer-current-principal-smoke" in script
+    assert "bearer-current-principal-contract-result.json" in script
     assert "verify-user-profile-smoke" in script
     assert "user-profile-contract-result.json" in script
     assert "verify-account-merge-smoke" in script
@@ -277,6 +279,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "Invoke-SkillHardDeleteContractComparison" in script
     assert "Invoke-AccountMergeTests" in script
     assert "Invoke-AccountMergeContractComparison" in script
+    assert "Invoke-BearerCurrentPrincipalTests" in script
+    assert "Invoke-BearerCurrentPrincipalContractComparison" in script
     assert "Invoke-DeviceAuthTests" in script
     assert "Invoke-DeviceAuthContractComparison" in script
     assert "Invoke-AdminSkillHideUnhideTests" in script

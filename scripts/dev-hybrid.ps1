@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -2622,6 +2622,259 @@ function Invoke-HybridAuthWhoamiSmokeVerification {
         Invoke-AuthWhoamiTests
         Start-Hybrid
         Invoke-AuthWhoamiContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
+function Invoke-BearerCurrentPrincipalTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_auth_bearer.py',
+            'tests/test_auth_me.py',
+            'tests/test_auth_whoami.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+}
+
+function Get-Sha256Hex {
+    param([string]$Value)
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+    $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+    return (($hash | ForEach-Object { $_.ToString('x2') }) -join '')
+}
+
+function Invoke-BearerJson {
+    param(
+        [string]$Url,
+        [string]$RawToken
+    )
+
+    return Invoke-RestMethod -Uri $Url -Headers @{ Authorization = "Bearer $RawToken" } -TimeoutSec 20
+}
+
+function Invoke-BearerStatus {
+    param(
+        [string]$Url,
+        [string]$RawToken
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Headers @{ Authorization = "Bearer $RawToken" } -UseBasicParsing -TimeoutSec 20
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableBearerAuthMeJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            userId = $Response.data.userId
+            displayName = $Response.data.displayName
+            email = $Response.data.email
+            avatarUrl = $Response.data.avatarUrl
+            oauthProvider = $Response.data.oauthProvider
+            platformRoles = @($Response.data.platformRoles | Sort-Object)
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableBearerAuthMeComparableJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            userId = '<user-id>'
+            displayName = $Response.data.displayName
+            email = $Response.data.email
+            avatarUrl = $Response.data.avatarUrl
+            oauthProvider = $Response.data.oauthProvider
+            platformRoles = @($Response.data.platformRoles | Sort-Object)
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function ConvertTo-StableBearerClawHubWhoamiJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        user = [ordered]@{
+            handle = '<user-id>'
+            displayName = $Response.user.displayName
+            image = $Response.user.image
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function ConvertTo-StableBearerCliWhoamiJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            handle = '<user-id>'
+            displayName = $Response.data.displayName
+            email = $Response.data.email
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 20 -Compress)
+}
+
+function Ensure-BearerCurrentPrincipalFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $userId = "codex-bearer-$Channel-$Suffix"
+    $rawToken = "sk_codex_bearer_$Channel`_$Suffix"
+    $tokenHash = Get-Sha256Hex -Value $rawToken
+    $roleCode = 'SKILL_ADMIN'
+    $sql = @"
+DO `$`$
+DECLARE
+    role_id bigint;
+BEGIN
+    DELETE FROM audit_log WHERE actor_user_id = '$userId';
+    DELETE FROM api_token WHERE user_id = '$userId' OR token_hash = '$tokenHash';
+    DELETE FROM user_role_binding WHERE user_id = '$userId';
+    DELETE FROM user_account WHERE id = '$userId';
+
+    INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+    VALUES ('$userId', 'Codex Bearer User', 'bearer-current-principal@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    SELECT id INTO role_id FROM role WHERE code = '$roleCode';
+    INSERT INTO user_role_binding (user_id, role_id) VALUES ('$userId', role_id);
+
+    INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+    VALUES ('USER', '$userId', '$userId', 'Bearer Current Principal', 'sk_codex', '$tokenHash', jsonb_build_array('skill:read', 'skill:publish'), CURRENT_TIMESTAMP - INTERVAL '1 day');
+END
+`$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+    return [ordered]@{ userId = $userId; rawToken = $rawToken }
+}
+
+function Get-BearerCurrentPrincipalEvidence {
+    param([string]$UserId)
+
+    $sql = @"
+SELECT json_build_object(
+    'lastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Bearer Current Principal'
+          AND last_used_at IS NOT NULL
+    ),
+    'activeTokenCount', (
+        SELECT COUNT(*) FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Bearer Current Principal'
+          AND revoked_at IS NULL
+    )
+)::text;
+"@
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-BearerEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    return [bool]$json.lastUsedTouched -and [int]$json.activeTokenCount -eq 1
+}
+
+function Invoke-BearerCurrentPrincipalContractComparison {
+    param([string]$ResultFileName = 'bearer-current-principal-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing bearer current-principal contract: $($case.name)"
+        $fixture = Ensure-BearerCurrentPrincipalFixture -Channel $case.name -Suffix $suffix
+        $authMe = Invoke-BearerJson "$($case.baseUrl)/api/v1/auth/me" $fixture.rawToken
+        $clawHub = Invoke-BearerJson "$($case.baseUrl)/api/v1/whoami" $fixture.rawToken
+        $cli = Invoke-BearerJson "$($case.baseUrl)/api/cli/v1/auth/whoami" $fixture.rawToken
+        $evidence = Get-BearerCurrentPrincipalEvidence -UserId $fixture.userId
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            authMe = ConvertTo-StableBearerAuthMeComparableJson -Response $authMe
+            clawHub = ConvertTo-StableBearerClawHubWhoamiJson -Response $clawHub
+            cli = ConvertTo-StableBearerCliWhoamiJson -Response $cli
+            evidence = $evidence
+            evidencePassed = Test-BearerEvidence -Evidence $evidence
+        }
+    }
+
+    $badStatuses = [ordered]@{
+        java = Invoke-BearerStatus "$JavaUrl/api/v1/auth/me" 'sk_missing_bearer'
+        python = Invoke-BearerStatus "$PythonUrl/api/v1/auth/me" 'sk_missing_bearer'
+        proxy = Invoke-BearerStatus "$WebUrl/api/v1/auth/me" 'sk_missing_bearer'
+    }
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            authMeMatches = ($caseResults[0].authMe -eq $caseResults[1].authMe -and $caseResults[1].authMe -eq $caseResults[2].authMe)
+            clawHubMatches = ($caseResults[0].clawHub -eq $caseResults[1].clawHub -and $caseResults[1].clawHub -eq $caseResults[2].clawHub)
+            cliMatches = ($caseResults[0].cli -eq $caseResults[1].cli -and $caseResults[1].cli -eq $caseResults[2].cli)
+            allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+            badTokenStatusesMatch = ($badStatuses.java -eq $badStatuses.python -and $badStatuses.python -eq $badStatuses.proxy)
+        }
+        cases = $caseResults
+        badStatuses = $badStatuses
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "Bearer current-principal contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridBearerCurrentPrincipalSmokeVerification {
+    try {
+        Invoke-BearerCurrentPrincipalTests
+        Start-Hybrid
+        Invoke-BearerCurrentPrincipalContractComparison
         Install-PlaywrightBrowsers
         Push-Location (Join-Path $Root 'web')
         try {
@@ -20929,6 +21182,7 @@ switch ($Action) {
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }
+    'verify-bearer-current-principal-smoke' { Invoke-HybridBearerCurrentPrincipalSmokeVerification }
     'verify-user-profile-smoke' { Invoke-HybridUserProfileSmokeVerification }
     'verify-account-merge-smoke' { Invoke-HybridAccountMergeSmokeVerification }
     'verify-device-auth-smoke' { Invoke-HybridDeviceAuthSmokeVerification }

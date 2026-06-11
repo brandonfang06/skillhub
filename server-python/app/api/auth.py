@@ -1,4 +1,5 @@
 from collections.abc import Awaitable
+from datetime import UTC, datetime
 from inspect import isawaitable
 import os
 from typing import Any
@@ -7,6 +8,7 @@ from urllib.parse import quote_plus
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import text
 
+from app.auth.tokens import sha256_token
 from app.core.response import ok
 
 router = APIRouter()
@@ -29,7 +31,7 @@ def build_auth_me_response(user_row: dict[str, Any], role_codes: list[str]) -> d
         "displayName": str(user_row["display_name"]),
         "email": user_row["email"] or "",
         "avatarUrl": user_row["avatar_url"] or "",
-        "oauthProvider": "mock",
+        "oauthProvider": str(user_row.get("oauth_provider") or "mock"),
         "platformRoles": normalize_platform_roles(role_codes),
     }
 
@@ -198,6 +200,78 @@ async def read_current_mock_user(engine: Any, user_id: str) -> dict[str, object]
     return build_auth_me_response(dict(user_row), [str(row["code"]) for row in role_rows])
 
 
+def _decode_scope_json(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if isinstance(value, str):
+        import json
+
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed]
+    return []
+
+
+async def read_current_bearer_user(engine: Any, raw_token: str) -> dict[str, object] | None:
+    now = datetime.now(UTC)
+    async with engine.begin() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT
+                        t.id AS token_id,
+                        t.scope_json,
+                        u.id,
+                        u.display_name,
+                        u.email,
+                        u.avatar_url
+                    FROM api_token t
+                    JOIN user_account u ON u.id = t.user_id
+                    WHERE t.token_hash = :token_hash
+                      AND t.revoked_at IS NULL
+                      AND (t.expires_at IS NULL OR t.expires_at > :now)
+                      AND u.status = 'ACTIVE'
+                    LIMIT 1
+                    """
+                ),
+                {"token_hash": sha256_token(raw_token), "now": now},
+            )
+        ).mappings().one_or_none()
+        if row is None:
+            return None
+
+        role_rows = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT r.code
+                    FROM user_role_binding urb
+                    JOIN role r ON r.id = urb.role_id
+                    WHERE urb.user_id = :user_id
+                    ORDER BY r.code ASC
+                    """
+                ),
+                {"user_id": row["id"]},
+            )
+        ).mappings().all()
+        await connection.execute(
+            text("UPDATE api_token SET last_used_at = :last_used_at WHERE id = :token_id"),
+            {"last_used_at": now, "token_id": int(row["token_id"])},
+        )
+
+    data = dict(row)
+    data["oauth_provider"] = "api_token"
+    response = build_auth_me_response(data, [str(role["code"]) for role in role_rows])
+    response["tokenScopes"] = _decode_scope_json(row.get("scope_json"))
+    return response
+
+
 async def _resolve_reader_result(
     result: dict[str, object] | None | Awaitable[dict[str, object] | None],
 ) -> dict[str, object] | None:
@@ -222,6 +296,36 @@ async def _read_mock_user_or_401(request: Request, mock_user_id: str | None) -> 
     return data
 
 
+def _bearer_token(authorization: str | None) -> str | None:
+    if authorization is None or not authorization.startswith("Bearer "):
+        return None
+    token = authorization[len("Bearer ") :].strip()
+    return token if token else None
+
+
+async def _read_current_user_or_401(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, object]:
+    if mock_user_id is not None and mock_user_id.strip() != "":
+        return await _read_mock_user_or_401(request, mock_user_id)
+
+    token = _bearer_token(authorization)
+    if token is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+
+    reader = getattr(request.app.state, "auth_bearer_reader", None)
+    if reader is not None:
+        data = await _resolve_reader_result(reader(token))
+    else:
+        data = await read_current_bearer_user(request.app.state.db_engine, token)
+
+    if data is None:
+        raise HTTPException(status_code=401, detail="error.auth.required")
+    return data
+
+
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
@@ -236,8 +340,9 @@ def _payload_provider(payload: dict[str, Any]) -> str:
 async def get_current_user(
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
-    data = await _read_mock_user_or_401(request, mock_user_id)
+    data = await _read_current_user_or_401(request, mock_user_id, authorization)
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
@@ -245,8 +350,9 @@ async def get_current_user(
 async def get_clawhub_whoami(
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
-    data = await _read_mock_user_or_401(request, mock_user_id)
+    data = await _read_current_user_or_401(request, mock_user_id, authorization)
     return build_clawhub_whoami_response(data)
 
 
@@ -254,8 +360,9 @@ async def get_clawhub_whoami(
 async def get_cli_whoami(
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
-    data = await _read_mock_user_or_401(request, mock_user_id)
+    data = await _read_current_user_or_401(request, mock_user_id, authorization)
     return ok("\u83b7\u53d6\u6210\u529f", build_cli_whoami_response(data), request)
 
 

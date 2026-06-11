@@ -30,9 +30,9 @@ deferred routes are still visible.
 | GET | `/api/v1/resolve/{canonicalSlug}` | python | ClawHub compatibility resolve by canonical slug. |
 | GET | `/api/v1/download` | python | ClawHub compatibility download query route. Returns Java-compatible `302` redirect to portal v1 download route. |
 | GET | `/api/v1/download/{canonicalSlug}` | python | ClawHub compatibility download path route. Returns Java-compatible `302` redirect to portal v1 download route. |
-| GET | `/api/v1/auth/me` | python | Current local mock-user bridge for frontend auth context. OAuth callback/session/device-flow and bearer-token auth filters remain Java-owned. |
-| GET | `/api/v1/whoami` | python | ClawHub current-principal read moved to Python. Returns plain `{ user: { handle, displayName, image } }` JSON, not `ApiResponse`. |
-| GET | `/api/cli/v1/auth/whoami` | python | CLI current-principal read moved to Python. Returns Java-compatible `ApiResponse` envelope with `{ handle, displayName, email }`. |
+| GET | `/api/v1/auth/me` | python | Current-principal auth context. Accepts `X-Mock-User-Id` first and Java-compatible `Authorization: Bearer sk_...` fallback; bearer auth hashes tokens, requires active token/user, projects roles with `oauthProvider = api_token`, and touches `last_used_at`. OAuth callback/session cookies and global bearer scope enforcement remain deferred. |
+| GET | `/api/v1/whoami` | python | ClawHub current-principal read moved to Python. Accepts mock-user or bearer-token principal and returns plain `{ user: { handle, displayName, image } }` JSON, not `ApiResponse`. |
+| GET | `/api/cli/v1/auth/whoami` | python | CLI current-principal read moved to Python. Accepts mock-user or bearer-token principal and returns Java-compatible `ApiResponse` envelope with `{ handle, displayName, email }`. |
 | GET | `/api/v1/auth/providers` | python | Public OAuth provider catalog moved to Python. Preserves Java registration sorting, display-name fallback, OAuth authorization URL shape, and safe `returnTo` handling. |
 | GET | `/api/v1/auth/methods` | python | Public auth method catalog moved to Python. Preserves Java local-password first entry, sorted OAuth methods, default-disabled direct/session-bootstrap methods, and safe `returnTo` handling. |
 | POST | `/api/v1/auth/direct/login` | python | Direct login boundary moved to Python. Preserves Java default-disabled 403 and unsupported-provider ordering when enabled. Direct local delegates to migrated local login response, but final cookie/session persistence remains deferred. |

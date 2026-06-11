@@ -232,6 +232,7 @@ Still plan carefully when a group requires:
 | 96 | `DELETE /api/v1/skills/id/{skillId}`, `DELETE /api/v1/skills/{namespace}/{slug}`, `DELETE /api/web/skills/id/{skillId}`, `DELETE /api/web/skills/{namespace}/{slug}` | python | Whole-skill hard delete moved to Python. Preserves v1 `SUPER_ADMIN` guard, web owner-or-super-admin guard, slug idempotent `deleted=false`, DB artifact cleanup, `DELETE_SKILL_HARD` audit, local storage deletion, and ClawHub delete/undelete Java ownership. |
 | 97 | `POST /api/v1/account/merge/initiate`, `POST /api/v1/account/merge/verify`, `POST /api/v1/account/merge/confirm` | python | Account merge workflow moved to Python. Preserves mock-user auth requirement, local username/provider-subject secondary resolution, pending/local-credential conflict checks, BCrypt token hashing/verification, and atomic confirm side effects for bindings, tokens, roles, namespace memberships, credentials, primary email fill, secondary `MERGED`, and request completion. |
 | 98 | `POST /api/v1/auth/device/code`, `POST /api/v1/device/authorize`, `POST /api/v1/auth/device/token` | python | CLI/browser device authorization flow moved to Python. Preserves Java code payload shape, Redis key/TTL semantics, user-code authorization state machine, `DEVICE_AUTHORIZE` audit, one-time token redemption, `CLI Device Flow` API token rotation, and `skill:read`/`skill:publish` scopes. Windows live gate also records the current Java runtime token-poll `ClassCastException` as a pre-existing reference defect while Python/proxy full flow passes. |
+| 99 | Bearer-token current-principal bridge for `GET /api/v1/auth/me`, `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Existing Python-owned current-principal routes now accept Java-compatible bearer tokens after `X-Mock-User-Id` precedence. Preserves SHA-256 token lookup, active token/user checks, `api_token` provider projection, platform-role fallback/projection, and `last_used_at` touch. Global bearer scope enforcement remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -399,10 +400,10 @@ Python-owned in this group:
 - manager-only owner preview version compare for
   `GET /api/web/skills/{namespace}/{slug}/versions/compare`
 
-Still Java-owned in this group:
+Still Java-owned/deferred in this group:
 
 - OAuth callback/session establishment paths not explicitly moved to Python.
-- Bearer-token authentication filters and scope enforcement.
+- Global bearer-token scope enforcement outside the current-principal read bridge.
 - `/oauth2/**`
 
 Next candidate routes:
@@ -1317,8 +1318,8 @@ Group E has started with review lifecycle write ownership:
 - Completed: API token management APIs:
   `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, and
   `PUT /api/v1/tokens/{id}/expiration`. These move self-service token CRUD/storage behavior
-  to Python while keeping bearer-token authentication filters, scope enforcement, and OAuth
-  Java-owned.
+  to Python. Current-principal bearer-token reads now work in Python; global scope enforcement
+  and OAuth remain deferred.
 - Completed: anonymous local password reset APIs:
   `POST /api/v1/auth/local/password-reset/request` and
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password
@@ -1340,8 +1341,8 @@ Group E has started with review lifecycle write ownership:
   success, bearer-token authentication, and scope enforcement deferred.
 - Completed: current-principal whoami read APIs:
   `GET /api/v1/whoami` and `GET /api/cli/v1/auth/whoami`. These move ClawHub and CLI
-  whoami reads to Python while keeping OAuth callbacks/authorization, bearer-token authentication
-  filters, and scope enforcement Java-owned.
+  whoami reads to Python. They now accept mock-user or bearer-token principals while keeping OAuth
+  callbacks/authorization and global scope enforcement deferred.
 - Completed: current-user profile APIs:
   `GET /api/v1/user/profile` and `PATCH /api/v1/user/profile`. These move the self-service
   profile read/update boundary to Python, preserving Java display-name validation, latest
@@ -1417,12 +1418,12 @@ Group E has started with review lifecycle write ownership:
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
-  and device-auth boundary routes, Spring Session establishment, bearer-token authentication filters,
-  scope enforcement, active SSE notification fanout, and final proxy cleanup.
+  device-auth, and bearer current-principal boundary routes, Spring Session establishment,
+  global bearer-token scope enforcement, active SSE notification fanout, and final proxy cleanup.
 
 Recommended next choice:
 
-- Continue with remaining auth/session/bearer-token surfaces or final proxy cleanup based on
+- Continue with remaining auth/session/global bearer-scope surfaces or final proxy cleanup based on
   route ownership priority.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
