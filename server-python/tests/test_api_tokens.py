@@ -171,6 +171,18 @@ def auth_user(user_id: str = "user-1") -> dict[str, object]:
     }
 
 
+def bearer_user(user_id: str = "token-user", scopes: list[str] | None = None) -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "api_token",
+        "platformRoles": ["USER"],
+        "tokenScopes": scopes if scopes is not None else ["token:manage"],
+    }
+
+
 @pytest.mark.anyio
 async def test_create_api_token_rotates_active_same_name_and_stores_hash_only() -> None:
     connection = FakeTokenConnection()
@@ -296,3 +308,99 @@ def test_api_token_routes_use_java_envelopes_and_auth_boundaries() -> None:
     missing_auth = client.get("/api/v1/tokens")
     assert missing_auth.status_code == 401
     assert missing_auth.json()["detail"] == "error.auth.required"
+
+
+def test_api_token_routes_accept_bearer_with_token_manage_scope() -> None:
+    app = create_app()
+    seen_users: list[str] = []
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user("token-user", ["skill:read", "token:manage"])
+    app.state.token_creator = lambda payload, user: {
+        "token": "sk_raw",
+        "id": 7,
+        "name": payload["name"].strip(),
+        "tokenPrefix": "sk_raw",
+        "createdAt": "2026-06-10T12:00:00Z",
+        "expiresAt": "",
+    }
+    app.state.token_lister = lambda payload, user: seen_users.append(str(user["userId"])) or {
+        "items": [],
+        "total": 0,
+        "page": payload["page"],
+        "size": payload["size"],
+    }
+    app.state.token_revoker = lambda token_id, user: seen_users.append(str(user["userId"]))
+    app.state.token_expiration_updater = lambda token_id, payload, user: seen_users.append(str(user["userId"])) or {
+        "id": token_id,
+        "name": "cli",
+        "tokenPrefix": "sk_raw",
+        "createdAt": "2026-06-10T12:00:00Z",
+        "expiresAt": "",
+        "lastUsedAt": "",
+    }
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer sk_manage"}
+
+    create_response = client.post("/api/v1/tokens", headers=headers, json={"name": "cli"})
+    assert create_response.status_code == 200
+    assert create_response.json()["data"]["token"] == "sk_raw"
+
+    list_response = client.get("/api/v1/tokens", headers=headers)
+    assert list_response.status_code == 200
+
+    update_response = client.put("/api/v1/tokens/7/expiration", headers=headers, json={"expiresAt": None})
+    assert update_response.status_code == 200
+
+    revoke_response = client.delete("/api/v1/tokens/7", headers=headers)
+    assert revoke_response.status_code == 204
+    assert seen_users == ["token-user", "token-user", "token-user"]
+
+
+def test_api_token_routes_reject_bearer_without_token_manage_scope() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user("token-user", ["skill:read"])
+    app.state.token_lister = lambda payload, user: pytest.fail("token route should reject before service call")
+    client = TestClient(app)
+
+    response = client.get("/api/v1/tokens", headers={"Authorization": "Bearer sk_readonly"})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing API token scope: token:manage"
+
+
+def test_api_token_routes_keep_mock_precedence_over_bearer_scope() -> None:
+    app = create_app()
+    seen_mock_ids: list[str] = []
+    seen_bearer_tokens: list[str] = []
+
+    def mock_reader(user_id: str) -> dict[str, object] | None:
+        seen_mock_ids.append(user_id)
+        return auth_user(user_id)
+
+    def bearer_reader(raw_token: str) -> dict[str, object] | None:
+        seen_bearer_tokens.append(raw_token)
+        return bearer_user("token-user", ["skill:read"])
+
+    app.state.auth_me_reader = mock_reader
+    app.state.auth_bearer_reader = bearer_reader
+    app.state.token_lister = lambda payload, user: {"items": [], "total": 0, "page": 0, "size": 10}
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/tokens",
+        headers={"X-Mock-User-Id": "mock-user", "Authorization": "Bearer sk_readonly"},
+    )
+
+    assert response.status_code == 200
+    assert seen_mock_ids == ["mock-user"]
+    assert seen_bearer_tokens == []
+
+
+def test_api_token_routes_reject_bad_bearer() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda raw_token: None
+    client = TestClient(app)
+
+    response = client.get("/api/v1/tokens", headers={"Authorization": "Bearer sk_missing"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"

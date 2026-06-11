@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-cli-skill-read-download-smoke', 'verify-skill-tag-management-smoke', 'verify-skill-hard-delete-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-bearer-current-principal-smoke', 'verify-user-profile-smoke', 'verify-account-merge-smoke', 'verify-device-auth-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-api-token-scope-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -19076,6 +19076,245 @@ function Invoke-HybridApiTokenManagementSmokeVerification {
     }
 }
 
+function Invoke-ApiTokenScopeTests {
+    Push-Location (Join-Path $Root 'server-python')
+    try {
+        $env:UV_CACHE_DIR = Join-Path $Root '.uv-cache'
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @(
+            'run',
+            'pytest',
+            'tests/test_api_tokens.py',
+            'tests/test_auth_bearer.py',
+            'tests/test_hybrid_makefile.py',
+            '-q'
+        )
+    } finally {
+        Pop-Location
+    }
+
+    Push-Location (Join-Path $Root 'web')
+    try {
+        Invoke-NativeCommand -FilePath 'npx.cmd' -Arguments @('vitest', 'run', 'vite.config.test.ts')
+    } finally {
+        Pop-Location
+    }
+}
+
+function Invoke-ApiTokenBearerJson {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$RawToken,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ Authorization = "Bearer $RawToken" }
+        ContentType = 'application/json'
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+    return Invoke-RestMethod @params
+}
+
+function Invoke-ApiTokenBearerStatus {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$RawToken,
+        [object]$Body = $null
+    )
+
+    $params = @{
+        Uri = $Url
+        Method = $Method
+        Headers = @{ Authorization = "Bearer $RawToken" }
+        ContentType = 'application/json'
+        UseBasicParsing = $true
+        TimeoutSec = 20
+    }
+    if ($null -ne $Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 20 -Compress)
+    }
+
+    try {
+        $response = Invoke-WebRequest @params
+        return [int]$response.StatusCode
+    } catch {
+        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+            return [int]$_.Exception.Response.StatusCode
+        }
+        throw
+    }
+}
+
+function ConvertTo-StableApiTokenScopeListJson {
+    param([object]$Response)
+
+    $items = @()
+    if ($Response.data -and $Response.data.items) {
+        $items = @($Response.data.items | ForEach-Object {
+            [ordered]@{
+                name = $_.name
+                tokenPrefixPresent = ("$($_.tokenPrefix)" -ne '')
+                createdAtPresent = ("$($_.createdAt)" -ne '')
+                expiresAt = $_.expiresAt
+                lastUsedAtPresent = ("$($_.lastUsedAt)" -ne '')
+            }
+        } | Sort-Object { $_.name })
+    }
+    $stable = [ordered]@{
+        code = $Response.code
+        data = [ordered]@{
+            items = $items
+            total = [int]$Response.data.total
+            page = [int]$Response.data.page
+            size = [int]$Response.data.size
+        }
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Ensure-ApiTokenScopeFixture {
+    param(
+        [string]$Channel,
+        [string]$Suffix
+    )
+
+    $userId = "codex-token-scope-$Channel-$Suffix"
+    $manageRawToken = "sk_codex_scope_manage_$Channel`_$Suffix"
+    $readRawToken = "sk_codex_scope_read_$Channel`_$Suffix"
+    $manageHash = Get-Sha256Hex -Value $manageRawToken
+    $readHash = Get-Sha256Hex -Value $readRawToken
+
+    $sql = @"
+DELETE FROM api_token WHERE user_id = '$userId' OR token_hash IN ('$manageHash', '$readHash');
+DELETE FROM user_account WHERE id = '$userId';
+
+INSERT INTO user_account (id, display_name, email, avatar_url, status, created_at, updated_at)
+VALUES ('$userId', 'Codex Token Scope User', 'token-scope-$Channel-$Suffix@example.test', '', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json, created_at)
+VALUES
+    ('USER', '$userId', '$userId', 'Bearer Manage', 'sk_scope', '$manageHash', jsonb_build_array('token:manage', 'skill:read'), CURRENT_TIMESTAMP - INTERVAL '2 minutes'),
+    ('USER', '$userId', '$userId', 'Bearer Readonly', 'sk_scope', '$readHash', jsonb_build_array('skill:read'), CURRENT_TIMESTAMP - INTERVAL '1 minutes');
+"@
+    Invoke-PostgresSql -Sql $sql
+    return [ordered]@{ userId = $userId; manageRawToken = $manageRawToken; readRawToken = $readRawToken }
+}
+
+function Get-ApiTokenScopeEvidence {
+    param([string]$UserId)
+
+    $sql = @"
+SELECT json_build_object(
+    'manageLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Bearer Manage'
+          AND last_used_at IS NOT NULL
+    ),
+    'readOnlyLastUsedTouched', EXISTS (
+        SELECT 1 FROM api_token
+        WHERE user_id = '$UserId'
+          AND name = 'Bearer Readonly'
+          AND last_used_at IS NOT NULL
+    ),
+    'activeTokenCount', (
+        SELECT COUNT(*) FROM api_token
+        WHERE user_id = '$UserId'
+          AND revoked_at IS NULL
+    )
+)::text;
+"@
+    return Invoke-PostgresScalar -Sql $sql
+}
+
+function Test-ApiTokenScopeEvidence {
+    param([object]$Evidence)
+
+    $json = $Evidence | ConvertFrom-Json
+    return [bool]$json.manageLastUsedTouched -and [bool]$json.readOnlyLastUsedTouched -and [int]$json.activeTokenCount -ge 2
+}
+
+function Invoke-ApiTokenScopeContractComparison {
+    param([string]$ResultFileName = 'api-token-scope-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $cases = @(
+        [ordered]@{ name = 'java'; baseUrl = $JavaUrl },
+        [ordered]@{ name = 'python'; baseUrl = $PythonUrl },
+        [ordered]@{ name = 'proxy'; baseUrl = $WebUrl }
+    )
+
+    $caseResults = @()
+    foreach ($case in $cases) {
+        Write-Host "Comparing API token scope contract: $($case.name)"
+        $fixture = Ensure-ApiTokenScopeFixture -Channel $case.name -Suffix $suffix
+        $list = Invoke-ApiTokenBearerJson 'Get' "$($case.baseUrl)/api/v1/tokens?page=0&size=10" $fixture.manageRawToken
+        $create = Invoke-ApiTokenBearerJson 'Post' "$($case.baseUrl)/api/v1/tokens" $fixture.manageRawToken @{ name = 'Bearer Created'; expiresAt = '2036-06-11T12:00:00' }
+        $readOnlyListStatus = Invoke-ApiTokenBearerStatus 'Get' "$($case.baseUrl)/api/v1/tokens?page=0&size=10" $fixture.readRawToken
+        $readOnlyCreateStatus = Invoke-ApiTokenBearerStatus 'Post' "$($case.baseUrl)/api/v1/tokens" $fixture.readRawToken @{ name = 'Should Fail' }
+        $missingStatus = Invoke-ApiTokenBearerStatus 'Get' "$($case.baseUrl)/api/v1/tokens" "sk_missing_scope_$($case.name)_$suffix"
+        $evidence = Get-ApiTokenScopeEvidence -UserId $fixture.userId
+
+        $caseResults += [ordered]@{
+            name = $case.name
+            list = ConvertTo-StableApiTokenScopeListJson -Response $list
+            create = ConvertTo-StableApiTokenCreateJson -Response $create
+            readOnlyListStatus = $readOnlyListStatus
+            readOnlyCreateStatus = $readOnlyCreateStatus
+            missingStatus = $missingStatus
+            evidence = $evidence
+            evidencePassed = Test-ApiTokenScopeEvidence -Evidence $evidence
+        }
+    }
+
+    $result = [ordered]@{
+        checks = [ordered]@{
+            listMatches = ($caseResults[0].list -eq $caseResults[1].list -and $caseResults[1].list -eq $caseResults[2].list)
+            createMatches = ($caseResults[0].create -eq $caseResults[1].create -and $caseResults[1].create -eq $caseResults[2].create)
+            readOnlyListDenied = -not [bool]($caseResults | Where-Object { $_.readOnlyListStatus -ne 403 })
+            readOnlyCreateDenied = -not [bool]($caseResults | Where-Object { $_.readOnlyCreateStatus -ne 403 })
+            missingBearerRejected = -not [bool]($caseResults | Where-Object { $_.missingStatus -ne 401 })
+            allEvidencePassed = -not [bool]($caseResults | Where-Object { -not $_.evidencePassed })
+        }
+        cases = $caseResults
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "API token scope contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridApiTokenScopeSmokeVerification {
+    try {
+        Invoke-ApiTokenScopeTests
+        Start-Hybrid
+        Invoke-ApiTokenScopeContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
+    }
+}
+
 function Invoke-LocalAuthCoreTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
@@ -21254,6 +21493,7 @@ switch ($Action) {
     'verify-admin-user-management-smoke' { Invoke-HybridAdminUserManagementSmokeVerification }
     'verify-admin-password-reset-smoke' { Invoke-HybridAdminPasswordResetSmokeVerification }
     'verify-api-token-management-smoke' { Invoke-HybridApiTokenManagementSmokeVerification }
+    'verify-api-token-scope-smoke' { Invoke-HybridApiTokenScopeSmokeVerification }
     'verify-local-password-reset-smoke' { Invoke-HybridLocalPasswordResetSmokeVerification }
     'verify-local-auth-core-smoke' { Invoke-HybridLocalAuthCoreSmokeVerification }
     'verify-direct-session-auth-boundary-smoke' { Invoke-HybridDirectSessionAuthBoundarySmokeVerification }

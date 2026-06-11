@@ -219,7 +219,7 @@ Still plan carefully when a group requires:
 
 | 85 | `POST /api/v1/admin/users/{userId}/password-reset` | python | Admin-triggered local password reset moved to Python. Preserves admin role guard, Java eligibility errors, BCrypt-compatible code hashes, pending-request consumption, and admin metadata. |
 | 86 | `POST /api/v1/stars/{canonicalSlug}`, `DELETE /api/v1/stars/{canonicalSlug}` | python | ClawHub compatibility star/unstar moved to Python. Preserves Java canonical slug mapping, visible skill lookup, idempotent `alreadyStarred`/`alreadyUnstarred` fields, plain ClawHub JSON responses, and synchronized `skill.star_count`. |
-| 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token authentication filters remain Java-owned. |
+| 86 | `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, `PUT /api/v1/tokens/{id}/expiration` | python | API token self-service management moved to Python. Preserves current-user guard, create/rotate semantics, SHA-256 hash-only storage, active owner-scoped listing, owner-scoped revoke, and expiration validation. Bearer token scope enforcement is completed in order 100. |
 | 87 | `POST /api/v1/auth/local/password-reset/request`, `POST /api/v1/auth/local/password-reset/confirm` | python | Anonymous local password reset request/confirm moved to Python. Preserves Java normalization, validation, silent request success for unknown/ineligible users, BCrypt reset code storage, password policy, credential reset, and pending reset request consumption while local register/login/change-password remain Java-owned. |
 | 88 | `GET /api/v1/auth/providers`, `GET /api/v1/auth/methods` | python | Public auth catalog reads moved to Python. Preserves Java OAuth provider sorting, method ordering, default-disabled direct/session-bootstrap entries, authorization URLs, and safe `returnTo` sanitization while login/session/OAuth callbacks remain Java-owned. |
 | 89 | `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Current-principal whoami reads moved to Python. Preserves ClawHub plain JSON and CLI `ApiResponse` envelope shapes while keeping session/OAuth callbacks and bearer-token authentication filters Java-owned. |
@@ -233,6 +233,7 @@ Still plan carefully when a group requires:
 | 97 | `POST /api/v1/account/merge/initiate`, `POST /api/v1/account/merge/verify`, `POST /api/v1/account/merge/confirm` | python | Account merge workflow moved to Python. Preserves mock-user auth requirement, local username/provider-subject secondary resolution, pending/local-credential conflict checks, BCrypt token hashing/verification, and atomic confirm side effects for bindings, tokens, roles, namespace memberships, credentials, primary email fill, secondary `MERGED`, and request completion. |
 | 98 | `POST /api/v1/auth/device/code`, `POST /api/v1/device/authorize`, `POST /api/v1/auth/device/token` | python | CLI/browser device authorization flow moved to Python. Preserves Java code payload shape, Redis key/TTL semantics, user-code authorization state machine, `DEVICE_AUTHORIZE` audit, one-time token redemption, `CLI Device Flow` API token rotation, and `skill:read`/`skill:publish` scopes. Windows live gate also records the current Java runtime token-poll `ClassCastException` as a pre-existing reference defect while Python/proxy full flow passes. |
 | 99 | Bearer-token current-principal bridge for `GET /api/v1/auth/me`, `GET /api/v1/whoami`, `GET /api/cli/v1/auth/whoami` | python | Existing Python-owned current-principal routes now accept Java-compatible bearer tokens after `X-Mock-User-Id` precedence. Preserves SHA-256 token lookup, active token/user checks, `api_token` provider projection, platform-role fallback/projection, and `last_used_at` touch. Global bearer scope enforcement remains deferred. |
+| 100 | Bearer-token `token:manage` scope enforcement for `/api/v1/tokens*` | python | Already Python-owned token management routes now reject bearer `api_token` principals without `token:manage` with Java-compatible `403`, keep bad bearer tokens at `401`, and preserve mock-user precedence. Broader route-policy scope enforcement remains deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1318,8 +1319,9 @@ Group E has started with review lifecycle write ownership:
 - Completed: API token management APIs:
   `POST /api/v1/tokens`, `GET /api/v1/tokens`, `DELETE /api/v1/tokens/{id}`, and
   `PUT /api/v1/tokens/{id}/expiration`. These move self-service token CRUD/storage behavior
-  to Python. Current-principal bearer-token reads now work in Python; global scope enforcement
-  and OAuth remain deferred.
+  to Python. Current-principal bearer-token reads now work in Python, and these token management
+  routes now enforce Java-compatible bearer `token:manage` scope. Broader route-policy scope
+  enforcement and OAuth remain deferred.
 - Completed: anonymous local password reset APIs:
   `POST /api/v1/auth/local/password-reset/request` and
   `POST /api/v1/auth/local/password-reset/confirm`. These move reset code creation and password

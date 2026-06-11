@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 
-from app.api.auth import read_current_mock_user
+from app.api.auth import _read_current_user_or_401
 from app.auth.tokens import (
     ApiTokenError,
     create_api_token,
@@ -25,15 +25,11 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _current_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    user = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return dict(user)
+async def _current_user(request: Request, mock_user_id: str | None, authorization: str | None) -> dict[str, Any]:
+    user = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
+    if user.get("oauthProvider") == "api_token" and "token:manage" not in set(user.get("tokenScopes") or []):
+        raise HTTPException(status_code=403, detail="Missing API token scope: token:manage")
+    return user
 
 
 def _user_id(user: dict[str, Any]) -> str:
@@ -45,8 +41,9 @@ async def create_token_route(
     request: Request,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    user = await _current_user(request, x_mock_user_id)
+    user = await _current_user(request, x_mock_user_id, authorization)
     creator = getattr(request.app.state, "token_creator", None)
     try:
         data = await _resolve_result(
@@ -71,8 +68,9 @@ async def list_tokens_route(
     page: int = Query(default=0),
     size: int = Query(default=10),
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    user = await _current_user(request, x_mock_user_id)
+    user = await _current_user(request, x_mock_user_id, authorization)
     lister = getattr(request.app.state, "token_lister", None)
     payload = {"page": page, "size": size}
     data = await _resolve_result(
@@ -88,8 +86,9 @@ async def revoke_token_route(
     request: Request,
     token_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
-    user = await _current_user(request, x_mock_user_id)
+    user = await _current_user(request, x_mock_user_id, authorization)
     revoker = getattr(request.app.state, "token_revoker", None)
     await _resolve_result(
         revoker(token_id, user)
@@ -105,8 +104,9 @@ async def update_token_expiration_route(
     token_id: int,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    user = await _current_user(request, x_mock_user_id)
+    user = await _current_user(request, x_mock_user_id, authorization)
     updater = getattr(request.app.state, "token_expiration_updater", None)
     try:
         data = await _resolve_result(
