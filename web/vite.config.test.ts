@@ -387,6 +387,26 @@ describe('Vite dev proxy route ownership', () => {
     expect(matchingDevProxyTarget('DELETE', '/api/web/skills/101/star')).toBe('http://localhost:8081')
   })
 
+  it('routes ClawHub star compatibility mutations to Python without taking over skill delete', () => {
+    expect(resolveMethodAwareProxyTarget('POST', '/api/v1/stars/agent-helper')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('DELETE', '/api/v1/stars/team-ai--agent-helper')).toBe(
+      'http://localhost:8081',
+    )
+    expect(resolveMethodAwareProxyTarget('GET', '/api/v1/stars/agent-helper')).toBeUndefined()
+
+    expect(matchingDevProxyTarget('POST', '/api/v1/stars/agent-helper')).toBe('http://localhost:8081')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/stars/team-ai--agent-helper')).toBe(
+      'http://localhost:8081',
+    )
+    expect(matchingDevProxyTarget('GET', '/api/v1/stars/agent-helper')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('DELETE', '/api/v1/skills/agent-helper')).toBe('http://localhost:8080')
+    expect(matchingDevProxyTarget('POST', '/api/v1/skills/agent-helper/undelete')).toBe(
+      'http://localhost:8080',
+    )
+  })
+
   it('routes skill subscription viewer-state actions to Python including unsubscribe', () => {
     expect(resolveMethodAwareProxyTarget('GET', '/api/v1/skills/101/subscription')).toBe(
       'http://localhost:8081',

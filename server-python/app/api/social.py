@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.api.auth import read_current_mock_user
 from app.core.response import ok
 from app.social.owned import list_my_owned_skills
+from app.social.clawhub_star import ClawHubStarError, clawhub_star_skill, clawhub_unstar_skill
 from app.social.lists import SocialListKind, list_my_social_skills
 from app.social.rating import SkillRatingError, SkillRatingInput, check_skill_rating, rate_skill
 from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill, unstar_skill
@@ -118,6 +119,32 @@ async def check_skill_star_route_data(request: Request, skill_id: int, mock_user
     except SkillStarError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u83b7\u53d6\u6210\u529f", bool(data), request)
+
+
+async def clawhub_star_route_data(request: Request, canonical_slug: str, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    writer = getattr(request.app.state, "clawhub_star_writer", None)
+    try:
+        return await _resolve_result(
+            writer(request.app.state.db_engine, canonical_slug, user_id)
+            if writer is not None
+            else clawhub_star_skill(request.app.state.db_engine, canonical_slug, user_id)
+        )
+    except ClawHubStarError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+async def clawhub_unstar_route_data(request: Request, canonical_slug: str, mock_user_id: str | None) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    writer = getattr(request.app.state, "clawhub_unstar_writer", None)
+    try:
+        return await _resolve_result(
+            writer(request.app.state.db_engine, canonical_slug, user_id)
+            if writer is not None
+            else clawhub_unstar_skill(request.app.state.db_engine, canonical_slug, user_id)
+        )
+    except ClawHubStarError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 async def subscribe_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
@@ -316,6 +343,24 @@ async def list_my_subscriptions_route(
         page=page,
         size=size,
     )
+
+
+@router.post("/api/v1/stars/{canonical_slug}")
+async def clawhub_star_route(
+    request: Request,
+    canonical_slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await clawhub_star_route_data(request, canonical_slug, x_mock_user_id)
+
+
+@router.delete("/api/v1/stars/{canonical_slug}")
+async def clawhub_unstar_route(
+    request: Request,
+    canonical_slug: str,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await clawhub_unstar_route_data(request, canonical_slug, x_mock_user_id)
 
 
 @router.put("/api/v1/skills/{skill_id}/star")

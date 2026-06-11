@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
+    [ValidateSet('up', 'down', 'status', 'verify-labels-smoke', 'verify-skill-label-mutation-smoke', 'verify-files-smoke', 'verify-detail-smoke', 'verify-search-smoke', 'verify-clawhub-search-smoke', 'verify-clawhub-resolve-smoke', 'verify-clawhub-skill-smoke', 'verify-clawhub-list-smoke', 'verify-clawhub-star-smoke', 'verify-auth-me-smoke', 'verify-auth-method-catalog-smoke', 'verify-auth-whoami-smoke', 'verify-user-profile-smoke', 'verify-security-audit-read-smoke', 'verify-auth-detail-smoke', 'verify-owner-preview-detail-smoke', 'verify-owner-preview-version-smoke', 'verify-owner-preview-files-smoke', 'verify-file-content-smoke', 'verify-download-smoke', 'verify-owner-preview-resolve-smoke', 'verify-owner-preview-compare-smoke', 'verify-publish-foundation-smoke', 'verify-publish-dry-run-smoke', 'verify-publish-storage-foundation-smoke', 'verify-publish-db-foundation-smoke', 'verify-publish-side-effects-foundation-smoke', 'verify-publish-replacement-foundation-smoke', 'verify-publish-transaction-split-smoke', 'verify-publish-orchestration-foundation-smoke', 'verify-publish-http-validate-smoke', 'verify-publish-cli-write-direct-smoke', 'verify-publish-scanner-handoff-smoke', 'verify-publish-cli-replacement-lookup-smoke', 'verify-publish-pending-auto-withdraw-smoke', 'verify-publish-storage-failure-cleanup-smoke', 'verify-cli-publish-write-ownership-smoke', 'verify-portal-publish-write-ownership-smoke', 'verify-root-legacy-publish-write-ownership-smoke', 'verify-publish-scanner-result-processing-smoke', 'verify-publish-scan-task-worker-boundary-smoke', 'verify-publish-scan-consumer-runtime-smoke', 'verify-publish-scanner-http-client-smoke', 'verify-publish-scan-daemon-supervisor-smoke', 'verify-review-approve-smoke', 'verify-review-reject-withdraw-smoke', 'verify-review-submit-smoke', 'verify-review-list-smoke', 'verify-review-detail-smoke', 'verify-review-skill-detail-smoke', 'verify-review-file-smoke', 'verify-review-download-smoke', 'verify-promotion-read-smoke', 'verify-promotion-submit-reject-smoke', 'verify-promotion-approve-smoke', 'verify-skill-lifecycle-archive-smoke', 'verify-skill-version-delete-smoke', 'verify-skill-version-withdraw-review-smoke', 'verify-skill-confirm-publish-smoke', 'verify-skill-submit-review-smoke', 'verify-skill-rerelease-smoke', 'verify-admin-skill-hide-unhide-smoke', 'verify-admin-version-yank-smoke', 'verify-skill-star-smoke', 'verify-skill-subscription-smoke', 'verify-skill-rating-smoke', 'verify-my-social-lists-smoke', 'verify-notification-read-smoke', 'verify-notification-sse-boundary-smoke', 'verify-notification-preferences-smoke', 'verify-my-skills-smoke', 'verify-namespace-read-smoke', 'verify-namespace-member-read-smoke', 'verify-namespace-member-mutation-smoke', 'verify-namespace-transfer-ownership-smoke', 'verify-namespace-profile-lifecycle-smoke', 'verify-admin-label-definition-smoke', 'verify-admin-user-management-smoke', 'verify-admin-password-reset-smoke', 'verify-api-token-management-smoke', 'verify-local-password-reset-smoke', 'verify-local-auth-core-smoke', 'verify-direct-session-auth-boundary-smoke', 'verify-governance-workbench-smoke', 'verify-governance-notification-mark-read-smoke', 'verify-admin-audit-log-smoke', 'verify-admin-review-report-smoke', 'verify-admin-review-report-mutation-smoke', 'verify-skill-report-submit-smoke', 'e2e-smoke', 'e2e')]
     [string]$Action = 'up'
 )
 
@@ -12680,7 +12680,7 @@ function Invoke-SkillStarTests {
     Push-Location (Join-Path $Root 'server-python')
     try {
         $env:UV_CACHE_DIR = '.uv-cache'
-        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_star.py', 'tests/test_hybrid_makefile.py', '-q')
+        Invoke-NativeCommand -FilePath 'uv' -Arguments @('run', 'pytest', 'tests/test_skill_star.py', 'tests/test_clawhub_star.py', 'tests/test_hybrid_makefile.py', '-q')
     } finally {
         Pop-Location
     }
@@ -12690,6 +12690,231 @@ function Invoke-SkillStarTests {
         Invoke-NativeCommand -FilePath '.\node_modules\.bin\vitest.CMD' -Arguments @('run', 'vite.config.test.ts')
     } finally {
         Pop-Location
+    }
+}
+
+function ConvertTo-StableClawHubStarJson {
+    param([object]$Response)
+
+    $stable = [ordered]@{
+        ok = [bool]$Response.ok
+    }
+    if ($null -ne $Response.starred) {
+        $stable.starred = [bool]$Response.starred
+        $stable.alreadyStarred = [bool]$Response.alreadyStarred
+    }
+    if ($null -ne $Response.unstarred) {
+        $stable.unstarred = [bool]$Response.unstarred
+        $stable.alreadyUnstarred = [bool]$Response.alreadyUnstarred
+    }
+    return ($stable | ConvertTo-Json -Depth 50 -Compress)
+}
+
+function Invoke-ClawHubStarContractComparison {
+    param([string]$ResultFileName = 'clawhub-star-contract-result.json')
+
+    $suffix = Get-Date -Format 'yyyyMMddHHmmssfff'
+    $userId = "codex-clawhub-star-user-$suffix"
+    $slugs = @(
+        "clawhub-star-java-$suffix",
+        "clawhub-star-python-$suffix",
+        "clawhub-star-proxy-$suffix"
+    )
+    $valuesSql = ($slugs | ForEach-Object {
+        "(ns_id, '$($_)', 'ClawHub Star', 'ClawHub star contract', '$userId', 'PUBLIC', 'ACTIVE', '$userId', '$userId', 0)"
+    }) -join ",`n        "
+
+    $sql = @"
+DO `$`$
+DECLARE
+    ns_id BIGINT;
+    skill_row RECORD;
+    version_id BIGINT;
+BEGIN
+    INSERT INTO user_account (id, display_name, email, avatar_url, status)
+    VALUES ('$userId', 'Codex ClawHub Star User', 'clawhub-star-$suffix@example.test', '', 'ACTIVE')
+    ON CONFLICT (id) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        email = EXCLUDED.email,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP;
+
+    INSERT INTO namespace (slug, display_name, type, status, created_by)
+    VALUES ('global', 'Global', 'GLOBAL', 'ACTIVE', '$userId')
+    ON CONFLICT (slug) DO UPDATE
+    SET display_name = EXCLUDED.display_name,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO ns_id;
+
+    INSERT INTO skill (namespace_id, slug, display_name, summary, owner_id, visibility, status, created_by, updated_by, star_count)
+    VALUES
+        $valuesSql;
+
+    FOR skill_row IN
+        SELECT id, slug FROM skill WHERE namespace_id = ns_id AND slug IN ('$($slugs[0])', '$($slugs[1])', '$($slugs[2])')
+    LOOP
+        INSERT INTO skill_version (
+            skill_id,
+            version,
+            status,
+            changelog,
+            parsed_metadata_json,
+            manifest_json,
+            file_count,
+            total_size,
+            published_at,
+            created_by,
+            created_at,
+            bundle_ready,
+            download_ready,
+            requested_visibility
+        )
+        VALUES (
+            skill_row.id,
+            '1.0.0',
+            'PUBLISHED',
+            'clawhub star fixture',
+            jsonb_build_object('name', skill_row.slug, 'version', '1.0.0'),
+            jsonb_build_array(jsonb_build_object('path', 'SKILL.md')),
+            1,
+            64,
+            CURRENT_TIMESTAMP,
+            '$userId',
+            CURRENT_TIMESTAMP,
+            TRUE,
+            TRUE,
+            'PUBLIC'
+        )
+        ON CONFLICT (skill_id, version) DO UPDATE
+            SET status = 'PUBLISHED',
+                published_at = CURRENT_TIMESTAMP,
+                bundle_ready = TRUE,
+                download_ready = TRUE,
+                requested_visibility = 'PUBLIC'
+        RETURNING id INTO version_id;
+
+        UPDATE skill
+        SET latest_version_id = version_id,
+            updated_by = '$userId',
+            updated_at = CURRENT_TIMESTAMP,
+            star_count = 0
+        WHERE id = skill_row.id;
+
+        DELETE FROM skill_star WHERE skill_id = skill_row.id AND user_id = '$userId';
+    END LOOP;
+END `$`$;
+"@
+    Invoke-PostgresSql -Sql $sql
+
+    function Get-ClawHubStarDbState([string]$Slug) {
+        return Invoke-PostgresScalar -Sql "SELECT (EXISTS (SELECT 1 FROM skill_star ss WHERE ss.skill_id = s.id AND ss.user_id = '$userId')) || '|' || s.star_count FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug = 'global' AND s.slug = '$Slug' LIMIT 1;"
+    }
+
+    $headers = @{ 'X-Mock-User-Id' = $userId }
+    $javaBase = "$JavaUrl/api/v1/stars/$($slugs[0])"
+    $pythonBase = "$PythonUrl/api/v1/stars/$($slugs[1])"
+    $proxyBase = "$WebUrl/api/v1/stars/$($slugs[2])"
+
+    $javaAnonymousStatus = Invoke-SkillStarStatus 'Post' $javaBase
+    $pythonAnonymousStatus = Invoke-SkillStarStatus 'Post' $pythonBase
+    $proxyAnonymousStatus = Invoke-SkillStarStatus 'Post' $proxyBase
+
+    $javaFirstStar = Invoke-RestMethod -Uri $javaBase -Method Post -Headers $headers
+    $pythonFirstStar = Invoke-RestMethod -Uri $pythonBase -Method Post -Headers $headers
+    $proxyFirstStar = Invoke-RestMethod -Uri $proxyBase -Method Post -Headers $headers
+    $javaSecondStar = Invoke-RestMethod -Uri $javaBase -Method Post -Headers $headers
+    $pythonSecondStar = Invoke-RestMethod -Uri $pythonBase -Method Post -Headers $headers
+    $proxySecondStar = Invoke-RestMethod -Uri $proxyBase -Method Post -Headers $headers
+
+    $javaStarState = Get-ClawHubStarDbState $slugs[0]
+    $pythonStarState = Get-ClawHubStarDbState $slugs[1]
+    $proxyStarState = Get-ClawHubStarDbState $slugs[2]
+
+    $javaFirstUnstar = Invoke-RestMethod -Uri $javaBase -Method Delete -Headers $headers
+    $pythonFirstUnstar = Invoke-RestMethod -Uri $pythonBase -Method Delete -Headers $headers
+    $proxyFirstUnstar = Invoke-RestMethod -Uri $proxyBase -Method Delete -Headers $headers
+    $javaSecondUnstar = Invoke-RestMethod -Uri $javaBase -Method Delete -Headers $headers
+    $pythonSecondUnstar = Invoke-RestMethod -Uri $pythonBase -Method Delete -Headers $headers
+    $proxySecondUnstar = Invoke-RestMethod -Uri $proxyBase -Method Delete -Headers $headers
+
+    $javaUnstarState = Get-ClawHubStarDbState $slugs[0]
+    $pythonUnstarState = Get-ClawHubStarDbState $slugs[1]
+    $proxyUnstarState = Get-ClawHubStarDbState $slugs[2]
+
+    $stableFirstStar = [ordered]@{
+        java = ConvertTo-StableClawHubStarJson -Response $javaFirstStar
+        python = ConvertTo-StableClawHubStarJson -Response $pythonFirstStar
+        proxy = ConvertTo-StableClawHubStarJson -Response $proxyFirstStar
+    }
+    $stableSecondStar = [ordered]@{
+        java = ConvertTo-StableClawHubStarJson -Response $javaSecondStar
+        python = ConvertTo-StableClawHubStarJson -Response $pythonSecondStar
+        proxy = ConvertTo-StableClawHubStarJson -Response $proxySecondStar
+    }
+    $stableFirstUnstar = [ordered]@{
+        java = ConvertTo-StableClawHubStarJson -Response $javaFirstUnstar
+        python = ConvertTo-StableClawHubStarJson -Response $pythonFirstUnstar
+        proxy = ConvertTo-StableClawHubStarJson -Response $proxyFirstUnstar
+    }
+    $stableSecondUnstar = [ordered]@{
+        java = ConvertTo-StableClawHubStarJson -Response $javaSecondUnstar
+        python = ConvertTo-StableClawHubStarJson -Response $pythonSecondUnstar
+        proxy = ConvertTo-StableClawHubStarJson -Response $proxySecondUnstar
+    }
+
+    $result = [ordered]@{
+        userId = $userId
+        checks = [ordered]@{
+            unauthenticatedPostRejected = ($javaAnonymousStatus -eq 401 -and $pythonAnonymousStatus -eq 401 -and $proxyAnonymousStatus -eq 401)
+            firstStarResponsesMatch = ($stableFirstStar.java -eq $stableFirstStar.python -and $stableFirstStar.python -eq $stableFirstStar.proxy)
+            secondStarResponsesMatch = ($stableSecondStar.java -eq $stableSecondStar.python -and $stableSecondStar.python -eq $stableSecondStar.proxy)
+            starDbState = ($javaStarState -eq 'true|1' -and $pythonStarState -eq 'true|1' -and $proxyStarState -eq 'true|1')
+            firstUnstarResponsesMatch = ($stableFirstUnstar.java -eq $stableFirstUnstar.python -and $stableFirstUnstar.python -eq $stableFirstUnstar.proxy)
+            secondUnstarResponsesMatch = ($stableSecondUnstar.java -eq $stableSecondUnstar.python -and $stableSecondUnstar.python -eq $stableSecondUnstar.proxy)
+            unstarDbState = ($javaUnstarState -eq 'false|0' -and $pythonUnstarState -eq 'false|0' -and $proxyUnstarState -eq 'false|0')
+        }
+        stableFirstStar = $stableFirstStar
+        stableSecondStar = $stableSecondStar
+        stableFirstUnstar = $stableFirstUnstar
+        stableSecondUnstar = $stableSecondUnstar
+        dbState = [ordered]@{
+            javaStar = $javaStarState
+            pythonStar = $pythonStarState
+            proxyStar = $proxyStarState
+            javaUnstar = $javaUnstarState
+            pythonUnstar = $pythonUnstarState
+            proxyUnstar = $proxyUnstarState
+        }
+    }
+
+    $resultPath = Join-Path $DevDir $ResultFileName
+    $result | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $resultPath
+    $result | ConvertTo-Json -Depth 50
+
+    foreach ($entry in $result.checks.GetEnumerator()) {
+        if (-not $entry.Value) {
+            throw "ClawHub star contract check failed at $($entry.Key). See .dev/$ResultFileName."
+        }
+    }
+}
+
+function Invoke-HybridClawHubStarSmokeVerification {
+    try {
+        Invoke-SkillStarTests
+        Start-Hybrid
+        Invoke-ClawHubStarContractComparison
+        Install-PlaywrightBrowsers
+        Push-Location (Join-Path $Root 'web')
+        try {
+            $env:PLAYWRIGHT_BROWSERS_PATH = $PlaywrightBrowsersPath
+            Invoke-NativeCommand -FilePath '.\node_modules\.bin\playwright.CMD' -Arguments @('test', '-c', 'playwright.smoke.config.ts')
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        Stop-Hybrid
     }
 }
 
@@ -19291,6 +19516,7 @@ switch ($Action) {
     'verify-clawhub-resolve-smoke' { Invoke-HybridClawHubResolveSmokeVerification }
     'verify-clawhub-skill-smoke' { Invoke-HybridClawHubSkillSmokeVerification }
     'verify-clawhub-list-smoke' { Invoke-HybridClawHubListSmokeVerification }
+    'verify-clawhub-star-smoke' { Invoke-HybridClawHubStarSmokeVerification }
     'verify-auth-me-smoke' { Invoke-HybridAuthMeSmokeVerification }
     'verify-auth-method-catalog-smoke' { Invoke-HybridAuthMethodCatalogSmokeVerification }
     'verify-auth-whoami-smoke' { Invoke-HybridAuthWhoamiSmokeVerification }

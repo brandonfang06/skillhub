@@ -143,6 +143,8 @@ deferred routes are still visible.
 | PUT | `/api/web/skills/{skillId}/star` | python | Frontend alias for authenticated idempotent star action. |
 | DELETE | `/api/v1/skills/{skillId}/star` | python | Authenticated idempotent unstar action moved to Python. Java v1 live policy still returns 403 for normal mock users through the broad hard-delete rule, so Python follows the Java controller/domain service contract instead. |
 | DELETE | `/api/web/skills/{skillId}/star` | python | Frontend alias for authenticated idempotent unstar action. |
+| POST | `/api/v1/stars/{canonicalSlug}` | python | ClawHub compatibility idempotent star moved to Python. Resolves canonical slug with Java `namespace--slug` semantics, enforces visible skill access, returns plain `{ ok, starred, alreadyStarred }`, and refreshes `skill.star_count`. |
+| DELETE | `/api/v1/stars/{canonicalSlug}` | python | ClawHub compatibility idempotent unstar moved to Python. Resolves canonical slug with Java `namespace--slug` semantics, enforces visible skill access, returns plain `{ ok, unstarred, alreadyUnstarred }`, and refreshes `skill.star_count`. |
 | GET | `/api/v1/skills/{skillId}/subscription` | python | Viewer subscription-state read moved to Python. Anonymous reads return Java-compatible `false`; authenticated reads validate skill existence and check `skill_subscription`. |
 | GET | `/api/web/skills/{skillId}/subscription` | python | Frontend alias for viewer subscription-state read. |
 | PUT | `/api/v1/skills/{skillId}/subscription` | python | Authenticated idempotent subscribe action moved to Python. Inserts `skill_subscription` when missing and increments `skill.subscription_count` once. |
