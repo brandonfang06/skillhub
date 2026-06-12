@@ -13,6 +13,14 @@ API_SQL_BRIDGE_ALLOWLIST = {
     "app/api/labels.py": "temporary label route bridge SQL retained until label repositories are extracted",
 }
 
+POST_CUTOVER_SQL_FACADE_MODULES = {
+    "app/admin/audit_logs.py",
+    "app/admin/users.py",
+    "app/admin/review_reports.py",
+    "app/governance/workbench.py",
+    "app/reports/skill_reports.py",
+}
+
 
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if ".venv" not in path.parts)
@@ -45,6 +53,16 @@ def test_route_level_sql_bridge_usage_is_allowlisted() -> None:
 
     assert actual == set(API_SQL_BRIDGE_ALLOWLIST)
     assert all(reason.strip() for reason in API_SQL_BRIDGE_ALLOWLIST.values())
+
+
+def test_post_cutover_facade_modules_do_not_own_sql() -> None:
+    offenders = [
+        path
+        for path in sorted(POST_CUTOVER_SQL_FACADE_MODULES)
+        if _uses_sqlalchemy_text(SERVER_ROOT / path)
+    ]
+
+    assert offenders == []
 
 
 def test_no_sqlalchemy_declarative_orm_models_before_selective_orm_milestone() -> None:

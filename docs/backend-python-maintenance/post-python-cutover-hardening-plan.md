@@ -114,14 +114,14 @@ Current observations from the post-cutover scan:
 - Create: `docs/backend-python-maintenance/results/2026-06-12-admin-governance-query-boundaries.md`
 
 **Steps:**
-- [ ] Extract admin audit-log list/count SQL into `app/admin/audit_repository.py`.
-- [ ] Extract admin user list/detail/role mutation SQL into `app/admin/user_repository.py`.
-- [ ] Extract review/report list and moderation query SQL into `app/admin/review_report_repository.py`.
-- [ ] Extract governance workbench counters, pending task lists, and notification summary SQL into `app/governance/workbench_repository.py`.
-- [ ] Extract skill report submit/read helper SQL into `app/reports/report_repository.py`.
-- [ ] Keep platform-role and namespace-role checks in the existing policy helpers; do not bury auth decisions inside repositories.
-- [ ] Remove direct `text()` calls from the corresponding API route modules where possible.
-- [ ] Keep dynamic SQL construction parameterized; preserve existing filter behavior exactly.
+- [x] Extract admin audit-log list/count SQL into `app/admin/audit_repository.py`.
+- [x] Extract admin user list/detail/role mutation SQL into `app/admin/user_repository.py`.
+- [x] Extract review/report list and moderation query SQL into `app/admin/review_report_repository.py`.
+- [x] Extract governance workbench counters, pending task lists, and notification summary SQL into `app/governance/workbench_repository.py`.
+- [x] Extract skill report submit/read helper SQL into `app/reports/report_repository.py`.
+- [x] Keep platform-role and namespace-role checks in the existing policy helpers; do not bury auth decisions inside repositories.
+- [x] Remove direct `text()` calls from the corresponding API route modules where possible.
+- [x] Keep dynamic SQL construction parameterized; preserve existing filter behavior exactly.
 
 **Verify:**
 - `cd server-python; uv run pytest tests/test_admin_audit_logs.py tests/test_admin_user_management.py tests/test_admin_review_reports.py tests/test_admin_review_report_mutations.py tests/test_governance_workbench.py tests/test_skill_report_submit.py -q`
