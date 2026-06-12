@@ -16,6 +16,7 @@ from app.admin.labels import (
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles, require_platform_role
 from app.core.response import ok
 
 router = APIRouter()
@@ -36,8 +37,7 @@ async def _require_super_admin_user(request: Request, mock_user_id: str | None) 
     if user is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
     data = dict(user)
-    if "SUPER_ADMIN" not in {str(role) for role in data.get("platformRoles", [])}:
-        raise HTTPException(status_code=403, detail="label.definition.no_permission")
+    require_platform_role(data, "SUPER_ADMIN", detail="label.definition.no_permission")
     return data
 
 
@@ -62,7 +62,7 @@ async def list_admin_labels_route(
         data = await _resolve_result(
             reader(user)
             if reader is not None
-            else list_label_definitions(request.app.state.db_engine, platform_roles=[str(role) for role in user.get("platformRoles", [])])
+            else list_label_definitions(request.app.state.db_engine, platform_roles=platform_roles(user))
         )
     except AdminLabelError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -91,7 +91,7 @@ async def create_admin_label_route(
                 sort_order=int(payload.get("sortOrder") or 0),
                 translations=list(payload.get("translations") or []),
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
                 **_request_context(request),
             )
         )
@@ -118,7 +118,7 @@ async def update_admin_label_sort_order_route(
                 request.app.state.db_engine,
                 items=list(payload.get("items") or []),
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
                 **_request_context(request),
             )
         )
@@ -150,7 +150,7 @@ async def update_admin_label_route(
                 sort_order=int(payload.get("sortOrder") or 0),
                 translations=list(payload.get("translations") or []),
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
                 **_request_context(request),
             )
         )
@@ -177,7 +177,7 @@ async def delete_admin_label_route(
                 request.app.state.db_engine,
                 slug=slug,
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
                 **_request_context(request),
             )
         )

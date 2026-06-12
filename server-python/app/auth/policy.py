@@ -9,6 +9,20 @@ def is_api_token_principal(user: dict[str, Any]) -> bool:
     return user.get("oauthProvider") == "api_token"
 
 
+def platform_roles(user: dict[str, Any]) -> list[str]:
+    return sorted({str(role) for role in user.get("platformRoles") or [] if str(role)})
+
+
+def require_platform_role(user: dict[str, Any], role: str, *, detail: str) -> None:
+    if role not in set(platform_roles(user)):
+        raise HTTPException(status_code=403, detail=detail)
+
+
+def require_any_platform_role(user: dict[str, Any], roles: set[str], *, detail: str) -> None:
+    if set(platform_roles(user)).isdisjoint(roles):
+        raise HTTPException(status_code=403, detail=detail)
+
+
 def require_api_token_scope(user: dict[str, Any], scope: str) -> None:
     if not is_api_token_principal(user):
         return

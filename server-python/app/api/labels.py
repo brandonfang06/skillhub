@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 
 router = APIRouter()
@@ -109,7 +110,7 @@ def _normalize_label_slug(value: str | None) -> str:
 
 
 def _roles(user: dict[str, Any]) -> list[str]:
-    return [str(role) for role in user.get("platformRoles", [])]
+    return platform_roles(user)
 
 
 def _user_id(user: dict[str, Any]) -> str:

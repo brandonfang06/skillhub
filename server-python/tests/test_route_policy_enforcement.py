@@ -65,3 +65,25 @@ def test_admin_policy_rejects_api_token_principal_but_not_mock_or_session() -> N
 
     assert exc.value.status_code == 403
     assert exc.value.detail == "API token cannot access endpoint: /api/v1/admin/users"
+
+
+def test_platform_role_helpers_normalize_roles_and_preserve_route_error_details() -> None:
+    from app.auth.policy import platform_roles, require_any_platform_role, require_platform_role
+
+    user = {"platformRoles": ["", "USER", "SUPER_ADMIN", "USER"]}
+
+    assert platform_roles(user) == ["SUPER_ADMIN", "USER"]
+    require_platform_role(user, "SUPER_ADMIN", detail="error.admin.superAdminRequired")
+    require_any_platform_role(user, {"SKILL_ADMIN", "SUPER_ADMIN"}, detail="error.admin.skillAdminRequired")
+
+    with pytest.raises(HTTPException) as single_role_exc:
+        require_platform_role(user, "AUDITOR", detail="error.admin.auditRequired")
+
+    assert single_role_exc.value.status_code == 403
+    assert single_role_exc.value.detail == "error.admin.auditRequired"
+
+    with pytest.raises(HTTPException) as any_role_exc:
+        require_any_platform_role(user, {"SKILL_ADMIN", "AUDITOR"}, detail="error.admin.skillAdminRequired")
+
+    assert any_role_exc.value.status_code == 403
+    assert any_role_exc.value.detail == "error.admin.skillAdminRequired"

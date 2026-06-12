@@ -16,6 +16,7 @@ from app.admin.users import (
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 
 
@@ -42,14 +43,14 @@ async def _read_current_user(request: Request, mock_user_id: str | None) -> dict
 async def _require_admin_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
     user = await _read_current_user(request, mock_user_id)
     try:
-        require_user_admin([str(role) for role in user.get("platformRoles", [])])
+        require_user_admin(platform_roles(user))
     except AdminUserError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return user
 
 
 def _roles(user: dict[str, Any]) -> list[str]:
-    return [str(role) for role in user.get("platformRoles", [])]
+    return platform_roles(user)
 
 
 @router.get("/api/v1/admin/users")

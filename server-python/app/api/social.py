@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 from app.social.owned import list_my_owned_skills
 from app.social.clawhub_star import ClawHubStarError, clawhub_star_skill, clawhub_unstar_skill
@@ -268,17 +269,17 @@ async def list_my_owned_skills_route_data(
 ) -> dict[str, Any]:
     user = await _require_user_context(request, mock_user_id)
     user_id = str(user["userId"])
-    platform_roles = {str(role) for role in user.get("platformRoles", [])}
+    platform_role_set = set(platform_roles(user))
     normalized_page = _parse_non_negative_int(page, 0)
     normalized_size = _parse_positive_int(size, 10)
     reader = getattr(request.app.state, "my_skills_reader", None)
     data = await _resolve_result(
-        reader(user_id, platform_roles, normalized_page, normalized_size, filter_value, keyword, namespace)
+        reader(user_id, platform_role_set, normalized_page, normalized_size, filter_value, keyword, namespace)
         if reader is not None
         else list_my_owned_skills(
             request.app.state.db_engine,
             user_id=user_id,
-            platform_roles=platform_roles,
+            platform_roles=platform_role_set,
             page=normalized_page,
             size=normalized_size,
             filter_value=filter_value,

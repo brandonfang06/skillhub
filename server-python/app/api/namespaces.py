@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 from app.namespace.members import (
     NamespaceMemberReadError,
@@ -95,7 +96,7 @@ async def create_namespace_route(
                 display_name=str(payload.get("displayName") or ""),
                 description=payload.get("description"),
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
             )
         )
     except NamespaceMutationError as exc:

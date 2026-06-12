@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 
 from app.auth.context import resolve_current_user_or_401
-from app.auth.policy import require_api_token_scope
+from app.auth.policy import platform_roles, require_api_token_scope
 from app.core.config import get_settings
 from app.core.response import ok
 from app.publish.dry_run import (
@@ -226,10 +226,10 @@ async def publish_entries(
 ) -> tuple[PublishDryRunResult, PublishWriteResult, str]:
     user = await resolve_current_user(request, mock_user_id, authorization)
     resolved_visibility = normalize_visibility(visibility)
-    platform_roles = {str(role) for role in user.get("platformRoles", [])}
+    platform_role_set = set(platform_roles(user))
     publisher_id = str(user["userId"])
 
-    dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_roles)
+    dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_role_set)
     if not dry_run.valid:
         messages = dry_run.errors or dry_run.warnings
         raise HTTPException(status_code=400, detail=", ".join(messages))
@@ -241,7 +241,7 @@ async def publish_entries(
     if metadata is None:
         raise HTTPException(status_code=400, detail="error.skill.publish.skillMd.notFound")
 
-    namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_roles)
+    namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_role_set)
     settings = getattr(request.app.state, "settings", get_settings())
     replacement = await find_publish_replacement(
         request,
@@ -260,7 +260,7 @@ async def publish_entries(
         publisher_id=publisher_id,
         visibility=resolved_visibility,
         version=dry_run.resolved_version,
-        auto_publish="SUPER_ADMIN" in platform_roles,
+        auto_publish="SUPER_ADMIN" in platform_role_set,
         metadata=metadata_with_resolved_version(metadata, dry_run.resolved_version),
         entries=entries,
         storage_base_path=settings.storage_base_path,
@@ -313,7 +313,7 @@ async def validate_cli_publish(
         entries,
         str(user["userId"]),
         resolved_visibility,
-        {str(role) for role in user.get("platformRoles", [])},
+        set(platform_roles(user)),
     )
     return ok("response.success.read", dry_run_response(result), request)
 

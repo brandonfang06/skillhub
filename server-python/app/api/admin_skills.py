@@ -16,6 +16,7 @@ from app.admin.skill import (
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import require_any_platform_role, require_platform_role
 from app.core.response import ok
 
 
@@ -45,16 +46,12 @@ async def _read_current_user(request: Request, mock_user_id: str | None) -> dict
 
 
 def _require_super_admin(user: dict[str, object]) -> str:
-    roles = {str(role) for role in user.get("platformRoles", [])}
-    if "SUPER_ADMIN" not in roles:
-        raise HTTPException(status_code=403, detail="error.admin.superAdminRequired")
+    require_platform_role(user, "SUPER_ADMIN", detail="error.admin.superAdminRequired")
     return str(user["userId"])
 
 
 def _require_skill_admin_or_super_admin(user: dict[str, object]) -> str:
-    roles = {str(role) for role in user.get("platformRoles", [])}
-    if roles.isdisjoint({"SKILL_ADMIN", "SUPER_ADMIN"}):
-        raise HTTPException(status_code=403, detail="error.admin.skillAdminRequired")
+    require_any_platform_role(user, {"SKILL_ADMIN", "SUPER_ADMIN"}, detail="error.admin.skillAdminRequired")
     return str(user["userId"])
 
 

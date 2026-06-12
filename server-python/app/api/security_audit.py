@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 from app.security_audit import SecurityAuditReadError, list_security_audits
 
@@ -39,7 +40,7 @@ def _user_id(user: dict[str, Any]) -> str:
 
 
 def _roles(user: dict[str, Any]) -> list[str]:
-    return [str(role) for role in user.get("platformRoles", [])]
+    return platform_roles(user)
 
 
 @router.get("/api/v1/skills/{skill_id}/versions/{version_id}/security-audit")

@@ -19,6 +19,7 @@ from app.admin.review_reports import (
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 
 
@@ -43,7 +44,7 @@ async def _read_current_user(request: Request, mock_user_id: str | None) -> dict
 
 
 def _roles(user: dict[str, Any]) -> list[str]:
-    return [str(role) for role in user.get("platformRoles", [])]
+    return platform_roles(user)
 
 
 def _user_id(user: dict[str, Any]) -> str:

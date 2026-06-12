@@ -8,7 +8,13 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from app.auth.context import read_current_mock_user, resolve_current_user_or_401
-from app.auth.policy import is_api_token_principal, reject_api_token_principal_for_route, require_api_token_scope
+from app.auth.policy import (
+    is_api_token_principal,
+    platform_roles,
+    reject_api_token_principal_for_route,
+    require_api_token_scope,
+    require_platform_role,
+)
 from app.core.response import ok
 from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
@@ -196,8 +202,8 @@ async def hard_delete_skill_route_data(
     authorization: str | None,
 ) -> dict[str, Any]:
     user = await _read_hard_delete_user(request, route_scope, mock_user_id, authorization)
-    if route_scope == "v1" and "SUPER_ADMIN" not in {str(role) for role in user.get("platformRoles", [])}:
-        raise HTTPException(status_code=403, detail="error.admin.superAdminRequired")
+    if route_scope == "v1":
+        require_platform_role(user, "SUPER_ADMIN", detail="error.admin.superAdminRequired")
     delete_input = SkillHardDeleteInput(
         route_scope=route_scope,
         skill_id=skill_id,
@@ -205,7 +211,7 @@ async def hard_delete_skill_route_data(
         slug=slug,
         owner_id=owner_id,
         actor_user_id=str(user["userId"]),
-        actor_platform_roles=[str(role) for role in user.get("platformRoles", [])],
+        actor_platform_roles=platform_roles(user),
         storage_base_path=_settings_storage_base_path(request),
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,

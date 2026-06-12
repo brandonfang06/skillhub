@@ -10,6 +10,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from app.admin.audit_logs import AdminAuditLogError, list_admin_audit_logs, require_audit_reader
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles
 from app.core.response import ok
 
 
@@ -31,7 +32,7 @@ async def _require_audit_user(request: Request, mock_user_id: str | None) -> dic
     if user is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
     try:
-        require_audit_reader([str(role) for role in user.get("platformRoles", [])])
+        require_audit_reader(platform_roles(dict(user)))
     except AdminAuditLogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return dict(user)
@@ -83,7 +84,7 @@ async def list_admin_audit_logs_route(
             resource_id=resourceId,
             start_time=startTime,
             end_time=endTime,
-            platform_roles=[str(role) for role in user.get("platformRoles", [])],
+            platform_roles=platform_roles(user),
         )
     )
     return ok("\u83b7\u53d6\u6210\u529f", data, request)

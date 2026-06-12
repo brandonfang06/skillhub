@@ -9,6 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from app.admin.search import AdminSearchError, rebuild_search_index
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import read_current_mock_user
+from app.auth.policy import platform_roles, require_platform_role
 from app.core.response import ok
 
 router = APIRouter()
@@ -29,8 +30,7 @@ async def _require_super_admin_user(request: Request, mock_user_id: str | None) 
     if user is None:
         raise HTTPException(status_code=401, detail="error.auth.required")
     data = dict(user)
-    if "SUPER_ADMIN" not in {str(role) for role in data.get("platformRoles", [])}:
-        raise HTTPException(status_code=403, detail="admin.search.no_permission")
+    require_platform_role(data, "SUPER_ADMIN", detail="admin.search.no_permission")
     return data
 
 
@@ -59,7 +59,7 @@ async def rebuild_admin_search_route(
             await rebuild_search_index(
                 request.app.state.db_engine,
                 actor_user_id=str(user["userId"]),
-                platform_roles=[str(role) for role in user.get("platformRoles", [])],
+                platform_roles=platform_roles(user),
                 **context,
             )
     except AdminSearchError as exc:
