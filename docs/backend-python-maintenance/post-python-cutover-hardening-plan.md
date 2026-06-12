@@ -33,6 +33,7 @@ Current observations from the post-cutover scan:
 - Do not convert every SQL query to ORM. Reporting, search, and projection-heavy lists may remain explicit SQL if they stay behind repository/query functions.
 - Do not change external API envelopes, HTTP statuses, message keys, auth behavior, or E2E user flows unless a milestone explicitly calls out a bug fix.
 - Do not delete the Java `server/` tree as part of these milestones. Java reference retirement is a separate post-launch decision.
+- Do not blindly merge upstream Java backend changes and assume Python parity. Upstream intake requires a triage note and targeted Python follow-up when Java behavior, schema, API contracts, or security rules change.
 
 ## Milestone 1: Post-Cutover Architecture Inventory And Guardrails
 
@@ -231,7 +232,42 @@ Current observations from the post-cutover scan:
 
 **Done when:** The largest fake-DB tests share common fixtures and future repository changes require less test boilerplate churn.
 
-## Milestone 7: Full Post-Cutover Regression And Launch Readiness Note
+## Milestone 7: Upstream Sync And Python Parity Workflow
+
+**Purpose:** Define a repeatable workflow for tracking future open-source upstream changes after the Python cutover.
+
+**Files:**
+- Create: `docs/backend-python-maintenance/upstream-sync-workflow.md`
+- Create: `docs/backend-python-maintenance/results/2026-06-12-upstream-sync-workflow.md`
+- Create: `scripts/check-upstream-backend-drift.ps1`
+- Modify: `docs/backend-python-maintenance/README.md`
+- Modify: `server-python/AGENTS.md`
+
+**Steps:**
+- [ ] Confirm and document the canonical open-source upstream remote. If the current `upstream` remote is not the true upstream, rename or add the correct remote before relying on drift checks.
+- [ ] Define an intake cadence. Recommended default: check upstream before each hardening milestone batch and at least weekly while the project is pre-launch.
+- [ ] Add `scripts/check-upstream-backend-drift.ps1` that compares a chosen upstream ref against the local cutover branch and groups changed files into:
+  - Java backend contract or behavior.
+  - Database migration or schema.
+  - Frontend/API client expectations.
+  - Docs/config/CI.
+  - Scanner/CLI/other.
+- [ ] Document the required triage decision for each upstream batch:
+  - `port-to-python-now`: security, schema, API contract, auth/authorization, lifecycle, publish/review, or data-integrity behavior.
+  - `accept-non-backend`: docs/frontend/config changes that do not affect Python runtime behavior.
+  - `defer-with-reason`: non-critical Java-only implementation cleanup or behavior outside the product scope.
+  - `reject`: upstream change conflicts with the Python product direction.
+- [ ] Add a rule that Java behavior changes are ported by writing or updating Python tests first, then implementing Python behavior, then recording a result note.
+- [ ] Add a rule that upstream Java Flyway migrations must become Python-owned Alembic/app migration changes before launch.
+- [ ] Add a result note describing the workflow and the current remote state.
+
+**Verify:**
+- `powershell -ExecutionPolicy Bypass -File scripts/check-upstream-backend-drift.ps1 -BaseRef <upstream-ref> -HeadRef HEAD`
+- `git diff --check`
+
+**Done when:** Future upstream pulls have a written triage workflow and a script-assisted drift report so Python parity does not rely on memory or manual file browsing.
+
+## Milestone 8: Full Post-Cutover Regression And Launch Readiness Note
 
 **Purpose:** Re-run the full stack after maintainability changes and document the new baseline.
 
@@ -275,6 +311,7 @@ Current observations from the post-cutover scan:
 4. Milestone 4: Lifecycle, review, promotion, and publish transaction boundaries.
 5. Milestone 5: Selective ORM foundation for mutation aggregates.
 6. Milestone 6: Test fixture and support cleanup.
-7. Milestone 7: Full post-cutover regression and launch readiness note.
+7. Milestone 7: Upstream sync and Python parity workflow.
+8. Milestone 8: Full post-cutover regression and launch readiness note.
 
-This order keeps behavior stable: inventory first, route/query extraction second, transaction cleanup third, ORM only after the mutation boundaries are explicit.
+This order keeps behavior stable: inventory first, route/query extraction second, transaction cleanup third, ORM only after the mutation boundaries are explicit, and upstream intake before final launch readiness.
