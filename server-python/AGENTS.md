@@ -296,6 +296,12 @@ milestones.
   as repository extraction milestones complete.
 - Run `uv run python scripts/sql_inventory.py` before and after broad
   repository or ORM refactors.
+- Before each hardening milestone batch, fetch the canonical upstream and run
+  `scripts/check-upstream-backend-drift.ps1`. Triage upstream Java behavior,
+  schema, API contract, security, auth, lifecycle, publish/review, and
+  data-integrity changes before continuing local-only refactors.
+- Upstream Java Flyway migrations must become Python-owned schema migration
+  work before launch. Do not treat schema drift as a docs-only change.
 
 ### Java Parity Checklist
 

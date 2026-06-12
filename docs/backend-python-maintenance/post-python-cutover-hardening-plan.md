@@ -244,22 +244,22 @@ Current observations from the post-cutover scan:
 - Modify: `server-python/AGENTS.md`
 
 **Steps:**
-- [ ] Confirm and document the canonical open-source upstream remote. If the current `upstream` remote is not the true upstream, rename or add the correct remote before relying on drift checks.
-- [ ] Define an intake cadence. Recommended default: check upstream before each hardening milestone batch and at least weekly while the project is pre-launch.
-- [ ] Add `scripts/check-upstream-backend-drift.ps1` that compares a chosen upstream ref against the local cutover branch and groups changed files into:
+- [x] Confirm and document the canonical open-source upstream remote. If the current `upstream` remote is not the true upstream, rename or add the correct remote before relying on drift checks.
+- [x] Define an intake cadence. Recommended default: check upstream before each hardening milestone batch and at least weekly while the project is pre-launch.
+- [x] Add `scripts/check-upstream-backend-drift.ps1` that compares a chosen upstream ref against the local cutover branch and groups changed files into:
   - Java backend contract or behavior.
   - Database migration or schema.
   - Frontend/API client expectations.
   - Docs/config/CI.
   - Scanner/CLI/other.
-- [ ] Document the required triage decision for each upstream batch:
+- [x] Document the required triage decision for each upstream batch:
   - `port-to-python-now`: security, schema, API contract, auth/authorization, lifecycle, publish/review, or data-integrity behavior.
   - `accept-non-backend`: docs/frontend/config changes that do not affect Python runtime behavior.
   - `defer-with-reason`: non-critical Java-only implementation cleanup or behavior outside the product scope.
   - `reject`: upstream change conflicts with the Python product direction.
-- [ ] Add a rule that Java behavior changes are ported by writing or updating Python tests first, then implementing Python behavior, then recording a result note.
-- [ ] Add a rule that upstream Java Flyway migrations must become Python-owned Alembic/app migration changes before launch.
-- [ ] Add a result note describing the workflow and the current remote state.
+- [x] Add a rule that Java behavior changes are ported by writing or updating Python tests first, then implementing Python behavior, then recording a result note.
+- [x] Add a rule that upstream Java Flyway migrations must become Python-owned Alembic/app migration changes before launch.
+- [x] Add a result note describing the workflow and the current remote state.
 
 **Verify:**
 - `powershell -ExecutionPolicy Bypass -File scripts/check-upstream-backend-drift.ps1 -BaseRef <upstream-ref> -HeadRef HEAD`

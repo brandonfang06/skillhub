@@ -22,6 +22,19 @@ API runtime paths.
 
 - `docs/backend-python-maintenance/post-python-cutover-hardening-plan.md`
 
+## Upstream Sync
+
+- `docs/backend-python-maintenance/upstream-sync-workflow.md`
+- Before each hardening milestone batch, run:
+
+```powershell
+git fetch upstream --prune
+powershell -ExecutionPolicy Bypass -File scripts\check-upstream-backend-drift.ps1 -BaseRef upstream/main -HeadRef HEAD
+```
+
+Use the report to classify upstream changes as `port-to-python-now`,
+`accept-non-backend`, `defer-with-reason`, or `reject`.
+
 ## Results
 
 Milestone result notes live under `docs/backend-python-maintenance/results/`.
