@@ -98,14 +98,14 @@ def test_clawhub_skills_list_route_normalizes_invalid_pagination() -> None:
     assert seen[0]["sort"] == "newest"
 
 
-def test_clawhub_skills_list_post_remains_unowned_by_python_router() -> None:
+def test_clawhub_skills_list_post_is_owned_by_python_publish_router() -> None:
     app = create_app()
     app.state.clawhub_skills_list_reader = lambda **kwargs: portal_search_response()
 
     client = TestClient(app)
     response = client.post("/api/v1/skills")
 
-    assert response.status_code == 405
+    assert response.status_code == 422
 
 
 def test_clawhub_skill_detail_route_stays_owned_by_python() -> None:

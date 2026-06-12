@@ -5,6 +5,7 @@ description = "FastAPI backend for gradual SkillHub Java backend migration"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.18.4",
   "asyncpg>=0.30.0",
   "bcrypt>=5.0.0",
   "fastapi>=0.116.0",

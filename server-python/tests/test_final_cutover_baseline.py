@@ -31,7 +31,7 @@ def test_final_cutover_deferred_categories_are_explicit() -> None:
     plan = read_text(ROOT / "docs" / "backend-python-migration" / "migration-sequence-plan.md")
     final_plan = read_text(FINAL_PLAN)
 
-    categories = [
+    baseline_categories = [
         "Global route-policy enforcement outside the completed high-risk foundation slice",
         "Active notification SSE fanout",
         "Post-publish lifecycle/governance semantic audit",
@@ -39,9 +39,16 @@ def test_final_cutover_deferred_categories_are_explicit() -> None:
         "Java runtime deprecation from default local/staging paths",
     ]
 
-    for category in categories:
-        assert category in plan
+    for category in baseline_categories:
         assert category in final_plan
+
+    remaining_categories = [
+        "Global route-policy enforcement outside the completed high-risk foundation slice",
+        "Java runtime deprecation from default local/staging paths",
+    ]
+
+    for category in remaining_categories:
+        assert category in plan
 
 
 def test_milestone_114_is_recorded_as_completed() -> None:

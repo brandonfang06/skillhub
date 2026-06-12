@@ -203,6 +203,10 @@ capability bucket plus the remaining non-Java follow-ups.
 
 **Purpose:** Move database schema ownership from Java Flyway to Python before Java backend deprecation.
 
+**Status:** Completed. Python now has an Alembic baseline marker plus a migration command that can
+initialize a fresh database from the existing Flyway SQL baseline or stamp an existing Flyway-created
+schema without replaying legacy SQL. Java Flyway files remain read-only reference material.
+
 **Files:**
 - Create: `server-python/alembic.ini`
 - Create: `server-python/alembic/env.py`
@@ -213,13 +217,13 @@ capability bucket plus the remaining non-Java follow-ups.
 - Create: `docs/backend-python-migration/results/2026-06-12-python-schema-migration-takeover.md`
 
 **Implementation steps:**
-- [ ] Add a test that verifies Python migration metadata can stamp an existing Flyway-created schema.
-- [ ] Add a test that verifies a fresh database can be initialized by the Python migration command.
-- [ ] Add Alembic baseline without trying to recreate already-applied Flyway migrations.
-- [ ] Wire Python migration command into local dependency startup.
-- [ ] Wire Python migration command into staging/CI validation.
-- [ ] Keep Java Flyway files in `server/` read-only until the final Java deprecation milestone, then remove references only after the Python migration path is verified.
-- [ ] Verify:
+- [x] Add a test that verifies Python migration metadata can stamp an existing Flyway-created schema.
+- [x] Add a test that verifies a fresh database can be initialized by the Python migration command.
+- [x] Add Alembic baseline without trying to recreate already-applied Flyway migrations.
+- [x] Wire Python migration command into local dependency startup.
+- [x] Wire Python migration command into staging/CI validation.
+- [x] Keep Java Flyway files in `server/` read-only until the final Java deprecation milestone, then remove references only after the Python migration path is verified.
+- [x] Verify:
   - `uv run pytest tests/test_schema_migration_baseline.py -q`
   - Fresh local DB bootstrap.
   - Existing DB stamp/upgrade path.
@@ -274,7 +278,7 @@ Before declaring the Java-to-Python migration complete:
 - [ ] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
 - [x] SSE delivers active notifications.
 - [x] No broad deferred lifecycle/governance bucket remains.
-- [ ] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
+- [x] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
 - [ ] Java runtime deprecation from default local/staging paths is complete.
 - [ ] All result docs are written.
 - [ ] Final regression and smoke gates pass.

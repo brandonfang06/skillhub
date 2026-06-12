@@ -125,10 +125,14 @@ def test_build_parsed_metadata_json_keeps_frontmatter() -> None:
 @dataclass
 class FakeResult:
     row: dict[str, Any] | None = None
+    rows: list[dict[str, Any]] | None = None
     scalar: Any = None
 
     def mappings(self) -> "FakeResult":
         return self
+
+    def all(self) -> list[dict[str, Any]]:
+        return self.rows or []
 
     def one_or_none(self) -> dict[str, Any] | None:
         return self.row
@@ -197,6 +201,7 @@ async def test_create_publish_db_records_inserts_new_skill_version_files_and_upd
             FakeResult(row=None),
             FakeResult(row={"id": 7, "status": "ACTIVE"}),
             FakeResult(scalar=42),
+            FakeResult(rows=[]),
             FakeResult(),
             FakeResult(),
             FakeResult(),
@@ -284,6 +289,7 @@ async def test_create_publish_db_records_reuses_existing_skill_without_insert() 
     connection = FakeConnection(
         [
             FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(rows=[]),
             FakeResult(scalar=42),
             FakeResult(),
             FakeResult(),
@@ -298,7 +304,7 @@ async def test_create_publish_db_records_reuses_existing_skill_without_insert() 
     assert result.version_status == "UPLOADED"
     assert result.latest_version_updated
     assert not any("INSERT INTO skill (" in statement for statement in connection.statements)
-    assert connection.params[1]["status"] == "UPLOADED"
+    assert any(params.get("status") == "UPLOADED" for params in connection.params)
 
 
 @pytest.mark.anyio
@@ -316,6 +322,7 @@ async def test_create_publish_db_records_leaves_latest_version_for_pending_revie
     connection = FakeConnection(
         [
             FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(rows=[]),
             FakeResult(scalar=42),
             FakeResult(),
             FakeResult(),

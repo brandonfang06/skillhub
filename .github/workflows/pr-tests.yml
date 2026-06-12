@@ -66,6 +66,29 @@ jobs:
       - name: Run backend unit tests
         run: make test-backend
 
+  server-python-tests:
+    name: Server Python Tests
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: server-python/uv.lock
+
+      - name: Run Python schema migration tests
+        run: cd server-python && uv run pytest tests/test_schema_migration_baseline.py
+
   docs-build:
     name: Docs Build
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}

@@ -172,8 +172,9 @@ Current completed migration result examples:
 
 - Do not migrate an endpoint or route group unless it is listed or planned in
   `docs/backend-python-migration/route-registry.md` and a milestone plan.
-- Do not change database schema from Python during coexistence. Java Flyway
-  remains the schema owner.
+- Database schema ownership has moved to the Python migration command for the
+  final cutover path. Keep Java Flyway files under `server/` read-only, and add
+  future schema changes through explicit `server-python` migration plans.
 - Do not implement auth/session/OAuth/API-token behavior unless a written
   migration plan explicitly covers it.
 - Mutating endpoints may be migrated before production only when their

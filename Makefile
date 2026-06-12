@@ -1,4 +1,4 @@
-.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install db-reset dev dev-all dev-all-hybrid dev-all-down dev-all-reset dev-down dev-logs dev-python dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-hybrid test-e2e-smoke-frontend test-e2e-smoke-hybrid test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
+.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install db-migrate-python db-reset dev dev-all dev-all-hybrid dev-all-down dev-all-reset dev-down dev-logs dev-python dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-hybrid test-e2e-smoke-frontend test-e2e-smoke-hybrid test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
 
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
@@ -360,10 +360,13 @@ publish-cli-minor: ## 发布 CLI（minor 版本）- 本地 build+test → 推 re
 publish-cli-major: ## 发布 CLI（major 版本）- 本地 build+test → 推 release 分支 → 开 PR，合并后手动 tag 触发 CI
 	./scripts/publish-cli.sh major
 
+db-migrate-python: ## Run Python-owned schema migrations
+	cd server-python && uv run python -m app.migrations upgrade
+
 db-reset: ## 重置数据库
 	$(DEV_COMPOSE) down -v --remove-orphans
 	$(DEV_COMPOSE) up -d --wait --remove-orphans postgres
-	cd server && ./mvnw flyway:migrate -pl skillhub-app
+	$(MAKE) db-migrate-python
 
 validate-release-config: ## 校验发布环境变量文件（默认 .env.release）
 	./scripts/validate-release-config.sh .env.release
