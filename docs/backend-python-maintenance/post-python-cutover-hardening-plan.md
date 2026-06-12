@@ -146,13 +146,13 @@ Current observations from the post-cutover scan:
 - Create: `docs/backend-python-maintenance/results/2026-06-12-mutation-transaction-boundaries.md`
 
 **Steps:**
-- [ ] Add a small `UnitOfWork` helper that wraps `engine.begin()` and exposes the active connection without changing SQL semantics.
-- [ ] Add an audit writer helper for common audit-log insert fields used by lifecycle/review/promotion/publish paths.
-- [ ] Refactor lifecycle mutation functions to use the shared transaction boundary, keeping storage cleanup after database commit.
-- [ ] Refactor review approval/reject/withdraw paths to use the shared transaction boundary and audit writer.
-- [ ] Refactor promotion submit/approve/reject paths to use the shared transaction boundary and audit writer.
-- [ ] Refactor publish orchestration so DB transaction, scanner handoff, search document update, and after-commit cleanup boundaries are explicit in one flow.
-- [ ] Keep compensation behavior unchanged; any after-commit failure behavior must remain covered by existing tests.
+- [x] Add a small `UnitOfWork` helper that wraps `engine.begin()` and exposes the active connection without changing SQL semantics.
+- [x] Add an audit writer helper for common audit-log insert fields used by lifecycle/review/promotion/publish paths.
+- [x] Refactor lifecycle mutation functions to use the shared transaction boundary, keeping storage cleanup after database commit.
+- [x] Refactor review approval/reject/withdraw paths to use the shared transaction boundary and audit writer.
+- [x] Refactor promotion submit/approve/reject paths to use the shared transaction boundary and audit writer.
+- [x] Refactor publish orchestration so DB transaction, scanner handoff, search document update, and after-commit cleanup boundaries are explicit in one flow.
+- [x] Keep compensation behavior unchanged; any after-commit failure behavior must remain covered by existing tests.
 
 **Verify:**
 - `cd server-python; uv run pytest tests/test_skill_lifecycle_archive.py tests/test_skill_lifecycle_confirm_publish.py tests/test_skill_lifecycle_delete_version.py tests/test_skill_lifecycle_rerelease.py tests/test_skill_lifecycle_submit_review.py tests/test_skill_lifecycle_withdraw_review.py tests/test_skill_hard_delete.py -q`

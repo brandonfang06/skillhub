@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import text
+
+
+async def write_audit_log(
+    connection: Any,
+    *,
+    actor_user_id: str,
+    action: str,
+    target_type: str,
+    target_id: int,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    detail: dict[str, Any],
+    created_at: datetime,
+    detail_json: str | None = None,
+) -> None:
+    serialized_detail = detail_json if detail_json is not None else (json.dumps(detail) if detail else None)
+    await connection.execute(
+        text(
+            """
+            INSERT INTO audit_log (
+                actor_user_id, action, target_type, target_id, request_id,
+                client_ip, user_agent, detail_json, created_at
+            )
+            VALUES (
+                :actor_user_id, :action, :target_type, :target_id, :request_id,
+                :client_ip, :user_agent, :detail_json, :created_at
+            )
+            """
+        ),
+        {
+            "actor_user_id": actor_user_id,
+            "action": action,
+            "target_type": target_type,
+            "target_id": target_id,
+            "request_id": request_id,
+            "client_ip": client_ip,
+            "user_agent": user_agent,
+            "detail_json": serialized_detail,
+            "created_at": created_at,
+        },
+    )

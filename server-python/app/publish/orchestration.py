@@ -4,6 +4,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Protocol
 
+from app.db.unit_of_work import transaction_connection
+
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
 from app.publish.replacement import (
@@ -77,7 +79,7 @@ async def execute_publish_write(
     after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
     replacement_storage_keys: list[str] = []
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         if request.replacement is not None:
             await auto_withdraw_pending_review_versions(
                 connection,
@@ -153,7 +155,7 @@ async def execute_publish_write(
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False
     if request.replacement is not None and replacement_storage_keys:
-        async with engine.begin() as connection:
+        async with transaction_connection(engine) as connection:
             delete_result = await delete_local_storage_objects_or_record_compensation(
                 connection,
                 request.storage_base_path,

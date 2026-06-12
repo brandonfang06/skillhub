@@ -6,6 +6,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
+
+from app.audit.writer import write_audit_log
+from app.db.unit_of_work import transaction_connection
 from sqlalchemy.exc import IntegrityError
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
@@ -187,30 +190,18 @@ async def _insert_audit_log(
     detail_json: str | None,
     created_at: datetime,
 ) -> None:
-    await connection.execute(
-        text(
-            """
-            INSERT INTO audit_log (
-                actor_user_id, action, target_type, target_id, request_id,
-                client_ip, user_agent, detail_json, created_at
-            )
-            VALUES (
-                :actor_user_id, :action, :target_type, :target_id, :request_id,
-                :client_ip, :user_agent, :detail_json, :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "action": action,
-            "target_type": target_type,
-            "target_id": target_id,
-            "request_id": request_id,
-            "client_ip": client_ip,
-            "user_agent": user_agent,
-            "detail_json": detail_json,
-            "created_at": created_at,
-        },
+    await write_audit_log(
+        connection,
+        actor_user_id=actor_user_id,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        request_id=request_id,
+        client_ip=client_ip,
+        user_agent=user_agent,
+        detail={},
+        detail_json=detail_json,
+        created_at=created_at,
     )
 
 
@@ -358,7 +349,7 @@ async def _read_source_files(connection: Any, source_version_id: int) -> list[di
 
 async def submit_promotion(engine: Any, request: PromotionSubmitInput) -> dict[str, Any]:
     submitted_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         context = await _read_submit_context(connection, request)
         _assert_submit_context(context, request)
         await _assert_can_submit(connection, context, request)
@@ -417,7 +408,7 @@ async def submit_promotion(engine: Any, request: PromotionSubmitInput) -> dict[s
 
 async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict[str, Any]:
     reviewed_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         row = await _read_promotion_response_row(connection, request.promotion_id)
         if str(row["status"]) != "PENDING":
             raise PromotionWorkflowError("promotion.not_pending")
@@ -634,7 +625,7 @@ async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict
 
 async def reject_promotion(engine: Any, request: PromotionRejectInput) -> dict[str, Any]:
     reviewed_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         row = await _read_promotion_response_row(connection, request.promotion_id)
         if str(row["status"]) != "PENDING":
             raise PromotionWorkflowError("promotion.not_pending")

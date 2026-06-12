@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.audit.writer import write_audit_log
 from app.publish.scanner_result import scanner_type_db_value
 
 
@@ -212,33 +213,21 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
         )
 
     if plan.create_compat_audit:
-        await connection.execute(
-            text(
-                """
-                INSERT INTO audit_log (
-                    actor_user_id, action, target_type, target_id, request_id,
-                    client_ip, user_agent, detail_json, created_at
-                )
-                VALUES (
-                    :actor_user_id, :action, :target_type, :target_id, :request_id,
-                    :client_ip, :user_agent, :detail_json, :created_at
-                )
-                """
+        await write_audit_log(
+            connection,
+            actor_user_id=request.publisher_id,
+            action="COMPAT_PUBLISH",
+            target_type="SKILL_VERSION",
+            target_id=request.version_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail={},
+            detail_json=build_compat_publish_audit_detail(
+                namespace=request.compat_namespace or "",
+                slug=request.compat_slug,
             ),
-            {
-                "actor_user_id": request.publisher_id,
-                "action": "COMPAT_PUBLISH",
-                "target_type": "SKILL_VERSION",
-                "target_id": request.version_id,
-                "request_id": request.request_id,
-                "client_ip": request.client_ip,
-                "user_agent": request.user_agent,
-                "detail_json": build_compat_publish_audit_detail(
-                    namespace=request.compat_namespace or "",
-                    slug=request.compat_slug,
-                ),
-                "created_at": now,
-            },
+            created_at=now,
         )
 
     return PublishSideEffectResult(

@@ -7,6 +7,9 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.audit.writer import write_audit_log
+from app.db.unit_of_work import transaction_connection
+
 from app.admin.search import upsert_skill_search_document
 from sqlalchemy.exc import IntegrityError
 
@@ -73,6 +76,33 @@ def _detail_with_comment(comment: str | None) -> str | None:
     if comment is None or comment.strip() == "":
         return None
     return json.dumps({"comment": comment}, separators=(",", ":"))
+
+
+async def _write_review_audit(
+    connection: Any,
+    *,
+    actor_user_id: str,
+    action: str,
+    target_id: int,
+    request_id: str | None,
+    client_ip: str | None,
+    user_agent: str | None,
+    detail_json: str | None,
+    created_at: datetime,
+) -> None:
+    await write_audit_log(
+        connection,
+        actor_user_id=actor_user_id,
+        action=action,
+        target_type="REVIEW_TASK",
+        target_id=target_id,
+        request_id=request_id,
+        client_ip=client_ip,
+        user_agent=user_agent,
+        detail={},
+        detail_json=detail_json,
+        created_at=created_at,
+    )
 
 
 def _metadata_value(parsed_metadata_json: object, key: str) -> str | None:
@@ -302,7 +332,7 @@ async def _assert_can_submit(connection: Any, version_row: dict[str, Any], user_
 
 async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[str, Any]:
     submitted_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         version_row = await _read_review_submit_context(connection, request.skill_version_id, request.user_id)
         _assert_namespace_active(version_row)
         await _assert_can_submit(connection, version_row, request.user_id)
@@ -373,30 +403,16 @@ async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[st
         review_task_id = int(task_row["id"])
         task_submitted_at = task_row["submitted_at"]
 
-        await connection.execute(
-            text(
-                """
-                INSERT INTO audit_log (
-                    actor_user_id, action, target_type, target_id, request_id,
-                    client_ip, user_agent, detail_json, created_at
-                )
-                VALUES (
-                    :actor_user_id, :action, :target_type, :target_id, :request_id,
-                    :client_ip, :user_agent, :detail_json, :created_at
-                )
-                """
-            ),
-            {
-                "actor_user_id": request.user_id,
-                "action": "REVIEW_SUBMIT",
-                "target_type": "REVIEW_TASK",
-                "target_id": review_task_id,
-                "request_id": request.request_id,
-                "client_ip": request.client_ip,
-                "user_agent": request.user_agent,
-                "detail_json": json.dumps({"skillVersionId": int(request.skill_version_id)}, separators=(",", ":")),
-                "created_at": submitted_at,
-            },
+        await _write_review_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="REVIEW_SUBMIT",
+            target_id=review_task_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps({"skillVersionId": int(request.skill_version_id)}, separators=(",", ":")),
+            created_at=submitted_at,
         )
 
     return _review_submit_response(
@@ -409,7 +425,7 @@ async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[st
 
 async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[str, Any]:
     reviewed_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
         _assert_namespace_active(task)
@@ -514,30 +530,16 @@ async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[
             },
         )
 
-        await connection.execute(
-            text(
-                """
-                INSERT INTO audit_log (
-                    actor_user_id, action, target_type, target_id, request_id,
-                    client_ip, user_agent, detail_json, created_at
-                )
-                VALUES (
-                    :actor_user_id, :action, :target_type, :target_id, :request_id,
-                    :client_ip, :user_agent, :detail_json, :created_at
-                )
-                """
-            ),
-            {
-                "actor_user_id": request.reviewer_id,
-                "action": "REVIEW_APPROVE",
-                "target_type": "REVIEW_TASK",
-                "target_id": request.review_task_id,
-                "request_id": request.request_id,
-                "client_ip": request.client_ip,
-                "user_agent": request.user_agent,
-                "detail_json": _detail_with_comment(request.comment),
-                "created_at": reviewed_at,
-            },
+        await _write_review_audit(
+            connection,
+            actor_user_id=request.reviewer_id,
+            action="REVIEW_APPROVE",
+            target_id=request.review_task_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=_detail_with_comment(request.comment),
+            created_at=reviewed_at,
         )
         await upsert_skill_search_document(connection, int(task["skill_id"]))
 
@@ -546,7 +548,7 @@ async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[
 
 async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[str, Any]:
     reviewed_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
         _assert_namespace_active(task)
@@ -595,30 +597,16 @@ async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[st
             },
         )
 
-        await connection.execute(
-            text(
-                """
-                INSERT INTO audit_log (
-                    actor_user_id, action, target_type, target_id, request_id,
-                    client_ip, user_agent, detail_json, created_at
-                )
-                VALUES (
-                    :actor_user_id, :action, :target_type, :target_id, :request_id,
-                    :client_ip, :user_agent, :detail_json, :created_at
-                )
-                """
-            ),
-            {
-                "actor_user_id": request.reviewer_id,
-                "action": "REVIEW_REJECT",
-                "target_type": "REVIEW_TASK",
-                "target_id": request.review_task_id,
-                "request_id": request.request_id,
-                "client_ip": request.client_ip,
-                "user_agent": request.user_agent,
-                "detail_json": _detail_with_comment(request.comment),
-                "created_at": reviewed_at,
-            },
+        await _write_review_audit(
+            connection,
+            actor_user_id=request.reviewer_id,
+            action="REVIEW_REJECT",
+            target_id=request.review_task_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=_detail_with_comment(request.comment),
+            created_at=reviewed_at,
         )
 
     return _review_response(task, status="REJECTED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
@@ -626,7 +614,7 @@ async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[st
 
 async def withdraw_review_task(engine: Any, request: ReviewWithdrawInput) -> None:
     updated_at = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         if str(task["status"]) != "PENDING":
             raise ReviewApprovalError("review_task.not_found_for_version", status_code=404)
@@ -682,28 +670,14 @@ async def withdraw_review_task(engine: Any, request: ReviewWithdrawInput) -> Non
             },
         )
 
-        await connection.execute(
-            text(
-                """
-                INSERT INTO audit_log (
-                    actor_user_id, action, target_type, target_id, request_id,
-                    client_ip, user_agent, detail_json, created_at
-                )
-                VALUES (
-                    :actor_user_id, :action, :target_type, :target_id, :request_id,
-                    :client_ip, :user_agent, :detail_json, :created_at
-                )
-                """
-            ),
-            {
-                "actor_user_id": request.user_id,
-                "action": "REVIEW_WITHDRAW",
-                "target_type": "REVIEW_TASK",
-                "target_id": request.review_task_id,
-                "request_id": request.request_id,
-                "client_ip": request.client_ip,
-                "user_agent": request.user_agent,
-                "detail_json": json.dumps({"skillVersionId": int(task["skill_version_id"])}, separators=(",", ":")),
-                "created_at": updated_at,
-            },
+        await _write_review_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="REVIEW_WITHDRAW",
+            target_id=request.review_task_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps({"skillVersionId": int(task["skill_version_id"])}, separators=(",", ":")),
+            created_at=updated_at,
         )

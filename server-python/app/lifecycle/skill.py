@@ -9,6 +9,9 @@ from typing import Any
 import yaml
 from sqlalchemy import text
 
+from app.audit.writer import write_audit_log
+from app.db.unit_of_work import transaction_connection
+
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
@@ -209,30 +212,18 @@ async def _write_audit(
     detail_json: str | None,
     created_at: datetime,
 ) -> None:
-    await connection.execute(
-        text(
-            """
-            INSERT INTO audit_log (
-                actor_user_id, action, target_type, target_id, request_id,
-                client_ip, user_agent, detail_json, created_at
-            )
-            VALUES (
-                :actor_user_id, :action, :target_type, :target_id, :request_id,
-                :client_ip, :user_agent, :detail_json, :created_at
-            )
-            """
-        ),
-        {
-            "actor_user_id": actor_user_id,
-            "action": action,
-            "target_type": target_type,
-            "target_id": target_id,
-            "request_id": request_id,
-            "client_ip": client_ip,
-            "user_agent": user_agent,
-            "detail_json": detail_json,
-            "created_at": created_at,
-        },
+    await write_audit_log(
+        connection,
+        actor_user_id=actor_user_id,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        request_id=request_id,
+        client_ip=client_ip,
+        user_agent=user_agent,
+        detail={},
+        detail_json=detail_json,
+        created_at=created_at,
     )
 
 
@@ -246,7 +237,7 @@ async def _mutate_archive_status(
     detail_json: str | None,
 ) -> dict[str, Any]:
     timestamp = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
         _assert_can_manage(skill, request.user_id, namespace_role)
@@ -446,7 +437,7 @@ async def _read_latest_published_version_id(connection: Any, skill_id: int, excl
 
 async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) -> SkillVersionDeleteResult:
     timestamp = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
         _assert_can_manage(skill, request.user_id, namespace_role)
@@ -558,7 +549,7 @@ async def _read_pending_review_task_for_version(connection: Any, version_id: int
 
 async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdrawReviewInput) -> dict[str, Any]:
     timestamp = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         _assert_namespace_active(skill.get("namespace_status"))
 
@@ -621,7 +612,7 @@ async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdr
 
 async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublishInput) -> dict[str, Any]:
     timestamp = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
         _assert_can_manage(skill, request.user_id, namespace_role)
@@ -685,7 +676,7 @@ async def submit_skill_version_for_review(engine: Any, request: SkillSubmitRevie
         raise SkillLifecycleError("error.skill.review.visibility.invalid")
 
     timestamp = _now(request.now)
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
         _assert_can_manage(skill, request.user_id, namespace_role)
@@ -824,7 +815,7 @@ async def rerelease_skill_version(
     if not target_version:
         raise SkillLifecycleError("validation.required")
 
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         _assert_namespace_active(skill.get("namespace_status"))
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
@@ -884,7 +875,7 @@ async def rerelease_skill_version(
 
     if publish_writer is not None:
         publish_result = await publish_writer(write_input)
-        async with engine.begin() as connection:
+        async with transaction_connection(engine) as connection:
             await write_rerelease_audit(connection)
     else:
         publish_result = await execute_publish_write(engine, write_input, after_publish=write_rerelease_audit)
@@ -898,7 +889,7 @@ async def rerelease_skill_version(
 
 
 async def cleanup_deleted_version_storage(engine: Any, storage_base_path: str, result: SkillVersionDeleteResult) -> None:
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         await delete_local_storage_objects_or_record_compensation(
             connection,
             storage_base_path,

@@ -7,6 +7,9 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.audit.writer import write_audit_log
+from app.db.unit_of_work import transaction_connection
+
 from app.publish.replacement import (
     StorageDeleteCompensationInput,
     bundle_storage_key,
@@ -216,33 +219,21 @@ async def _delete_related_rows(connection: Any, request: SkillHardDeleteInput, s
         await connection.execute(text("DELETE FROM skill_file WHERE version_id = :version_id"), {"version_id": version_id})
     await connection.execute(text("DELETE FROM skill_version WHERE skill_id = :skill_id"), {"skill_id": skill_id})
     await connection.execute(text("DELETE FROM skill WHERE id = :skill_id"), {"skill_id": skill_id})
-    await connection.execute(
-        text(
-            """
-            INSERT INTO audit_log (
-                actor_user_id, action, target_type, target_id, request_id,
-                client_ip, user_agent, detail_json, created_at
-            )
-            VALUES (
-                :actor_user_id, :action, :target_type, :target_id, :request_id,
-                :client_ip, :user_agent, CAST(:detail_json AS jsonb), :created_at
-            )
-            """
+    await write_audit_log(
+        connection,
+        actor_user_id=request.actor_user_id,
+        action="DELETE_SKILL_HARD",
+        target_type="SKILL",
+        target_id=skill_id,
+        request_id=request.request_id,
+        client_ip=request.client_ip,
+        user_agent=request.user_agent,
+        detail={},
+        detail_json=json.dumps(
+            {"namespaceId": int(skill["namespace_id"]), "slug": str(skill["skill_slug"])},
+            separators=(",", ":"),
         ),
-        {
-            "actor_user_id": request.actor_user_id,
-            "action": "DELETE_SKILL_HARD",
-            "target_type": "SKILL",
-            "target_id": skill_id,
-            "request_id": request.request_id,
-            "client_ip": request.client_ip,
-            "user_agent": request.user_agent,
-            "detail_json": json.dumps(
-                {"namespaceId": int(skill["namespace_id"]), "slug": str(skill["skill_slug"])},
-                separators=(",", ":"),
-            ),
-            "created_at": timestamp,
-        },
+        created_at=timestamp,
     )
 
 
@@ -250,7 +241,7 @@ async def hard_delete_skill(engine: Any, request: SkillHardDeleteInput) -> dict[
     _require_v1_super_admin(request)
     storage_keys: list[str] = []
     target: dict[str, Any] | None = None
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         if request.skill_id is not None:
             target = await _read_skill_by_id(connection, request.skill_id)
         else:
@@ -267,7 +258,7 @@ async def hard_delete_skill(engine: Any, request: SkillHardDeleteInput) -> dict[
         await _delete_related_rows(connection, request, target, version_ids)
 
     if storage_keys:
-        async with engine.begin() as connection:
+        async with transaction_connection(engine) as connection:
             await delete_local_storage_objects_or_record_compensation(
                 connection,
                 request.storage_base_path,

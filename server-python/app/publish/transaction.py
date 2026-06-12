@@ -7,6 +7,8 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.db.unit_of_work import transaction_connection
+
 from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.storage import StoredPackageResult
@@ -110,7 +112,7 @@ def encode_jsonb(value: object) -> str:
 
 
 async def create_publish_db_records(engine: Any, request: PublishDbTransactionInput) -> PublishDbTransactionResult:
-    async with engine.begin() as connection:
+    async with transaction_connection(engine) as connection:
         prepared = await prepare_publish_db_records(
             connection,
             PublishDbPrepareInput(
