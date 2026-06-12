@@ -15,7 +15,7 @@ from app.admin.skill import (
     yank_skill_version_as_admin,
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
-from app.auth.context import read_current_mock_user
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import require_any_platform_role, require_platform_role
 from app.core.response import ok
 
@@ -33,15 +33,12 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _read_current_user(request: Request, mock_user_id: str | None) -> dict[str, object]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
+async def _read_current_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, object]:
+    data = await resolve_current_user_or_401(request, mock_user_id, authorization)
     return dict(data)
 
 
@@ -76,8 +73,9 @@ async def hide_skill_route_data(
     skill_id: int,
     body: AdminSkillActionRequest | None,
     mock_user_id: str | None,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    actor_user_id = _require_super_admin(await _read_current_user(request, mock_user_id))
+    actor_user_id = _require_super_admin(await _read_current_user(request, mock_user_id, authorization))
     governance_input = _build_input(request, skill_id, actor_user_id, body)
     writer = getattr(request.app.state, "admin_skill_hide_writer", None)
     try:
@@ -95,8 +93,9 @@ async def unhide_skill_route_data(
     request: Request,
     skill_id: int,
     mock_user_id: str | None,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    actor_user_id = _require_super_admin(await _read_current_user(request, mock_user_id))
+    actor_user_id = _require_super_admin(await _read_current_user(request, mock_user_id, authorization))
     governance_input = _build_input(request, skill_id, actor_user_id, None)
     writer = getattr(request.app.state, "admin_skill_unhide_writer", None)
     try:
@@ -115,8 +114,9 @@ async def yank_skill_version_route_data(
     version_id: int,
     body: AdminSkillActionRequest | None,
     mock_user_id: str | None,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    actor_user_id = _require_skill_admin_or_super_admin(await _read_current_user(request, mock_user_id))
+    actor_user_id = _require_skill_admin_or_super_admin(await _read_current_user(request, mock_user_id, authorization))
     governance_input = _build_input(request, version_id, actor_user_id, body)
     writer = getattr(request.app.state, "admin_skill_version_yank_writer", None)
     try:
@@ -139,7 +139,7 @@ async def hide_skill(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    return await hide_skill_route_data(request, skill_id, body, x_mock_user_id)
+    return await hide_skill_route_data(request, skill_id, body, x_mock_user_id, authorization)
 
 
 @router.post("/api/v1/admin/skills/{skill_id}/unhide")
@@ -150,7 +150,7 @@ async def unhide_skill(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    return await unhide_skill_route_data(request, skill_id, x_mock_user_id)
+    return await unhide_skill_route_data(request, skill_id, x_mock_user_id, authorization)
 
 
 @router.post("/api/v1/admin/skills/versions/{version_id}/yank")
@@ -162,4 +162,4 @@ async def yank_skill_version(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    return await yank_skill_version_route_data(request, version_id, body, x_mock_user_id)
+    return await yank_skill_version_route_data(request, version_id, body, x_mock_user_id, authorization)

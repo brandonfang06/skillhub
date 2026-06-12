@@ -12,7 +12,7 @@ from app.auth.account_merge import (
     initiate_account_merge,
     verify_account_merge,
 )
-from app.auth.context import read_mock_user_or_401
+from app.auth.context import resolve_current_user_or_401
 from app.core.response import ok
 
 router = APIRouter()
@@ -25,7 +25,7 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 async def _current_user_id(request: Request, mock_user_id: str | None) -> str:
-    user = await read_mock_user_or_401(request, mock_user_id)
+    user = await resolve_current_user_or_401(request, mock_user_id, None)
     return str(user["userId"])
 
 

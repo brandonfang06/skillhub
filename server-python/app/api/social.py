@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from app.auth.context import read_current_mock_user
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
 from app.core.response import ok
 from app.social.owned import list_my_owned_skills
@@ -38,14 +38,12 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 async def _read_optional_user_id(request: Request, mock_user_id: str | None) -> str | None:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        return None
-
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if data is None:
-        return None
+    try:
+        data = await resolve_current_user_or_401(request, mock_user_id, None)
+    except HTTPException as exc:
+        if exc.status_code == 401 and (mock_user_id is None or mock_user_id.strip() == ""):
+            return None
+        raise
     return str(data["userId"])
 
 
@@ -57,15 +55,7 @@ async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
 
 
 async def _require_user_context(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return dict(data)
+    return dict(await resolve_current_user_or_401(request, mock_user_id, None))
 
 
 def _star_input(skill_id: int, user_id: str) -> SkillStarInput:

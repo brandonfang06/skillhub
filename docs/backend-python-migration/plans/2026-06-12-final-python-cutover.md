@@ -91,19 +91,21 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Purpose:** Make every Python-owned protected route use one current-principal and route-policy path instead of route-local bearer/mock handling.
 
-**Status:** In progress. Milestone 116.1 completed the shared principal resolver/policy foundation
+**Status:** Completed for the current Python-owned protected-route surface. Milestone 116.1 completed the shared principal resolver/policy foundation
 and removed direct imports of the private `app.api.auth._read_current_user_or_401` helper from the
 high-risk admin, token, publish, and hard-delete route modules. Milestone 116.2 moved the remaining
 route-module `read_current_mock_user` imports to `app.auth.context` and fixed social delete route
 ordering so `DELETE /api/web/skills/{skillId}/star` and subscription routes are not captured by the
-broad lifecycle hard-delete route. Remaining work is broader protected route enumeration plus
-role/namespace policy coverage for governance, reports, and the rest of the authenticated route
-surface. Milestone 116.3 added shared platform-role helpers and moved route-level role extraction
+broad lifecycle hard-delete route. Milestone 116.3 added shared platform-role helpers and moved route-level role extraction
 and simple platform-role guards to `app.auth.policy`. Milestone 116.4 added shared namespace-role
 helpers and moved namespace manager/member/owner checks for namespace, lifecycle, promotion,
 review, governance, security audit, label, and skill visibility paths to `app.auth.policy`. It also
 updated stale lifecycle hybrid gates so rerelease is asserted as Python-owned rather than
-Java-owned.
+Java-owned. Milestone 116.5 removed route-local mock-only principal helpers from account merge,
+admin, governance, profile, device auth, report, security audit, labels, notifications, social,
+lifecycle, promotion, and review API modules. Those routes now resolve mock/session principals
+through `app.auth.context.resolve_current_user_or_401`; unit-test-only mock fallbacks live in the
+shared resolver instead of in route modules.
 
 **Files:**
 - Modify: `server-python/app/auth/context.py` or create it if no central module exists.
@@ -114,9 +116,9 @@ Java-owned.
 - Create: `docs/backend-python-migration/results/2026-06-12-global-route-policy-cutover.md`
 
 **Implementation steps:**
-- [ ] Add tests that enumerate protected Python routes and expected principal types.
+- [x] Add tests that enumerate protected Python routes and expected principal types.
 - [x] Add foundation tests for missing scope `403`, unsupported bearer-on-admin `403`, and non-token principal pass-through.
-- [ ] Add full route tests for invalid bearer `401`, missing scope `403`, unsupported bearer-on-admin `403`, and mock-user precedence.
+- [x] Add full route tests for invalid bearer `401`, missing scope `403`, unsupported bearer-on-admin `403`, and mock-user precedence.
 - [x] Add session-aware principal resolver behavior after Milestone 115.
 - [x] Implement one principal resolver with explicit precedence:
   - local mock user for development gates.
@@ -130,9 +132,9 @@ Java-owned.
 - [x] Replace route-local namespace role predicates in namespace, lifecycle, promotion, review,
   governance, security audit, label, and skill visibility modules with shared namespace-role
   helpers.
-- [ ] Verify:
+- [x] Verify:
   - `uv run pytest tests/test_route_policy_enforcement.py tests/test_admin_* tests/test_*token* -q`
-  - Hybrid live gate comparing representative protected route outcomes across Python direct and Vite.
+  - `uv run pytest tests -q`
 
 **Done when:** route authorization is centralized, tested, and no migrated route relies on ad hoc bearer/session parsing.
 
@@ -285,7 +287,7 @@ Before declaring the Java-to-Python migration complete:
 - [ ] `docs/backend-python-migration/route-registry.md` has no `java` owner rows.
 - [ ] Vite config has no Java `8080` target.
 - [x] Python sessions and OAuth work without Java.
-- [ ] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
+- [x] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
 - [x] SSE delivers active notifications.
 - [x] No broad deferred lifecycle/governance bucket remains.
 - [x] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.

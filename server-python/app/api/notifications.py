@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from app.auth.context import read_current_mock_user
+from app.auth.context import resolve_current_user_or_401
 from app.core.response import ok
 from app.notifications.fanout import format_sse_comment, format_sse_event
 from app.notifications.service import (
@@ -38,13 +38,7 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    data = await resolve_current_user_or_401(request, mock_user_id, None)
     return str(data["userId"])
 
 

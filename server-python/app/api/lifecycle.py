@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from app.auth.context import read_current_mock_user, resolve_current_user_or_401
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import (
     is_api_token_principal,
     platform_roles,
@@ -63,19 +63,9 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-def _require_mock_user(mock_user_id: str | None) -> str:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return mock_user_id.strip()
-
-
-async def _read_current_user(request: Request, mock_user_id: str | None) -> dict[str, object]:
-    user_id = _require_mock_user(mock_user_id)
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    data = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return dict(data)
+async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
+    user = await resolve_current_user_or_401(request, mock_user_id, None)
+    return str(user["userId"])
 
 
 async def _read_hard_delete_user(
@@ -124,7 +114,7 @@ async def archive_skill_route_data(
     body: SkillArchiveRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     archive_input = _build_input(request, namespace, slug, body, user_id)
     writer = getattr(request.app.state, "skill_archive_writer", None)
     try:
@@ -142,7 +132,7 @@ async def unarchive_skill_route_data(
     slug: str,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     archive_input = _build_input(request, namespace, slug, None, user_id)
     writer = getattr(request.app.state, "skill_unarchive_writer", None)
     try:
@@ -161,7 +151,7 @@ async def delete_skill_version_route_data(
     version: str,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     delete_input = SkillVersionDeleteInput(
         namespace=namespace,
         slug=slug,
@@ -267,7 +257,7 @@ async def withdraw_skill_version_review_route_data(
     version: str,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     withdraw_input = SkillVersionWithdrawReviewInput(
         namespace=namespace,
         slug=slug,
@@ -296,7 +286,7 @@ async def confirm_publish_route_data(
     body: SkillConfirmPublishRequest,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     confirm_input = SkillConfirmPublishInput(
         namespace=namespace,
         slug=slug,
@@ -325,7 +315,7 @@ async def submit_review_route_data(
     body: SkillSubmitReviewRequest,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     submit_input = SkillSubmitReviewInput(
         namespace=namespace,
         slug=slug,
@@ -356,7 +346,7 @@ async def rerelease_route_data(
     body: SkillRereleaseRequest,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     settings = getattr(request.app.state, "settings", None)
     rerelease_input = SkillRereleaseInput(
         namespace=namespace,

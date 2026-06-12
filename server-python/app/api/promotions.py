@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, ValidationError
 
+from app.auth.context import resolve_current_user_or_401
 from app.core.response import ok
 from app.promotion.query import (
     PromotionListQuery,
@@ -51,10 +52,9 @@ async def _resolve_writer_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-def _require_mock_user(mock_user_id: str | None) -> str:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return mock_user_id.strip()
+async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
+    user = await resolve_current_user_or_401(request, mock_user_id, None)
+    return str(user["userId"])
 
 
 async def list_promotions_route_data(
@@ -64,7 +64,7 @@ async def list_promotions_route_data(
     size: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "promotion_list_reader", None)
     try:
         if reader is not None:
@@ -85,7 +85,7 @@ async def list_pending_promotions_route_data(
     size: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "promotion_pending_reader", None)
     try:
         if reader is not None:
@@ -102,7 +102,7 @@ async def get_promotion_detail_route_data(
     promotion_id: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "promotion_detail_reader", None)
     try:
         if reader is not None:
@@ -119,7 +119,7 @@ async def submit_promotion_route_data(
     body: dict[str, Any] | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     if body is None:
         raise HTTPException(status_code=422, detail="body.required")
     try:
@@ -152,7 +152,7 @@ async def reject_promotion_route_data(
     body: PromotionActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     promotion_input = PromotionRejectInput(
         promotion_id=promotion_id,
         reviewer_id=user_id,
@@ -178,7 +178,7 @@ async def approve_promotion_route_data(
     body: PromotionActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     promotion_input = PromotionApproveInput(
         promotion_id=promotion_id,
         reviewer_id=user_id,

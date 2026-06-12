@@ -18,7 +18,7 @@ from app.admin.review_reports import (
     resolve_admin_skill_report,
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
-from app.auth.context import read_current_mock_user
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
 from app.core.response import ok
 
@@ -32,14 +32,12 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _read_current_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    user = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
+async def _read_current_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    user = await resolve_current_user_or_401(request, mock_user_id, authorization)
     return dict(user)
 
 
@@ -78,8 +76,12 @@ def _request_meta(request: Request) -> dict[str, str | None]:
     }
 
 
-async def _require_skill_report_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    user = await _read_current_user(request, mock_user_id)
+async def _require_skill_report_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    user = await _read_current_user(request, mock_user_id, authorization)
     try:
         require_skill_report_reader(_roles(user))
     except AdminReviewReportError as exc:
@@ -87,8 +89,12 @@ async def _require_skill_report_user(request: Request, mock_user_id: str | None)
     return user
 
 
-async def _require_profile_review_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    user = await _read_current_user(request, mock_user_id)
+async def _require_profile_review_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    user = await _read_current_user(request, mock_user_id, authorization)
     try:
         require_profile_review_reader(_roles(user))
     except AdminReviewReportError as exc:
@@ -106,7 +112,7 @@ async def list_admin_skill_reports_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_skill_report_user(request, x_mock_user_id)
+    user = await _require_skill_report_user(request, x_mock_user_id, authorization)
     payload = {"status": status, "page": page, "size": size}
     reader = getattr(request.app.state, "admin_skill_report_reader", None)
     try:
@@ -135,7 +141,7 @@ async def resolve_admin_skill_report_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_skill_report_user(request, x_mock_user_id)
+    user = await _require_skill_report_user(request, x_mock_user_id, authorization)
     payload = _payload(body)
     meta = _request_meta(request)
     writer = getattr(request.app.state, "admin_skill_report_resolver", None)
@@ -169,7 +175,7 @@ async def dismiss_admin_skill_report_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_skill_report_user(request, x_mock_user_id)
+    user = await _require_skill_report_user(request, x_mock_user_id, authorization)
     payload = _payload(body)
     meta = _request_meta(request)
     writer = getattr(request.app.state, "admin_skill_report_dismisser", None)
@@ -204,7 +210,7 @@ async def list_admin_profile_reviews_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_profile_review_user(request, x_mock_user_id)
+    user = await _require_profile_review_user(request, x_mock_user_id, authorization)
     payload = {"status": status, "page": page, "size": size, "sortDirection": sortDirection}
     reader = getattr(request.app.state, "admin_profile_review_reader", None)
     try:
@@ -233,7 +239,7 @@ async def approve_admin_profile_review_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_profile_review_user(request, x_mock_user_id)
+    user = await _require_profile_review_user(request, x_mock_user_id, authorization)
     meta = _request_meta(request)
     writer = getattr(request.app.state, "admin_profile_review_approver", None)
     try:
@@ -264,7 +270,7 @@ async def reject_admin_profile_review_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_profile_review_user(request, x_mock_user_id)
+    user = await _require_profile_review_user(request, x_mock_user_id, authorization)
     payload = _payload(body)
     comment = payload.get("comment")
     if not isinstance(comment, str) or comment.strip() == "":

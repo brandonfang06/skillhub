@@ -15,7 +15,7 @@ from app.admin.users import (
     update_admin_user_status,
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
-from app.auth.context import read_current_mock_user
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
 from app.core.response import ok
 
@@ -29,19 +29,21 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _read_current_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    user_id = mock_user_id.strip()
-    reader = getattr(request.app.state, "auth_me_reader", None)
-    user = await _resolve_result(reader(user_id)) if reader is not None else await read_current_mock_user(request.app.state.db_engine, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
+async def _read_current_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    user = await resolve_current_user_or_401(request, mock_user_id, authorization)
     return dict(user)
 
 
-async def _require_admin_user(request: Request, mock_user_id: str | None) -> dict[str, Any]:
-    user = await _read_current_user(request, mock_user_id)
+async def _require_admin_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> dict[str, Any]:
+    user = await _read_current_user(request, mock_user_id, authorization)
     try:
         require_user_admin(platform_roles(user))
     except AdminUserError as exc:
@@ -64,7 +66,7 @@ async def list_admin_users_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     reader = getattr(request.app.state, "admin_user_reader", None)
     payload = {"search": search, "status": status, "page": page, "size": size}
     try:
@@ -94,7 +96,7 @@ async def update_admin_user_role_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     writer = getattr(request.app.state, "admin_user_role_writer", None)
     try:
         data = await _resolve_result(
@@ -140,7 +142,7 @@ async def update_admin_user_status_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     return await _update_status_response(request, user_id, str(payload.get("status") or ""), user)
 
 
@@ -152,7 +154,7 @@ async def approve_admin_user_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     return await _update_status_response(request, user_id, "ACTIVE", user)
 
 
@@ -164,7 +166,7 @@ async def disable_admin_user_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     return await _update_status_response(request, user_id, "DISABLED", user)
 
 
@@ -176,7 +178,7 @@ async def enable_admin_user_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     return await _update_status_response(request, user_id, "ACTIVE", user)
 
 
@@ -188,7 +190,7 @@ async def trigger_admin_user_password_reset_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
-    user = await _require_admin_user(request, x_mock_user_id)
+    user = await _require_admin_user(request, x_mock_user_id, authorization)
     writer = getattr(request.app.state, "admin_user_password_reset_writer", None)
     sender = getattr(request.app.state, "admin_password_reset_sender", None)
     try:

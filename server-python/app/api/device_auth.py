@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import text
 
-from app.auth.context import read_mock_user_or_401
+from app.auth.context import resolve_current_user_or_401
 from app.auth.device import (
     DeviceAuthError,
     RedisDeviceStore,
@@ -95,7 +95,7 @@ async def authorize_device_route(
     payload: dict[str, Any],
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
-    user = await read_mock_user_or_401(request, mock_user_id)
+    user = await resolve_current_user_or_401(request, mock_user_id, None)
     user_id = str(user["userId"])
     authorizer = getattr(request.app.state, "device_code_authorizer", None)
     try:

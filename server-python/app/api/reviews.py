@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from app.auth.context import resolve_current_user_or_401
 from app.core.response import ok
 from app.review.approval import (
     ReviewApprovalError,
@@ -56,10 +57,9 @@ async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-def _require_mock_user(mock_user_id: str | None) -> str:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return mock_user_id.strip()
+async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
+    user = await resolve_current_user_or_401(request, mock_user_id, None)
+    return str(user["userId"])
 
 
 def _validate_review_file_path(path: str | None) -> str:
@@ -74,7 +74,7 @@ async def approve_review(
     body: ReviewActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
 
     approval_input = ReviewApproveInput(
         review_task_id=review_task_id,
@@ -100,7 +100,7 @@ async def reject_review(
     body: ReviewActionRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
 
     reject_input = ReviewRejectInput(
         review_task_id=review_task_id,
@@ -125,7 +125,7 @@ async def withdraw_review(
     review_task_id: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
 
     withdraw_input = ReviewWithdrawInput(
         review_task_id=review_task_id,
@@ -149,7 +149,7 @@ async def submit_review(
     body: ReviewSubmitRequest,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
 
     submit_input = ReviewSubmitInput(
         skill_version_id=body.skillVersionId,
@@ -177,7 +177,7 @@ async def list_reviews(
     sort_direction: str,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_list_reader", None)
     try:
         if reader is not None:
@@ -215,7 +215,7 @@ async def list_pending_review_route_data(
     size: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_pending_reader", None)
     try:
         if reader is not None:
@@ -239,7 +239,7 @@ async def list_my_submissions_route_data(
     size: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_my_submissions_reader", None)
     try:
         if reader is not None:
@@ -261,7 +261,7 @@ async def get_review_detail(
     review_task_id: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_detail_reader", None)
     try:
         if reader is not None:
@@ -282,7 +282,7 @@ async def get_review_skill_detail(
     review_task_id: int,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_skill_detail_reader", None)
     try:
         if reader is not None:
@@ -312,7 +312,7 @@ async def get_review_file_content(
     file_path: str | None,
     mock_user_id: str | None,
 ) -> Response:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     normalized_path = _validate_review_file_path(file_path)
     reader = getattr(request.app.state, "review_file_reader", None)
     try:
@@ -355,7 +355,7 @@ async def get_review_download(
     review_task_id: int,
     mock_user_id: str | None,
 ) -> Response:
-    user_id = _require_mock_user(mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "review_download_reader", None)
     try:
         if reader is not None:

@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -32,6 +33,79 @@ def test_authenticated_route_modules_do_not_import_auth_api_principal_helpers() 
     assert offenders == []
 
 
+def test_remaining_protected_routes_use_shared_principal_resolver() -> None:
+    protected_modules = [
+        "server-python/app/api/account_merge.py",
+        "server-python/app/api/admin_audit_logs.py",
+        "server-python/app/api/admin_review_reports.py",
+        "server-python/app/api/admin_search.py",
+        "server-python/app/api/admin_skills.py",
+        "server-python/app/api/admin_users.py",
+        "server-python/app/api/governance.py",
+        "server-python/app/api/user_profile.py",
+    ]
+    forbidden_imports = [
+        "from app.auth.context import read_current_mock_user",
+        "from app.auth.context import read_mock_user_or_401",
+    ]
+
+    offenders: list[str] = []
+    for relative in protected_modules:
+        source = (ROOT / relative).read_text(encoding="utf-8")
+        for forbidden in forbidden_imports:
+            if forbidden in source:
+                offenders.append(f"{relative}: {forbidden}")
+
+    assert offenders == []
+
+
+def test_remaining_user_action_routes_use_shared_principal_resolver() -> None:
+    protected_modules = [
+        "server-python/app/api/device_auth.py",
+        "server-python/app/api/labels.py",
+        "server-python/app/api/notifications.py",
+        "server-python/app/api/security_audit.py",
+        "server-python/app/api/skill_reports.py",
+        "server-python/app/api/social.py",
+    ]
+    forbidden_imports = [
+        "from app.auth.context import read_current_mock_user",
+        "from app.auth.context import read_mock_user_or_401",
+    ]
+
+    offenders: list[str] = []
+    for relative in protected_modules:
+        source = (ROOT / relative).read_text(encoding="utf-8")
+        for forbidden in forbidden_imports:
+            if forbidden in source:
+                offenders.append(f"{relative}: {forbidden}")
+
+    assert offenders == []
+
+
+def test_workflow_route_modules_use_shared_principal_resolver() -> None:
+    workflow_modules = [
+        "server-python/app/api/lifecycle.py",
+        "server-python/app/api/promotions.py",
+        "server-python/app/api/reviews.py",
+    ]
+    forbidden_fragments = [
+        "from app.auth.context import read_current_mock_user",
+        "from app.auth.context import read_mock_user_or_401",
+        "def _require_mock_user(",
+        "_require_mock_user(",
+    ]
+
+    offenders: list[str] = []
+    for relative in workflow_modules:
+        source = (ROOT / relative).read_text(encoding="utf-8")
+        for forbidden in forbidden_fragments:
+            if forbidden in source:
+                offenders.append(f"{relative}: {forbidden}")
+
+    assert offenders == []
+
+
 def test_api_token_scope_policy_allows_mock_and_session_principals() -> None:
     from app.auth.policy import require_api_token_scope
 
@@ -40,6 +114,39 @@ def test_api_token_scope_policy_allows_mock_and_session_principals() -> None:
 
     require_api_token_scope(mock_user, "token:manage")
     require_api_token_scope(session_user, "token:manage")
+
+
+def test_shared_principal_resolver_preserves_mock_header_unit_test_fallback() -> None:
+    import asyncio
+
+    from app.auth.context import resolve_current_user_or_401
+
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()), cookies={}, headers={})
+
+    user = asyncio.run(resolve_current_user_or_401(request, "route-unit-user", None))
+
+    assert user == {
+        "userId": "route-unit-user",
+        "displayName": "route-unit-user",
+        "email": "",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["USER"],
+    }
+
+
+def test_shared_principal_resolver_preserves_mock_header_with_stub_engine() -> None:
+    import asyncio
+
+    from app.auth.context import resolve_current_user_or_401
+
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(db_engine=object())), cookies={}, headers={})
+
+    user = asyncio.run(resolve_current_user_or_401(request, "stub-engine-user", None))
+
+    assert user["userId"] == "stub-engine-user"
+    assert user["oauthProvider"] == "mock"
+    assert user["platformRoles"] == ["USER"]
 
 
 def test_api_token_scope_policy_rejects_missing_scope_only_for_api_tokens() -> None:

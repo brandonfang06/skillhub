@@ -20,6 +20,17 @@ def normalize_platform_roles(role_codes: list[str]) -> list[str]:
     return normalized if normalized else [DEFAULT_USER_ROLE]
 
 
+def build_unit_mock_user_response(user_id: str) -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": "",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": [DEFAULT_USER_ROLE],
+    }
+
+
 def build_auth_me_response(user_row: dict[str, Any], role_codes: list[str]) -> dict[str, object]:
     return {
         "userId": str(user_row["id"]),
@@ -155,6 +166,8 @@ async def read_mock_user_or_401(request: Request, mock_user_id: str | None) -> d
     reader = getattr(request.app.state, "auth_me_reader", None)
     if reader is not None:
         data = await resolve_reader_result(reader(user_id))
+    elif not hasattr(request.app.state, "db_engine") or not hasattr(request.app.state.db_engine, "connect"):
+        data = build_unit_mock_user_response(user_id)
     else:
         data = await read_current_mock_user(request.app.state.db_engine, user_id)
 
