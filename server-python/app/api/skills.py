@@ -16,6 +16,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.auth.policy import is_namespace_manager, is_namespace_member
 from app.core.response import ok
 
 router = APIRouter()
@@ -121,7 +122,7 @@ async def read_namespace_role(
 
 def can_manage_lifecycle_for_row(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> bool:
     return current_user_id is not None and (
-        str(row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+        str(row["owner_id"]) == str(current_user_id) or is_namespace_manager(namespace_role)
     )
 
 
@@ -132,7 +133,7 @@ def can_access_skill_row(row: dict[str, Any], current_user_id: str | None, names
     if visibility == "PUBLIC":
         return True
     if visibility == "NAMESPACE_ONLY":
-        return current_user_id is not None and namespace_role is not None
+        return current_user_id is not None and is_namespace_member(namespace_role)
     if visibility == "PRIVATE":
         return can_manage_lifecycle_for_row(row, current_user_id, namespace_role)
     return False
@@ -328,7 +329,7 @@ def build_skill_detail_response(
     current_user_id = row.get("current_user_id")
     namespace_role = row.get("namespace_role")
     can_manage_lifecycle = current_user_id is not None and (
-        str(row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+        str(row["owner_id"]) == str(current_user_id) or is_namespace_manager(namespace_role)
     )
     can_submit_promotion = (
         can_manage_lifecycle
@@ -1304,7 +1305,7 @@ async def read_skill_detail(
         ).mappings().one_or_none()
 
         can_manage_lifecycle = current_user_id is not None and (
-            str(skill_row["owner_id"]) == str(current_user_id) or namespace_role in {"ADMIN", "OWNER"}
+            str(skill_row["owner_id"]) == str(current_user_id) or is_namespace_manager(namespace_role)
         )
         owner_preview_version = None
         owner_preview_review_comment = None
@@ -2044,7 +2045,7 @@ async def assert_namespace_tag_admin(connection: Any, namespace_id: int, user_id
     role = await read_namespace_role(connection, namespace_id, user_id)
     if role is None:
         raise SkillResolveError("error.namespace.membership.required", status_code=403)
-    if role not in {"OWNER", "ADMIN"}:
+    if not is_namespace_manager(role):
         raise SkillResolveError("error.namespace.admin.required", status_code=403)
 
 

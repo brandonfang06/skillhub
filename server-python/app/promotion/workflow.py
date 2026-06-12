@@ -8,10 +8,11 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.promotion.query import PLATFORM_PROMOTION_ROLES, _java_instant, _promotion_response, _read_platform_roles
 
 
-NAMESPACE_PROMOTION_ROLES = {"OWNER", "ADMIN"}
+NAMESPACE_PROMOTION_ROLES = NAMESPACE_MANAGER_ROLES
 
 
 @dataclass(frozen=True)
@@ -146,7 +147,7 @@ async def _assert_can_submit(connection: Any, context: dict[str, Any], request: 
     if str(context["owner_id"]) == request.user_id or platform_roles & PLATFORM_PROMOTION_ROLES:
         return
     namespace_role = await _read_namespace_role(connection, int(context["source_namespace_id"]), request.user_id)
-    if namespace_role not in NAMESPACE_PROMOTION_ROLES:
+    if not namespace_role_allows(namespace_role, NAMESPACE_PROMOTION_ROLES):
         raise PromotionWorkflowError("promotion.no_permission", status_code=403)
 
 

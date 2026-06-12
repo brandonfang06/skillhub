@@ -10,9 +10,11 @@ from zipfile import ZipFile
 
 from sqlalchemy import text
 
+from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
-NAMESPACE_REVIEW_ROLES = {"OWNER", "ADMIN"}
+NAMESPACE_REVIEW_ROLES = NAMESPACE_MANAGER_ROLES
 REVIEW_STATUSES = {"PENDING", "APPROVED", "REJECTED"}
 REVIEW_VERSION_STATUSES = (
     "PUBLISHED",
@@ -366,7 +368,7 @@ def _can_review_namespace(
         return True
     if namespace_type == "GLOBAL":
         return False
-    return namespace_roles.get(namespace_id) in NAMESPACE_REVIEW_ROLES
+    return namespace_role_allows(namespace_roles.get(namespace_id), NAMESPACE_REVIEW_ROLES)
 
 
 def _can_view_review(row: dict[str, Any], user_id: str, namespace_roles: dict[int, str], platform_roles: set[str]) -> bool:

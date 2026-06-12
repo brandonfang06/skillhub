@@ -97,7 +97,11 @@ ordering so `DELETE /api/web/skills/{skillId}/star` and subscription routes are 
 broad lifecycle hard-delete route. Remaining work is broader protected route enumeration plus
 role/namespace policy coverage for governance, reports, and the rest of the authenticated route
 surface. Milestone 116.3 added shared platform-role helpers and moved route-level role extraction
-and simple platform-role guards to `app.auth.policy`.
+and simple platform-role guards to `app.auth.policy`. Milestone 116.4 added shared namespace-role
+helpers and moved namespace manager/member/owner checks for namespace, lifecycle, promotion,
+review, governance, security audit, label, and skill visibility paths to `app.auth.policy`. It also
+updated stale lifecycle hybrid gates so rerelease is asserted as Python-owned rather than
+Java-owned.
 
 **Files:**
 - Modify: `server-python/app/auth/context.py` or create it if no central module exists.
@@ -117,11 +121,13 @@ and simple platform-role guards to `app.auth.policy`.
   - bearer API token.
   - session cookie.
 - [x] Implement shared policy helpers for required platform roles and bearer scopes.
-- [ ] Implement shared policy helpers for namespace roles.
+- [x] Implement shared policy helpers for namespace roles.
 - [x] Implement initial policy helpers for API-token bearer scopes and unsupported API-token principals on admin/web-only routes.
 - [x] Replace duplicated route-local auth checks in high-risk modules first: admin, publish, lifecycle hard-delete, tokens.
 - [x] Move remaining API route module principal-helper imports from `app.api.auth` to `app.auth.context`.
-- [ ] Replace remaining route-local namespace auth checks in governance, reports, and other authenticated route modules.
+- [x] Replace route-local namespace role predicates in namespace, lifecycle, promotion, review,
+  governance, security audit, label, and skill visibility modules with shared namespace-role
+  helpers.
 - [ ] Verify:
   - `uv run pytest tests/test_route_policy_enforcement.py tests/test_admin_* tests/test_*token* -q`
   - Hybrid live gate comparing representative protected route outcomes across Python direct and Vite.

@@ -8,9 +8,11 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
-NAMESPACE_REVIEW_ROLES = {"OWNER", "ADMIN"}
+NAMESPACE_REVIEW_ROLES = NAMESPACE_MANAGER_ROLES
 
 
 @dataclass(frozen=True)
@@ -99,13 +101,13 @@ def _can_review(
     submitted_by = str(task_row["submitted_by"])
     if submitted_by == reviewer_id:
         return "SUPER_ADMIN" in platform_roles or (
-            namespace_type != "GLOBAL" and namespace_role in NAMESPACE_REVIEW_ROLES
+            namespace_type != "GLOBAL" and namespace_role_allows(namespace_role, NAMESPACE_REVIEW_ROLES)
         )
     if platform_roles & PLATFORM_REVIEW_ROLES:
         return True
     if namespace_type == "GLOBAL":
         return False
-    return namespace_role in NAMESPACE_REVIEW_ROLES and namespace_id > 0
+    return namespace_role_allows(namespace_role, NAMESPACE_REVIEW_ROLES) and namespace_id > 0
 
 
 def _can_submit(
@@ -118,7 +120,7 @@ def _can_submit(
         return True
     if platform_roles & PLATFORM_REVIEW_ROLES:
         return True
-    return namespace_role in NAMESPACE_REVIEW_ROLES
+    return namespace_role_allows(namespace_role, NAMESPACE_REVIEW_ROLES)
 
 
 def _review_response(task_row: dict[str, Any], *, status: str, reviewer_id: str, comment: str | None, reviewed_at: datetime) -> dict[str, Any]:

@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.auth.policy import is_namespace_manager, is_namespace_owner, namespace_role_allows
 from app.namespace.read import _namespace_response
 
 
@@ -102,7 +103,7 @@ def _assert_writable(namespace: dict[str, Any]) -> None:
 
 async def _require_admin_or_owner(connection: Any, namespace_id: int, user_id: str) -> str:
     role = await _read_member_role(connection, namespace_id, user_id)
-    if role not in {"OWNER", "ADMIN"}:
+    if not is_namespace_manager(role):
         raise NamespaceMutationError("error.namespace.admin.required", status_code=403)
     return role
 
@@ -263,7 +264,7 @@ async def delete_namespace(engine: Any, *, slug: str, actor_user_id: str) -> dic
         namespace_id = int(namespace["id"])
         _assert_not_immutable(namespace)
         role = await _read_member_role(connection, namespace_id, actor_user_id)
-        if role != "OWNER":
+        if not is_namespace_owner(role):
             raise NamespaceMutationError("error.namespace.owner.required", status_code=403)
         if await _has_dependencies(connection, namespace_id):
             raise NamespaceMutationError("error.namespace.delete.hasDependencies", status_code=400)
@@ -298,7 +299,7 @@ async def _transition_namespace(
                 raise NamespaceMutationError("error.namespace.state.transition.invalid", status_code=400)
         elif current_status != source_status:
             raise NamespaceMutationError("error.namespace.state.transition.invalid", status_code=400)
-        if role not in allowed_roles:
+        if not namespace_role_allows(role, allowed_roles):
             raise NamespaceMutationError("error.namespace.lifecycle.forbidden", status_code=403)
         row = (
             await connection.execute(

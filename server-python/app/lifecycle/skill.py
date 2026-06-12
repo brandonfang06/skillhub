@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 from sqlalchemy import text
 
+from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
 from app.publish.replacement import (
@@ -18,7 +19,7 @@ from app.publish.replacement import (
 )
 
 
-LIFECYCLE_NAMESPACE_ROLES = {"OWNER", "ADMIN"}
+LIFECYCLE_NAMESPACE_ROLES = NAMESPACE_MANAGER_ROLES
 DELETABLE_VERSION_STATUSES = {"DRAFT", "REJECTED", "SCAN_FAILED", "UPLOADED"}
 CONFIRM_PUBLISH_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
 SUBMIT_REVIEW_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
@@ -182,7 +183,7 @@ async def _read_namespace_role(connection: Any, namespace_id: int, user_id: str)
 def _assert_can_manage(skill: dict[str, Any], user_id: str, namespace_role: str | None) -> None:
     if str(skill["owner_id"]) == user_id:
         return
-    if namespace_role in LIFECYCLE_NAMESPACE_ROLES:
+    if namespace_role_allows(namespace_role, LIFECYCLE_NAMESPACE_ROLES):
         return
     raise SkillLifecycleError("error.skill.lifecycle.noPermission", status_code=403)
 

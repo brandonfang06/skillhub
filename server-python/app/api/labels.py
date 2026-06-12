@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import read_current_mock_user
-from app.auth.policy import platform_roles
+from app.auth.policy import is_namespace_manager, platform_roles
 from app.core.response import ok
 
 router = APIRouter()
@@ -230,7 +230,7 @@ def _assert_can_manage_skill_label(
         return
     if str(label["type"]) == "PRIVILEGED":
         raise SkillLabelMutationError("label.skill.no_permission", status_code=403)
-    if str(skill["owner_id"]) == actor_user_id or namespace_role in {"ADMIN", "OWNER"}:
+    if str(skill["owner_id"]) == actor_user_id or is_namespace_manager(namespace_role):
         return
     raise SkillLabelMutationError("label.skill.no_permission", status_code=403)
 

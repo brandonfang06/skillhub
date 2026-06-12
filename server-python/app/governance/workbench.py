@@ -6,10 +6,12 @@ from typing import Any
 
 from sqlalchemy import bindparam, text
 
+from app.auth.policy import NAMESPACE_MANAGER_ROLES, managed_namespace_ids as select_managed_namespace_ids
+
 
 PLATFORM_GOVERNANCE_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
 ACTIVITY_READ_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN", "AUDITOR"}
-NAMESPACE_GOVERNANCE_ROLES = {"OWNER", "ADMIN"}
+NAMESPACE_GOVERNANCE_ROLES = NAMESPACE_MANAGER_ROLES
 INBOX_TYPES = {"REVIEW", "PROMOTION", "REPORT"}
 ACTIVITY_ACTIONS = {
     "REVIEW_SUBMIT",
@@ -94,14 +96,6 @@ async def _read_namespace_roles(connection: Any, user_id: str) -> list[dict[str,
     return [dict(row) for row in rows]
 
 
-def _managed_namespace_ids(namespace_roles: list[dict[str, Any]]) -> list[int]:
-    return [
-        int(row["namespace_id"])
-        for row in namespace_roles
-        if str(row["role"]) in NAMESPACE_GOVERNANCE_ROLES
-    ]
-
-
 def _has_platform_governance_role(platform_roles: set[str]) -> bool:
     return bool(platform_roles & PLATFORM_GOVERNANCE_ROLES)
 
@@ -174,7 +168,7 @@ async def get_governance_summary(engine: Any, *, user_id: str) -> dict[str, int]
     async with engine.connect() as connection:
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
-        managed_ids = _managed_namespace_ids(namespace_roles)
+        managed_ids = select_managed_namespace_ids(namespace_roles, NAMESPACE_GOVERNANCE_ROLES)
         can_platform = _has_platform_governance_role(platform_roles)
         return {
             "pendingReviews": await _count_pending_reviews(
@@ -306,7 +300,7 @@ async def list_governance_inbox(
     async with engine.connect() as connection:
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
-        managed_ids = _managed_namespace_ids(namespace_roles)
+        managed_ids = select_managed_namespace_ids(namespace_roles, NAMESPACE_GOVERNANCE_ROLES)
         can_platform = _has_platform_governance_role(platform_roles)
         rows: list[dict[str, Any]] = []
         total = 0

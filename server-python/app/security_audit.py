@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.api.skills import to_java_instant
+from app.auth.policy import is_namespace_manager, is_namespace_member
 
 
 SCANNER_TYPE_API_TO_DB = {
@@ -114,7 +115,7 @@ async def _read_namespace_role(connection: Any, namespace_id: int, current_user_
 
 
 def _is_admin_or_owner(role: str | None) -> bool:
-    return role in {"ADMIN", "OWNER"}
+    return is_namespace_manager(role)
 
 
 def _can_view_audit(
@@ -139,7 +140,7 @@ def _can_view_audit(
     if visibility == "PUBLIC":
         return True
     if visibility == "NAMESPACE_ONLY":
-        return namespace_role is not None
+        return is_namespace_member(namespace_role)
     if visibility == "PRIVATE":
         return str(skill["owner_id"]) == str(current_user_id) or _is_admin_or_owner(namespace_role)
     return False

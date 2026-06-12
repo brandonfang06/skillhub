@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.api.skills import to_java_instant
+from app.auth.policy import is_namespace_manager, is_namespace_owner
 
 
 class NamespaceReadError(Exception):
@@ -43,23 +44,23 @@ def _is_team(row: dict[str, Any]) -> bool:
 
 
 def _can_freeze(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and str(row["status"]) == "ACTIVE" and role in {"OWNER", "ADMIN"}
+    return _is_team(row) and str(row["status"]) == "ACTIVE" and is_namespace_manager(role)
 
 
 def _can_unfreeze(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and str(row["status"]) == "FROZEN" and role in {"OWNER", "ADMIN"}
+    return _is_team(row) and str(row["status"]) == "FROZEN" and is_namespace_manager(role)
 
 
 def _can_archive(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and str(row["status"]) != "ARCHIVED" and role == "OWNER"
+    return _is_team(row) and str(row["status"]) != "ARCHIVED" and is_namespace_owner(role)
 
 
 def _can_restore(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and str(row["status"]) == "ARCHIVED" and role == "OWNER"
+    return _is_team(row) and str(row["status"]) == "ARCHIVED" and is_namespace_owner(role)
 
 
 def _can_delete_policy(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and role == "OWNER"
+    return _is_team(row) and is_namespace_owner(role)
 
 
 async def _read_roles(connection: Any, user_id: str) -> dict[int, str]:

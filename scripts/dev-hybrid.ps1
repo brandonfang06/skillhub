@@ -11532,7 +11532,7 @@ END `$`$;
             unarchiveDbState = ((Get-SkillLifecycleState $unarchiveSlugs[1]) -eq "ACTIVE|$actorId" -and (Get-SkillLifecycleState $unarchiveSlugs[2]) -eq "ACTIVE|$actorId" -and (Get-SkillLifecycleState $unarchiveSlugs[3]) -eq "ACTIVE|$actorId")
             archiveAudit = ((Get-SkillLifecycleAudit $pythonArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$pythonArchiveSkillId|$actorId|*" -and (Get-SkillLifecycleAudit $proxyArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$proxyArchiveSkillId|$actorId|*" -and (Get-SkillLifecycleAudit $proxyWebArchiveSkillId 'ARCHIVE_SKILL') -like "ARCHIVE_SKILL|SKILL|$proxyWebArchiveSkillId|$actorId|*")
             unarchiveAudit = ((Get-SkillLifecycleAudit $pythonUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$pythonUnarchiveSkillId|$actorId|" -and (Get-SkillLifecycleAudit $proxyUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$proxyUnarchiveSkillId|$actorId|" -and (Get-SkillLifecycleAudit $proxyWebUnarchiveSkillId 'UNARCHIVE_SKILL') -eq "UNARCHIVE_SKILL|SKILL|$proxyWebUnarchiveSkillId|$actorId|")
-            rereleaseBoundaryJavaOwned = ($rereleaseBoundaryJava -eq $rereleaseBoundaryProxy)
+            rereleaseBoundaryStillPythonOwned = ($rereleaseBoundaryProxy -ne 404 -and $rereleaseBoundaryProxy -ne $rereleaseBoundaryJava)
             unauthenticatedArchiveRejected = ($unauthenticatedArchiveStatus -eq 401)
         }
         routeBoundaries = [ordered]@{
@@ -11781,7 +11781,7 @@ END `$`$;
             dbState = ((Get-DeleteDbState $slugs[1] $deleteVersionIds[$slugs[1]] $publishedVersionIds[$slugs[1]]) -eq "true|true|true|true|$ownerId" -and (Get-DeleteDbState $slugs[2] $deleteVersionIds[$slugs[2]] $publishedVersionIds[$slugs[2]]) -eq "true|true|true|true|$ownerId" -and (Get-DeleteDbState $slugs[3] $deleteVersionIds[$slugs[3]] $publishedVersionIds[$slugs[3]]) -eq "true|true|true|true|$ownerId")
             audit = ((Get-DeleteAudit $deleteVersionIds[$slugs[1]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[1]])|$ownerId|*" -and (Get-DeleteAudit $deleteVersionIds[$slugs[2]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[2]])|$ownerId|*" -and (Get-DeleteAudit $deleteVersionIds[$slugs[3]]) -like "DELETE_SKILL_VERSION|SKILL_VERSION|$($deleteVersionIds[$slugs[3]])|$ownerId|*")
             storageDeleted = ((Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[1]] -VersionId $deleteVersionIds[$slugs[1]]) -and (Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[2]] -VersionId $deleteVersionIds[$slugs[2]]) -and (Test-SkillVersionDeleteStorageMissing -SkillId $skillIds[$slugs[3]] -VersionId $deleteVersionIds[$slugs[3]]))
-            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            rereleaseBoundaryStillPythonOwned = ($rereleaseProxy -ne 404 -and $rereleaseProxy -ne $rereleaseJava)
             submitReviewBoundaryJavaOwned = ($submitReviewJava -eq $submitReviewProxy)
             unauthenticatedDeleteRejected = ($unauthenticatedDeleteStatus -eq 401)
         }
@@ -11973,7 +11973,7 @@ END `$`$;
             responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
             dbState = ((Get-WithdrawDbState $slugs[1] $versionIds[$slugs[1]]) -eq "UPLOADED|$submitterId|true" -and (Get-WithdrawDbState $slugs[2] $versionIds[$slugs[2]]) -eq "UPLOADED|$submitterId|true" -and (Get-WithdrawDbState $slugs[3] $versionIds[$slugs[3]]) -eq "UPLOADED|$submitterId|true")
             audit = ((Get-WithdrawAudit $versionIds[$slugs[1]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[1]])|$submitterId|*" -and (Get-WithdrawAudit $versionIds[$slugs[2]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[2]])|$submitterId|*" -and (Get-WithdrawAudit $versionIds[$slugs[3]]) -like "REVIEW_WITHDRAW|SKILL_VERSION|$($versionIds[$slugs[3]])|$submitterId|*")
-            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            rereleaseBoundaryStillPythonOwned = ($rereleaseProxy -ne 404 -and $rereleaseProxy -ne $rereleaseJava)
             submitReviewBoundaryStillPythonOwned = ($submitReviewPython -eq 401 -and $submitReviewProxy -eq 401)
             confirmPublishBoundaryStillPythonOwned = ($confirmPublishPython -eq 401 -and $confirmPublishProxy -eq 401)
             unauthenticatedWithdrawRejected = ($unauthenticatedWithdrawStatus -eq 401)
@@ -12181,7 +12181,7 @@ END `$`$;
             responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
             dbState = ((Get-ConfirmDbState $slugs[1] $versionIds[$slugs[1]]) -eq "PUBLISHED|true|true|$ownerId" -and (Get-ConfirmDbState $slugs[2] $versionIds[$slugs[2]]) -eq "PUBLISHED|true|true|$ownerId" -and (Get-ConfirmDbState $slugs[3] $versionIds[$slugs[3]]) -eq "PUBLISHED|true|true|$ownerId")
             audit = ((Get-ConfirmAudit $versionIds[$slugs[1]]) -like "CONFIRM_PUBLISH|SKILL_VERSION|$($versionIds[$slugs[1]])|$ownerId|*" -and (Get-ConfirmAudit $versionIds[$slugs[2]]) -like "CONFIRM_PUBLISH|SKILL_VERSION|$($versionIds[$slugs[2]])|$ownerId|*" -and (Get-ConfirmAudit $versionIds[$slugs[3]]) -like "CONFIRM_PUBLISH|SKILL_VERSION|$($versionIds[$slugs[3]])|$ownerId|*")
-            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            rereleaseBoundaryStillPythonOwned = ($rereleaseProxy -ne 404 -and $rereleaseProxy -ne $rereleaseJava)
             submitReviewBoundaryJavaOwned = ($submitReviewJava -eq $submitReviewProxy)
             unauthenticatedConfirmRejected = ($unauthenticatedConfirmStatus -eq 401)
         }
@@ -12388,7 +12388,7 @@ END `$`$;
             responsesMatch = ($stable.java -eq $stable.python -and $stable.python -eq $stable.proxy -and $stable.python -eq $stable.proxyWeb)
             dbState = ((Get-SubmitDbState $slugs[0] $versionIds[$slugs[0]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[1] $versionIds[$slugs[1]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[2] $versionIds[$slugs[2]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId" -and (Get-SubmitDbState $slugs[3] $versionIds[$slugs[3]]) -eq "PENDING_REVIEW|PUBLIC|true|$ownerId")
             audit = ((Get-SubmitAudit $versionIds[$slugs[0]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[0]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[1]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[1]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[2]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[2]])|$ownerId|*" -and (Get-SubmitAudit $versionIds[$slugs[3]]) -like "SUBMIT_REVIEW|SKILL_VERSION|$($versionIds[$slugs[3]])|$ownerId|*")
-            rereleaseBoundaryJavaOwned = ($rereleaseJava -eq $rereleaseProxy)
+            rereleaseBoundaryStillPythonOwned = ($rereleaseProxy -ne 404 -and $rereleaseProxy -ne $rereleaseJava)
             confirmPublishBoundaryStillPythonOwned = ($confirmPublishPython -eq 401 -and $confirmPublishProxy -eq 401)
             unauthenticatedSubmitRejected = ($unauthenticatedSubmitStatus -eq 401)
         }

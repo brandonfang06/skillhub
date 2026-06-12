@@ -133,6 +133,8 @@ def test_powershell_hybrid_script_supports_local_windows_workflow() -> None:
     assert "verify-skill-confirm-publish-smoke" in script
     assert "verify-skill-submit-review-smoke" in script
     assert "verify-skill-rerelease-smoke" in script
+    assert "rereleaseBoundaryStillPythonOwned" in script
+    assert "rereleaseBoundaryJavaOwned" not in script
     assert "verify-admin-skill-hide-unhide-smoke" in script
     assert "verify-admin-version-yank-smoke" in script
     assert "verify-skill-star-smoke" in script

@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.api.skills import to_java_instant
+from app.auth.policy import is_namespace_manager, is_namespace_member, is_namespace_owner
 
 
 class NamespaceMemberReadError(Exception):
@@ -92,13 +93,13 @@ def _assert_transfer_ownership_allowed(namespace: dict[str, Any]) -> None:
 
 
 def _validate_role(role: str) -> None:
-    if role not in {"OWNER", "ADMIN", "MEMBER"}:
+    if not is_namespace_member(role):
         raise NamespaceMemberReadError("error.namespace.member.role.invalid", status_code=400)
 
 
 async def _require_admin_or_owner(connection: Any, namespace_id: int, user_id: str) -> str:
     role = await _require_member(connection, namespace_id, user_id)
-    if role not in {"OWNER", "ADMIN"}:
+    if not is_namespace_manager(role):
         raise NamespaceMemberReadError("error.namespace.admin.required", status_code=403)
     return role
 
@@ -177,7 +178,7 @@ async def add_namespace_member(
         namespace_id = int(namespace["id"])
         _assert_member_mutation_allowed(namespace)
         await _require_admin_or_owner(connection, namespace_id, operator_user_id)
-        if role == "OWNER":
+        if is_namespace_owner(role):
             raise NamespaceMemberReadError("error.namespace.member.owner.assignDirect", status_code=400)
         if await _read_member_role(connection, namespace_id, member_user_id) is not None:
             raise NamespaceMemberReadError("error.namespace.member.alreadyExists", status_code=400)
@@ -211,7 +212,7 @@ async def remove_namespace_member(
         role = await _read_member_role(connection, namespace_id, member_user_id)
         if role is None:
             raise NamespaceMemberReadError("error.namespace.member.notFound", status_code=400)
-        if role == "OWNER":
+        if is_namespace_owner(role):
             raise NamespaceMemberReadError("error.namespace.member.owner.remove", status_code=400)
         await connection.execute(
             text(
@@ -239,7 +240,7 @@ async def update_namespace_member_role(
         namespace_id = int(namespace["id"])
         _assert_member_mutation_allowed(namespace)
         await _require_admin_or_owner(connection, namespace_id, operator_user_id)
-        if role == "OWNER":
+        if is_namespace_owner(role):
             raise NamespaceMemberReadError("error.namespace.member.owner.setDirect", status_code=400)
         if await _read_member_role(connection, namespace_id, member_user_id) is None:
             raise NamespaceMemberReadError("error.namespace.member.notFound", status_code=400)
@@ -275,7 +276,7 @@ async def transfer_namespace_ownership(
         current_role = await _read_member_role(connection, namespace_id, current_owner_id)
         if current_role is None:
             raise NamespaceMemberReadError("error.namespace.owner.current.notFound", status_code=400)
-        if current_role != "OWNER":
+        if not is_namespace_owner(current_role):
             raise NamespaceMemberReadError("error.namespace.owner.current.invalid", status_code=400)
         if await _read_member_role(connection, namespace_id, new_owner_id) is None:
             raise NamespaceMemberReadError("error.namespace.owner.new.notFound", status_code=400)
@@ -385,7 +386,7 @@ async def search_namespace_member_candidates(
         if str(namespace["type"]) == "GLOBAL":
             raise NamespaceMemberReadError("error.namespace.system.immutable", status_code=400)
         role = await _require_member(connection, namespace_id, user_id)
-        if role not in {"OWNER", "ADMIN"}:
+        if not is_namespace_manager(role):
             raise NamespaceMemberReadError("error.namespace.admin.required", status_code=403)
         if str(namespace["status"]) != "ACTIVE":
             raise NamespaceMemberReadError("error.namespace.readonly", status_code=400)
