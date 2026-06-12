@@ -279,6 +279,24 @@ This is intentional migration bridge code:
   transaction boundaries, authorization, idempotency, and rollback behavior are
   higher risk.
 
+### Post-Cutover Maintenance Rules
+
+The default backend runtime is now Python after tag
+`backend-python-cutover-2026-06-12`. Future backend hardening work belongs under
+`docs/backend-python-maintenance/` instead of reopening Java route migration
+milestones.
+
+- New SQL must live in repository/query/helper modules, not new route handlers.
+- ORM models require a milestone plan and targeted transaction tests before
+  being introduced.
+- Projection-heavy SQL can remain explicit SQL when it is isolated behind a
+  repository/query/helper boundary and covered by tests.
+- Existing API route SQL bridge code is temporary. Keep the allowlist in
+  `server-python/tests/test_post_cutover_architecture.py` narrow and reduce it
+  as repository extraction milestones complete.
+- Run `uv run python scripts/sql_inventory.py` before and after broad
+  repository or ORM refactors.
+
 ### Java Parity Checklist
 
 Every migration milestone must use

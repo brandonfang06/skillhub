@@ -46,15 +46,15 @@ Current observations from the post-cutover scan:
 - Modify: `server-python/AGENTS.md`
 
 **Steps:**
-- [ ] Add `docs/backend-python-maintenance/README.md` defining this as the post-cutover track, separate from Java migration.
-- [ ] Add `server-python/scripts/sql_inventory.py` that reports `sqlalchemy.text` usage by file and flags whether it is in an API route module, domain/service module, repository/query module, migration/bootstrap module, or test.
-- [ ] Add `server-python/tests/test_post_cutover_architecture.py` with an allowlist of current API modules that still contain SQL bridge code. The test must fail on new API modules importing or calling `text()` unless the allowlist is updated with a reason.
-- [ ] Add a second architecture test that confirms no SQLAlchemy declarative ORM model exists yet. This prevents accidental partial ORM introduction before Milestone 5.
-- [ ] Update `server-python/AGENTS.md` with post-cutover rules:
+- [x] Add `docs/backend-python-maintenance/README.md` defining this as the post-cutover track, separate from Java migration.
+- [x] Add `server-python/scripts/sql_inventory.py` that reports `sqlalchemy.text` usage by file and flags whether it is in an API route module, domain/service module, repository/query module, migration/bootstrap module, or test.
+- [x] Add `server-python/tests/test_post_cutover_architecture.py` with an allowlist of current API modules that still contain SQL bridge code. The test must fail on new API modules importing or calling `text()` unless the allowlist is updated with a reason.
+- [x] Add a second architecture test that confirms no SQLAlchemy declarative ORM model exists yet. This prevents accidental partial ORM introduction before Milestone 5.
+- [x] Update `server-python/AGENTS.md` with post-cutover rules:
   - New SQL must live in repository/query/helper modules, not new route handlers.
   - ORM models require a milestone plan and targeted transaction tests.
   - Projection-heavy SQL can remain explicit SQL when it is covered and isolated.
-- [ ] Write the result note with the current top SQL modules and large-file inventory.
+- [x] Write the result note with the current top SQL modules and large-file inventory.
 
 **Verify:**
 - `cd server-python; uv run python scripts/sql_inventory.py`
