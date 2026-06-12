@@ -1,8 +1,10 @@
-# Global Route Policy Cutover
+# Final Route Policy Hardening
 
 Date: 2026-06-12
 
-Milestone 116.5 completed the remaining protected-route principal cutover for the Python backend.
+Milestone 121 completed the remaining protected-route principal cutover for the Python backend.
+This milestone was executed after the Milestone 120 runtime cutover, but it closes the final
+acceptance gap that was originally tracked under Milestone 116 global route-policy enforcement.
 Route modules that still resolved only `X-Mock-User-Id` locally now delegate current-principal
 resolution to `app.auth.context.resolve_current_user_or_401`.
 

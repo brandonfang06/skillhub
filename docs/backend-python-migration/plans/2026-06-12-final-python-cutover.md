@@ -101,11 +101,12 @@ and simple platform-role guards to `app.auth.policy`. Milestone 116.4 added shar
 helpers and moved namespace manager/member/owner checks for namespace, lifecycle, promotion,
 review, governance, security audit, label, and skill visibility paths to `app.auth.policy`. It also
 updated stale lifecycle hybrid gates so rerelease is asserted as Python-owned rather than
-Java-owned. Milestone 116.5 removed route-local mock-only principal helpers from account merge,
+Java-owned. Milestone 121, executed after the runtime cutover, removed route-local mock-only principal helpers from account merge,
 admin, governance, profile, device auth, report, security audit, labels, notifications, social,
 lifecycle, promotion, and review API modules. Those routes now resolve mock/session principals
 through `app.auth.context.resolve_current_user_or_401`; unit-test-only mock fallbacks live in the
-shared resolver instead of in route modules.
+shared resolver instead of in route modules. It closes the remaining Milestone 116 final-acceptance
+gap without changing the completed Milestone 120 runtime-cutover status.
 
 **Files:**
 - Modify: `server-python/app/auth/context.py` or create it if no central module exists.
