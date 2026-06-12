@@ -35,9 +35,8 @@ echo "=== SkillHub Smoke Test ==="
 echo "Target: $BASE_URL"
 echo
 
-check "Health endpoint" "$BASE_URL/actuator/health" "200"
-check "Prometheus metrics" "$BASE_URL/actuator/prometheus" "200"
-check "Namespaces API" "$BASE_URL/api/v1/namespaces" "200"
+check "Health endpoint" "$BASE_URL/api/v1/health" "200"
+check "Prometheus metrics" "$BASE_URL/api/v1/metrics/prometheus" "200"
 check "Auth required" "$BASE_URL/api/v1/auth/me" "401"
 
 curl -s -c "$COOKIE_JAR" "$BASE_URL/api/v1/auth/me" >/dev/null
@@ -64,6 +63,15 @@ if [[ "$AUTH_ME_STATUS" == "200" ]]; then
   PASS=$((PASS + 1))
 else
   echo "FAIL: Auth me with session (got $AUTH_ME_STATUS)"
+  FAIL=$((FAIL + 1))
+fi
+
+NAMESPACES_STATUS="$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" -b "$COOKIE_JAR" "$BASE_URL/api/v1/namespaces" || true)"
+if [[ "$NAMESPACES_STATUS" == "200" ]]; then
+  echo "PASS: Namespaces API with session (HTTP $NAMESPACES_STATUS)"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL: Namespaces API with session (got $NAMESPACES_STATUS)"
   FAIL=$((FAIL + 1))
 fi
 

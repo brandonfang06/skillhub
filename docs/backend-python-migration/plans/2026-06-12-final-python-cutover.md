@@ -235,21 +235,31 @@ schema without replaying legacy SQL. Java Flyway files remain read-only referenc
 
 **Purpose:** Make the default local/staging runtime start Python without Java.
 
+**Status:** Completed. Default `make dev-all`, `make dev-server`, and `make staging` now use the
+Python backend. Java backend commands remain available only through explicit reference/hybrid
+workflows, not the default local or staging path.
+
 **Files:**
 - Modify: `scripts/dev-hybrid.ps1` or add a new Python-only dev script.
 - Modify: Docker Compose and staging scripts that still build/start the Java backend.
+- Modify: `scripts/smoke-test.sh` if smoke gates still target Java actuator endpoints.
 - Modify: docs that describe backend runtime ports and startup commands.
 - Test: `server-python/tests/test_final_cutover_baseline.py`
+- Test: `server-python/tests/test_python_runtime_cutover.py`
+- Test: `server-python/tests/test_bootstrap_admin.py`
+- Test: `server-python/tests/test_health.py`
 - Test: frontend smoke/E2E configs as needed.
 - Create: `docs/backend-python-migration/results/2026-06-12-java-runtime-deprecation.md`
 
 **Implementation steps:**
-- [ ] Add tests or script checks that fail if default dev/staging paths require Java for HTTP traffic.
-- [ ] Keep a clearly named Java reference script only for historical parity checks, not default development.
-- [ ] Update local startup to run dependencies, Python backend, scanner, and frontend.
-- [ ] Update staging to build/deploy Python backend as the service backend.
-- [ ] Update docs to mark Java backend as deprecated/reference-only.
-- [ ] Verify:
+- [x] Add tests or script checks that fail if default dev/staging paths require Java for HTTP traffic.
+- [x] Keep a clearly named Java reference script only for historical parity checks, not default development.
+- [x] Update local startup to run dependencies, Python backend, scanner, and frontend.
+- [x] Update staging to build/deploy Python backend as the service backend.
+- [x] Update staging smoke checks to use Python health and metrics endpoints.
+- [x] Add Python bootstrap admin seeding for staging admin smoke parity.
+- [x] Update docs to mark Java backend as deprecated/reference-only.
+- [x] Verify:
   - Python-only local stack starts.
   - `http://localhost:3000/api/v1/health` reaches Python.
   - frontend smoke passes against Python-only stack.
@@ -279,6 +289,6 @@ Before declaring the Java-to-Python migration complete:
 - [x] SSE delivers active notifications.
 - [x] No broad deferred lifecycle/governance bucket remains.
 - [x] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
-- [ ] Java runtime deprecation from default local/staging paths is complete.
+- [x] Java runtime deprecation from default local/staging paths is complete.
 - [ ] All result docs are written.
 - [ ] Final regression and smoke gates pass.

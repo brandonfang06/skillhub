@@ -44,7 +44,6 @@ def test_final_cutover_deferred_categories_are_explicit() -> None:
 
     remaining_categories = [
         "Global route-policy enforcement outside the completed high-risk foundation slice",
-        "Java runtime deprecation from default local/staging paths",
     ]
 
     for category in remaining_categories:

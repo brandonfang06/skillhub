@@ -318,6 +318,14 @@ def test_local_auth_core_routes_use_java_envelopes_and_auth_boundaries() -> None
         "oauthProvider": "local",
         "platformRoles": ["USER"],
     }
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": "route",
+        "email": "route@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["USER"],
+    }
     app.state.local_auth_password_changer = lambda user_id, payload: None
     client = TestClient(app)
 
@@ -334,7 +342,8 @@ def test_local_auth_core_routes_use_java_envelopes_and_auth_boundaries() -> None
     assert login.json()["code"] == 0
     assert login.json()["data"]["userId"] == "usr_route"
 
-    missing_auth = client.post(
+    unauthenticated_client = TestClient(app)
+    missing_auth = unauthenticated_client.post(
         "/api/v1/auth/local/change-password",
         json={"currentPassword": "Abcd123!", "newPassword": "Newpass123!"},
     )

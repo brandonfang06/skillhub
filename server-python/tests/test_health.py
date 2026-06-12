@@ -29,3 +29,12 @@ def test_health_generates_request_id_when_missing() -> None:
     assert response.headers["X-Request-Id"]
     assert body["requestId"] == response.headers["X-Request-Id"]
 
+
+def test_prometheus_metrics_endpoint_is_available_for_staging_smoke() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/api/v1/metrics/prometheus")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "skillhub_python_backend_up 1" in response.text

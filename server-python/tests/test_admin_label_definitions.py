@@ -344,6 +344,33 @@ def test_admin_label_routes_use_java_envelopes_and_auth() -> None:
     assert deleted.json()["data"]["message"] == "Label deleted"
 
 
+def test_admin_label_routes_accept_super_admin_session() -> None:
+    app = create_app()
+    app.state.local_auth_login = lambda payload: auth_user("admin", ["SUPER_ADMIN"])
+    app.state.admin_label_reader = lambda user: [{"slug": "featured"}]
+    app.state.admin_label_create_writer = lambda payload, user, request: {"slug": payload["slug"]}
+    client = TestClient(app)
+
+    login = client.post("/api/v1/auth/local/login", json={"username": "admin", "password": "Admin@staging2026"})
+    listed = client.get("/api/v1/admin/labels")
+    created = client.post(
+        "/api/v1/admin/labels",
+        json={
+            "slug": "featured",
+            "type": "RECOMMENDED",
+            "visibleInFilter": True,
+            "sortOrder": 1,
+            "translations": [{"locale": "en", "displayName": "Featured"}],
+        },
+    )
+
+    assert login.status_code == 200
+    assert listed.status_code == 200
+    assert listed.json()["data"] == [{"slug": "featured"}]
+    assert created.status_code == 200
+    assert created.json()["data"] == {"slug": "featured"}
+
+
 def test_admin_label_routes_reject_api_token_principals_as_unsupported() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(user_id, ["SUPER_ADMIN"])

@@ -34,6 +34,43 @@ def test_local_login_creates_session_cookie_used_by_auth_me() -> None:
     assert auth_me.json()["data"] == principal()
 
 
+def test_local_register_creates_session_cookie_used_by_auth_me() -> None:
+    app = create_app()
+    app.state.local_auth_registrar = lambda payload: principal()
+    client = TestClient(app)
+
+    register = client.post(
+        "/api/v1/auth/local/register",
+        json={"username": "session-user", "password": "Abcd123!", "email": "session-user@example.test"},
+    )
+    auth_me = client.get("/api/v1/auth/me")
+
+    assert register.status_code == 200
+    assert "SESSION" in client.cookies
+    assert auth_me.status_code == 200
+    assert auth_me.json()["data"] == principal()
+
+
+def test_change_password_accepts_session_principal() -> None:
+    app = create_app()
+    calls: list[tuple[str, dict[str, object]]] = []
+    app.state.local_auth_login = lambda payload: principal()
+    app.state.local_auth_password_changer = lambda user_id, payload: calls.append((user_id, payload))
+    client = TestClient(app)
+
+    client.post(
+        "/api/v1/auth/local/login",
+        json={"username": "session-user", "password": "Abcd123!"},
+    )
+    changed = client.post(
+        "/api/v1/auth/local/change-password",
+        json={"currentPassword": "Abcd123!", "newPassword": "Newpass123!"},
+    )
+
+    assert changed.status_code == 200
+    assert calls == [("session-user", {"currentPassword": "Abcd123!", "newPassword": "Newpass123!"})]
+
+
 def test_mock_user_header_takes_precedence_over_session_cookie() -> None:
     app = create_app()
     app.state.local_auth_login = lambda payload: principal()

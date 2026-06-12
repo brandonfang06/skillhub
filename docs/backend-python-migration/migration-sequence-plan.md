@@ -257,6 +257,7 @@ Still plan carefully when a group requires:
 | 117 | Active notification SSE fanout | python | Python notification SSE now uses an app-level in-process fanout manager with Java-compatible `connected`, `ping`, and `notification` event shapes. `notification` table payloads are built with the Java `NotificationDispatcher` SSE field set, and skill report submit publishes created report notifications to connected users after the database transaction commits. A hybrid live check verified a connected Python SSE client received a `REPORT_SUBMITTED` notification after a real report-submit request. |
 | 118 | Deferred lifecycle/governance semantic audit | n/a | A route-shape audit now compares representative lifecycle/governance routes against the FastAPI app and route registry, the current registry no longer keeps stale broad Java-owned/deferred wording for review/promotion/namespace/SSE buckets, and the result note records each audited capability bucket. No broad lifecycle/governance deferred bucket remains. |
 | 119 | Python schema migration takeover | python | Python schema migration ownership moved to `server-python` through an Alembic baseline marker and `python -m app.migrations upgrade|stamp|status`. Fresh databases can apply the existing Flyway SQL baseline from Python and existing Flyway-created schemas can be stamped without replaying legacy SQL. `make db-reset` now uses the Python migration command while Java Flyway files stay read-only reference material. |
+| 120 | Java runtime deprecation and staging cutover | python | Default local and staging runtime paths now start the Python backend without Java. `make dev-all`, `make dev-server`, and `make staging` use `server-python`; staging builds `server-python/Dockerfile`, runs Python schema migration on startup, and serves Nginx through the Python backend on service port 8080. Java remains available only through explicit reference/hybrid workflows. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1500,9 +1501,8 @@ Group E has started with review lifecycle write ownership:
   `app.auth.context` centralizes mock/bearer/session principal resolution, and `app.auth.policy`
   centralizes initial API-token scope plus unsupported-admin-route checks. Broader route enumeration
   and role/namespace policy coverage remain in milestone 116.
-- Still deferred outside the completed lifecycle/governance and schema ownership audits: any
-  remaining route-policy scope enforcement outside the covered high-risk routes and default
-  runtime/staging deprecation of Java.
+- Still deferred outside the completed lifecycle/governance, schema ownership, and runtime cutover
+  audits: any remaining route-policy scope enforcement outside the covered high-risk routes.
 
 Recommended next choice:
 
@@ -1515,7 +1515,6 @@ Recommended next choice:
 Final deferred categories:
 
 - Global route-policy enforcement outside the completed high-risk foundation slice.
-- Java runtime deprecation from default local/staging paths.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

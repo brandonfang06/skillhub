@@ -13,7 +13,7 @@ DEV_PYTHON_URL := http://localhost:8081
 DEV_SCANNER_URL := http://localhost:8000
 STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
-STAGING_SERVER_IMAGE := skillhub-server:staging
+STAGING_SERVER_IMAGE := skillhub-server-python:staging
 DEV_PROCESS := bash scripts/dev-process.sh
 DEV_SERVER_PREPARE := true
 DEV_SERVER_CMD := ./scripts/run-dev-app.sh
@@ -42,55 +42,37 @@ dev: ## 启动本地开发环境（依赖服务，含 skill-scanner）
 dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端）
 	@mkdir -p $(DEV_DIR)
 	@$(MAKE) dev
+	@$(MAKE) db-migrate-python
 	@$(MAKE) web-deps
-	@if $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
-		echo "Backend already running with PID $$(cat $(DEV_SERVER_PID))"; \
+	@if $(DEV_PROCESS) status --pid-file $(DEV_PYTHON_PID) >/dev/null 2>&1; then \
+		echo "Python backend already running with PID $$(cat $(DEV_PYTHON_PID))"; \
 	else \
-		echo "Starting backend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null; \
+		echo "Starting Python backend..."; \
+		$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null; \
 	fi
 	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
 		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
 	else \
 		echo "Starting frontend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- pnpm exec vite --host 0.0.0.0 --strictPort >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- /bin/sh -lc 'if command -v pnpm >/dev/null 2>&1; then exec pnpm exec vite --host 0.0.0.0 --strictPort; else exec ./node_modules/.bin/vite --host 0.0.0.0 --strictPort; fi' >/dev/null; \
 	fi
-	@echo "Waiting for backend on $(DEV_API_URL) ..."
-	@backend_ready=0; \
-	for attempt in 1 2; do \
-		for i in $$(seq 1 30); do \
-			if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
-				echo "Backend ready."; \
-				backend_ready=1; \
-				break 2; \
-			fi; \
-			if ! $(DEV_PROCESS) status --pid-file $(DEV_SERVER_PID) >/dev/null 2>&1; then \
-				break; \
-			fi; \
-			sleep 2; \
-		done; \
-		if [ "$$attempt" -lt 2 ]; then \
-			echo "Backend did not become ready on attempt $$attempt. Restarting..."; \
-			$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID); \
-			sleep 2; \
-			$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null; \
+	@echo "Waiting for Python backend on $(DEV_PYTHON_URL) ..."
+	@python_ready=0; \
+	for i in $$(seq 1 30); do \
+		if curl -sf $(DEV_PYTHON_URL)/api/v1/health >/dev/null; then \
+			echo "Python backend ready."; \
+			python_ready=1; \
+			break; \
 		fi; \
+		if ! $(DEV_PROCESS) status --pid-file $(DEV_PYTHON_PID) >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		sleep 2; \
 	done; \
-		if [ "$$backend_ready" -ne 1 ]; then \
-			echo ""; \
-			echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
-			echo ""; \
-			echo "Common issues:"; \
-			echo "  1. Maven dependency download failed (network timeout)"; \
-			echo "     -> Configure mirror in ~/.m2/settings.xml"; \
-			echo "     -> See: https://maven.aliyun.com/mvn/guide"; \
-			echo "  2. Java version mismatch (requires Java 21+)"; \
-			echo "     -> Run: java -version"; \
-			echo "  3. Port 8080 already in use"; \
-			echo "     -> Run: lsof -i :8080"; \
-			echo ""; \
-			exit 1; \
-		fi
+	if [ "$$python_ready" -ne 1 ]; then \
+		echo "Python backend failed to become ready. Check $(DEV_PYTHON_LOG)"; \
+		exit 1; \
+	fi
 	@echo "Waiting for scanner on $(DEV_SCANNER_URL) ..."
 	@scanner_ready=0; \
 	for i in $$(seq 1 30); do \
@@ -119,15 +101,29 @@ dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端�
 		echo "Frontend failed to become ready. Check $(DEV_WEB_LOG)"; \
 		exit 1; \
 	fi
+	@echo "Checking Vite proxy to Python health route ..."
+	@proxy_ready=0; \
+	for i in $$(seq 1 15); do \
+		if curl -sf $(DEV_WEB_URL)/api/v1/health >/dev/null; then \
+			echo "Vite proxy to Python backend ready."; \
+			proxy_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$proxy_ready" -ne 1 ]; then \
+		echo "Vite proxy did not reach Python backend. Check $(DEV_WEB_LOG) and $(DEV_PYTHON_LOG)"; \
+		exit 1; \
+	fi
 	@echo "Local environment is ready:"
 	@echo "  Web UI:  $(DEV_WEB_URL)"
-	@echo "  Backend: $(DEV_API_URL)"
+	@echo "  Backend: $(DEV_PYTHON_URL)"
 	@echo "  Scanner: $(DEV_SCANNER_URL)"
 	@echo "Mock auth users:"
 	@echo "  local-user  -> X-Mock-User-Id: local-user"
 	@echo "  local-admin -> X-Mock-User-Id: local-admin"
 	@echo "Logs:"
-	@echo "  Backend: $(DEV_SERVER_LOG)"
+	@echo "  Backend: $(DEV_PYTHON_LOG)"
 	@echo "  Frontend: $(DEV_WEB_LOG)"
 
 dev-all-hybrid: ## Start dependencies, Java backend, Python backend, frontend, and scanner
@@ -177,24 +173,24 @@ dev-all-hybrid: ## Start dependencies, Java backend, Python backend, frontend, a
 	exit 1
 
 dev-server: ## 启动后端开发服务器
-	cd server && /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec $(DEV_SERVER_CMD)'
+	cd server-python && $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
 
 dev-python: ## Start Python FastAPI backend in the foreground
 	cd server-python && $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
 
 dev-server-restart: ## 重启后端开发服务器
 	@mkdir -p $(DEV_DIR)
-	@$(DEV_PROCESS) stop --pid-file $(DEV_SERVER_PID)
-	@$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID) --log-file $(DEV_SERVER_LOG) --cwd server -- /bin/sh -lc '$(DEV_SERVER_PREPARE) && exec env $(DEV_SERVER_SCANNER_ENV) $(DEV_SERVER_CMD)' >/dev/null
-	@echo "Waiting for backend on $(DEV_API_URL) ..."
+	@$(DEV_PROCESS) stop --pid-file $(DEV_PYTHON_PID)
+	@$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null
+	@echo "Waiting for Python backend on $(DEV_PYTHON_URL) ..."
 	@for i in $$(seq 1 30); do \
-		if curl -sf $(DEV_API_URL)/actuator/health >/dev/null; then \
-			echo "Backend ready."; \
+		if curl -sf $(DEV_PYTHON_URL)/api/v1/health >/dev/null; then \
+			echo "Python backend ready."; \
 			exit 0; \
 		fi; \
 		sleep 2; \
 	done; \
-	echo "Backend failed to become ready. Check $(DEV_SERVER_LOG)"; \
+	echo "Python backend failed to become ready. Check $(DEV_PYTHON_LOG)"; \
 	exit 1
 
 namespace-smoke: ## 运行命名空间工作流 smoke test
@@ -372,13 +368,14 @@ validate-release-config: ## 校验发布环境变量文件（默认 .env.release
 	./scripts/validate-release-config.sh .env.release
 
 staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：后端镜像 + 前端静态文件）
-	@echo "=== [1/5] Building backend JAR and Docker image ==="
-	cd server && ./mvnw package -DskipTests -B -q
-	docker build -t $(STAGING_SERVER_IMAGE) -f server/Dockerfile.dev server
+	@echo "=== [1/5] Building Python backend Docker image ==="
+	docker build -t $(STAGING_SERVER_IMAGE) -f server-python/Dockerfile .
 	@echo "=== [2/5] Building frontend static files ==="
-	cd web && pnpm run build
+	cd web && if command -v pnpm >/dev/null 2>&1; then pnpm run build; else npm run build; fi
 	@echo "=== [3/5] Starting dependency services ==="
 	$(STAGING_BASE_COMPOSE) up -d --wait
+	$(STAGING_BASE_COMPOSE) exec -T postgres psql -U skillhub -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS skillhub WITH (FORCE);"
+	$(STAGING_BASE_COMPOSE) exec -T postgres psql -U skillhub -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE skillhub;"
 	@echo "=== [4/5] Starting staging services ==="
 	$(STAGING_COMPOSE) up -d --wait server web
 	@echo "=== [5/5] Running smoke tests ==="

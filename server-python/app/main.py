@@ -28,6 +28,7 @@ from app.api.social import router as social_router
 from app.api.tokens import router as tokens_router
 from app.api.user_profile import router as user_profile_router
 from app.api.well_known import router as well_known_router
+from app.bootstrap import initialize_bootstrap_admin
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.core.request_id import RequestIdMiddleware
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.db_engine = create_database_engine(settings)
+    await initialize_bootstrap_admin(app.state.db_engine)
     app.state.notification_fanout = NotificationFanoutManager()
     app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine)
     if app.state.scan_consumer_daemon is not None:

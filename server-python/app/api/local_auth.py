@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
+from app.auth.context import resolve_current_user_or_401
 from app.auth.local import LocalAuthError, change_local_password, login_local_user, register_local_user
 from app.auth.password_reset import (
     PasswordResetError,
@@ -27,7 +28,7 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 @router.post("/api/v1/auth/local/register")
-async def register_local_account_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
+async def register_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
     registrar = getattr(request.app.state, "local_auth_registrar", None)
     try:
         data = await _resolve_result(
@@ -42,6 +43,7 @@ async def register_local_account_route(request: Request, payload: dict[str, Any]
         )
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await establish_session(request, response, data)
     return ok("response.success.created", data, request)
 
 
@@ -69,17 +71,18 @@ async def change_local_password_route(
     request: Request,
     payload: dict[str, Any],
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    if mock_user_id is None or mock_user_id.strip() == "":
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    user = await resolve_current_user_or_401(request, mock_user_id, authorization)
+    user_id = str(user["userId"])
     changer = getattr(request.app.state, "local_auth_password_changer", None)
     try:
         await _resolve_result(
-            changer(mock_user_id.strip(), payload)
+            changer(user_id, payload)
             if changer is not None
             else change_local_password(
                 request.app.state.db_engine,
-                user_id=mock_user_id.strip(),
+                user_id=user_id,
                 current_password=payload.get("currentPassword"),
                 new_password=payload.get("newPassword"),
             )

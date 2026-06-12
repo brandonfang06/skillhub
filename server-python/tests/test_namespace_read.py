@@ -222,3 +222,21 @@ def test_namespace_routes_use_java_envelopes() -> None:
     detail_response = client.get("/api/web/namespaces/team-a", headers={"X-Mock-User-Id": "user-1"})
     assert detail_response.status_code == 200
     assert detail_response.json()["data"]["slug"] == "team-a"
+
+
+def test_namespace_list_accepts_session_principal() -> None:
+    app = create_app()
+    app.state.local_auth_login = lambda payload: auth_user("user-1")
+
+    async def list_reader(user_id: str, page: int, size: int) -> dict[str, object]:
+        return {"items": [{"id": 1, "slug": "team-a"}], "total": 1, "page": page, "size": size}
+
+    app.state.namespace_list_reader = list_reader
+    client = TestClient(app)
+
+    login = client.post("/api/v1/auth/local/login", json={"username": "user-1", "password": "Abcd123!"})
+    list_response = client.get("/api/v1/namespaces?page=0&size=20")
+
+    assert login.status_code == 200
+    assert list_response.status_code == 200
+    assert list_response.json()["data"]["items"] == [{"id": 1, "slug": "team-a"}]

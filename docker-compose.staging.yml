@@ -1,5 +1,5 @@
-# Staging environment: hybrid mode
-# - Backend: locally built Docker image
+# Staging environment: Python-only mode
+# - Backend: locally built Python Docker image
 # - Frontend: locally built static files mounted into Nginx
 # - Dependencies: reuses docker-compose.yml (postgres, redis, minio)
 #
@@ -11,29 +11,16 @@
 
 services:
   server:
-    image: skillhub-server:staging
+    image: skillhub-server-python:staging
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/skillhub
-      SPRING_DATASOURCE_USERNAME: skillhub
-      SPRING_DATASOURCE_PASSWORD: skillhub_dev
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      SESSION_COOKIE_SECURE: "false"
+      SKILLHUB_DATABASE_URL: postgresql+asyncpg://skillhub:skillhub_dev@postgres:5432/skillhub
+      SKILLHUB_REDIS_URL: redis://redis:6379
+      SKILLHUB_SECURITY_SCANNER_ENABLED: "true"
+      SKILLHUB_SECURITY_SCANNER_BASE_URL: http://skill-scanner:8000
+      SKILLHUB_STORAGE_BASE_PATH: /var/lib/skillhub/storage
       SKILLHUB_PUBLIC_BASE_URL: "http://localhost"
-      DEVICE_AUTH_VERIFICATION_URI: "http://localhost/cli/auth"
-      SKILLHUB_STORAGE_PROVIDER: s3
-      STORAGE_BASE_PATH: /var/lib/skillhub/storage
-      SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000
-      SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT: http://localhost:9000
-      SKILLHUB_STORAGE_S3_BUCKET: skillhub
-      SKILLHUB_STORAGE_S3_ACCESS_KEY: minioadmin
-      SKILLHUB_STORAGE_S3_SECRET_KEY: minioadmin
-      SKILLHUB_STORAGE_S3_REGION: us-east-1
-      SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE: "true"
-      SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET: "true"
       BOOTSTRAP_ADMIN_ENABLED: "true"
       BOOTSTRAP_ADMIN_USER_ID: staging-admin
       BOOTSTRAP_ADMIN_USERNAME: admin
@@ -47,8 +34,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      skill-scanner:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/health').read()"]
       interval: 10s
       timeout: 5s
       retries: 12
