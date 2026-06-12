@@ -99,9 +99,9 @@ deferred routes are still visible.
 | GET | `/api/cli/v1/skills/{namespace}/{slug}/download` | python | CLI latest package download moved to Python. Reuses the migrated portal download stream, headers, visibility behavior, and published counter increment logic. |
 | GET | `/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | python | CLI explicit version package download moved to Python. Reuses the migrated portal version download stream, headers, visibility behavior, and published counter increment logic. |
 | DELETE | `/api/cli/v1/skills/{namespace}/{slug}` | python | Destructive CLI delete moved to Python. Reuses the whole-skill hard-delete workflow, preserves Java CLI `{ ok, scope, action, namespace, slug }` response data, and requires bearer `skill:delete` for API-token principals. |
-| POST | `/api/v1/reviews` | python | Review submit write moved to Python. Moves `DRAFT`/`UPLOADED` versions to `PENDING_REVIEW`, creates a pending review task, and writes `REVIEW_SUBMIT` audit. Detail and file/download remain Java-owned. |
+| POST | `/api/v1/reviews` | python | Review submit write moved to Python. Moves `DRAFT`/`UPLOADED` versions to `PENDING_REVIEW`, creates a pending review task, and writes `REVIEW_SUBMIT` audit. Review detail, file, and download routes are also Python-owned. |
 | POST | `/api/web/reviews` | python | Frontend review submit alias moved to Python with the same exact-POST ownership boundary as `/api/v1/reviews`. |
-| GET | `/api/v1/reviews` | python | Review task global/namespace list moved to Python. Exact GET route only; detail and file/download remain Java-owned. |
+| GET | `/api/v1/reviews` | python | Review task global/namespace list moved to Python. Detail, skill-detail, file, download, approve, reject, and withdraw routes are also Python-owned. |
 | GET | `/api/web/reviews` | python | Frontend alias for review task global/namespace list. |
 | GET | `/api/v1/reviews/pending` | python | Namespace pending review list moved to Python. |
 | GET | `/api/web/reviews/pending` | python | Frontend alias for namespace pending review list. |
@@ -115,7 +115,7 @@ deferred routes are still visible.
 | GET | `/api/web/reviews/{id}/file` | python | Frontend alias for review-bound single-file content. |
 | GET | `/api/v1/reviews/{id}/download` | python | Review-bound package download moved to Python. Streams the review task's active version bundle/fallback zip without public download counter increments. |
 | GET | `/api/web/reviews/{id}/download` | python | Frontend alias for review-bound package download. |
-| GET | `/api/v1/promotions` | python | Promotion request list moved to Python. Requires platform review role (`SKILL_ADMIN` or `SUPER_ADMIN`) and keeps write routes Java-owned. |
+| GET | `/api/v1/promotions` | python | Promotion request list moved to Python. Requires platform review role (`SKILL_ADMIN` or `SUPER_ADMIN`); submit, approve, and reject writes are also Python-owned. |
 | GET | `/api/web/promotions` | python | Frontend alias for promotion request list. |
 | GET | `/api/v1/promotions/pending` | python | Pending promotion list moved to Python. Requires platform review role. |
 | GET | `/api/web/promotions/pending` | python | Frontend alias for pending promotion list. |
@@ -127,7 +127,7 @@ deferred routes are still visible.
 | POST | `/api/web/promotions/{id}/approve` | python | Frontend promotion approval alias moved to Python with the same ownership boundary as `/api/v1/promotions/{id}/approve`. |
 | POST | `/api/v1/promotions/{id}/reject` | python | Promotion reject moved to Python. Platform reviewer only, self-review forbidden, updates request to `REJECTED`, writes `PROMOTION_REJECT` audit and synchronous governance notification. |
 | POST | `/api/web/promotions/{id}/reject` | python | Frontend promotion reject alias moved to Python with the same ownership boundary as `/api/v1/promotions/{id}/reject`. |
-| POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Other review routes remain Java-owned. |
+| POST | `/api/v1/reviews/{id}/approve` | python | Review approval write moved to Python. Publishes the reviewed version, updates the skill latest/version visibility/metadata, and writes `REVIEW_APPROVE` audit. Reject, withdraw, detail, file, and download routes are also Python-owned. |
 | POST | `/api/web/reviews/{id}/approve` | python | Frontend review approval alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/approve`. |
 | POST | `/api/v1/reviews/{id}/reject` | python | Review rejection write moved to Python. Rejects the review task, moves the version to `REJECTED`, and writes `REVIEW_REJECT` audit. |
 | POST | `/api/web/reviews/{id}/reject` | python | Frontend review rejection alias moved to Python with the same ownership boundary as `/api/v1/reviews/{id}/reject`. |
@@ -206,7 +206,7 @@ deferred routes are still visible.
 | PUT | `/api/web/namespaces/{slug}/members/{userId}/role` | python | Frontend alias for namespace member role update. |
 | POST | `/api/v1/namespaces/{slug}/members/batch` | python | Namespace member batch add moved to Python. Preserves Java partial-success behavior and batch error mapping. |
 | POST | `/api/web/namespaces/{slug}/members/batch` | python | Frontend alias for namespace member batch add. |
-| POST | `/api/v1/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Requires current owner, swaps old owner to `ADMIN` and new owner to `OWNER`, and keeps namespace lifecycle/profile APIs Java-owned. |
+| POST | `/api/v1/namespaces/{slug}/transfer-ownership` | python | Namespace ownership transfer moved to Python. Requires current owner, swaps old owner to `ADMIN` and new owner to `OWNER`; namespace lifecycle and profile APIs are Python-owned. |
 | POST | `/api/web/namespaces/{slug}/transfer-ownership` | python | Frontend alias for namespace ownership transfer. |
 | GET | `/api/v1/notifications` | python | Current user's notification list moved to Python. Requires auth, preserves Java `PageResponse` envelope, category validation, target resolution, and created-at descending order. |
 | GET | `/api/web/notifications` | python | Frontend alias for current user's notification list. |
@@ -218,7 +218,7 @@ deferred routes are still visible.
 | PUT | `/api/web/notifications/read-all` | python | Frontend alias for mark-all-read. |
 | DELETE | `/api/v1/notifications/{id}` | python | Delete-read notification moved to Python. Deletes only current-user `READ` notifications; otherwise returns `error.notification.readNotFound`. |
 | DELETE | `/api/web/notifications/{id}` | python | Frontend alias for delete-read notification. |
-| GET | `/api/v1/notifications/sse` | python | Notification SSE connection boundary moved to Python. Requires auth, returns `text/event-stream`, emits Java-compatible `connected` event and heartbeat comments. Active notification fanout remains deferred. |
+| GET | `/api/v1/notifications/sse` | python | Notification SSE connection boundary and single-backend fanout moved to Python. Requires auth, returns `text/event-stream`, emits Java-compatible `connected`, `ping`, and `notification` events, and report-submit publishes committed notifications after the database transaction. |
 | GET | `/api/web/notifications/sse` | python | Frontend SSE connection boundary moved to Python with the same connection behavior as `/api/v1/notifications/sse`. |
 | GET | `/api/v1/notification-preferences` | python | Current user's notification preferences moved to Python. Returns all Java notification categories in enum order with `IN_APP` channel and default `enabled = true` for missing rows. |
 | GET | `/api/web/notification-preferences` | python | Frontend alias for notification preference read. |

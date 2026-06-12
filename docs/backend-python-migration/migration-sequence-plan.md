@@ -255,6 +255,7 @@ Still plan carefully when a group requires:
 | 116.3 | Shared platform role policy helpers | python | `app.auth.policy` now owns platform role normalization and reusable platform-role guards while preserving existing route-specific 403 detail strings. Admin search, label definitions, admin skill governance, admin users, audit logs, admin review/report routes, labels, lifecycle hard delete, namespaces, publish, security audit, and social list routes now use the shared role extraction/guard helpers. Superseded by 116.4 for namespace-role policy helpers. |
 | 116.4 | Shared namespace role policy helpers | python | `app.auth.policy` now owns namespace role normalization, owner/manager/member predicates, generic namespace role allowance checks, and managed namespace ID selection. Namespace members/mutations/read models, skill lifecycle, promotion workflow, review approval/query, governance workbench, security audit, skill label checks, and skill read/detail visibility now use the shared namespace-role helpers. Hybrid lifecycle gates were updated to assert rerelease is Python-owned instead of stale Java-owned boundary wording. |
 | 117 | Active notification SSE fanout | python | Python notification SSE now uses an app-level in-process fanout manager with Java-compatible `connected`, `ping`, and `notification` event shapes. `notification` table payloads are built with the Java `NotificationDispatcher` SSE field set, and skill report submit publishes created report notifications to connected users after the database transaction commits. A hybrid live check verified a connected Python SSE client received a `REPORT_SUBMITTED` notification after a real report-submit request. |
+| 118 | Deferred lifecycle/governance semantic audit | n/a | A route-shape audit now compares representative lifecycle/governance routes against the FastAPI app and route registry, the current registry no longer keeps stale broad Java-owned/deferred wording for review/promotion/namespace/SSE buckets, and the result note records each audited capability bucket. No broad lifecycle/governance deferred bucket remains. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1498,10 +1499,9 @@ Group E has started with review lifecycle write ownership:
   `app.auth.context` centralizes mock/bearer/session principal resolution, and `app.auth.policy`
   centralizes initial API-token scope plus unsupported-admin-route checks. Broader route enumeration
   and role/namespace policy coverage remain in milestone 116.
-- Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes, any remaining
-  route-policy scope enforcement outside the covered high-risk routes, active SSE notification
-  fanout, Python schema migration ownership, and default runtime/staging deprecation of Java.
+- Still deferred outside the lifecycle/governance audit: any remaining route-policy scope
+  enforcement outside the covered high-risk routes, Python schema migration ownership, and default
+  runtime/staging deprecation of Java.
 
 Recommended next choice:
 
@@ -1514,8 +1514,6 @@ Recommended next choice:
 Final deferred categories:
 
 - Global route-policy enforcement outside the completed high-risk foundation slice.
-- Active notification SSE fanout.
-- Post-publish lifecycle/governance semantic audit.
 - Python schema migration ownership.
 - Java runtime deprecation from default local/staging paths.
 

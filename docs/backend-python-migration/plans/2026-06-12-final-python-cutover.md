@@ -38,6 +38,8 @@ The remaining work is not mainly route ownership. It is the behavior still marke
   - Active notification SSE fanout.
   - Post-publish lifecycle/governance semantic audit.
   - Python schema migration ownership.
+  - Note: the SSE fanout and lifecycle/governance categories above were baseline categories at
+    milestone 114 and are closed by milestones 117 and 118.
 - [x] Update the migration sequence with this final cutover plan link.
 - [x] Verify:
   - `uv run pytest tests/test_final_cutover_baseline.py tests/test_route_registry.py -q`
@@ -168,6 +170,11 @@ backend replica.
 
 **Purpose:** Close or remove the broad "post-publish lifecycle/governance deferred" note with evidence.
 
+**Status:** Completed. A route-shape audit now checks representative lifecycle/governance Python
+routes against the FastAPI app and route registry. The current registry no longer carries broad
+stale Java-owned/deferred lifecycle/governance wording, and the result note records each audited
+capability bucket plus the remaining non-Java follow-ups.
+
 **Files:**
 - Create: `server-python/tests/test_final_lifecycle_governance_audit.py`
 - Modify: route tests for any missing behavior found by the audit.
@@ -176,16 +183,16 @@ backend replica.
 - Create: `docs/backend-python-migration/results/2026-06-12-lifecycle-governance-deferred-audit.md`
 
 **Implementation steps:**
-- [ ] Add a route matrix test that compares `server-python` registered routes against route registry entries.
-- [ ] Add an audit note for each remaining lifecycle/governance capability:
+- [x] Add a route matrix test that compares `server-python` registered routes against route registry entries.
+- [x] Add an audit note for each remaining lifecycle/governance capability:
   - publish side effects.
   - review and promotion transitions.
   - admin hide/unhide/yank/report/profile review actions.
   - skill tag/label/report/social/delete flows.
   - governance summary/inbox/activity/legacy notification behavior.
-- [ ] For each uncovered gap, either implement the Python behavior with TDD or mark it as intentionally not in product scope before launch.
-- [ ] Remove stale "Java-owned" wording from old historical sections only when it no longer describes current state.
-- [ ] Verify:
+- [x] For each uncovered gap, either implement the Python behavior with TDD or mark it as intentionally not in product scope before launch.
+- [x] Remove stale "Java-owned" wording from old historical sections only when it no longer describes current state.
+- [x] Verify:
   - `uv run pytest tests/test_final_lifecycle_governance_audit.py tests/test_route_registry.py -q`
   - Existing affected route tests.
   - One hybrid live gate covering representative lifecycle/governance side effects.
@@ -266,7 +273,7 @@ Before declaring the Java-to-Python migration complete:
 - [x] Python sessions and OAuth work without Java.
 - [ ] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
 - [x] SSE delivers active notifications.
-- [ ] No broad deferred lifecycle/governance bucket remains.
+- [x] No broad deferred lifecycle/governance bucket remains.
 - [ ] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
 - [ ] Java runtime deprecation from default local/staging paths is complete.
 - [ ] All result docs are written.
