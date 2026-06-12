@@ -7,6 +7,7 @@ import pytest
 from app.api import skills
 from app.api.skills import SkillResolveError, read_local_storage_bytes
 from app.main import create_app
+from app.skills import read_repository as skill_repository
 
 
 class _FakeMappings:
@@ -372,7 +373,7 @@ def test_read_file_content_from_row_maps_missing_storage_to_file_not_found(tmp_p
 
 
 def test_read_skill_version_file_content_does_not_hardcode_public_skill_visibility(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(skills, "read_file_content_from_row", lambda storage_base_path, file_row: b"preview")
+    monkeypatch.setattr(skill_repository, "read_file_content_from_row", lambda storage_base_path, file_row: b"preview")
 
     result = asyncio.run(
         skills.read_skill_version_file_content(
@@ -390,7 +391,7 @@ def test_read_skill_version_file_content_does_not_hardcode_public_skill_visibili
 
 
 def test_read_skill_tag_file_content_does_not_hardcode_public_skill_visibility(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(skills, "read_file_content_from_row", lambda storage_base_path, file_row: b"tag")
+    monkeypatch.setattr(skill_repository, "read_file_content_from_row", lambda storage_base_path, file_row: b"tag")
 
     result = asyncio.run(
         skills.read_skill_tag_file_content(

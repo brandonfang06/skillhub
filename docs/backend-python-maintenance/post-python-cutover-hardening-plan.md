@@ -78,14 +78,14 @@ Current observations from the post-cutover scan:
 - Create: `docs/backend-python-maintenance/results/2026-06-12-skill-read-repository-boundary.md`
 
 **Steps:**
-- [ ] Move public skill search/detail/version/file metadata SQL from `app/api/skills.py` into `app/skills/read_repository.py`.
-- [ ] Move file content and download read helpers into `app/skills/file_repository.py`; keep storage I/O orchestration out of route handlers.
-- [ ] Move tag list/add/delete SQL into `app/skills/tag_repository.py`.
-- [ ] Move ClawHub compatibility coordinate/detail/list/resolve SQL into `app/skills/compat_repository.py`.
-- [ ] Leave FastAPI route functions in `app/api/skills.py` responsible only for request binding, auth principal resolution, response wrapping, and delegation.
-- [ ] Keep response DTO shapes and Java-compatible message keys unchanged.
-- [ ] Update tests only where import paths changed; do not weaken behavioral assertions.
-- [ ] Update the architecture allowlist so `app/api/skills.py` no longer has direct `text()` usage except temporary explicitly documented shims if needed.
+- [x] Move public skill search/detail/version/file metadata SQL from `app/api/skills.py` into `app/skills/read_repository.py`.
+- [x] Move file content and download read helpers into `app/skills/file_repository.py`; keep storage I/O orchestration out of route handlers.
+- [x] Move tag list/add/delete SQL into `app/skills/tag_repository.py`.
+- [x] Move ClawHub compatibility coordinate/detail/list/resolve SQL into `app/skills/compat_repository.py`.
+- [x] Leave FastAPI route functions in `app/api/skills.py` responsible only for request binding, auth principal resolution, response wrapping, and delegation.
+- [x] Keep response DTO shapes and Java-compatible message keys unchanged.
+- [x] Update tests only where import paths changed; do not weaken behavioral assertions.
+- [x] Update the architecture allowlist so `app/api/skills.py` no longer has direct `text()` usage except temporary explicitly documented shims if needed.
 
 **Verify:**
 - `cd server-python; uv run pytest tests/test_skill_search.py tests/test_skill_detail.py tests/test_skill_versions.py tests/test_skill_version_detail.py tests/test_skill_file_metadata.py tests/test_skill_file_content.py tests/test_skill_download.py tests/test_skill_tags.py tests/test_clawhub_search.py tests/test_clawhub_skill_detail.py tests/test_clawhub_skills_list.py tests/test_clawhub_resolve.py -q`

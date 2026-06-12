@@ -11,7 +11,6 @@ REPO_ROOT = SERVER_ROOT.parent
 API_SQL_BRIDGE_ALLOWLIST = {
     "app/api/device_auth.py": "temporary device-flow bridge SQL retained until auth repositories are extracted",
     "app/api/labels.py": "temporary label route bridge SQL retained until label repositories are extracted",
-    "app/api/skills.py": "temporary skill read and compatibility bridge SQL retained until Milestone 2",
 }
 
 

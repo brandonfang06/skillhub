@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from app.api import skills
 from app.api.skills import build_compare_response
 from app.main import create_app
+from app.skills import read_repository as skill_repository
 
 
 class _FakeMappings:
@@ -334,7 +335,7 @@ def test_read_skill_version_compare_skips_content_reads_for_unchanged_files(monk
         read_keys.append(storage_key)
         return "old\n" if storage_key == "old/skill" else "new\n"
 
-    monkeypatch.setattr(skills, "read_local_storage_text", fake_read_text)
+    monkeypatch.setattr(skill_repository, "read_local_storage_text", fake_read_text)
 
     result = asyncio.run(
         skills.read_skill_version_compare(
