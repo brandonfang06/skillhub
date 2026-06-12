@@ -11,6 +11,13 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response
 from sqlalchemy import text
 from starlette.responses import RedirectResponse
 
+from app.auth.oauth import (
+    bind_oauth_principal,
+    configured_oauth_registration,
+    default_oauth_flow_configured,
+    exchange_oauth_code,
+    oauth_registrations_from_env,
+)
 from app.auth.session import clear_session, establish_session, read_session_principal
 from app.auth.tokens import sha256_token
 from app.core.response import ok
@@ -18,10 +25,6 @@ from app.core.response import ok
 router = APIRouter()
 
 DEFAULT_USER_ROLE = "USER"
-DEFAULT_OAUTH_REGISTRATIONS = [
-    {"id": "github", "clientName": "GitHub"},
-    {"id": "gitlab", "clientName": os.getenv("OAUTH2_GITLAB_DISPLAY_NAME", "GitLab")},
-]
 DEFAULT_OAUTH_TARGET_URL = "/dashboard"
 
 
@@ -154,7 +157,7 @@ def _parse_bool_env(name: str) -> bool:
 
 def _oauth_registrations(request: Request) -> list[dict[str, object]]:
     configured = getattr(request.app.state, "auth_oauth_registrations", None)
-    return configured if configured is not None else DEFAULT_OAUTH_REGISTRATIONS
+    return configured if configured is not None else oauth_registrations_from_env()
 
 
 def _find_oauth_registration(request: Request, registration_id: str) -> dict[str, object] | None:
@@ -162,10 +165,6 @@ def _find_oauth_registration(request: Request, registration_id: str) -> dict[str
         if _registration_id(registration) == registration_id:
             return registration
     return None
-
-
-def _configured_oauth_registration(registration: dict[str, object]) -> bool:
-    return all(str(registration.get(key) or "").strip() for key in ("authorizationUri", "clientId", "redirectUri"))
 
 
 def _oauth_scopes(registration: dict[str, object]) -> str | None:
@@ -445,7 +444,7 @@ async def oauth_authorization_boundary(request: Request, registration_id: str, r
     registration = _find_oauth_registration(request, registration_id)
     if registration is None:
         raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
-    if not _configured_oauth_registration(registration):
+    if not configured_oauth_registration(registration):
         sanitize_return_to(returnTo)
         raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
 
@@ -473,16 +472,32 @@ async def oauth_callback(
         raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
     if code is None or code.strip() == "":
         raise HTTPException(status_code=400, detail="error.auth.oauth.codeRequired")
-    if not _configured_oauth_registration(registration):
+    if not configured_oauth_registration(registration):
         raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
 
     exchanger = getattr(request.app.state, "oauth_code_exchanger", None)
     binder = getattr(request.app.state, "oauth_principal_binder", None)
-    if exchanger is None or binder is None:
+    if (exchanger is None or binder is None) and not default_oauth_flow_configured(registration):
         raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
-
-    claims = await _resolve_result(exchanger(registration, code.strip()))
-    principal = await _resolve_result(binder(registration, claims))
+    try:
+        claims = await _resolve_result(
+            exchanger(registration, code.strip())
+            if exchanger is not None
+            else exchange_oauth_code(
+                registration,
+                code.strip(),
+                http_client_factory=getattr(request.app.state, "oauth_http_client_factory", None),
+            )
+        )
+        principal = await _resolve_result(
+            binder(registration, claims)
+            if binder is not None
+            else bind_oauth_principal(request.app.state.db_engine, registration, claims)
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=502, detail="error.auth.oauth.exchangeFailed") from exc
     redirect = RedirectResponse(_consume_oauth_return_to(request, state))
     await establish_session(request, redirect, principal)
     return redirect

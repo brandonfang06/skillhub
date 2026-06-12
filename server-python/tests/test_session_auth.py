@@ -1,5 +1,8 @@
+import asyncio
+
 from fastapi.testclient import TestClient
 
+from app.auth.session import RedisSessionStore
 from app.main import create_app
 
 
@@ -96,3 +99,34 @@ def test_direct_login_creates_session_cookie_used_by_auth_me() -> None:
     assert "SESSION" in client.cookies
     assert auth_me.status_code == 200
     assert auth_me.json()["data"] == principal()
+
+
+def test_redis_session_store_serializes_principals_with_ttl() -> None:
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+            self.ttls: dict[str, int] = {}
+
+        async def setex(self, key: str, ttl: int, value: str) -> None:
+            self.values[key] = value
+            self.ttls[key] = ttl
+
+        async def get(self, key: str) -> str | None:
+            return self.values.get(key)
+
+        async def delete(self, key: str) -> None:
+            self.values.pop(key, None)
+
+    async def scenario() -> None:
+        redis = FakeRedis()
+        store = RedisSessionStore(redis, ttl_seconds=60, key_prefix="test:session:")
+
+        session_id = await store.create(principal())
+        loaded = await store.get(session_id)
+        await store.delete(session_id)
+
+        assert loaded == principal()
+        assert redis.ttls[f"test:session:{session_id}"] == 60
+        assert await store.get(session_id) is None
+
+    asyncio.run(scenario())

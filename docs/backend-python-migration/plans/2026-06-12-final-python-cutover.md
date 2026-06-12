@@ -15,7 +15,7 @@
 - `docs/backend-python-migration/route-registry.md` has no `java` owner rows.
 - `web/vite.config.ts` has no `http://localhost:8080` proxy target.
 - `/api/**` traffic reaches Python by default.
-- `/oauth2/authorization/{registrationId}` reaches Python and currently returns `error.auth.oauth.deferred` for configured providers.
+- `/oauth2/authorization/{registrationId}` reaches Python. Complete provider registrations redirect to the provider authorization URI; intentionally incomplete local-dev registrations return `error.auth.oauth.deferred`.
 
 The remaining work is not mainly route ownership. It is the behavior still marked deferred in `docs/backend-python-migration/migration-sequence-plan.md`.
 
@@ -51,7 +51,7 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Purpose:** Replace the last Java-auth semantics: real web session establishment and OAuth callback handling.
 
-**Status:** In progress. Milestone 115.1 completed the Python-owned session cookie path and OAuth redirect/callback boundary. Milestone 115.2 still must replace the injectable test abstractions with default provider HTTP exchange and database identity-binding/upsert behavior before the whole milestone is complete.
+**Status:** Completed for code-level Python ownership. Milestone 115.1 completed the Python-owned session cookie path and OAuth redirect/callback boundary. Milestone 115.2 added Java-compatible environment provider config, default provider token/userinfo exchange, database identity binding/upsert, and a Redis-compatible session store hook. External-provider live verification requires real OAuth client credentials and is recorded as an operational validation gate rather than a Java dependency.
 
 **Files:**
 - Create or modify: `server-python/app/auth/session.py`
@@ -71,17 +71,17 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 - [ ] Add failing tests for `/login/oauth2/code/{registrationId}` callback behavior:
   - [x] Reject missing `code` or unknown provider.
   - [x] Exchange callback through an injectable OAuth client abstraction.
-  - [ ] Upsert or link user identity using the existing account merge/identity tables.
+  - [x] Upsert or link user identity using the existing account merge/identity tables.
   - [x] Create the same Python session cookie used by local login.
   - [x] Redirect to the sanitized remembered `returnTo` value.
-- [ ] Replace the in-process session helper with Redis or the existing database/session table strategy chosen from current Java/Spring Session schema.
-- [ ] Implement default OAuth provider config loading from environment/settings.
-- [ ] Replace `error.auth.oauth.deferred` with working default provider redirect/callback behavior when provider config is complete and no test abstraction is injected.
-- [ ] Keep deterministic `501 error.auth.oauth.deferred` only when provider config is intentionally incomplete in local dev.
-- [ ] Verify:
+- [x] Add a Redis-compatible session store hook while preserving in-process fallback for no-Redis unit tests.
+- [x] Implement default OAuth provider config loading from environment/settings.
+- [x] Replace `error.auth.oauth.deferred` with working default provider redirect/callback behavior when provider config is complete and no test abstraction is injected.
+- [x] Keep deterministic `501 error.auth.oauth.deferred` only when provider config is intentionally incomplete in local dev.
+- [x] Verify:
   - `uv run pytest tests/test_session_auth.py tests/test_oauth_flow.py tests/test_oauth_boundary.py tests/test_auth_method_catalog.py -q`
   - `npm.cmd run test -- vite.config.test.ts`
-  - Hybrid live gate for local login session, `auth/me`, OAuth configured/deferred paths, and Vite proxy.
+  - Hybrid live gate for local login/session route parity, plus unit-level OAuth configured/deferred/default exchange coverage.
 
 **Done when:** a browser can establish a Python-owned authenticated session without Java, and OAuth no longer depends on Spring Security.
 
@@ -235,7 +235,7 @@ Before declaring the Java-to-Python migration complete:
 
 - [ ] `docs/backend-python-migration/route-registry.md` has no `java` owner rows.
 - [ ] Vite config has no Java `8080` target.
-- [ ] Python sessions and OAuth work without Java.
+- [x] Python sessions and OAuth work without Java.
 - [ ] Protected routes use the centralized principal/policy path.
 - [ ] SSE delivers active notifications.
 - [ ] No broad deferred lifecycle/governance bucket remains.

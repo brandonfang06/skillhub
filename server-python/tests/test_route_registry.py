@@ -64,7 +64,7 @@ def test_route_registry_lists_clawhub_placeholders_and_remaining_java_fallbacks(
         in registry
     )
     assert (
-        "| GET | `/login/oauth2/code/{registrationId}` | python | OAuth callback boundary moved to Python. Requires `code`, exchanges/binds through injectable OAuth abstractions, creates the same Python `SESSION` cookie as local/direct login, and redirects to sanitized remembered `returnTo`; default provider HTTP exchange and DB identity binding remain pending in milestone 115.2."
+        "| GET | `/login/oauth2/code/{registrationId}` | python | OAuth callback moved to Python. Requires `code`, exchanges the provider token/userinfo through the default OAuth helper or injectable test abstraction, binds/upserts `identity_binding` and `user_account`, creates the same Python `SESSION` cookie as local/direct login, and redirects to sanitized remembered `returnTo`."
         in registry
     )
     assert "| * | `/oauth2/**` | java | OAuth remains Java-owned." not in registry

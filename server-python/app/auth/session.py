@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 import os
 import secrets
 from typing import Any
@@ -28,10 +29,44 @@ class InMemorySessionStore:
         self.sessions.pop(session_id, None)
 
 
+class RedisSessionStore:
+    def __init__(
+        self,
+        redis_client: Any,
+        *,
+        ttl_seconds: int = SESSION_TTL_SECONDS,
+        key_prefix: str = "skillhub:session:",
+    ) -> None:
+        self.redis_client = redis_client
+        self.ttl_seconds = ttl_seconds
+        self.key_prefix = key_prefix
+
+    def _key(self, session_id: str) -> str:
+        return f"{self.key_prefix}{session_id}"
+
+    async def create(self, principal: dict[str, object]) -> str:
+        session_id = secrets.token_urlsafe(32)
+        await self.redis_client.setex(self._key(session_id), self.ttl_seconds, json.dumps(principal))
+        return session_id
+
+    async def get(self, session_id: str) -> dict[str, object] | None:
+        value = await self.redis_client.get(self._key(session_id))
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            value = value.decode("utf-8")
+        parsed = json.loads(str(value))
+        return dict(parsed) if isinstance(parsed, dict) else None
+
+    async def delete(self, session_id: str) -> None:
+        await self.redis_client.delete(self._key(session_id))
+
+
 def _session_store(request: Request) -> Any:
     store = getattr(request.app.state, "auth_session_store", None)
     if store is None:
-        store = InMemorySessionStore()
+        redis_client = getattr(request.app.state, "redis_client", None)
+        store = RedisSessionStore(redis_client) if redis_client is not None else InMemorySessionStore()
         request.app.state.auth_session_store = store
     return store
 
