@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from app.api.auth import read_current_mock_user
+from app.auth.context import read_current_mock_user
 from app.core.response import ok
 from app.social.owned import list_my_owned_skills
 from app.social.clawhub_star import ClawHubStarError, clawhub_star_skill, clawhub_unstar_skill

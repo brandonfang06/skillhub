@@ -9,7 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.admin.audit_logs import AdminAuditLogError, list_admin_audit_logs, require_audit_reader
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
-from app.api.auth import read_current_mock_user
+from app.auth.context import read_current_mock_user
 from app.core.response import ok
 
 

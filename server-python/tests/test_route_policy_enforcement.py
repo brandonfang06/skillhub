@@ -18,6 +18,20 @@ def test_high_risk_routes_do_not_import_auth_api_private_principal_helper() -> N
         assert "from app.api.auth import _read_current_user_or_401" not in source
 
 
+def test_authenticated_route_modules_do_not_import_auth_api_principal_helpers() -> None:
+    api_dir = ROOT / "server-python" / "app" / "api"
+    allowed = {api_dir / "auth.py"}
+    offenders: list[str] = []
+    for path in sorted(api_dir.glob("*.py")):
+        if path in allowed:
+            continue
+        source = path.read_text(encoding="utf-8")
+        if "from app.api.auth import read_current_mock_user" in source:
+            offenders.append(str(path.relative_to(ROOT)).replace("\\", "/"))
+
+    assert offenders == []
+
+
 def test_api_token_scope_policy_allows_mock_and_session_principals() -> None:
     from app.auth.policy import require_api_token_scope
 

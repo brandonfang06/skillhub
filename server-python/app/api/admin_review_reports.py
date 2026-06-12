@@ -18,7 +18,7 @@ from app.admin.review_reports import (
     resolve_admin_skill_report,
 )
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
-from app.api.auth import read_current_mock_user
+from app.auth.context import read_current_mock_user
 from app.core.response import ok
 
 

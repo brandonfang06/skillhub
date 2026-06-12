@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.auth import read_current_mock_user
+from app.auth.context import read_current_mock_user
 from app.core.response import ok
 from app.namespace.members import (
     NamespaceMemberReadError,

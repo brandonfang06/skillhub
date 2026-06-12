@@ -17429,6 +17429,8 @@ BEGIN
     DELETE FROM audit_log WHERE request_id LIKE 'codex-governance-%';
     DELETE FROM user_notification WHERE title LIKE 'Codex Governance Notification %';
     DELETE FROM skill_report sr
+    WHERE sr.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-report-submit-%');
+    DELETE FROM skill_report sr
     WHERE sr.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
     DELETE FROM promotion_request pr
     WHERE pr.source_skill_id IN (
@@ -17438,6 +17440,10 @@ BEGIN
     WHERE rt.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
     UPDATE skill s SET latest_version_id = NULL
     WHERE s.namespace_id IN (SELECT id FROM namespace WHERE slug LIKE 'codex-governance-%');
+    DELETE FROM skill_search_document ssd
+    WHERE ssd.skill_id IN (
+        SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug LIKE 'codex-governance-%'
+    );
     DELETE FROM skill_version sv
     WHERE sv.skill_id IN (
         SELECT s.id FROM skill s JOIN namespace n ON n.id = s.namespace_id WHERE n.slug LIKE 'codex-governance-%'

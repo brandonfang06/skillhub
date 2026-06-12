@@ -32,11 +32,11 @@ def test_final_cutover_deferred_categories_are_explicit() -> None:
     final_plan = read_text(FINAL_PLAN)
 
     categories = [
-        "OAuth provider redirect/callback/session establishment",
-        "Global bearer route-policy enforcement",
+        "Global route-policy enforcement outside the completed high-risk foundation slice",
         "Active notification SSE fanout",
         "Post-publish lifecycle/governance semantic audit",
         "Python schema migration ownership",
+        "Java runtime deprecation from default local/staging paths",
     ]
 
     for category in categories:

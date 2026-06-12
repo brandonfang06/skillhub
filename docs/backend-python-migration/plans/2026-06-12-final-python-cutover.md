@@ -91,9 +91,12 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Status:** In progress. Milestone 116.1 completed the shared principal resolver/policy foundation
 and removed direct imports of the private `app.api.auth._read_current_user_or_401` helper from the
-high-risk admin, token, publish, and hard-delete route modules. Remaining work is broader protected
-route enumeration plus role/namespace policy coverage for governance, reports, and the rest of the
-authenticated route surface.
+high-risk admin, token, publish, and hard-delete route modules. Milestone 116.2 moved the remaining
+route-module `read_current_mock_user` imports to `app.auth.context` and fixed social delete route
+ordering so `DELETE /api/web/skills/{skillId}/star` and subscription routes are not captured by the
+broad lifecycle hard-delete route. Remaining work is broader protected route enumeration plus
+role/namespace policy coverage for governance, reports, and the rest of the authenticated route
+surface.
 
 **Files:**
 - Modify: `server-python/app/auth/context.py` or create it if no central module exists.
@@ -115,6 +118,7 @@ authenticated route surface.
 - [ ] Implement one policy helper for required platform roles, namespace roles, and bearer scopes.
 - [x] Implement initial policy helpers for API-token bearer scopes and unsupported API-token principals on admin/web-only routes.
 - [x] Replace duplicated route-local auth checks in high-risk modules first: admin, publish, lifecycle hard-delete, tokens.
+- [x] Move remaining API route module principal-helper imports from `app.api.auth` to `app.auth.context`.
 - [ ] Replace remaining route-local auth checks in governance, reports, and other authenticated route modules.
 - [ ] Verify:
   - `uv run pytest tests/test_route_policy_enforcement.py tests/test_admin_* tests/test_*token* -q`
@@ -245,10 +249,10 @@ Before declaring the Java-to-Python migration complete:
 - [ ] `docs/backend-python-migration/route-registry.md` has no `java` owner rows.
 - [ ] Vite config has no Java `8080` target.
 - [x] Python sessions and OAuth work without Java.
-- [ ] Protected routes use the centralized principal/policy path.
+- [ ] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
 - [ ] SSE delivers active notifications.
 - [ ] No broad deferred lifecycle/governance bucket remains.
 - [ ] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
-- [ ] Default local/staging runtime does not start or require Java.
+- [ ] Java runtime deprecation from default local/staging paths is complete.
 - [ ] All result docs are written.
 - [ ] Final regression and smoke gates pass.
