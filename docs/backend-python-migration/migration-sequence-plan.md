@@ -1496,8 +1496,11 @@ Group E has started with review lifecycle write ownership:
 
 Recommended next choice:
 
-- Continue with remaining auth/session/global bearer-scope surfaces, OAuth/session replacement, or
-  active SSE notification fanout based on route ownership priority.
+- Follow the final Python cutover plan:
+  `docs/backend-python-migration/plans/2026-06-12-final-python-cutover.md`.
+  Execute milestones 114-120 in order: deferred-surface baseline, Python session/OAuth completion,
+  global principal and route-policy enforcement, active SSE fanout, lifecycle/governance semantic
+  audit, Python schema migration takeover, and Java runtime deprecation.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 
