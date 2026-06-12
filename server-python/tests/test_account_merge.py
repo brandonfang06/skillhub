@@ -13,47 +13,7 @@ from app.auth.account_merge import (
     verify_account_merge,
 )
 from app.main import create_app
-
-
-class FakeMappings:
-    def __init__(self, rows: list[dict[str, Any]]) -> None:
-        self.rows = rows
-
-    def all(self) -> list[dict[str, Any]]:
-        return self.rows
-
-    def one_or_none(self) -> dict[str, Any] | None:
-        return self.rows[0] if self.rows else None
-
-
-class FakeResult:
-    def __init__(self, rows: list[dict[str, Any]] | None = None) -> None:
-        self.rows = rows or []
-
-    def mappings(self) -> FakeMappings:
-        return FakeMappings(self.rows)
-
-
-class FakeContext:
-    def __init__(self, connection: "FakeAccountMergeConnection") -> None:
-        self.connection = connection
-
-    async def __aenter__(self) -> "FakeAccountMergeConnection":
-        return self.connection
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
-        return None
-
-
-class FakeEngine:
-    def __init__(self, connection: "FakeAccountMergeConnection") -> None:
-        self.connection = connection
-
-    def connect(self) -> FakeContext:
-        return FakeContext(self.connection)
-
-    def begin(self) -> FakeContext:
-        return FakeContext(self.connection)
+from tests.support.fake_db import FakeEngine, FakeResult, normalized_sql
 
 
 class FakeAccountMergeConnection:
@@ -95,7 +55,7 @@ class FakeAccountMergeConnection:
         self.merge_requests: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
-        sql = " ".join(str(statement).split())
+        sql = normalized_sql(statement)
         bound = params or {}
 
         if sql.startswith("SELECT id, display_name, email, avatar_url, status FROM user_account"):

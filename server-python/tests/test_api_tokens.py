@@ -15,50 +15,8 @@ from app.auth.tokens import (
     update_api_token_expiration,
 )
 from app.main import create_app
-
-
-class FakeMappings:
-    def __init__(self, rows: list[dict[str, Any]]) -> None:
-        self.rows = rows
-
-    def all(self) -> list[dict[str, Any]]:
-        return self.rows
-
-    def one_or_none(self) -> dict[str, Any] | None:
-        return self.rows[0] if self.rows else None
-
-
-class FakeResult:
-    def __init__(self, rows: list[dict[str, Any]] | None = None, row: dict[str, Any] | None = None) -> None:
-        self.rows = rows if rows is not None else ([row] if row is not None else [])
-
-    def mappings(self) -> FakeMappings:
-        return FakeMappings(self.rows)
-
-    def scalar_one(self) -> int:
-        return int(self.rows[0]["count"])
-
-
-class FakeTransaction:
-    def __init__(self, connection: "FakeTokenConnection") -> None:
-        self.connection = connection
-
-    async def __aenter__(self) -> "FakeTokenConnection":
-        return self.connection
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
-        return None
-
-
-class FakeEngine:
-    def __init__(self, connection: "FakeTokenConnection") -> None:
-        self.connection = connection
-
-    def connect(self) -> FakeTransaction:
-        return FakeTransaction(self.connection)
-
-    def begin(self) -> FakeTransaction:
-        return FakeTransaction(self.connection)
+from tests.support.builders import auth_user, bearer_user, token_row
+from tests.support.fake_db import FakeEngine, FakeResult
 
 
 class FakeTokenConnection:
@@ -131,57 +89,6 @@ class FakeTokenConnection:
 
     def _active_user_rows(self, user_id: str) -> list[dict[str, Any]]:
         return [row for row in self.tokens if row["user_id"] == user_id and row["revoked_at"] is None]
-
-
-def token_row(
-    token_id: int,
-    user_id: str,
-    name: str,
-    prefix: str,
-    token_hash: str,
-    scopes: list[str],
-    created_at: str,
-    *,
-    revoked: bool = False,
-) -> dict[str, Any]:
-    return {
-        "id": token_id,
-        "subject_type": "USER",
-        "subject_id": user_id,
-        "user_id": user_id,
-        "name": name,
-        "token_prefix": prefix,
-        "token_hash": token_hash,
-        "scope_json": scopes,
-        "expires_at": None,
-        "last_used_at": None,
-        "revoked_at": datetime(2026, 6, 10, 12, 0, tzinfo=UTC) if revoked else None,
-        "created_at": datetime.fromisoformat(created_at.replace("Z", "+00:00")),
-    }
-
-
-def auth_user(user_id: str = "user-1") -> dict[str, object]:
-    return {
-        "userId": user_id,
-        "displayName": user_id,
-        "email": f"{user_id}@example.test",
-        "avatarUrl": "",
-        "oauthProvider": "mock",
-        "platformRoles": ["USER"],
-    }
-
-
-def bearer_user(user_id: str = "token-user", scopes: list[str] | None = None) -> dict[str, object]:
-    return {
-        "userId": user_id,
-        "displayName": user_id,
-        "email": f"{user_id}@example.test",
-        "avatarUrl": "",
-        "oauthProvider": "api_token",
-        "platformRoles": ["USER"],
-        "tokenScopes": scopes if scopes is not None else ["token:manage"],
-    }
-
 
 @pytest.mark.anyio
 async def test_create_api_token_rotates_active_same_name_and_stores_hash_only() -> None:

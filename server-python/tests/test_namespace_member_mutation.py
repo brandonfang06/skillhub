@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -15,47 +14,8 @@ from app.namespace.members import (
     transfer_namespace_ownership,
     update_namespace_member_role,
 )
-
-
-class FakeMappings:
-    def __init__(self, rows: list[dict[str, Any]]) -> None:
-        self.rows = rows
-
-    def all(self) -> list[dict[str, Any]]:
-        return self.rows
-
-    def one_or_none(self) -> dict[str, Any] | None:
-        return self.rows[0] if self.rows else None
-
-
-class FakeResult:
-    def __init__(self, rows: list[dict[str, Any]] | None = None, row: dict[str, Any] | None = None) -> None:
-        self.rows = rows if rows is not None else ([row] if row is not None else [])
-
-    def mappings(self) -> FakeMappings:
-        return FakeMappings(self.rows)
-
-    def scalar_one(self) -> int:
-        return int(self.rows[0]["count"])
-
-
-class FakeTransaction:
-    def __init__(self, connection: "FakeNamespaceMutationConnection") -> None:
-        self.connection = connection
-
-    async def __aenter__(self) -> "FakeNamespaceMutationConnection":
-        return self.connection
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
-        return None
-
-
-class FakeEngine:
-    def __init__(self, connection: "FakeNamespaceMutationConnection") -> None:
-        self.connection = connection
-
-    def begin(self) -> FakeTransaction:
-        return FakeTransaction(self.connection)
+from tests.support.builders import auth_user, namespace_member_row as member_row, namespace_row, user_row
+from tests.support.fake_db import FakeEngine, FakeResult
 
 
 class FakeNamespaceMutationConnection:
@@ -121,49 +81,6 @@ class FakeNamespaceMutationConnection:
             "display_name": user["display_name"] if user else None,
             "email": user["email"] if user else None,
         }
-
-
-def namespace_row(**overrides: Any) -> dict[str, Any]:
-    data: dict[str, Any] = {"id": 10, "slug": "team-a", "status": "ACTIVE", "type": "TEAM"}
-    data.update(overrides)
-    return data
-
-
-def member_row(**overrides: Any) -> dict[str, Any]:
-    data: dict[str, Any] = {
-        "id": 101,
-        "namespace_id": 10,
-        "user_id": "member",
-        "role": "MEMBER",
-        "created_at": datetime(2026, 6, 10, 8, 5, tzinfo=UTC),
-        "updated_at": datetime(2026, 6, 10, 8, 6, tzinfo=UTC),
-    }
-    data.update(overrides)
-    return data
-
-
-def user_row(**overrides: Any) -> dict[str, Any]:
-    user_id = str(overrides.get("id", "member"))
-    data: dict[str, Any] = {
-        "id": user_id,
-        "display_name": "Member User",
-        "email": f"{user_id}@example.test",
-        "status": "ACTIVE",
-    }
-    data.update(overrides)
-    return data
-
-
-def auth_user(user_id: str = "operator") -> dict[str, object]:
-    return {
-        "userId": user_id,
-        "displayName": "Operator",
-        "email": f"{user_id}@example.test",
-        "avatarUrl": "",
-        "oauthProvider": "mock",
-        "platformRoles": ["USER"],
-    }
-
 
 @pytest.mark.anyio
 async def test_add_namespace_member_matches_java_rules() -> None:

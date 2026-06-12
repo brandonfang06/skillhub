@@ -14,6 +14,8 @@ from app.publish.dry_run import PublishDryRunResult
 from app.publish.package import PackageEntry
 from app.publish.side_effects import PublishSideEffectResult
 from app.publish.storage import StoredPackageResult
+from tests.support.builders import auth_user as build_auth_user
+from tests.support.builders import bearer_user as build_bearer_user
 
 
 def skill_zip(skill_md: bytes | None = None) -> bytes:
@@ -29,26 +31,18 @@ def skill_zip(skill_md: bytes | None = None) -> bytes:
 
 
 def auth_user(platform_roles: list[str] | None = None) -> dict[str, object]:
-    return {
-        "userId": "local-user",
-        "displayName": "Local User",
-        "email": "local-user@example.com",
-        "avatarUrl": "",
-        "oauthProvider": "mock",
-        "platformRoles": platform_roles or ["USER"],
-    }
+    user = build_auth_user("local-user", platform_roles=platform_roles)
+    user["displayName"] = "Local User"
+    user["email"] = "local-user@example.com"
+    return user
 
 
 def bearer_user(scopes: list[str] | None = None, platform_roles: list[str] | None = None) -> dict[str, object]:
-    return {
-        "userId": "token-user",
-        "displayName": "Token User",
-        "email": "token-user@example.com",
-        "avatarUrl": "",
-        "oauthProvider": "api_token",
-        "platformRoles": platform_roles or ["USER"],
-        "tokenScopes": scopes if scopes is not None else ["skill:publish"],
-    }
+    user = build_bearer_user("token-user", scopes if scopes is not None else ["skill:publish"])
+    user["displayName"] = "Token User"
+    user["email"] = "token-user@example.com"
+    user["platformRoles"] = platform_roles or ["USER"]
+    return user
 
 
 def install_publish_validate_reader(app: object, seen: dict[str, object] | None = None) -> None:

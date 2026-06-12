@@ -10,22 +10,8 @@ from fastapi.testclient import TestClient
 
 from app.lifecycle.hard_delete import SkillHardDeleteInput, SkillHardDeleteError, hard_delete_skill
 from app.main import create_app
-
-
-class FakeResult:
-    def __init__(self, row: dict[str, Any] | None = None, rows: list[dict[str, Any]] | None = None, rowcount: int = 1):
-        self.row = row
-        self.rows = rows or []
-        self.rowcount = rowcount
-
-    def mappings(self) -> "FakeResult":
-        return self
-
-    def one_or_none(self) -> dict[str, Any] | None:
-        return self.row
-
-    def all(self) -> list[dict[str, Any]]:
-        return self.rows
+from tests.support.builders import skill_row
+from tests.support.fake_db import FakeEngine, FakeResult
 
 
 class FakeHardDeleteConnection:
@@ -33,14 +19,7 @@ class FakeHardDeleteConnection:
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
         self.skill_rows = [
-            {
-                "skill_id": 10,
-                "namespace_id": 1,
-                "namespace_slug": "team",
-                "skill_slug": "demo",
-                "owner_id": "owner-1",
-                "latest_version_id": 102,
-            }
+            skill_row()
         ]
         self.version_rows = [{"version_id": 101}, {"version_id": 102}]
         self.file_rows = [
@@ -71,25 +50,6 @@ class FakeHardDeleteConnection:
         if "DELETE FROM skill" in sql:
             return FakeResult(rowcount=1)
         return FakeResult()
-
-
-class FakeBegin:
-    def __init__(self, connection: FakeHardDeleteConnection):
-        self.connection = connection
-
-    async def __aenter__(self) -> FakeHardDeleteConnection:
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:
-        return None
-
-
-class FakeEngine:
-    def __init__(self, connection: FakeHardDeleteConnection):
-        self.connection = connection
-
-    def begin(self) -> FakeBegin:
-        return FakeBegin(self.connection)
 
 
 def normalized(sql: str) -> str:

@@ -219,12 +219,12 @@ Current observations from the post-cutover scan:
 - Create: `docs/backend-python-maintenance/results/2026-06-12-test-fixture-cleanup.md`
 
 **Steps:**
-- [ ] Extract a fake async result/connection/engine toolkit from repeated test helpers.
-- [ ] Add builders for common user, namespace, skill, skill version, review task, promotion request, and token rows.
-- [ ] Convert one large test file at a time to the shared helpers.
-- [ ] Keep each converted test's assertions equivalent; do not combine unrelated test cases.
-- [ ] Remove copied helper code only after the converted file passes.
-- [ ] Record before/after line counts for converted test files in the result note.
+- [x] Extract a fake async result/connection/engine toolkit from repeated test helpers.
+- [x] Add builders for common user, namespace, skill, skill version, review task, promotion request, and token rows.
+- [x] Convert one large test file at a time to the shared helpers.
+- [x] Keep each converted test's assertions equivalent; do not combine unrelated test cases.
+- [x] Remove copied helper code only after the converted file passes.
+- [x] Record before/after line counts for converted test files in the result note.
 
 **Verify:**
 - Run each converted test file directly, for example `cd server-python; uv run pytest tests/test_skill_hard_delete.py -q`

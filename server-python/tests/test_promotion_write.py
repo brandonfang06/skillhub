@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,25 +16,7 @@ from app.promotion.workflow import (
     reject_promotion,
     submit_promotion,
 )
-
-
-@dataclass
-class FakeResult:
-    row: dict[str, Any] | None = None
-    rows: list[dict[str, Any]] | None = None
-    scalar: Any = None
-
-    def mappings(self) -> "FakeResult":
-        return self
-
-    def one_or_none(self) -> dict[str, Any] | None:
-        return self.row
-
-    def all(self) -> list[dict[str, Any]]:
-        return self.rows or []
-
-    def scalar_one(self) -> Any:
-        return self.scalar
+from tests.support.fake_db import FakeEngine, FakeResult
 
 
 class FakePromotionWriteConnection:
@@ -178,25 +159,6 @@ class FakePromotionWriteConnection:
             return FakeResult()
 
         raise AssertionError(f"unexpected SQL: {sql}")
-
-
-class FakeBegin:
-    def __init__(self, connection: FakePromotionWriteConnection) -> None:
-        self.connection = connection
-
-    async def __aenter__(self) -> FakePromotionWriteConnection:
-        return self.connection
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
-        return None
-
-
-class FakeEngine:
-    def __init__(self, connection: FakePromotionWriteConnection) -> None:
-        self.connection = connection
-
-    def begin(self) -> FakeBegin:
-        return FakeBegin(self.connection)
 
 
 def submit_input(**overrides: Any) -> PromotionSubmitInput:
