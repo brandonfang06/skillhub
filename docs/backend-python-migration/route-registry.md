@@ -269,4 +269,4 @@ deferred routes are still visible.
 | DELETE | `/api/v1/skills/{canonicalSlug}` | python | ClawHub placeholder delete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
 | POST | `/api/v1/skills/{canonicalSlug}/undelete` | python | ClawHub placeholder undelete moved to Python. Requires current user and returns Java-compatible plain `{ ok: true }` without DB/storage side effects. |
 | * | `/api/**` unmatched paths | python | Vite dev proxy now routes every API path to Python; unsupported or method-mismatched paths use Python/FastAPI fallback behavior. |
-| * | `/oauth2/**` | java | OAuth remains Java-owned. |
+| GET | `/oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python. Known configured providers return `error.auth.oauth.deferred` until external provider redirect, callback token exchange, identity binding, and session cookie creation are implemented; unknown providers return `error.auth.oauth.providerNotFound`. |

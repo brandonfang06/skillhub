@@ -245,7 +245,8 @@ Still plan carefully when a group requires:
 | 109 | Admin label definition bearer route-policy enforcement | python | Already Python-owned admin label definition routes now reject valid bearer API-token principals without a mock user as Java-compatible unsupported admin-route access while preserving invalid-bearer `401` and mock-user precedence. |
 | 110 | Admin route bearer policy cutover | python | Already Python-owned `/api/v1/admin/**` route groups now share Java-compatible bearer API-token unsupported handling while preserving invalid-bearer `401` and `X-Mock-User-Id` precedence. |
 | 111 | Vite API default Python cutover | python | Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit Java-owned exceptions, while `/oauth2/**` remains Java-owned. Superseded by milestone 112 for API exceptions. |
-| 112 | API Java exception removal | python | Local Vite dev proxy now sends all `/api/**` traffic to Python; `/oauth2/**` is the only remaining Java-owned proxy family. Unsupported API paths use Python/FastAPI fallback behavior. |
+| 112 | API Java exception removal | python | Local Vite dev proxy now sends all `/api/**` traffic to Python. Unsupported API paths use Python/FastAPI fallback behavior. Superseded by milestone 113 for the remaining OAuth proxy family. |
+| 113 | `GET /oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python and local Vite dev proxy no longer contains any Java `8080` target. Known configured providers return `error.auth.oauth.deferred`; full external OAuth redirect, callback token exchange, identity binding, and session cookie creation remain deferred. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -415,9 +416,8 @@ Python-owned in this group:
 
 Still Java-owned/deferred in this group:
 
-- OAuth callback/session establishment paths not explicitly moved to Python.
+- OAuth provider redirect, callback token exchange, identity binding, and session establishment.
 - Global bearer-token scope enforcement outside the current-principal read bridge.
-- `/oauth2/**`
 
 Next candidate routes:
 
@@ -1167,8 +1167,10 @@ Reason:
 
 Deferred routes:
 
-- `/api/v1/auth/**`
-- `/oauth2/**`
+- Remaining session/OAuth routes outside migrated auth catalog, local auth, direct/session boundary,
+  account merge, device auth, token management, current-principal, and OAuth authorization boundary
+  routes.
+- OAuth provider redirect, callback token exchange, identity binding, and session establishment.
 - bearer-token authentication filters and scope enforcement
 
 Reason:
@@ -1480,11 +1482,17 @@ Group E has started with review lifecycle write ownership:
 - Completed: API Java exception removal:
   Local Vite dev proxy no longer contains any `/api/**` Java target. All API paths now reach
   Python, and unsupported or method-mismatched paths use Python/FastAPI fallback behavior.
+- Completed: OAuth proxy boundary cutover:
+  `GET /oauth2/authorization/{registrationId}` now routes to Python, and local Vite dev proxy no
+  longer contains any Java `8080` target. Full external OAuth redirect, callback token exchange,
+  identity binding, and session cookie creation remain deferred behind
+  `error.auth.oauth.deferred`.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
   portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
   surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
-  device-auth, and bearer current-principal boundary routes, Spring Session establishment,
-  any remaining route-policy scope enforcement, active SSE notification fanout, and `/oauth2/**`.
+  device-auth, and bearer current-principal boundary routes, full OAuth provider exchange/callback
+  handling, Spring Session establishment, any remaining route-policy scope enforcement, and active
+  SSE notification fanout.
 
 Recommended next choice:
 

@@ -152,6 +152,13 @@ def _oauth_registrations(request: Request) -> list[dict[str, object]]:
     return configured if configured is not None else DEFAULT_OAUTH_REGISTRATIONS
 
 
+def _find_oauth_registration(request: Request, registration_id: str) -> dict[str, object] | None:
+    for registration in _oauth_registrations(request):
+        if _registration_id(registration) == registration_id:
+            return registration
+    return None
+
+
 def _direct_enabled(request: Request) -> bool:
     configured = getattr(request.app.state, "auth_direct_enabled", None)
     return bool(configured) if configured is not None else _parse_bool_env("SKILLHUB_AUTH_DIRECT_ENABLED")
@@ -383,6 +390,14 @@ async def get_auth_methods(request: Request, returnTo: str | None = None) -> dic
         ),
         request,
     )
+
+
+@router.get("/oauth2/authorization/{registration_id}")
+async def oauth_authorization_boundary(request: Request, registration_id: str, returnTo: str | None = None) -> None:
+    if _find_oauth_registration(request, registration_id) is None:
+        raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
+    sanitize_return_to(returnTo)
+    raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
 
 
 @router.post("/api/v1/auth/direct/login")
