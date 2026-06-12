@@ -81,6 +81,25 @@ class FakeReviewApproveConnection:
             return FakeResult()
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
+        if "FROM skill s" in sql and "JOIN skill_version sv ON sv.id = s.latest_version_id" in sql:
+            return FakeResult(
+                row={
+                    "skill_id": 7,
+                    "namespace_id": 10,
+                    "namespace_slug": "team-a",
+                    "owner_id": "local-user",
+                    "slug": "agent-helper",
+                    "display_name": "Agent Helper",
+                    "summary": "Helps agents",
+                    "visibility": "NAMESPACE_ONLY",
+                    "status": "ACTIVE",
+                    "parsed_metadata_json": json.dumps({"name": "Agent Helper", "description": "Helps agents"}),
+                }
+            )
+        if "FROM skill_label sl" in sql:
+            return FakeResult(rows=[])
+        if "INSERT INTO skill_search_document" in sql:
+            return FakeResult()
 
         raise AssertionError(f"unexpected SQL: {sql}")
 
@@ -132,7 +151,9 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     version_update = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill_version" in sql)
     skill_update = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill\n" in sql)
     audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    search_upsert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_search_document" in sql)
     assert review_update < version_update < skill_update < audit_insert
+    assert audit_insert < search_upsert
     assert connection.params[review_update]["status"] == "APPROVED"
     assert connection.params[version_update]["status"] == "PUBLISHED"
     assert connection.params[skill_update]["latest_version_id"] == 42
@@ -142,6 +163,7 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     assert connection.params[audit_insert]["action"] == "REVIEW_APPROVE"
     assert connection.params[audit_insert]["target_type"] == "REVIEW_TASK"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "ship it"}
+    assert connection.params[search_upsert]["skill_id"] == 7
 
 
 def test_review_approve_route_returns_java_envelope() -> None:

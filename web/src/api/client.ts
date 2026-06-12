@@ -171,6 +171,10 @@ type ApiEnvelope<T> = {
   requestId: string
 }
 
+type ApiErrorEnvelope<T> = Partial<ApiEnvelope<T>> & {
+  detail?: unknown
+}
+
 type RequestWithTimeout = RequestInit & {
   timeoutMs?: number
 }
@@ -221,7 +225,7 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
     cleanup()
   }
 
-  let json: ApiEnvelope<T> | null = null
+  let json: ApiErrorEnvelope<T> | null = null
 
   try {
     json = (await response.json()) as ApiEnvelope<T>
@@ -233,10 +237,12 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   }
 
   if (!response.ok || json.code !== 0) {
-    throw new ApiError(json.msg || `HTTP ${response.status}`, response.status, json.msg, json.msg)
+    const detail = typeof json.detail === 'string' ? json.detail : undefined
+    const message = json.msg || detail || `HTTP ${response.status}`
+    throw new ApiError(message, response.status, json.msg || detail, json.msg || detail)
   }
 
-  return json.data
+  return json.data as T
 }
 
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {

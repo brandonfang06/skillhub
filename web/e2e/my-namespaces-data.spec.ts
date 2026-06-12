@@ -1,13 +1,19 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
+import { loginWithCredentials } from './helpers/session'
 import { E2eTestDataBuilder } from './helpers/test-data-builder'
 
+function adminCredentials() {
+  return {
+    username: process.env.E2E_ADMIN_USERNAME ?? process.env.BOOTSTRAP_ADMIN_USERNAME ?? 'admin',
+    password: process.env.E2E_ADMIN_PASSWORD ?? process.env.BOOTSTRAP_ADMIN_PASSWORD ?? 'ChangeMe!2026',
+  }
+}
+
 test.describe('My Namespaces Data (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
-    await page.context().setExtraHTTPHeaders({
-      'X-Mock-User-Id': 'local-admin',
-    })
+    await loginWithCredentials(page, adminCredentials(), testInfo)
   })
 
   test('shows namespace created by request helper', async ({ page }, testInfo) => {

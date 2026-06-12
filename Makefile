@@ -18,7 +18,7 @@ DEV_PROCESS := bash scripts/dev-process.sh
 DEV_SERVER_PREPARE := true
 DEV_SERVER_CMD := ./scripts/run-dev-app.sh
 DEV_SERVER_SCANNER_ENV := SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_URL=$(DEV_SCANNER_URL) SKILLHUB_SECURITY_SCANNER_MODE=upload
-DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache
+DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true
 DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 BACKEND_TEST_JAVA_OPTIONS ?= -XX:+EnableDynamicAgentLoading
 PARALLEL_BASE_REF ?= origin/main

@@ -28,6 +28,7 @@ def test_default_make_targets_start_python_without_java_backend() -> None:
 
     assert "$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID)" in dev_all
     assert "--cwd server-python" in dev_all
+    assert "DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true" in makefile
     assert "command -v pnpm" in dev_all
     assert "$(DEV_WEB_URL)/api/v1/health" in dev_all
     assert "$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID)" not in dev_all

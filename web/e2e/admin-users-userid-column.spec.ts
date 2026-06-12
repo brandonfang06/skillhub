@@ -1,19 +1,20 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
+import { loginWithCredentials } from './helpers/session'
+
+function adminCredentials() {
+  return {
+    username: process.env.E2E_ADMIN_USERNAME ?? process.env.BOOTSTRAP_ADMIN_USERNAME ?? 'admin',
+    password: process.env.E2E_ADMIN_PASSWORD ?? process.env.BOOTSTRAP_ADMIN_PASSWORD ?? 'ChangeMe!2026',
+  }
+}
 
 // This spec verifies the admin UI surfaces userId next to username and supports one-click copy.
-// We rely on the `X-Mock-User-Id: local-admin` mock profile (the same approach used by other
-// admin specs such as `my-namespaces-data.spec.ts`). The mock profile activates a deterministic
-// admin session without exercising the full SSO path; treat results here as evidence of the
-// admin UI behavior, not of the real-service auth path.
 test.describe('Admin Users - UserId Column', () => {
-  test.beforeEach(async ({ page, context }) => {
+  test.beforeEach(async ({ page, context }, testInfo) => {
     await setEnglishLocale(page)
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-
-    await page.context().setExtraHTTPHeaders({
-      'X-Mock-User-Id': 'local-admin',
-    })
+    await loginWithCredentials(page, adminCredentials(), testInfo)
 
     await Promise.all([
       page.waitForResponse(

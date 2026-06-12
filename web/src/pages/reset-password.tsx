@@ -6,6 +6,13 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 
+function resetPasswordErrorMessage(message: string, t: (key: string) => string): string {
+  if (message === 'error.auth.password.reset.invalid.code') {
+    return t('resetPassword.invalidCode')
+  }
+  return message
+}
+
 /**
  * Public page for verifying a reset code and setting a new password.
  */
@@ -40,7 +47,7 @@ export function ResetPasswordPage() {
       await authApi.requestPasswordReset({ email: normalizedEmail })
       setCodeSentMessage(t('resetPassword.codeSentMessage'))
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : t('resetPassword.genericError'))
+      setErrorMessage(error instanceof Error ? resetPasswordErrorMessage(error.message, t) : t('resetPassword.genericError'))
     } finally {
       setIsSendingCode(false)
     }
@@ -81,7 +88,7 @@ export function ResetPasswordPage() {
       })
       setIsSuccess(true)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : t('resetPassword.genericError'))
+      setErrorMessage(error instanceof Error ? resetPasswordErrorMessage(error.message, t) : t('resetPassword.genericError'))
     } finally {
       setIsSubmitting(false)
     }

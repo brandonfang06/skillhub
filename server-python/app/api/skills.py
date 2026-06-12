@@ -16,6 +16,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, is_namespace_member
 from app.core.response import ok
 
@@ -87,6 +88,19 @@ def has_text(value: str | None) -> bool:
 
 def normalized_current_user_id(mock_user_id: str | None) -> str | None:
     return mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
+
+
+async def optional_current_user_id(request: Request, mock_user_id: str | None) -> str | None:
+    header_user_id = normalized_current_user_id(mock_user_id)
+    if header_user_id is not None:
+        return header_user_id
+    try:
+        user = await resolve_current_user_or_401(request, None, None)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return None
+        raise
+    return str(user["userId"])
 
 
 def lifecycle_visible_statuses(can_manage: bool) -> tuple[str, ...]:
@@ -953,7 +967,6 @@ async def read_skill_resolve(
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1244,7 +1257,6 @@ async def read_skill_detail(
                     WHERE n.slug = :namespace
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1258,8 +1270,6 @@ async def read_skill_detail(
             raise SkillResolveError("error.skill.notFound")
         if str(skill_row["namespace_status"]) == "ARCHIVED":
             raise SkillResolveError("error.namespace.archived", status_code=403)
-        if str(skill_row["visibility"]) != "PUBLIC":
-            raise SkillResolveError("error.skill.access.denied", status_code=403)
 
         namespace_role = None
         if current_user_id is not None:
@@ -1280,6 +1290,9 @@ async def read_skill_detail(
                     },
                 )
             ).scalar_one_or_none()
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        if str(skill_row["visibility"]) != "PUBLIC" and not is_namespace_member(namespace_role):
+            raise SkillResolveError("error.skill.access.denied", status_code=403)
 
         published_version = (
             await connection.execute(
@@ -2922,7 +2935,7 @@ async def get_skill_detail(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_detail_reader", None)
-    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, current_user_id))
@@ -2945,7 +2958,7 @@ async def resolve_skill_version(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_resolve_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, version, tag, hash_value, current_user_id))

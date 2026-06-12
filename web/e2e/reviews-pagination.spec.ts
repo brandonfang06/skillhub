@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
+import { loginWithCredentials } from './helpers/session'
 
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -14,6 +15,13 @@ interface ReviewPageData {
   size: number
 }
 
+function adminCredentials() {
+  return {
+    username: process.env.E2E_ADMIN_USERNAME ?? process.env.BOOTSTRAP_ADMIN_USERNAME ?? 'admin',
+    password: process.env.E2E_ADMIN_PASSWORD ?? process.env.BOOTSTRAP_ADMIN_PASSWORD ?? 'ChangeMe!2026',
+  }
+}
+
 async function fetchReviewPageMeta(page: Page, status: ReviewStatus): Promise<ReviewPageData> {
   const response = await page.request.get(`/api/web/reviews?status=${status}&page=0&size=20&sortDirection=DESC`)
   const body = await response.json() as ApiEnvelope<ReviewPageData>
@@ -24,11 +32,9 @@ async function fetchReviewPageMeta(page: Page, status: ReviewStatus): Promise<Re
 }
 
 test.describe('Review Management Pagination (Real API)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
-    await page.context().setExtraHTTPHeaders({
-      'X-Mock-User-Id': 'local-admin',
-    })
+    await loginWithCredentials(page, adminCredentials(), testInfo)
   })
 
   test('matches pagination rendering with real review totals', async ({ page }) => {

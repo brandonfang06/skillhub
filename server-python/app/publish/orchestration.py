@@ -20,6 +20,7 @@ from app.publish.transaction import (
     prepare_publish_db_records,
     finalize_publish_db_records,
 )
+from app.admin.search import upsert_skill_search_document
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,8 @@ async def execute_publish_write(
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
         if after_publish is not None:
             await after_publish(connection, prepared.skill_id, prepared.version_id)
+        if prepared.latest_version_updated:
+            await upsert_skill_search_document(connection, prepared.skill_id)
 
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False

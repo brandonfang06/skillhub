@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
@@ -64,20 +64,20 @@ export function MySkillsPage() {
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
 
-  const updateSearch = (next: Partial<typeof search>, options?: { replace?: boolean }) => {
+  const updateSearch = useCallback((next: Partial<typeof search>, options?: { replace?: boolean }) => {
     navigate({
       to: '/dashboard/skills',
       search: (prev) => ({ ...prev, ...next }),
       replace: options?.replace,
     })
-  }
+  }, [navigate])
 
   // Push the debounced keyword to the URL (reset page to 0 when search changes)
   useEffect(() => {
     if (debouncedKeyword !== keyword) {
       updateSearch({ q: debouncedKeyword || undefined, page: 0 }, { replace: true })
     }
-  }, [debouncedKeyword])
+  }, [debouncedKeyword, keyword, updateSearch])
 
   // Sync keywordInput when navigating back via returnTo
   useEffect(() => {

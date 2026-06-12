@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
@@ -128,10 +128,10 @@ function buildSkillPackageZipBuffer(suffix: string, options?: SeedSkillOptions):
     const zipPath = path.join(tempRoot, `pkg-${suffix}.zip`)
     const { readmeHeading, skillMd } = buildSkillPackageContent(suffix, options)
 
-    execFileSync('mkdir', ['-p', packageDir])
+    mkdirSync(packageDir, { recursive: true })
     writeFileSync(path.join(packageDir, 'SKILL.md'), skillMd, 'utf8')
     writeFileSync(path.join(packageDir, 'README.md'), `# ${readmeHeading}\n`, 'utf8')
-    execFileSync('zip', ['-q', '-r', zipPath, 'SKILL.md', 'README.md'], { cwd: packageDir })
+    writeSkillPackageZip(zipPath, packageDir)
     return readFileSync(zipPath)
   } finally {
     rmSync(tempRoot, { recursive: true, force: true })
@@ -144,16 +144,30 @@ function createSkillPackageZipFile(suffix: string, options?: SeedSkillOptions): 
   const zipPath = path.join(tempRoot, `pkg-${suffix}.zip`)
   const { readmeHeading, skillMd } = buildSkillPackageContent(suffix, options)
 
-  execFileSync('mkdir', ['-p', packageDir])
+  mkdirSync(packageDir, { recursive: true })
   writeFileSync(path.join(packageDir, 'SKILL.md'), skillMd, 'utf8')
   writeFileSync(path.join(packageDir, 'README.md'), `# ${readmeHeading}\n`, 'utf8')
-  execFileSync('zip', ['-q', '-r', zipPath, 'SKILL.md', 'README.md'], { cwd: packageDir })
+  writeSkillPackageZip(zipPath, packageDir)
 
   return {
     filePath: zipPath,
     cleanup: () => {
       rmSync(tempRoot, { recursive: true, force: true })
     },
+  }
+}
+
+function writeSkillPackageZip(zipPath: string, packageDir: string): void {
+  try {
+    execFileSync('zip', ['-q', '-r', zipPath, 'SKILL.md', 'README.md'], { cwd: packageDir })
+  } catch (error) {
+    const zipError = error instanceof Error ? error.message : String(error)
+    try {
+      execFileSync('tar', ['-a', '-cf', zipPath, 'SKILL.md', 'README.md'], { cwd: packageDir })
+    } catch (tarError) {
+      const message = tarError instanceof Error ? tarError.message : String(tarError)
+      throw new Error(`Unable to create E2E skill package zip. zip failed: ${zipError}; tar failed: ${message}`)
+    }
   }
 }
 

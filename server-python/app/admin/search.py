@@ -226,6 +226,42 @@ async def _upsert_document(connection: Any, skill: dict[str, Any], keywords: str
     )
 
 
+async def upsert_skill_search_document(connection: Any, skill_id: int) -> None:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id AS skill_id,
+                       s.namespace_id,
+                       n.slug AS namespace_slug,
+                       s.owner_id,
+                       s.slug,
+                       s.display_name,
+                       s.summary,
+                       s.visibility,
+                       s.status,
+                       CAST(sv.parsed_metadata_json AS text) AS parsed_metadata_json
+                FROM skill s
+                JOIN namespace n ON n.id = s.namespace_id
+                JOIN skill_version sv ON sv.id = s.latest_version_id
+                WHERE s.id = :skill_id
+                  AND s.status = 'ACTIVE'
+                  AND s.latest_version_id IS NOT NULL
+                LIMIT 1
+                """
+            ),
+            {"skill_id": skill_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        await connection.execute(text("DELETE FROM skill_search_document WHERE skill_id = :skill_id"), {"skill_id": skill_id})
+        return
+
+    labels = await _read_label_keywords(connection, [int(row["skill_id"])])
+    keywords, search_text = _build_search_payload(dict(row), labels.get(int(row["skill_id"]), []))
+    await _upsert_document(connection, dict(row), keywords, search_text)
+
+
 async def _write_audit(
     connection: Any,
     *,

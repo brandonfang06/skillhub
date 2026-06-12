@@ -255,6 +255,17 @@
     "emailInvalid": "Invalid email format",
     "emailExists": "Email already exists"
   },
+  "error": {
+    "auth": {
+      "password": {
+        "reset": {
+          "invalid": {
+            "code": "The verification code is invalid or has expired."
+          }
+        }
+      }
+    }
+  },
   "resetPassword": {
     "title": "Reset Password",
     "subtitle": "Enter your email, verification code, and new password.",
@@ -278,6 +289,7 @@
     "submitting": "Resetting...",
     "successMessage": "Password reset successful. Please sign in with your new password.",
     "genericError": "Failed to reset password",
+    "invalidCode": "The verification code is invalid or has expired.",
     "backToLogin": "Back to login"
   },
   "device": {

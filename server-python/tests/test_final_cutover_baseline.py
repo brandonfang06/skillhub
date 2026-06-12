@@ -42,12 +42,11 @@ def test_final_cutover_deferred_categories_are_explicit() -> None:
     for category in baseline_categories:
         assert category in final_plan
 
-    remaining_categories = [
-        "Global route-policy enforcement outside the completed high-risk foundation slice",
-    ]
+    remaining_categories: list[str] = []
 
     for category in remaining_categories:
         assert category in plan
+    assert "Final deferred categories:\n\n- None currently tracked." in plan
 
 
 def test_milestone_114_is_recorded_as_completed() -> None:

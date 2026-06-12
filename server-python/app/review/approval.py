@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
+
+from app.admin.search import upsert_skill_search_document
 from sqlalchemy.exc import IntegrityError
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
@@ -537,6 +539,7 @@ async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[
                 "created_at": reviewed_at,
             },
         )
+        await upsert_skill_search_document(connection, int(task["skill_id"]))
 
     return _review_response(task, status="APPROVED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
 
