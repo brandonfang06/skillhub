@@ -30,16 +30,16 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 - Create: `docs/backend-python-migration/results/2026-06-12-final-cutover-baseline.md`
 
 **Implementation steps:**
-- [ ] Add tests that assert route registry has no `| java |` owner rows.
-- [ ] Add tests that assert Vite config has no Java `8080` proxy targets.
-- [ ] Add tests that assert final deferred categories are explicitly listed as:
+- [x] Add tests that assert route registry has no `| java |` owner rows.
+- [x] Add tests that assert Vite config has no Java `8080` proxy targets.
+- [x] Add tests that assert final deferred categories are explicitly listed as:
   - OAuth provider redirect/callback/session establishment.
   - Global bearer route-policy enforcement.
   - Active notification SSE fanout.
   - Post-publish lifecycle/governance semantic audit.
   - Python schema migration ownership.
-- [ ] Update the migration sequence with this final cutover plan link.
-- [ ] Verify:
+- [x] Update the migration sequence with this final cutover plan link.
+- [x] Verify:
   - `uv run pytest tests/test_final_cutover_baseline.py tests/test_route_registry.py -q`
   - `npm.cmd run test -- vite.config.test.ts`
   - `rg -n "target:\s*'http://localhost:8080'|toBe\('http://localhost:8080'\)" web\vite.config.ts web\vite.config.test.ts`

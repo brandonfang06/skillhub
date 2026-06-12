@@ -247,6 +247,7 @@ Still plan carefully when a group requires:
 | 111 | Vite API default Python cutover | python | Local Vite dev proxy now sends unmatched `/api/**` traffic to Python by default after explicit Java-owned exceptions, while `/oauth2/**` remains Java-owned. Superseded by milestone 112 for API exceptions. |
 | 112 | API Java exception removal | python | Local Vite dev proxy now sends all `/api/**` traffic to Python. Unsupported API paths use Python/FastAPI fallback behavior. Superseded by milestone 113 for the remaining OAuth proxy family. |
 | 113 | `GET /oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python and local Vite dev proxy no longer contains any Java `8080` target. Known configured providers return `error.auth.oauth.deferred`; full external OAuth redirect, callback token exchange, identity binding, and session cookie creation remain deferred. |
+| 114 | Deferred surface audit and cutover baseline | n/a | Final cutover baseline tests now assert no Java route/proxy ownership can reappear silently and lock the remaining deferred categories before semantic completion begins. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1501,6 +1502,14 @@ Recommended next choice:
   Execute milestones 114-120 in order: deferred-surface baseline, Python session/OAuth completion,
   global principal and route-policy enforcement, active SSE fanout, lifecycle/governance semantic
   audit, Python schema migration takeover, and Java runtime deprecation.
+
+Final deferred categories:
+
+- OAuth provider redirect/callback/session establishment.
+- Global bearer route-policy enforcement.
+- Active notification SSE fanout.
+- Post-publish lifecycle/governance semantic audit.
+- Python schema migration ownership.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 
