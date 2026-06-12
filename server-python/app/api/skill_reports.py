@@ -87,6 +87,7 @@ async def submit_skill_report_route_data(
                 request_id=meta["request_id"],
                 client_ip=meta["client_ip"],
                 user_agent=meta["user_agent"],
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
     except SkillReportSubmitError as exc:

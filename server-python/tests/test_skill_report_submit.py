@@ -66,6 +66,7 @@ class FakeBegin:
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.connection.transaction_closed = True
         return None
 
 
@@ -95,6 +96,7 @@ class FakeSkillReportConnection:
         self.audits: list[dict[str, Any]] = []
         self.notifications: list[dict[str, Any]] = []
         self.statements: list[str] = []
+        self.transaction_closed = False
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = " ".join(str(statement).split())
@@ -123,9 +125,22 @@ class FakeSkillReportConnection:
         if "FROM user_role_binding" in sql:
             return FakeResult(rows=[{"user_id": "skill-admin"}, {"user_id": "super-admin"}])
         if sql.startswith("INSERT INTO notification"):
-            self.notifications.append(dict(values))
-            return FakeResult()
+            notification = {
+                "id": 1200 + len(self.notifications),
+                **dict(values),
+            }
+            self.notifications.append(notification)
+            return FakeResult(row=notification)
         raise AssertionError(f"unexpected SQL: {sql}")
+
+
+class FakeNotificationFanout:
+    def __init__(self, connection: FakeSkillReportConnection) -> None:
+        self.connection = connection
+        self.published: list[tuple[str, dict[str, Any], bool]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload, self.connection.transaction_closed))
 
 
 def run(coro: Any) -> Any:
@@ -188,6 +203,44 @@ def test_submit_skill_report_inserts_report_audit_and_platform_notifications() -
         '{"skillId":100,"skillName":"Reported Skill","slug":"reported-skill",'
         '"namespace":"team-ai","reportId":901,"reporterId":"reporter-1"}'
     )
+
+
+def test_submit_skill_report_publishes_created_notifications_after_commit() -> None:
+    connection = FakeSkillReportConnection()
+    fanout = FakeNotificationFanout(connection)
+
+    result = run(
+        submit_skill_report(
+            FakeEngine(connection),
+            namespace_slug="@team-ai",
+            skill_slug="reported-skill",
+            reporter_id="reporter-1",
+            reason="policy violation",
+            details=None,
+            request_id="req-report",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+            now=datetime(2026, 6, 11, 8, 0, tzinfo=UTC),
+            notification_fanout=fanout,
+        )
+    )
+
+    assert result == {"reportId": 901, "status": "PENDING"}
+    assert [entry[0] for entry in fanout.published] == ["skill-admin", "super-admin"]
+    assert all(transaction_closed for _, _, transaction_closed in fanout.published)
+    assert fanout.published[0][1] == {
+        "id": 1200,
+        "category": "REPORT",
+        "eventType": "REPORT_SUBMITTED",
+        "title": "Skill reported: Reported Skill",
+        "bodyJson": (
+            '{"skillId":100,"skillName":"Reported Skill","slug":"reported-skill",'
+            '"namespace":"team-ai","reportId":901,"reporterId":"reporter-1"}'
+        ),
+        "entityType": "REPORT",
+        "entityId": 901,
+        "createdAt": "2026-06-11T08:00:00Z",
+    }
 
 
 def test_submit_skill_report_rejects_java_error_cases() -> None:

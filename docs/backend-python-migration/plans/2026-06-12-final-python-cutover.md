@@ -138,6 +138,12 @@ Java-owned.
 
 **Purpose:** Finish notification SSE beyond connection establishment by delivering real notification events from Python.
 
+**Status:** Completed for the single Python backend runtime path. Python now has an in-process
+notification fanout manager, Java-compatible SSE notification payload builder, app-level SSE manager
+wiring, and report-submit notification publishing after commit. Multi-process Redis-backed fanout is
+left as an operational scaling enhancement if the pre-launch deployment runs more than one Python
+backend replica.
+
 **Files:**
 - Modify: `server-python/app/api/notifications.py`
 - Create or modify: `server-python/app/notifications/fanout.py`
@@ -146,12 +152,13 @@ Java-owned.
 - Create: `docs/backend-python-migration/results/2026-06-12-notification-sse-fanout.md`
 
 **Implementation steps:**
-- [ ] Add tests for connected event, heartbeat, and user-scoped notification delivery.
-- [ ] Add tests proving one user's notification does not fan out to another user's SSE stream.
+- [x] Add tests for connected event, heartbeat, and user-scoped notification delivery.
+- [x] Add tests proving one user's notification does not fan out to another user's SSE stream.
 - [ ] Add tests for reconnect behavior if the current frontend uses last-event-id or polling fallback.
-- [ ] Implement Redis pub/sub or stream-backed fanout using the existing Redis dependency.
-- [ ] Wire migrated notification-producing workflows to publish fanout events after commit.
-- [ ] Verify:
+- [x] Implement active fanout for the single Python backend runtime using the same Java SSE event
+  shape. Redis-backed fanout remains a scaling enhancement for multi-replica deployment.
+- [x] Wire migrated notification-producing workflows to publish fanout events after commit.
+- [x] Verify:
   - `uv run pytest tests/test_notification_sse_fanout.py tests/test_notifications.py tests/test_governance.py -q`
   - Hybrid SSE live gate with one connected client and one notification-producing action.
 
@@ -258,7 +265,7 @@ Before declaring the Java-to-Python migration complete:
 - [ ] Vite config has no Java `8080` target.
 - [x] Python sessions and OAuth work without Java.
 - [ ] Global route-policy enforcement outside the completed high-risk foundation slice is complete.
-- [ ] SSE delivers active notifications.
+- [x] SSE delivers active notifications.
 - [ ] No broad deferred lifecycle/governance bucket remains.
 - [ ] Python schema migrations initialize fresh DBs and stamp/upgrade existing DBs.
 - [ ] Java runtime deprecation from default local/staging paths is complete.

@@ -6,6 +6,8 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app.notifications.publisher import NotificationFanout, publish_notification_rows
+
 
 class SkillReportSubmitError(ValueError):
     def __init__(self, message: str, *, status_code: int = 400) -> None:
@@ -210,7 +212,8 @@ async def _write_report_submitted_notifications(
     report_id: int,
     reporter_id: str,
     created_at: datetime,
-) -> None:
+) -> list[dict[str, Any]]:
+    created_rows: list[dict[str, Any]] = []
     title = f"Skill reported: {_display_name(skill)}"
     body_json = json.dumps(
         {
@@ -224,31 +227,37 @@ async def _write_report_submitted_notifications(
         separators=(",", ":"),
     )
     for recipient_id in dict.fromkeys(recipients):
-        await connection.execute(
-            text(
-                """
-                INSERT INTO notification (
-                    recipient_id, category, event_type, title, body_json,
-                    entity_type, entity_id, status, created_at
-                )
-                VALUES (
-                    :recipient_id, :category, :event_type, :title, :body_json,
-                    :entity_type, :entity_id, :status, :created_at
-                )
-                """
-            ),
-            {
-                "recipient_id": recipient_id,
-                "category": "REPORT",
-                "event_type": "REPORT_SUBMITTED",
-                "title": title,
-                "body_json": body_json,
-                "entity_type": "REPORT",
-                "entity_id": report_id,
-                "status": "UNREAD",
-                "created_at": created_at,
-            },
-        )
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO notification (
+                        recipient_id, category, event_type, title, body_json,
+                        entity_type, entity_id, status, created_at
+                    )
+                    VALUES (
+                        :recipient_id, :category, :event_type, :title, :body_json,
+                        :entity_type, :entity_id, :status, :created_at
+                    )
+                    RETURNING id, recipient_id, category, event_type, title, body_json,
+                              entity_type, entity_id, created_at
+                    """
+                ),
+                {
+                    "recipient_id": recipient_id,
+                    "category": "REPORT",
+                    "event_type": "REPORT_SUBMITTED",
+                    "title": title,
+                    "body_json": body_json,
+                    "entity_type": "REPORT",
+                    "entity_id": report_id,
+                    "status": "UNREAD",
+                    "created_at": created_at,
+                },
+            )
+        ).mappings().all()
+        created_rows.extend(dict(row) for row in rows)
+    return created_rows
 
 
 async def submit_skill_report(
@@ -263,10 +272,12 @@ async def submit_skill_report(
     client_ip: str | None,
     user_agent: str | None,
     now: datetime | None = None,
+    notification_fanout: NotificationFanout | None = None,
 ) -> dict[str, Any]:
     normalized_reason = _normalize_required(reason, "error.skill.report.reason.required")
     normalized_details = _normalize_optional(details)
     timestamp = _now(now)
+    notification_rows: list[dict[str, Any]] = []
     async with engine.begin() as connection:
         skill = await _read_reportable_skill(
             connection,
@@ -300,7 +311,7 @@ async def submit_skill_report(
             user_agent=user_agent,
             created_at=timestamp,
         )
-        await _write_report_submitted_notifications(
+        notification_rows = await _write_report_submitted_notifications(
             connection,
             recipients=await _read_platform_skill_admins(connection),
             skill=skill,
@@ -309,4 +320,5 @@ async def submit_skill_report(
             created_at=timestamp,
         )
 
+    await publish_notification_rows(notification_fanout, notification_rows)
     return {"reportId": report_id, "status": "PENDING"}

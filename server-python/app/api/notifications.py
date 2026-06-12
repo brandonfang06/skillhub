@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from app.auth.context import read_current_mock_user
 from app.core.response import ok
+from app.notifications.fanout import format_sse_comment, format_sse_event
 from app.notifications.service import (
     NotificationError,
     delete_read_notification,
@@ -55,22 +56,16 @@ def _parse_positive_int(value: int, default: int) -> int:
     return value if value > 0 else default
 
 
-def _escape_sse_lines(value: str) -> str:
-    return str(value).replace("\r\n", "\n").replace("\r", "\n")
-
-
-def format_sse_event(event: str, data: str) -> str:
-    event_name = _escape_sse_lines(event).split("\n", 1)[0]
-    payload = "".join(f"data: {line}\n" for line in _escape_sse_lines(data).split("\n"))
-    return f"event: {event_name}\n{payload}\n"
-
-
-def format_sse_comment(comment: str) -> str:
-    line = _escape_sse_lines(comment).split("\n", 1)[0]
-    return f": {line}\n\n"
-
-
 async def default_notification_sse_stream(user_id: str, request: Request):
+    fanout = getattr(request.app.state, "notification_fanout", None)
+    if fanout is not None:
+        async for event in fanout.stream(
+            user_id,
+            is_disconnected=request.is_disconnected,
+            heartbeat_interval=SSE_HEARTBEAT_INTERVAL_SECONDS,
+        ):
+            yield event
+        return
     yield format_sse_event("connected", "ok")
     while not await request.is_disconnected():
         await asyncio.sleep(SSE_HEARTBEAT_INTERVAL_SECONDS)
