@@ -248,6 +248,7 @@ Still plan carefully when a group requires:
 | 112 | API Java exception removal | python | Local Vite dev proxy now sends all `/api/**` traffic to Python. Unsupported API paths use Python/FastAPI fallback behavior. Superseded by milestone 113 for the remaining OAuth proxy family. |
 | 113 | `GET /oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python and local Vite dev proxy no longer contains any Java `8080` target. Known configured providers return `error.auth.oauth.deferred`; full external OAuth redirect, callback token exchange, identity binding, and session cookie creation remain deferred. |
 | 114 | Deferred surface audit and cutover baseline | n/a | Final cutover baseline tests now assert no Java route/proxy ownership can reappear silently and lock the remaining deferred categories before semantic completion begins. |
+| 115.1 | Python session and OAuth callback boundary foundation | python | Local/direct login now create a Python-owned `SESSION` cookie, current-principal routes resolve that session after mock/bearer precedence, logout clears it, and OAuth authorization/callback boundaries can redirect, exchange/bind through injectable abstractions, create the same session cookie, and redirect to sanitized `returnTo`. Default provider HTTP exchange, DB identity binding/upsert, and Redis/session durability remain in milestone 115.2. |
 
 ## Revised Pre-Launch Milestone Order
 

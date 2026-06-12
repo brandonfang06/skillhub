@@ -51,6 +51,8 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Purpose:** Replace the last Java-auth semantics: real web session establishment and OAuth callback handling.
 
+**Status:** In progress. Milestone 115.1 completed the Python-owned session cookie path and OAuth redirect/callback boundary. Milestone 115.2 still must replace the injectable test abstractions with default provider HTTP exchange and database identity-binding/upsert behavior before the whole milestone is complete.
+
 **Files:**
 - Create or modify: `server-python/app/auth/session.py`
 - Modify: `server-python/app/api/auth.py`
@@ -62,22 +64,22 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 - Create: `docs/backend-python-migration/results/2026-06-12-session-oauth-completion.md`
 
 **Implementation steps:**
-- [ ] Add failing tests for cookie-backed session creation on migrated local login.
-- [ ] Add failing tests for `GET /api/v1/auth/me` resolving a session cookie without `X-Mock-User-Id`.
-- [ ] Add failing tests for session logout or session invalidation if the frontend currently depends on it.
-- [ ] Add failing tests for `/oauth2/authorization/{registrationId}` returning a provider redirect when OAuth client config is present.
+- [x] Add failing tests for cookie-backed session creation on migrated local login.
+- [x] Add failing tests for `GET /api/v1/auth/me` resolving a session cookie without `X-Mock-User-Id`.
+- [x] Add failing tests for session logout or session invalidation if the frontend currently depends on it.
+- [x] Add failing tests for `/oauth2/authorization/{registrationId}` returning a provider redirect when OAuth client config is present.
 - [ ] Add failing tests for `/login/oauth2/code/{registrationId}` callback behavior:
-  - Reject missing `code` or unknown provider.
-  - Exchange callback through an injectable OAuth client abstraction.
-  - Upsert or link user identity using the existing account merge/identity tables.
-  - Create the same Python session cookie used by local login.
-  - Redirect to the sanitized remembered `returnTo` value.
-- [ ] Implement a Python session helper backed by Redis or the existing database/session table strategy chosen from current Java/Spring Session schema.
-- [ ] Implement OAuth provider config loading from environment/settings.
-- [ ] Replace `error.auth.oauth.deferred` with working redirect/callback behavior when provider config is complete.
+  - [x] Reject missing `code` or unknown provider.
+  - [x] Exchange callback through an injectable OAuth client abstraction.
+  - [ ] Upsert or link user identity using the existing account merge/identity tables.
+  - [x] Create the same Python session cookie used by local login.
+  - [x] Redirect to the sanitized remembered `returnTo` value.
+- [ ] Replace the in-process session helper with Redis or the existing database/session table strategy chosen from current Java/Spring Session schema.
+- [ ] Implement default OAuth provider config loading from environment/settings.
+- [ ] Replace `error.auth.oauth.deferred` with working default provider redirect/callback behavior when provider config is complete and no test abstraction is injected.
 - [ ] Keep deterministic `501 error.auth.oauth.deferred` only when provider config is intentionally incomplete in local dev.
 - [ ] Verify:
-  - `uv run pytest tests/test_session_auth.py tests/test_oauth_flow.py tests/test_auth_method_catalog.py -q`
+  - `uv run pytest tests/test_session_auth.py tests/test_oauth_flow.py tests/test_oauth_boundary.py tests/test_auth_method_catalog.py -q`
   - `npm.cmd run test -- vite.config.test.ts`
   - Hybrid live gate for local login session, `auth/me`, OAuth configured/deferred paths, and Vite proxy.
 

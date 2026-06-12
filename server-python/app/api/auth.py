@@ -2,12 +2,16 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from inspect import isawaitable
 import os
+import secrets
 from typing import Any
+from urllib.parse import urlencode
 from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request, Response
 from sqlalchemy import text
+from starlette.responses import RedirectResponse
 
+from app.auth.session import clear_session, establish_session, read_session_principal
 from app.auth.tokens import sha256_token
 from app.core.response import ok
 
@@ -18,6 +22,7 @@ DEFAULT_OAUTH_REGISTRATIONS = [
     {"id": "github", "clientName": "GitHub"},
     {"id": "gitlab", "clientName": os.getenv("OAUTH2_GITLAB_DISPLAY_NAME", "GitLab")},
 ]
+DEFAULT_OAUTH_TARGET_URL = "/dashboard"
 
 
 def normalize_platform_roles(role_codes: list[str]) -> list[str]:
@@ -157,6 +162,40 @@ def _find_oauth_registration(request: Request, registration_id: str) -> dict[str
         if _registration_id(registration) == registration_id:
             return registration
     return None
+
+
+def _configured_oauth_registration(registration: dict[str, object]) -> bool:
+    return all(str(registration.get(key) or "").strip() for key in ("authorizationUri", "clientId", "redirectUri"))
+
+
+def _oauth_scopes(registration: dict[str, object]) -> str | None:
+    scopes = registration.get("scopes")
+    if isinstance(scopes, list):
+        normalized = [str(scope).strip() for scope in scopes if str(scope).strip()]
+        return " ".join(normalized) if normalized else None
+    if isinstance(scopes, str) and scopes.strip():
+        return scopes.strip()
+    return None
+
+
+def _oauth_state_store(request: Request) -> dict[str, str]:
+    store = getattr(request.app.state, "oauth_state_store", None)
+    if store is None:
+        store = {}
+        request.app.state.oauth_state_store = store
+    return store
+
+
+def _remember_oauth_return_to(request: Request, return_to: str | None) -> str:
+    state = secrets.token_urlsafe(24)
+    _oauth_state_store(request)[state] = sanitize_return_to(return_to) or DEFAULT_OAUTH_TARGET_URL
+    return state
+
+
+def _consume_oauth_return_to(request: Request, state: str | None) -> str:
+    if state is None or state.strip() == "":
+        return DEFAULT_OAUTH_TARGET_URL
+    return _oauth_state_store(request).pop(state, DEFAULT_OAUTH_TARGET_URL)
 
 
 def _direct_enabled(request: Request) -> bool:
@@ -319,18 +358,22 @@ async def _read_current_user_or_401(
         return await _read_mock_user_or_401(request, mock_user_id)
 
     token = _bearer_token(authorization)
-    if token is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
+    if token is not None:
+        reader = getattr(request.app.state, "auth_bearer_reader", None)
+        if reader is not None:
+            data = await _resolve_reader_result(reader(token))
+        else:
+            data = await read_current_bearer_user(request.app.state.db_engine, token)
 
-    reader = getattr(request.app.state, "auth_bearer_reader", None)
-    if reader is not None:
-        data = await _resolve_reader_result(reader(token))
-    else:
-        data = await read_current_bearer_user(request.app.state.db_engine, token)
+        if data is None:
+            raise HTTPException(status_code=401, detail="error.auth.required")
+        return data
 
-    if data is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return data
+    session_principal = await read_session_principal(request)
+    if session_principal is not None:
+        return session_principal
+
+    raise HTTPException(status_code=401, detail="error.auth.required")
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -351,6 +394,11 @@ async def get_current_user(
 ) -> dict[str, object]:
     data = await _read_current_user_or_401(request, mock_user_id, authorization)
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.post("/api/v1/auth/logout", status_code=204)
+async def logout(request: Request, response: Response) -> None:
+    await clear_session(request, response)
 
 
 @router.get("/api/v1/whoami")
@@ -393,15 +441,55 @@ async def get_auth_methods(request: Request, returnTo: str | None = None) -> dic
 
 
 @router.get("/oauth2/authorization/{registration_id}")
-async def oauth_authorization_boundary(request: Request, registration_id: str, returnTo: str | None = None) -> None:
-    if _find_oauth_registration(request, registration_id) is None:
+async def oauth_authorization_boundary(request: Request, registration_id: str, returnTo: str | None = None) -> RedirectResponse:
+    registration = _find_oauth_registration(request, registration_id)
+    if registration is None:
         raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
-    sanitize_return_to(returnTo)
-    raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
+    if not _configured_oauth_registration(registration):
+        sanitize_return_to(returnTo)
+        raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
+
+    params = {
+        "response_type": "code",
+        "client_id": str(registration["clientId"]),
+        "redirect_uri": str(registration["redirectUri"]),
+        "state": _remember_oauth_return_to(request, returnTo),
+    }
+    scopes = _oauth_scopes(registration)
+    if scopes is not None:
+        params["scope"] = scopes
+    return RedirectResponse(f"{registration['authorizationUri']}?{urlencode(params)}")
+
+
+@router.get("/login/oauth2/code/{registration_id}")
+async def oauth_callback(
+    request: Request,
+    registration_id: str,
+    code: str | None = None,
+    state: str | None = None,
+) -> RedirectResponse:
+    registration = _find_oauth_registration(request, registration_id)
+    if registration is None:
+        raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
+    if code is None or code.strip() == "":
+        raise HTTPException(status_code=400, detail="error.auth.oauth.codeRequired")
+    if not _configured_oauth_registration(registration):
+        raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
+
+    exchanger = getattr(request.app.state, "oauth_code_exchanger", None)
+    binder = getattr(request.app.state, "oauth_principal_binder", None)
+    if exchanger is None or binder is None:
+        raise HTTPException(status_code=501, detail="error.auth.oauth.deferred")
+
+    claims = await _resolve_result(exchanger(registration, code.strip()))
+    principal = await _resolve_result(binder(registration, claims))
+    redirect = RedirectResponse(_consume_oauth_return_to(request, state))
+    await establish_session(request, redirect, principal)
+    return redirect
 
 
 @router.post("/api/v1/auth/direct/login")
-async def direct_login(request: Request, payload: dict[str, Any]) -> dict[str, object]:
+async def direct_login(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, object]:
     if not _direct_enabled(request):
         raise HTTPException(status_code=403, detail="error.auth.direct.disabled")
 
@@ -424,6 +512,7 @@ async def direct_login(request: Request, payload: dict[str, Any]) -> dict[str, o
         )
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await establish_session(request, response, data)
     return ok("response.success.read", data, request)
 
 

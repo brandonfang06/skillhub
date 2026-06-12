@@ -4,7 +4,7 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request, Response
 
 from app.auth.local import LocalAuthError, change_local_password, login_local_user, register_local_user
 from app.auth.password_reset import (
@@ -14,6 +14,7 @@ from app.auth.password_reset import (
     validate_password_reset_confirm,
     validate_password_reset_request,
 )
+from app.auth.session import establish_session
 from app.core.response import ok
 
 router = APIRouter()
@@ -45,7 +46,7 @@ async def register_local_account_route(request: Request, payload: dict[str, Any]
 
 
 @router.post("/api/v1/auth/local/login")
-async def login_local_account_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
+async def login_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
     login = getattr(request.app.state, "local_auth_login", None)
     try:
         data = await _resolve_result(
@@ -59,6 +60,7 @@ async def login_local_account_route(request: Request, payload: dict[str, Any]) -
         )
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await establish_session(request, response, data)
     return ok("response.success.read", data, request)
 
 

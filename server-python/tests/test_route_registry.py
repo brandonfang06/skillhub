@@ -56,7 +56,15 @@ def test_route_registry_lists_clawhub_placeholders_and_remaining_java_fallbacks(
         in registry
     )
     assert (
-        "| GET | `/oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python. Known configured providers return `error.auth.oauth.deferred` until external provider redirect, callback token exchange, identity binding, and session cookie creation are implemented; unknown providers return `error.auth.oauth.providerNotFound`."
+        "| POST | `/api/v1/auth/logout` | python | Python-owned session logout clears the `SESSION` cookie and invalidates the in-process session entry."
+        in registry
+    )
+    assert (
+        "| GET | `/oauth2/authorization/{registrationId}` | python | OAuth authorization boundary moved to Python. Fully configured providers redirect to their provider authorization URI with sanitized `returnTo` state; incomplete providers keep deterministic `error.auth.oauth.deferred`; unknown providers return `error.auth.oauth.providerNotFound`."
+        in registry
+    )
+    assert (
+        "| GET | `/login/oauth2/code/{registrationId}` | python | OAuth callback boundary moved to Python. Requires `code`, exchanges/binds through injectable OAuth abstractions, creates the same Python `SESSION` cookie as local/direct login, and redirects to sanitized remembered `returnTo`; default provider HTTP exchange and DB identity binding remain pending in milestone 115.2."
         in registry
     )
     assert "| * | `/oauth2/**` | java | OAuth remains Java-owned." not in registry
