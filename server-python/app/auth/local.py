@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import text
 
-from app.api.auth import normalize_platform_roles
+from app.auth.context import normalize_platform_roles
 from app.auth.password_reset import bcrypt_value, verify_bcrypt_value
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,64}$")

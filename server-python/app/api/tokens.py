@@ -6,7 +6,8 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 
-from app.api.auth import _read_current_user_or_401
+from app.auth.context import resolve_current_user_or_401
+from app.auth.policy import require_api_token_scope
 from app.auth.tokens import (
     ApiTokenError,
     create_api_token,
@@ -26,9 +27,8 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 async def _current_user(request: Request, mock_user_id: str | None, authorization: str | None) -> dict[str, Any]:
-    user = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
-    if user.get("oauthProvider") == "api_token" and "token:manage" not in set(user.get("tokenScopes") or []):
-        raise HTTPException(status_code=403, detail="Missing API token scope: token:manage")
+    user = dict(await resolve_current_user_or_401(request, mock_user_id, authorization))
+    require_api_token_scope(user, "token:manage")
     return user
 
 

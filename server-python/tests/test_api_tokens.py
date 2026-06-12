@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -186,13 +186,16 @@ def bearer_user(user_id: str = "token-user", scopes: list[str] | None = None) ->
 @pytest.mark.anyio
 async def test_create_api_token_rotates_active_same_name_and_stores_hash_only() -> None:
     connection = FakeTokenConnection()
+    expires_at = (datetime.now(UTC) + timedelta(days=30)).replace(microsecond=0)
+    expires_at_input = expires_at.strftime("%Y-%m-%dT%H:%M:%S")
+    expires_at_response = expires_at.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     response = await create_api_token(
         FakeEngine(connection),
         user_id="user-1",
         name="  Old CLI  ",
         scopes=None,
-        expires_at="2026-06-11T12:00:00",
+        expires_at=expires_at_input,
         token_generator=lambda: "sk_rawtokenfixture",
     )
 
@@ -200,7 +203,7 @@ async def test_create_api_token_rotates_active_same_name_and_stores_hash_only() 
     assert response["id"] == 10
     assert response["name"] == "Old CLI"
     assert response["tokenPrefix"] == "sk_rawto"
-    assert response["expiresAt"] == "2026-06-11T12:00:00Z"
+    assert response["expiresAt"] == expires_at_response
     assert connection.tokens[0]["revoked_at"] is not None
     inserted = connection.tokens[-1]
     assert inserted["token_hash"] == sha256_token("sk_rawtokenfixture")

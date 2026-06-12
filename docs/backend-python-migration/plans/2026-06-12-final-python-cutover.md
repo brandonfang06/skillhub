@@ -89,6 +89,12 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Purpose:** Make every Python-owned protected route use one current-principal and route-policy path instead of route-local bearer/mock handling.
 
+**Status:** In progress. Milestone 116.1 completed the shared principal resolver/policy foundation
+and removed direct imports of the private `app.api.auth._read_current_user_or_401` helper from the
+high-risk admin, token, publish, and hard-delete route modules. Remaining work is broader protected
+route enumeration plus role/namespace policy coverage for governance, reports, and the rest of the
+authenticated route surface.
+
 **Files:**
 - Modify: `server-python/app/auth/context.py` or create it if no central module exists.
 - Modify: `server-python/app/auth/policy.py` or create it if no central module exists.
@@ -99,14 +105,17 @@ The remaining work is not mainly route ownership. It is the behavior still marke
 
 **Implementation steps:**
 - [ ] Add tests that enumerate protected Python routes and expected principal types.
-- [ ] Add tests for invalid bearer `401`, missing scope `403`, unsupported bearer-on-admin `403`, and mock-user precedence.
-- [ ] Add tests for session-cookie principal behavior after Milestone 115.
-- [ ] Implement one principal resolver with explicit precedence:
+- [x] Add foundation tests for missing scope `403`, unsupported bearer-on-admin `403`, and non-token principal pass-through.
+- [ ] Add full route tests for invalid bearer `401`, missing scope `403`, unsupported bearer-on-admin `403`, and mock-user precedence.
+- [x] Add session-aware principal resolver behavior after Milestone 115.
+- [x] Implement one principal resolver with explicit precedence:
   - local mock user for development gates.
   - bearer API token.
   - session cookie.
 - [ ] Implement one policy helper for required platform roles, namespace roles, and bearer scopes.
-- [ ] Replace duplicated route-local auth checks in high-risk modules first: admin, publish, lifecycle, governance, reports, tokens.
+- [x] Implement initial policy helpers for API-token bearer scopes and unsupported API-token principals on admin/web-only routes.
+- [x] Replace duplicated route-local auth checks in high-risk modules first: admin, publish, lifecycle hard-delete, tokens.
+- [ ] Replace remaining route-local auth checks in governance, reports, and other authenticated route modules.
 - [ ] Verify:
   - `uv run pytest tests/test_route_policy_enforcement.py tests/test_admin_* tests/test_*token* -q`
   - Hybrid live gate comparing representative protected route outcomes across Python direct and Vite.

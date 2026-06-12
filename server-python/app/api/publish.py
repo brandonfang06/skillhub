@@ -7,7 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 
-from app.api.auth import _read_current_user_or_401
+from app.auth.context import resolve_current_user_or_401
+from app.auth.policy import require_api_token_scope
 from app.core.config import get_settings
 from app.core.response import ok
 from app.publish.dry_run import (
@@ -98,9 +99,8 @@ async def extract_multipart_files(files: list[UploadFile]) -> list[PackageEntry]
 
 
 async def resolve_current_user(request: Request, mock_user_id: str | None, authorization: str | None) -> dict[str, object]:
-    data = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
-    if data.get("oauthProvider") == "api_token" and "skill:publish" not in set(data.get("tokenScopes") or []):
-        raise HTTPException(status_code=403, detail="Missing API token scope: skill:publish")
+    data = dict(await resolve_current_user_or_401(request, mock_user_id, authorization))
+    require_api_token_scope(data, "skill:publish")
     return data
 
 

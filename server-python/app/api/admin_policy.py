@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
-from app.api.auth import _read_current_user_or_401
+from app.auth.context import resolve_current_user_or_401
+from app.auth.policy import reject_api_token_principal_for_route
 
 
 async def reject_bearer_api_token_for_admin_route(
@@ -14,6 +15,5 @@ async def reject_bearer_api_token_for_admin_route(
         return
     if authorization is None or not authorization.startswith("Bearer "):
         return
-    user = dict(await _read_current_user_or_401(request, None, authorization))
-    if user.get("oauthProvider") == "api_token":
-        raise HTTPException(status_code=403, detail=f"API token cannot access endpoint: {request.url.path}")
+    user = dict(await resolve_current_user_or_401(request, None, authorization))
+    reject_api_token_principal_for_route(user, request.url.path)

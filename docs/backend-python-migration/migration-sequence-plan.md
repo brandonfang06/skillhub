@@ -250,6 +250,7 @@ Still plan carefully when a group requires:
 | 114 | Deferred surface audit and cutover baseline | n/a | Final cutover baseline tests now assert no Java route/proxy ownership can reappear silently and lock the remaining deferred categories before semantic completion begins. |
 | 115.1 | Python session and OAuth callback boundary foundation | python | Local/direct login now create a Python-owned `SESSION` cookie, current-principal routes resolve that session after mock/bearer precedence, logout clears it, and OAuth authorization/callback boundaries can redirect, exchange/bind through injectable abstractions, create the same session cookie, and redirect to sanitized `returnTo`. Default provider HTTP exchange, DB identity binding/upsert, and Redis/session durability remain in milestone 115.2. |
 | 115.2 | Python OAuth provider exchange and identity binding | python | OAuth registrations can load Java-compatible GitHub/GitLab environment config, complete registrations redirect instead of returning deferred, callbacks exchange token/userinfo through the default HTTP helper, bind/upsert `identity_binding` and `user_account`, ensure global namespace membership, create Python sessions, and retain deterministic deferred responses for incomplete local-dev provider config. A Redis-compatible session store hook is available while no-Redis tests keep the in-process fallback. |
+| 116.1 | Shared principal and route-policy foundation | python | Shared `app.auth.context` and `app.auth.policy` helpers now own mock/bearer/session principal resolution plus API-token scope/admin-route checks. High-risk admin policy, token, publish, hard-delete, account merge, and device auth routes no longer import private `app.api.auth` helper functions. Broader protected-route enumeration, role/namespace policy coverage, and governance/report route cleanup remain in milestone 116. |
 
 ## Revised Pre-Launch Milestone Order
 
@@ -1485,17 +1486,18 @@ Group E has started with review lifecycle write ownership:
 - Completed: API Java exception removal:
   Local Vite dev proxy no longer contains any `/api/**` Java target. All API paths now reach
   Python, and unsupported or method-mismatched paths use Python/FastAPI fallback behavior.
-- Completed: OAuth proxy boundary cutover:
-  `GET /oauth2/authorization/{registrationId}` now routes to Python, and local Vite dev proxy no
-  longer contains any Java `8080` target. Full external OAuth redirect, callback token exchange,
-  identity binding, and session cookie creation remain deferred behind
-  `error.auth.oauth.deferred`.
+- Completed: OAuth/session completion:
+  OAuth authorization and callback handling now run in Python when provider config is complete,
+  including default token/userinfo exchange, identity binding/upsert, and Python session creation.
+  Incomplete local-dev provider config keeps deterministic `error.auth.oauth.deferred`.
+- Completed: shared principal and route-policy foundation:
+  `app.auth.context` centralizes mock/bearer/session principal resolution, and `app.auth.policy`
+  centralizes initial API-token scope plus unsupported-admin-route checks. Broader route enumeration
+  and role/namespace policy coverage remain in milestone 116.
 - Still Java-owned/deferred: broader post-publish lifecycle/governance actions outside the migrated
-  portal review/promotion/skill lifecycle and admin skill governance routes, auth/OAuth
-  surfaces outside migrated current-user/token/local-auth/password-reset/direct-session/account-merge
-  device-auth, and bearer current-principal boundary routes, full OAuth provider exchange/callback
-  handling, Spring Session establishment, any remaining route-policy scope enforcement, and active
-  SSE notification fanout.
+  portal review/promotion/skill lifecycle and admin skill governance routes, any remaining
+  route-policy scope enforcement outside the covered high-risk routes, active SSE notification
+  fanout, Python schema migration ownership, and default runtime/staging deprecation of Java.
 
 Recommended next choice:
 
@@ -1507,11 +1509,11 @@ Recommended next choice:
 
 Final deferred categories:
 
-- OAuth provider redirect/callback/session establishment.
-- Global bearer route-policy enforcement.
+- Global route-policy enforcement outside the completed high-risk foundation slice.
 - Active notification SSE fanout.
 - Post-publish lifecycle/governance semantic audit.
 - Python schema migration ownership.
+- Java runtime deprecation from default local/staging paths.
 
 Every next choice must include route-specific live gates and must keep `server/` read-only.
 

@@ -6,13 +6,13 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.auth import _read_mock_user_or_401
 from app.auth.account_merge import (
     AccountMergeError,
     confirm_account_merge,
     initiate_account_merge,
     verify_account_merge,
 )
+from app.auth.context import read_mock_user_or_401
 from app.core.response import ok
 
 router = APIRouter()
@@ -25,7 +25,7 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
 
 
 async def _current_user_id(request: Request, mock_user_id: str | None) -> str:
-    user = await _read_mock_user_or_401(request, mock_user_id)
+    user = await read_mock_user_or_401(request, mock_user_id)
     return str(user["userId"])
 
 

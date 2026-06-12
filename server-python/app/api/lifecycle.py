@@ -7,8 +7,9 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
+from app.auth.context import read_current_mock_user, resolve_current_user_or_401
+from app.auth.policy import is_api_token_principal, reject_api_token_principal_for_route, require_api_token_scope
 from app.core.response import ok
-from app.api.auth import _read_current_user_or_401, read_current_mock_user
 from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
     SkillArchiveInput,
@@ -77,12 +78,11 @@ async def _read_hard_delete_user(
     mock_user_id: str | None,
     authorization: str | None,
 ) -> dict[str, object]:
-    user = dict(await _read_current_user_or_401(request, mock_user_id, authorization))
-    if user.get("oauthProvider") == "api_token":
+    user = dict(await resolve_current_user_or_401(request, mock_user_id, authorization))
+    if is_api_token_principal(user):
         if route_scope not in {"v1", "cli"}:
-            raise HTTPException(status_code=403, detail=f"API token cannot access endpoint: {request.url.path}")
-        if "skill:delete" not in set(user.get("tokenScopes") or []):
-            raise HTTPException(status_code=403, detail="Missing API token scope: skill:delete")
+            reject_api_token_principal_for_route(user, request.url.path)
+        require_api_token_scope(user, "skill:delete")
     return user
 
 
