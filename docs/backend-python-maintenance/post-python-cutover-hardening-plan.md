@@ -175,7 +175,7 @@ Current observations from the post-cutover scan:
 - Create: `docs/backend-python-maintenance/results/2026-06-12-selective-orm-foundation.md`
 
 **Steps:**
-- [ ] Add declarative ORM mappings for mutation-heavy tables only:
+- [x] Add declarative ORM mappings for mutation-heavy tables only:
   - `skill`
   - `skill_version`
   - `review_task`
@@ -185,13 +185,13 @@ Current observations from the post-cutover scan:
   - `user_account`
   - `api_token`
   - `audit_log`
-- [ ] Do not map every projection/search/report table in this milestone.
-- [ ] Add mapping tests that assert table names, primary keys, important status columns, and relationship-free basic inserts/loads against a transaction-scoped test connection.
-- [ ] Add `app/db/session.py` with a narrowly scoped async session factory that can bind to the existing engine.
-- [ ] Convert one low-risk lifecycle mutation helper to ORM first, behind existing public function names.
-- [ ] Run the existing lifecycle/review/promotion/publish tests after the first conversion.
-- [ ] Convert additional mutation helpers only when the previous helper is green and the diff remains reviewable.
-- [ ] Keep read projection repositories from Milestones 2 and 3 on explicit SQL unless a specific query becomes clearer with ORM and has dedicated tests.
+- [x] Do not map every projection/search/report table in this milestone.
+- [x] Add mapping tests that assert table names, primary keys, important status columns, and relationship-free basic inserts/loads against a transaction-scoped test connection.
+- [x] Add `app/db/session.py` with a narrowly scoped async session factory that can bind to the existing engine.
+- [x] Convert one low-risk lifecycle mutation helper to ORM first, behind existing public function names.
+- [x] Run the existing lifecycle/review/promotion/publish tests after the first conversion.
+- [x] Convert additional mutation helpers only when the previous helper is green and the diff remains reviewable.
+- [x] Keep read projection repositories from Milestones 2 and 3 on explicit SQL unless a specific query becomes clearer with ORM and has dedicated tests.
 
 **Verify:**
 - `cd server-python; uv run pytest tests/test_orm_mapping.py -q`

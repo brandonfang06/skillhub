@@ -4,7 +4,9 @@ import json
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import insert
+
+from app.db.models import AuditLog
 
 
 async def write_audit_log(
@@ -23,18 +25,7 @@ async def write_audit_log(
 ) -> None:
     serialized_detail = detail_json if detail_json is not None else (json.dumps(detail) if detail else None)
     await connection.execute(
-        text(
-            """
-            INSERT INTO audit_log (
-                actor_user_id, action, target_type, target_id, request_id,
-                client_ip, user_agent, detail_json, created_at
-            )
-            VALUES (
-                :actor_user_id, :action, :target_type, :target_id, :request_id,
-                :client_ip, :user_agent, :detail_json, :created_at
-            )
-            """
-        ),
+        insert(AuditLog),
         {
             "actor_user_id": actor_user_id,
             "action": action,

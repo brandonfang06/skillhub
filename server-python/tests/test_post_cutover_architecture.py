@@ -65,21 +65,47 @@ def test_post_cutover_facade_modules_do_not_own_sql() -> None:
     assert offenders == []
 
 
-def test_no_sqlalchemy_declarative_orm_models_before_selective_orm_milestone() -> None:
+def test_sqlalchemy_declarative_orm_models_stay_in_db_models_module() -> None:
     forbidden_names = {"DeclarativeBase", "declarative_base", "mapped_column", "relationship", "Mapped"}
+    allowed_path = "app/db/models.py"
     offenders: list[str] = []
 
     for path in _python_files(SERVER_ROOT / "app"):
+        relative_path = path.relative_to(SERVER_ROOT).as_posix()
+        if relative_path == allowed_path:
+            continue
+
         tree = _tree(path)
         for node in ast.walk(tree):
             if isinstance(node, ast.Name) and node.id in forbidden_names:
-                offenders.append(f"{path.relative_to(SERVER_ROOT).as_posix()}:{node.lineno}:{node.id}")
+                offenders.append(f"{relative_path}:{node.lineno}:{node.id}")
             if isinstance(node, ast.ClassDef):
                 for base in node.bases:
                     if isinstance(base, ast.Name) and base.id == "Base":
-                        offenders.append(f"{path.relative_to(SERVER_ROOT).as_posix()}:{node.lineno}:Base")
+                        offenders.append(f"{relative_path}:{node.lineno}:Base")
 
     assert offenders == []
+
+    models = SERVER_ROOT / allowed_path
+    tree = _tree(models)
+    mapped_tables = [
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef)
+        and any(isinstance(base, ast.Name) and base.id == "Base" for base in node.bases)
+    ]
+
+    assert mapped_tables == [
+        "UserAccount",
+        "Namespace",
+        "NamespaceMember",
+        "Skill",
+        "SkillVersion",
+        "ReviewTask",
+        "PromotionRequest",
+        "ApiToken",
+        "AuditLog",
+    ]
 
 
 def test_sql_inventory_script_exposes_categories() -> None:

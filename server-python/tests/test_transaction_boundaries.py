@@ -75,6 +75,7 @@ def test_write_audit_log_uses_common_insert_shape() -> None:
     assert len(connection.calls) == 1
     statement, params = connection.calls[0]
     assert "INSERT INTO audit_log" in str(statement)
+    assert statement.table.name == "audit_log"
     assert params == {
         "actor_user_id": "admin",
         "action": "SKILL_ARCHIVED",
