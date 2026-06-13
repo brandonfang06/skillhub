@@ -277,12 +277,12 @@ Current observations from the post-cutover scan:
 - Modify: `docs/backend-python-migration/migration-sequence-plan.md` only to add a pointer to the post-cutover maintenance plan, not to reopen migration milestones.
 
 **Steps:**
-- [ ] Run the full Python backend pytest suite.
-- [ ] Run web typecheck, lint, and unit tests.
-- [ ] Start a clean local Python stack and run Playwright full E2E.
-- [ ] Run `git diff --check`.
-- [ ] Write the regression note with exact command outcomes and any accepted residual risk.
-- [ ] If all checks pass, commit the completed maintenance batch.
+- [x] Run the full Python backend pytest suite.
+- [x] Run web typecheck, lint, and unit tests.
+- [x] Start a clean local Python stack and run Playwright full E2E.
+- [x] Run `git diff --check`.
+- [x] Write the regression note with exact command outcomes and any accepted residual risk.
+- [x] If all checks pass, commit the completed maintenance batch.
 
 **Verify:**
 - `cd server-python; uv run pytest tests -q`
@@ -293,6 +293,8 @@ Current observations from the post-cutover scan:
 - `git diff --check`
 
 **Done when:** The post-cutover hardening branch has a full regression record comparable to the cutover baseline.
+
+**Result:** `docs/backend-python-maintenance/results/2026-06-12-post-cutover-hardening-regression.md`
 
 ## Execution Rules
 

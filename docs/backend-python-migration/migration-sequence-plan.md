@@ -36,6 +36,19 @@ This file is the source of truth for migration order. For every milestone:
 
 If priorities change, update this file first, then continue from the revised order.
 
+## Post-Cutover Maintenance
+
+The Java-to-Python backend migration is complete as of the cutover baseline tag
+`backend-python-cutover-2026-06-12`. Follow-up maintainability, ORM-boundary,
+fixture, upstream-sync, and launch-readiness work now lives under:
+
+- `docs/backend-python-maintenance/README.md`
+- `docs/backend-python-maintenance/post-python-cutover-hardening-plan.md`
+
+Do not reopen route-ownership migration milestones for post-cutover hardening
+work unless a new upstream contract or schema change requires an explicit Python
+parity port.
+
 ## Java Parity Checklist Gate
 
 Every milestone plan must include a Java parity checklist section based on:
