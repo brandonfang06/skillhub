@@ -13,7 +13,7 @@ resources:
   - ingress.yaml
 
 images:
-  - name: ghcr.io/iflytek/skillhub-server
+  - name: ghcr.io/iflytek/skillhub-server-python
     newTag: latest
   - name: ghcr.io/iflytek/skillhub-web
     newTag: latest

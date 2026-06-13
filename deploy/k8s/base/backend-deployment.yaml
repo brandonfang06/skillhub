@@ -4,6 +4,7 @@ metadata:
   name: skillhub-server
   labels:
     app.kubernetes.io/name: skillhub-server
+    app.kubernetes.io/component: backend
 spec:
   replicas: 1
   selector:
@@ -13,84 +14,83 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: skillhub-server
+        app.kubernetes.io/component: backend
     spec:
       containers:
-        - name: server
-          image: ghcr.io/iflytek/skillhub-server:edge
+        - name: backend-python
+          image: ghcr.io/iflytek/skillhub-server-python:edge
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
           env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: docker
-
             # Database
-            - name: SPRING_DATASOURCE_URL
+            - name: SKILLHUB_DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: skillhub-secret
-                  key: spring-datasource-url
-            - name: SPRING_DATASOURCE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: spring-datasource-username
-            - name: SPRING_DATASOURCE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: spring-datasource-password
+                  key: database-url
 
             # Redis
-            - name: SPRING_DATA_REDIS_HOST
+            - name: SKILLHUB_REDIS_URL
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
-                  key: redis-host
-            - name: SPRING_DATA_REDIS_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
-                  key: redis-port
+                  key: redis-url
 
             # Storage
-            - name: STORAGE_BASE_PATH
+            - name: SKILLHUB_STORAGE_BASE_PATH
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
                   key: storage-base-path
-            - name: SKILLHUB_STORAGE_PROVIDER
-              valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
-                  key: skillhub-storage-provider
 
             # Scanner
             - name: SKILLHUB_SECURITY_SCANNER_ENABLED
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
-                  key: skill-scanner-enabled
-            - name: SKILLHUB_SECURITY_SCANNER_URL
+                  key: security-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_BASE_URL
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
-                  key: skill-scanner-url
+                  key: security-scanner-base-url
             - name: SKILLHUB_SECURITY_SCANNER_MODE
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
-                  key: skill-scanner-mode
+                  key: security-scanner-mode
+            - name: SKILLHUB_SCAN_CONSUMER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scan-consumer-enabled
 
-            # Session
-            - name: SESSION_COOKIE_SECURE
+            # Session and auth
+            - name: SKILLHUB_SESSION_COOKIE_SECURE
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
                   key: session-cookie-secure
+            - name: SKILLHUB_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: public-base-url
+                  optional: true
+            - name: SKILLHUB_AUTH_DIRECT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: auth-direct-enabled
+            - name: SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: auth-session-bootstrap-enabled
 
-            # Bootstrap Admin (non-sensitive from ConfigMap)
+            # Bootstrap admin
             - name: BOOTSTRAP_ADMIN_ENABLED
               valueFrom:
                 configMapKeyRef:
@@ -116,8 +116,6 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: bootstrap-admin-email
-
-            # Bootstrap Admin Password (sensitive from Secret)
             - name: BOOTSTRAP_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -125,7 +123,7 @@ spec:
                   key: bootstrap-admin-password
                   optional: true
 
-            # OAuth2 GitHub (optional)
+            # OAuth2 providers
             - name: OAUTH2_GITHUB_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -138,21 +136,44 @@ spec:
                   name: skillhub-secret
                   key: oauth2-github-client-secret
                   optional: true
-
+            - name: OAUTH2_GITLAB_BASE_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-gitlab-base-uri
+                  optional: true
+            - name: OAUTH2_GITLAB_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-gitlab-display-name
+                  optional: true
+            - name: OAUTH2_GITLAB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-gitlab-client-id
+                  optional: true
+            - name: OAUTH2_GITLAB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-gitlab-client-secret
+                  optional: true
           volumeMounts:
             - name: skillhub-storage
               mountPath: /var/lib/skillhub/storage
           readinessProbe:
             httpGet:
-              path: /actuator/health
+              path: /api/v1/health
               port: http
-            initialDelaySeconds: 20
+            initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /actuator/health
+              path: /api/v1/health
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 20
             periodSeconds: 15
       volumes:
         - name: skillhub-storage

@@ -296,6 +296,48 @@ Current observations from the post-cutover scan:
 
 **Result:** `docs/backend-python-maintenance/results/2026-06-12-post-cutover-hardening-regression.md`
 
+## Milestone 9: Python Deployment Cutover
+
+**Purpose:** Update production deployment assets so Kubernetes and release
+Compose start the Python backend, frontend, and scanner as separate services
+without Spring Boot environment variables or Java health probes.
+
+**Files:**
+- Modify: `deploy/k8s/base/backend-deployment.yaml`
+- Modify: `deploy/k8s/base/configmap.yaml`
+- Modify: `deploy/k8s/base/secret.yaml.example`
+- Modify: `deploy/k8s/README.md`
+- Modify: `compose.release.yml`
+- Add: `server-python/tests/test_deployment_cutover.py`
+- Create: `docs/backend-python-maintenance/results/2026-06-13-python-deployment-cutover.md`
+
+**Steps:**
+- [x] Add static deployment guardrail tests that fail while Spring Boot image,
+  `SPRING_*` env, or `/actuator/health` probes remain in production deployment
+  assets.
+- [x] Point K8s backend deployment at the Python backend image and replace
+  Spring datasource/Redis/scanner/session env with Python `SKILLHUB_*` env.
+- [x] Point K8s readiness/liveness probes at `/api/v1/health`.
+- [x] Update release Compose to use the Python backend image and Python runtime
+  env names.
+- [x] Rewrite K8s deployment docs around three deployments: frontend,
+  backend-python, and scanner.
+- [x] Verify static tests, Kustomize render, Compose config render, and targeted
+  runtime cutover tests.
+- [x] Write the result note and commit the completed deployment cutover.
+
+**Verify:**
+- `cd server-python; uv run pytest tests/test_deployment_cutover.py tests/test_python_runtime_cutover.py -q`
+- `kubectl kustomize deploy/k8s/base`
+- `kubectl kustomize deploy/k8s/overlays/with-infra`
+- `docker compose -f compose.release.yml config`
+- `git diff --check`
+
+**Done when:** Production deployment artifacts no longer depend on Spring Boot
+environment variables, Java backend images, or actuator health endpoints.
+
+**Result:** `docs/backend-python-maintenance/results/2026-06-13-python-deployment-cutover.md`
+
 ## Execution Rules
 
 - Work one milestone at a time.
@@ -315,5 +357,6 @@ Current observations from the post-cutover scan:
 6. Milestone 6: Test fixture and support cleanup.
 7. Milestone 7: Upstream sync and Python parity workflow.
 8. Milestone 8: Full post-cutover regression and launch readiness note.
+9. Milestone 9: Python deployment cutover.
 
 This order keeps behavior stable: inventory first, route/query extraction second, transaction cleanup third, ORM only after the mutation boundaries are explicit, and upstream intake before final launch readiness.

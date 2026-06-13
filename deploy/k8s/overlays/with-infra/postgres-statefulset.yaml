@@ -28,12 +28,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: skillhub-secret
-                  key: spring-datasource-username
+                  key: postgres-username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: skillhub-secret
-                  key: spring-datasource-password
+                  key: postgres-password
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
