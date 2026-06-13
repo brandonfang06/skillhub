@@ -11,7 +11,7 @@ from app.publish.scan_worker import (
     parse_scan_task_fields,
     process_scan_task,
 )
-from app.publish.scanner_handoff import encode_resp_command, parse_redis_target
+from app.publish.scanner_handoff import encode_resp_command, open_redis_connection, parse_redis_target, read_resp
 
 
 MAX_SCAN_RETRY_COUNT = 3
@@ -310,11 +310,11 @@ class RedisStreamClient:
         return str(response)
 
     async def _command(self, arguments: list[str]) -> Any:
-        reader, writer = await asyncio.open_connection(self.target.host, self.target.port)
+        reader, writer = await open_redis_connection(self.target)
         try:
             writer.write(encode_resp_command(arguments))
             await writer.drain()
-            response = await _read_resp(reader)
+            response = await read_resp(reader)
             return response
         finally:
             writer.close()
@@ -328,28 +328,4 @@ def _parse_autoclaim_messages(payload: Any) -> list[RedisStreamMessage]:
 
 
 async def _read_resp(reader: asyncio.StreamReader) -> Any:
-    line = await reader.readline()
-    if not line:
-        raise ValueError("Redis closed the connection")
-    prefix = line[:1]
-    body = line[1:].rstrip(b"\r\n")
-    if prefix == b"+":
-        return body.decode("utf-8")
-    if prefix == b"-":
-        raise ValueError(body.decode("utf-8"))
-    if prefix == b":":
-        return int(body)
-    if prefix == b"$":
-        length = int(body)
-        if length < 0:
-            return None
-        payload = await reader.readexactly(length + 2)
-        if not payload.endswith(b"\r\n"):
-            raise ValueError("Malformed Redis bulk string response")
-        return payload[:-2].decode("utf-8")
-    if prefix == b"*":
-        length = int(body)
-        if length < 0:
-            return None
-        return [await _read_resp(reader) for _ in range(length)]
-    raise ValueError(f"Unsupported Redis response: {line!r}")
+    return await read_resp(reader)

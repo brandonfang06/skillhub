@@ -10,6 +10,7 @@ from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Uploa
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles, require_api_token_scope
 from app.core.config import get_settings
+from app.object_storage import object_storage_for_settings
 from app.core.response import ok
 from app.publish.dry_run import (
     PublishDryRunInput,
@@ -264,6 +265,7 @@ async def publish_entries(
         metadata=metadata_with_resolved_version(metadata, dry_run.resolved_version),
         entries=entries,
         storage_base_path=settings.storage_base_path,
+        storage=object_storage_for_settings(settings),
         scanner_enabled=settings.security_scanner_enabled,
         scan_mode=settings.security_scanner_mode,
         request_id=getattr(request.state, "request_id", None),

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, Protocol
 
 from app.db.unit_of_work import transaction_connection
+from app.object_storage import ObjectStorage, object_storage_for_base_path
 
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
@@ -15,7 +16,7 @@ from app.publish.replacement import (
     cleanup_replaceable_version,
 )
 from app.publish.side_effects import PublishSideEffectInput, PublishSideEffectResult, apply_publish_side_effects
-from app.publish.storage import StoredPackageResult, write_local_package_objects
+from app.publish.storage import StoredPackageResult, write_package_objects
 from app.publish.transaction import (
     PublishDbFinalizeInput,
     PublishDbPrepareInput,
@@ -39,6 +40,7 @@ class PublishWriteInput:
     metadata: SkillMetadata
     entries: list[PackageEntry]
     storage_base_path: str
+    storage: ObjectStorage | None = None
     scanner_enabled: bool = False
     scan_mode: str = "local"
     request_id: str | None = None
@@ -69,6 +71,15 @@ class PublishWriteResult:
 class ScanTaskPublisher(Protocol):
     async def publish_scan_task(self, task: Any) -> None:
         pass
+
+
+def write_local_package_objects(
+    storage_base_path: str,
+    skill_id: int,
+    version_id: int,
+    entries: list[PackageEntry],
+) -> StoredPackageResult:
+    return write_package_objects(object_storage_for_base_path(storage_base_path), skill_id, version_id, entries)
 
 
 async def execute_publish_write(
@@ -104,12 +115,20 @@ async def execute_publish_write(
                 now=request.now,
             ),
         )
-        stored_package = write_local_package_objects(
-            request.storage_base_path,
-            prepared.skill_id,
-            prepared.version_id,
-            request.entries,
-        )
+        if request.storage is None:
+            stored_package = write_local_package_objects(
+                request.storage_base_path,
+                prepared.skill_id,
+                prepared.version_id,
+                request.entries,
+            )
+        else:
+            stored_package = write_package_objects(
+                request.storage,
+                prepared.skill_id,
+                prepared.version_id,
+                request.entries,
+            )
         await finalize_publish_db_records(
             connection,
             PublishDbFinalizeInput(

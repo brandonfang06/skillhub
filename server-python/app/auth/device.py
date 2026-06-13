@@ -6,8 +6,7 @@ import secrets
 from typing import Any, Protocol
 
 from app.auth.tokens import create_api_token
-from app.publish.scan_consumer import _read_resp
-from app.publish.scanner_handoff import encode_resp_command, parse_redis_target
+from app.publish.scanner_handoff import encode_resp_command, open_redis_connection, parse_redis_target, read_resp
 
 DEVICE_CODE_PREFIX = "device:code:"
 DEVICE_CLAIM_PREFIX = "device:claim:"
@@ -52,11 +51,11 @@ class RedisDeviceStore:
         await self._command(["DEL", key])
 
     async def _command(self, arguments: list[str]) -> Any:
-        reader, writer = await asyncio.open_connection(self.target.host, self.target.port)
+        reader, writer = await open_redis_connection(self.target)
         try:
             writer.write(encode_resp_command(arguments))
             await writer.drain()
-            return await _read_resp(reader)
+            return await read_resp(reader)
         finally:
             writer.close()
             await writer.wait_closed()

@@ -28,6 +28,12 @@ spec:
                   name: skillhub-secret
                   key: skill-scanner-llm-api-key
                   optional: true
+            - name: SKILL_SCANNER_LLM_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: skill-scanner-llm-base-url
+                  optional: true
             - name: SKILL_SCANNER_LLM_MODEL
               valueFrom:
                 secretKeyRef:

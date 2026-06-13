@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.auth.oauth import _claims_from_attributes, oauth_registrations_from_env
 
 
 def oauth_registration() -> dict[str, object]:
@@ -217,6 +218,76 @@ def test_oauth_authorization_uses_java_compatible_environment_config(monkeypatch
     assert query["client_id"] == ["env-client"]
     assert query["redirect_uri"] == ["https://skillhub.example/login/oauth2/code/github"]
     assert query["scope"] == ["read:user user:email"]
+
+
+def test_keycloak_registration_uses_spring_boot_oidc_env_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID", "skillhub-web")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET", "keycloak-secret")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER", "keycloak")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_SCOPE", "openid,profile,email")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_NAME", "Keycloak")
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_REDIRECT_URI",
+        "{baseUrl}/login/oauth2/code/{registrationId}",
+    )
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI",
+        "https://id.example.test/realms/skillhub",
+    )
+
+    registrations = {str(item["id"]): item for item in oauth_registrations_from_env()}
+
+    keycloak = registrations["keycloak"]
+    assert keycloak["clientName"] == "Keycloak"
+    assert keycloak["clientId"] == "skillhub-web"
+    assert keycloak["clientSecret"] == "keycloak-secret"
+    assert keycloak["authorizationUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/auth"
+    assert keycloak["tokenUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/token"
+    assert keycloak["userInfoUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/userinfo"
+    assert keycloak["redirectUri"] == "https://skillhub.example/login/oauth2/code/keycloak"
+    assert keycloak["scopes"] == ["openid", "profile", "email"]
+
+
+def test_keycloak_authorization_redirects_from_spring_boot_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID", "skillhub-web")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET", "keycloak-secret")
+    monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_SCOPE", "openid,profile,email")
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI",
+        "https://id.example.test/realms/skillhub",
+    )
+    app = create_app()
+    client = TestClient(app)
+
+    response = client.get("/oauth2/authorization/keycloak?returnTo=/dashboard", follow_redirects=False)
+
+    assert response.status_code == 307
+    parsed = urlparse(response.headers["location"])
+    query = parse_qs(parsed.query)
+    assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == (
+        "https://id.example.test/realms/skillhub/protocol/openid-connect/auth"
+    )
+    assert query["client_id"] == ["skillhub-web"]
+    assert query["redirect_uri"] == ["https://skillhub.example/login/oauth2/code/keycloak"]
+    assert query["scope"] == ["openid profile email"]
+
+
+def test_keycloak_claims_use_sub_and_preferred_username() -> None:
+    claims = _claims_from_attributes(
+        "keycloak",
+        {
+            "sub": "1e52e2cf-1f10-4b8b-9f41-71ad3e845791",
+            "preferred_username": "alice",
+            "name": "Alice Example",
+            "email": "alice@example.test",
+        },
+    )
+
+    assert claims["subject"] == "1e52e2cf-1f10-4b8b-9f41-71ad3e845791"
+    assert claims["providerLogin"] == "alice"
+    assert claims["email"] == "alice@example.test"
 
 
 def test_oauth_callback_rejects_missing_code() -> None:

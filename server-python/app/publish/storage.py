@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from io import BytesIO
-from pathlib import Path
 from zipfile import ZipFile
 
+from app.object_storage import LocalObjectStorage, ObjectStorage
 from app.publish.package import PackageEntry, normalize_entry_path
 
 
@@ -52,11 +52,20 @@ def write_local_package_objects(
     version_id: int,
     entries: list[PackageEntry],
 ) -> StoredPackageResult:
+    return write_package_objects(LocalObjectStorage(storage_base_path), skill_id, version_id, entries)
+
+
+def write_package_objects(
+    storage: ObjectStorage,
+    skill_id: int,
+    version_id: int,
+    entries: list[PackageEntry],
+) -> StoredPackageResult:
     records: list[SkillFileWriteRecord] = []
     total_size = 0
     for entry in entries:
         key = skill_storage_key(skill_id, version_id, entry.path)
-        write_local_object(storage_base_path, key, entry.content)
+        storage.put_bytes(key, entry.content, content_type=entry.content_type)
         digest = sha256(entry.content).hexdigest()
         records.append(
             SkillFileWriteRecord(
@@ -72,7 +81,7 @@ def write_local_package_objects(
 
     bundle = build_bundle_zip(entries)
     bundle_key = bundle_storage_key(skill_id, version_id)
-    write_local_object(storage_base_path, bundle_key, bundle)
+    storage.put_bytes(bundle_key, bundle, content_type="application/zip")
 
     return StoredPackageResult(
         files=records,
@@ -86,12 +95,4 @@ def write_local_package_objects(
 
 
 def write_local_object(storage_base_path: str, object_key: str, content: bytes) -> None:
-    base = Path(storage_base_path).resolve()
-    target = (base / object_key).resolve()
-    try:
-        target.relative_to(base)
-    except ValueError as exc:
-        raise ValueError(f"Object key escapes storage base: {object_key}") from exc
-
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(content)
+    LocalObjectStorage(storage_base_path).put_bytes(object_key, content)

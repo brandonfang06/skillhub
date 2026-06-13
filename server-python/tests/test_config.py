@@ -8,6 +8,7 @@ def test_default_database_url_matches_local_docker_compose(monkeypatch):
 
     assert DEFAULT_DATABASE_URL == "postgresql+asyncpg://skillhub:skillhub_dev@localhost:5432/skillhub"
     assert settings.database_url == DEFAULT_DATABASE_URL
+    assert settings.storage_provider == "local"
     assert settings.storage_base_path == DEFAULT_STORAGE_BASE_PATH
 
 
@@ -25,6 +26,45 @@ def test_storage_base_path_can_be_overridden(monkeypatch):
     settings = get_settings()
 
     assert settings.storage_base_path == "C:/tmp/skillhub-storage"
+
+
+def test_s3_storage_settings_use_java_compatible_env_names(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_STORAGE_PROVIDER", "s3")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_ENDPOINT", "http://minio.internal:9000")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_PROXY_ENDPOINT", "http://minio-proxy.internal:9000")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT", "https://objects.example.test")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_BUCKET", "skillhub-packages")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_ACCESS_KEY", "skillhub")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_SECRET_KEY", "secret")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_REGION", "ap-northeast-1")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE", "true")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING", "true")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET", "false")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY", "PT15M")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_MAX_CONNECTIONS", "64")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT", "PT5S")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT", "PT20S")
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT", "PT1M")
+
+    settings = get_settings()
+
+    assert settings.storage_provider == "s3"
+    assert settings.storage_s3_endpoint == "http://minio.internal:9000"
+    assert settings.storage_s3_proxy_endpoint == "http://minio-proxy.internal:9000"
+    assert settings.storage_s3_effective_endpoint == "http://minio-proxy.internal:9000"
+    assert settings.storage_s3_public_endpoint == "https://objects.example.test"
+    assert settings.storage_s3_bucket == "skillhub-packages"
+    assert settings.storage_s3_access_key == "skillhub"
+    assert settings.storage_s3_secret_key == "secret"
+    assert settings.storage_s3_region == "ap-northeast-1"
+    assert settings.storage_s3_force_path_style is True
+    assert settings.storage_s3_disable_chunked_encoding is True
+    assert settings.storage_s3_auto_create_bucket is False
+    assert settings.storage_s3_presign_expiry_seconds == 900
+    assert settings.storage_s3_max_connections == 64
+    assert settings.storage_s3_connection_acquisition_timeout_seconds == 5
+    assert settings.storage_s3_api_call_attempt_timeout_seconds == 20
+    assert settings.storage_s3_api_call_timeout_seconds == 60
 
 
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
@@ -49,6 +89,30 @@ def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     assert settings.scanner_scan_path == "/scan-upload-custom"
     assert settings.scanner_connect_timeout_ms == 1234
     assert settings.scanner_read_timeout_ms == 5678
+
+
+def test_redis_url_can_be_built_from_java_compatible_env_names(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.setenv("SPRING_DATA_REDIS_HOST", "redis.internal")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PORT", "6380")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PASSWORD", "redis secret")
+    monkeypatch.setenv("SPRING_DATA_REDIS_DATABASE", "2")
+
+    settings = get_settings()
+
+    assert settings.redis_url == "redis://:redis%20secret@redis.internal:6380/2"
+
+
+def test_redis_password_falls_back_to_redis_password_env(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_PASSWORD", raising=False)
+    monkeypatch.setenv("REDIS_HOST", "redis.compat")
+    monkeypatch.setenv("REDIS_PORT", "6379")
+    monkeypatch.setenv("REDIS_PASSWORD", "compat-secret")
+
+    settings = get_settings()
+
+    assert settings.redis_url == "redis://:compat-secret@redis.compat:6379/0"
 
 
 def test_scanner_timeout_settings_fallback_to_defaults(monkeypatch):

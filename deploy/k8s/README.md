@@ -1,8 +1,14 @@
-# SkillHub Kubernetes Deployment
+# SkillHub Kubernetes deployment
 
-This directory contains Kubernetes manifests for running SkillHub after the
-Python backend cutover. The production shape is three application deployments:
-frontend, backend-python, and scanner.
+This manifest set is for the Python cutover runtime. It deploys only the three
+SkillHub workloads:
+
+- `skillhub-web`: frontend Nginx container
+- `skillhub-server`: Python FastAPI backend
+- `skillhub-scanner`: Python scanner service
+
+PostgreSQL, Redis, MinIO/S3, and Keycloak/OIDC are external dependencies. Point
+the ConfigMap and Secret values at the services your organization already runs.
 
 ## Layout
 
@@ -19,14 +25,10 @@ deploy/k8s/
     services.yaml
   overlays/
     external/
-    with-infra/
+  environment-variables.zh.md
 ```
 
-Use `overlays/with-infra` when the cluster should also run PostgreSQL and Redis.
-Use `overlays/external` when PostgreSQL and Redis are provided outside this
-manifest set.
-
-## Runtime Topology
+## Runtime
 
 ```text
 Ingress
@@ -47,89 +49,57 @@ skillhub-scanner
   health /health
 ```
 
-The Java backend is not part of the default Kubernetes runtime. Java remains a
-read-only reference for hybrid local verification only.
+The Java backend is not part of this Kubernetes runtime. Spring-compatible
+environment names are intentionally kept where they are part of the existing
+deployment contract, for example Redis and OIDC.
 
-## Required Configuration
+## Configure
 
-Create a namespace:
+Create the namespace:
 
 ```bash
 kubectl create namespace skillhub
 ```
 
-Create a secret from the example:
+Create a Secret from the example:
 
 ```bash
 cd deploy/k8s/base
 cp secret.yaml.example secret.yaml
 ```
 
-Apply the secret before applying an overlay:
+Edit these required Secret values:
 
-```bash
-kubectl apply -n skillhub -f deploy/k8s/base/secret.yaml
-```
-
-Required secret keys:
-
-| Key | Purpose |
+| Key | Meaning |
 | --- | --- |
-| `database-url` | SQLAlchemy async PostgreSQL URL for the Python backend, for example `postgresql+asyncpg://skillhub:password@postgres:5432/skillhub`. URL-encode special characters. |
-| `bootstrap-admin-password` | Optional bootstrap admin password when bootstrap is enabled. |
-| `oauth2-github-client-id` | Optional GitHub OAuth client ID. |
-| `oauth2-github-client-secret` | Optional GitHub OAuth client secret. |
-| `oauth2-gitlab-client-id` | Optional GitLab OAuth client ID. |
-| `oauth2-gitlab-client-secret` | Optional GitLab OAuth client secret. |
-| `skill-scanner-llm-api-key` | Optional scanner LLM API key. |
-| `skill-scanner-llm-base-url` | Optional scanner LLM base URL. |
-| `skill-scanner-llm-model` | Optional scanner LLM model. |
+| `database-url` | Feeds `SKILLHUB_DATABASE_URL`. PostgreSQL SQLAlchemy async URL, for example `postgresql+asyncpg://skillhub:password@postgres.example.internal:5432/skillhub`. URL-encode special characters. |
+| `redis-password` | Feeds `SPRING_DATA_REDIS_PASSWORD`. Leave empty only when Redis has no password. |
+| `redis-url` | Feeds optional `SKILLHUB_REDIS_URL`. If non-empty, it wins over `redis-host`, `redis-port`, `redis-database`, and `redis-password`. |
+| `storage-s3-access-key` | Feeds `SKILLHUB_STORAGE_S3_ACCESS_KEY`. MinIO/S3 access key. |
+| `storage-s3-secret-key` | Feeds `SKILLHUB_STORAGE_S3_SECRET_KEY`. MinIO/S3 secret key. |
+| `oauth2-keycloak-client-id` | Feeds `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID`. Leave empty until the provider is ready. |
+| `oauth2-keycloak-client-secret` | Feeds `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET`. Leave empty until the provider is ready. |
+| `bootstrap-admin-password` | Feeds `BOOTSTRAP_ADMIN_PASSWORD`. Rotate or disable after first setup. |
 
-Important ConfigMap keys:
+Edit these common ConfigMap values:
 
-| Key | Default | Purpose |
+| Key | Pod env | Meaning |
 | --- | --- | --- |
-| `redis-url` | `redis://redis:6379` | Redis URL for sessions, idempotency, and scan streams. |
-| `storage-base-path` | `/var/lib/skillhub/storage` | Local bundle storage path mounted from `skillhub-storage-pvc`. |
-| `public-base-url` | empty | External HTTPS origin used for OAuth callback construction. |
-| `security-scanner-enabled` | `true` | Enables scanner integration in the Python backend. |
-| `security-scanner-base-url` | `http://skillhub-scanner:8000` | Scanner service URL. |
-| `security-scanner-mode` | `upload` | Scanner handoff mode. |
-| `scan-consumer-enabled` | `false` | Enables the Python scan consumer worker loop when configured. |
-| `session-cookie-secure` | `false` | Set to `true` behind HTTPS ingress. |
-| `auth-direct-enabled` | `false` | Enables direct password auth method exposure. |
-| `auth-session-bootstrap-enabled` | `false` | Enables local/dev session bootstrap method exposure. |
+| `redis-host` | `SPRING_DATA_REDIS_HOST` | External Redis hostname. |
+| `redis-port` | `SPRING_DATA_REDIS_PORT` | External Redis port. |
+| `redis-database` | `SPRING_DATA_REDIS_DATABASE` | Redis logical database number. |
+| `storage-s3-endpoint` | `SKILLHUB_STORAGE_S3_ENDPOINT` | MinIO/S3 API endpoint. |
+| `storage-s3-proxy-endpoint` | `SKILLHUB_STORAGE_S3_PROXY_ENDPOINT` | Optional proxy endpoint used by the backend when it must reach MinIO through a proxy. |
+| `storage-s3-public-endpoint` | `SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT` | Optional public endpoint used for generated object URLs. |
+| `storage-s3-bucket` | `SKILLHUB_STORAGE_S3_BUCKET` | Bucket for skill package bundles. |
+| `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | External HTTPS origin used for OAuth callbacks and generated links. |
+| `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
+| `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
 
-The backend deployment maps those keys to Python runtime environment variables:
+For the full environment variable manual, see
+[environment-variables.zh.md](environment-variables.zh.md).
 
-| Pod environment variable | Source |
-| --- | --- |
-| `SKILLHUB_DATABASE_URL` | `skillhub-secret/database-url` |
-| `SKILLHUB_REDIS_URL` | `skillhub-config/redis-url` |
-| `SKILLHUB_STORAGE_BASE_PATH` | `skillhub-config/storage-base-path` |
-| `SKILLHUB_SECURITY_SCANNER_BASE_URL` | `skillhub-config/security-scanner-base-url` |
-| `SKILLHUB_SECURITY_SCANNER_ENABLED` | `skillhub-config/security-scanner-enabled` |
-| `SKILLHUB_SESSION_COOKIE_SECURE` | `skillhub-config/session-cookie-secure` |
-
-## Deploy With In-Cluster PostgreSQL And Redis
-
-```bash
-kubectl apply -n skillhub -f deploy/k8s/base/secret.yaml
-kubectl apply -k deploy/k8s/overlays/with-infra/
-kubectl wait --for=condition=ready pod --all -n skillhub --timeout=300s
-```
-
-The `with-infra` overlay includes PostgreSQL and Redis stateful workloads. The
-base backend secret example already points `database-url` at
-`postgres:5432/skillhub`.
-
-## Deploy With External PostgreSQL And Redis
-
-1. Edit `deploy/k8s/base/secret.yaml` and set `database-url` to the external
-   PostgreSQL URL.
-2. Edit `deploy/k8s/base/configmap.yaml` and set `redis-url` to the external
-   Redis URL.
-3. Apply the external overlay:
+## Apply
 
 ```bash
 kubectl apply -n skillhub -f deploy/k8s/base/secret.yaml
@@ -143,7 +113,7 @@ Render manifests before applying:
 
 ```bash
 kubectl kustomize deploy/k8s/base
-kubectl kustomize deploy/k8s/overlays/with-infra
+kubectl kustomize deploy/k8s/overlays/external
 ```
 
 Check pods and services:
@@ -153,7 +123,7 @@ kubectl get pods -n skillhub
 kubectl get svc -n skillhub
 ```
 
-Port-forward frontend and backend:
+Port-forward:
 
 ```bash
 kubectl port-forward svc/skillhub-web -n skillhub 8080:80
@@ -167,9 +137,6 @@ curl http://localhost:8081/api/v1/health
 curl http://localhost:8080/api/v1/health
 ```
 
-The first command hits the backend service directly. The second command hits the
-frontend Nginx proxy and should still reach the Python backend.
-
 ## Images
 
 | Component | Default image |
@@ -177,19 +144,10 @@ frontend Nginx proxy and should still reach the Python backend.
 | Frontend | `ghcr.io/iflytek/skillhub-web:edge` |
 | Backend Python | `ghcr.io/iflytek/skillhub-server-python:edge` |
 | Scanner | `ghcr.io/iflytek/skillhub-scanner:edge` |
-| PostgreSQL | `postgres:16-alpine` |
-| Redis | `redis:7-alpine` |
-
-## Storage
-
-The Python backend currently uses local filesystem bundle storage in this
-deployment path. The base manifest mounts `skillhub-storage-pvc` at
-`/var/lib/skillhub/storage` and passes that path through
-`SKILLHUB_STORAGE_BASE_PATH`.
 
 ## Cleanup
 
 ```bash
-kubectl delete -k deploy/k8s/overlays/with-infra/
+kubectl delete -k deploy/k8s/overlays/external/
 kubectl delete namespace skillhub
 ```

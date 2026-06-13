@@ -102,6 +102,7 @@ validate_url SKILLHUB_PUBLIC_BASE_URL
 validate_no_trailing_slash SKILLHUB_PUBLIC_BASE_URL
 
 reject_values POSTGRES_PASSWORD "change-this-postgres-password" "skillhub_demo" "skillhub_dev"
+reject_values REDIS_PASSWORD "change-this-redis-password" "skillhub_demo" "skillhub_dev"
 reject_values BOOTSTRAP_ADMIN_PASSWORD "replace-this-admin-password" "ChangeMe!2026" "Admin@2026"
 if [ "${BOOTSTRAP_ADMIN_ENABLED:-false}" = "true" ]; then
   require_non_empty BOOTSTRAP_ADMIN_PASSWORD

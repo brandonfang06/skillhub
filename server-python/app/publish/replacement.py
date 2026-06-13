@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
+from app.object_storage import object_storage_for_base_path
 from sqlalchemy import text
 
 
@@ -184,19 +184,7 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
 
 
 def delete_local_storage_objects(storage_base_path: str, storage_keys: list[str]) -> list[str]:
-    base = Path(storage_base_path).resolve()
-    deleted: list[str] = []
-    for key in storage_keys:
-        target = (base / key).resolve()
-        try:
-            target.relative_to(base)
-        except ValueError as exc:
-            raise ValueError(f"Object key escapes storage base: {key}") from exc
-
-        if target.exists():
-            target.unlink()
-            deleted.append(key)
-    return deleted
+    return object_storage_for_base_path(storage_base_path).delete_many(storage_keys)
 
 
 async def record_storage_delete_compensation(

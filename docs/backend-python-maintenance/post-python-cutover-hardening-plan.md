@@ -338,6 +338,66 @@ environment variables, Java backend images, or actuator health endpoints.
 
 **Result:** `docs/backend-python-maintenance/results/2026-06-13-python-deployment-cutover.md`
 
+## Milestone 10: External Infra Deployment Contract
+
+**Purpose:** Align the Kubernetes deployment with the intended organization
+runtime: only frontend, backend-python, and scanner are deployed by this repo;
+PostgreSQL, Redis, MinIO/S3, and Keycloak/OIDC are provided by the cluster
+operator. Preserve Java-compatible S3 and Keycloak environment variable names
+where they already existed, while adding the Python runtime support needed for
+those variables to work.
+
+**Files:**
+- Modify: `server-python/app/core/config.py`
+- Add: `server-python/app/object_storage.py`
+- Modify: `server-python/app/auth/oauth.py`
+- Modify: storage read/write callers under `server-python/app/publish/`,
+  `server-python/app/skills/`, `server-python/app/review/`, and
+  `server-python/app/lifecycle/`
+- Modify: `server-python/pyproject.toml`
+- Modify: `server-python/uv.lock`
+- Modify: `deploy/k8s/base/*.yaml`
+- Remove: `deploy/k8s/overlays/with-infra/*`
+- Modify: `deploy/k8s/README.md`
+- Add: `deploy/k8s/environment-variables.zh.md`
+- Modify: `server-python/tests/test_config.py`
+- Modify: `server-python/tests/test_oauth_flow.py`
+- Modify: `server-python/tests/test_publish_storage.py`
+- Modify: `server-python/tests/test_deployment_cutover.py`
+- Create: `docs/backend-python-maintenance/results/2026-06-13-external-infra-deployment-contract.md`
+
+**Steps:**
+- [x] Add tests for Java-compatible `SKILLHUB_STORAGE_S3_*` config parsing,
+  including the Python-only `SKILLHUB_STORAGE_S3_PROXY_ENDPOINT` override for
+  proxy-to-MinIO environments.
+- [x] Add tests for Spring Boot style Keycloak/OIDC env parsing and Keycloak
+  claim mapping from `sub` plus `preferred_username`.
+- [x] Add a storage adapter boundary so publish, download, review preview,
+  rerelease, replacement cleanup, and hard-delete cleanup can use local or
+  S3-backed object storage.
+- [x] Add `boto3` as the Python S3 client dependency and update the lockfile.
+- [x] Update K8s manifests so base/external overlays deploy only frontend,
+  backend-python, and scanner, with no PVC, PostgreSQL, Redis, or MinIO
+  workloads.
+- [x] Expose PostgreSQL, Redis, MinIO/S3, Keycloak/OIDC, scanner, session, and
+  bootstrap envs through ConfigMap/Secret keys.
+- [x] Add a Chinese K8s environment variable manual for operators.
+- [x] Verify Python tests, Kustomize render, no obsolete deployment resource
+  strings, and `git diff --check`.
+
+**Verify:**
+- `cd server-python; uv run pytest tests -q`
+- `kubectl kustomize deploy/k8s/base`
+- `kubectl kustomize deploy/k8s/overlays/external`
+- `rg -n "StatefulSet|PersistentVolumeClaim|skillhub-storage-pvc|overlays/with-infra|with-infra|SKILLHUB_STORAGE_BASE_PATH|/actuator/health" deploy/k8s`
+- `git diff --check`
+
+**Done when:** Kubernetes deployment assets are external-infra only, Python
+runtime can actually use MinIO/S3 and Keycloak/OIDC envs, and operators have a
+Chinese env var manual for filling deployment values.
+
+**Result:** `docs/backend-python-maintenance/results/2026-06-13-external-infra-deployment-contract.md`
+
 ## Execution Rules
 
 - Work one milestone at a time.
@@ -358,5 +418,6 @@ environment variables, Java backend images, or actuator health endpoints.
 7. Milestone 7: Upstream sync and Python parity workflow.
 8. Milestone 8: Full post-cutover regression and launch readiness note.
 9. Milestone 9: Python deployment cutover.
+10. Milestone 10: External infra deployment contract.
 
 This order keeps behavior stable: inventory first, route/query extraction second, transaction cleanup third, ORM only after the mutation boundaries are explicit, and upstream intake before final launch readiness.

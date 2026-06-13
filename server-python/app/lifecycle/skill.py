@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 import yaml
@@ -13,6 +12,7 @@ from app.audit.writer import write_audit_log
 from app.db.unit_of_work import transaction_connection
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
 from app.publish.replacement import (
@@ -745,15 +745,11 @@ async def submit_skill_version_for_review(engine: Any, request: SkillSubmitRevie
 
 
 def _read_local_object(storage_base_path: str, object_key: str) -> bytes:
-    base = Path(storage_base_path).resolve()
-    target = (base / object_key).resolve()
     try:
-        target.relative_to(base)
+        return object_storage_for_base_path(storage_base_path).read_bytes(object_key)
     except ValueError as exc:
         raise SkillLifecycleError(f"Object key escapes storage base: {object_key}") from exc
-    try:
-        return target.read_bytes()
-    except OSError as exc:
+    except (OSError, ObjectNotFoundError) as exc:
         raise SkillLifecycleError("error.skill.rerelease.sourceFileNotFound") from exc
 
 

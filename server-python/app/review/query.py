@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from io import BytesIO
 import mimetypes
-from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
 from sqlalchemy import text
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -122,13 +122,10 @@ def _review_skill_lifecycle_version(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _file_exists(storage_base_path: str, storage_key: str) -> bool:
-    base = Path(storage_base_path).resolve()
-    target = (base / storage_key).resolve()
     try:
-        target.relative_to(base)
+        return object_storage_for_base_path(storage_base_path).exists(storage_key)
     except ValueError:
         return False
-    return target.is_file()
 
 
 def _read_storage_text(storage_base_path: str, storage_key: str) -> str:
@@ -136,15 +133,9 @@ def _read_storage_text(storage_base_path: str, storage_key: str) -> str:
 
 
 def _read_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
-    base = Path(storage_base_path).resolve()
-    target = (base / storage_key).resolve()
     try:
-        target.relative_to(base)
-    except ValueError as exc:
-        raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
-    try:
-        return target.read_bytes()
-    except FileNotFoundError as exc:
+        return object_storage_for_base_path(storage_base_path).read_bytes(storage_key)
+    except (FileNotFoundError, ObjectNotFoundError, ValueError) as exc:
         raise ReviewQueryError("error.skill.file.notFound", status_code=400) from exc
 
 

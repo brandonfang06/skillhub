@@ -34,11 +34,13 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: ["sh", "-c", "redis-server --appendonly yes $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$${REDIS_PASSWORD:-}\" ]; then redis-cli -a \"$${REDIS_PASSWORD}\" ping; else redis-cli ping; fi"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,7 +52,10 @@ services:
       - "${API_PORT:-8080}:8080"
     environment:
       SKILLHUB_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-skillhub}:${POSTGRES_PASSWORD:-skillhub_demo}@postgres:5432/${POSTGRES_DB:-skillhub}
-      SKILLHUB_REDIS_URL: redis://redis:6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      SPRING_DATA_REDIS_DATABASE: 0
       SKILLHUB_SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       SKILLHUB_PUBLIC_BASE_URL: ${SKILLHUB_PUBLIC_BASE_URL:-}
       SKILLHUB_STORAGE_BASE_PATH: /var/lib/skillhub/storage

@@ -34,16 +34,95 @@ spec:
             # Redis
             - name: SKILLHUB_REDIS_URL
               valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
+                secretKeyRef:
+                  name: skillhub-secret
                   key: redis-url
-
-            # Storage
-            - name: SKILLHUB_STORAGE_BASE_PATH
+                  optional: true
+            - name: SPRING_DATA_REDIS_HOST
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
-                  key: storage-base-path
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-port
+            - name: SPRING_DATA_REDIS_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-database
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-password
+                  optional: true
+
+            # Storage
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-provider
+            - name: SKILLHUB_STORAGE_S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-endpoint
+            - name: SKILLHUB_STORAGE_S3_PROXY_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-proxy-endpoint
+                  optional: true
+            - name: SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-public-endpoint
+                  optional: true
+            - name: SKILLHUB_STORAGE_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-bucket
+            - name: SKILLHUB_STORAGE_S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-region
+            - name: SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-force-path-style
+            - name: SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-disable-chunked-encoding
+            - name: SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-auto-create-bucket
+            - name: SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-presign-expiry
+            - name: SKILLHUB_STORAGE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: storage-s3-access-key
+            - name: SKILLHUB_STORAGE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: storage-s3-secret-key
 
             # Scanner
             - name: SKILLHUB_SECURITY_SCANNER_ENABLED
@@ -160,9 +239,42 @@ spec:
                   name: skillhub-secret
                   key: oauth2-gitlab-client-secret
                   optional: true
-          volumeMounts:
-            - name: skillhub-storage
-              mountPath: /var/lib/skillhub/storage
+            # Keycloak / generic OIDC provider. Spring-style names are kept so
+            # existing Java deployment values can be reused during cutover.
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-keycloak-client-id
+                  optional: true
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-keycloak-client-secret
+                  optional: true
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER
+              value: keycloak
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE
+              value: authorization_code
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_REDIRECT_URI
+              value: "{baseUrl}/login/oauth2/code/{registrationId}"
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_SCOPE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-scope
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-client-name
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-issuer-uri
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/v1/health
@@ -175,7 +287,3 @@ spec:
               port: http
             initialDelaySeconds: 20
             periodSeconds: 15
-      volumes:
-        - name: skillhub-storage
-          persistentVolumeClaim:
-            claimName: skillhub-storage-pvc

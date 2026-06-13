@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, is_namespace_member
+from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 
 
 VersionRow = dict[str, Any]
@@ -805,16 +806,9 @@ def build_compare_response(
 
 
 def read_local_storage_bytes(storage_base_path: str, storage_key: str) -> bytes:
-    base = Path(storage_base_path).resolve()
-    target = (base / storage_key).resolve()
     try:
-        target.relative_to(base)
-    except ValueError as exc:
-        raise SkillResolveError("error.skill.file.notFound") from exc
-
-    try:
-        return target.read_bytes()
-    except FileNotFoundError as exc:
+        return object_storage_for_base_path(storage_base_path).read_bytes(storage_key)
+    except (FileNotFoundError, ObjectNotFoundError, ValueError) as exc:
         raise SkillResolveError("error.skill.file.notFound") from exc
 
 
@@ -862,13 +856,8 @@ def read_bundle_or_build_fallback_zip(
         str(version_row["version"]),
     )
     storage_key = bundle_storage_key(skill_id, version_id)
-    bundle_path = (Path(storage_base_path).resolve() / storage_key).resolve()
-    try:
-        bundle_path.relative_to(Path(storage_base_path).resolve())
-    except ValueError as exc:
-        raise SkillResolveError("error.skill.bundle.notFound") from exc
-
-    if bundle_path.exists():
+    storage = object_storage_for_base_path(storage_base_path)
+    if storage.exists(storage_key):
         content = read_local_storage_bytes(storage_base_path, storage_key)
         content_type = version_row.get("content_type") or "application/zip"
         content_length = version_row.get("content_length")

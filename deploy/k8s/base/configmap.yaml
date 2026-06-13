@@ -3,9 +3,25 @@ kind: ConfigMap
 metadata:
   name: skillhub-config
 data:
-  # Backend Python runtime
-  redis-url: redis://redis:6379
-  storage-base-path: /var/lib/skillhub/storage
+  # External MinIO / S3 storage. If access must go through an internal proxy,
+  # set storage-s3-proxy-endpoint and keep storage-s3-endpoint as the canonical
+  # MinIO endpoint for documentation parity.
+  storage-provider: s3
+  storage-s3-endpoint: http://minio.example.internal:9000
+  storage-s3-proxy-endpoint: ""
+  storage-s3-public-endpoint: https://objects.example.com
+  storage-s3-bucket: skillhub-packages
+  storage-s3-region: us-east-1
+  storage-s3-force-path-style: "true"
+  storage-s3-disable-chunked-encoding: "false"
+  storage-s3-auto-create-bucket: "false"
+  storage-s3-presign-expiry: PT10M
+
+  # External Redis. The Python backend also accepts SKILLHUB_REDIS_URL as an
+  # override, but these Spring-compatible keys preserve Java deployment parity.
+  redis-host: redis.example.internal
+  redis-port: "6379"
+  redis-database: "0"
 
   # Public URL used for OAuth callback construction. Set this to the external
   # HTTPS origin when ingress is configured, for example https://skills.example.com.
@@ -32,14 +48,8 @@ data:
   # Optional GitLab OAuth provider metadata
   oauth2-gitlab-base-uri: https://gitlab.com
   oauth2-gitlab-display-name: GitLab
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: skillhub-storage-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+
+  # Optional Keycloak / OIDC provider metadata
+  oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
+  oauth2-keycloak-scope: openid,profile,email
+  oauth2-keycloak-client-name: Keycloak

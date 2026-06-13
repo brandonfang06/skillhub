@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from urllib.parse import urlparse
+from typing import Any
+from urllib.parse import unquote, urlparse
 
 from app.publish.side_effects import ScanTaskPayload
 
@@ -14,6 +15,9 @@ DEFAULT_SCAN_STREAM_KEY = "skillhub:scan:requests"
 class RedisTarget:
     host: str
     port: int
+    username: str | None = None
+    password: str | None = None
+    database: int = 0
 
 
 def build_scan_stream_fields(task: ScanTaskPayload) -> dict[str, str]:
@@ -45,9 +49,67 @@ def parse_redis_target(redis_url: str) -> RedisTarget:
     parsed = urlparse(redis_url)
     if parsed.scheme != "redis":
         raise ValueError("Only redis:// URLs are supported")
-    if parsed.username or parsed.password or parsed.path not in {"", "/"}:
-        raise ValueError("Redis auth and DB selection are not supported by the publish handoff adapter")
-    return RedisTarget(host=parsed.hostname or "localhost", port=parsed.port or 6379)
+    path = parsed.path or ""
+    database = 0
+    if path not in {"", "/"}:
+        database_text = path.lstrip("/")
+        if not database_text.isdecimal():
+            raise ValueError("Redis database must be numeric")
+        database = int(database_text)
+    return RedisTarget(
+        host=parsed.hostname or "localhost",
+        port=parsed.port or 6379,
+        username=unquote(parsed.username) if parsed.username else None,
+        password=unquote(parsed.password) if parsed.password else None,
+        database=database,
+    )
+
+
+async def open_redis_connection(target: RedisTarget) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    reader, writer = await asyncio.open_connection(target.host, target.port)
+    try:
+        if target.password:
+            auth_arguments = ["AUTH", target.password] if target.username is None else ["AUTH", target.username, target.password]
+            writer.write(encode_resp_command(auth_arguments))
+            await writer.drain()
+            await read_resp(reader)
+        if target.database:
+            writer.write(encode_resp_command(["SELECT", str(target.database)]))
+            await writer.drain()
+            await read_resp(reader)
+        return reader, writer
+    except Exception:
+        writer.close()
+        await writer.wait_closed()
+        raise
+
+
+async def read_resp(reader: asyncio.StreamReader) -> Any:
+    line = await reader.readline()
+    if not line:
+        raise ValueError("Redis closed the connection")
+    prefix = line[:1]
+    body = line[1:].rstrip(b"\r\n")
+    if prefix == b"+":
+        return body.decode("utf-8")
+    if prefix == b"-":
+        raise ValueError(body.decode("utf-8"))
+    if prefix == b":":
+        return int(body)
+    if prefix == b"$":
+        length = int(body)
+        if length < 0:
+            return None
+        payload = await reader.readexactly(length + 2)
+        if not payload.endswith(b"\r\n"):
+            raise ValueError("Malformed Redis bulk string response")
+        return payload[:-2].decode("utf-8")
+    if prefix == b"*":
+        length = int(body)
+        if length < 0:
+            return None
+        return [await read_resp(reader) for _ in range(length)]
+    raise ValueError(f"Unsupported Redis response: {line!r}")
 
 
 class RedisScanTaskPublisher:
@@ -61,19 +123,13 @@ class RedisScanTaskPublisher:
         for key, value in fields.items():
             arguments.extend([key, value])
 
-        reader, writer = await asyncio.open_connection(self.target.host, self.target.port)
+        reader, writer = await open_redis_connection(self.target)
         try:
             writer.write(encode_resp_command(arguments))
             await writer.drain()
-            line = await reader.readline()
-            if not line.startswith(b"$"):
-                raise ValueError(f"Unexpected Redis XADD response: {line!r}")
-            length = int(line[1:].strip())
-            if length < 0:
+            response = await read_resp(reader)
+            if response is None:
                 raise ValueError("Redis XADD returned null")
-            payload = await reader.readexactly(length + 2)
-            if not payload.endswith(b"\r\n"):
-                raise ValueError("Malformed Redis bulk string response")
         finally:
             writer.close()
             await writer.wait_closed()

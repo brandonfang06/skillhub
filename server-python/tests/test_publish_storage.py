@@ -11,8 +11,17 @@ from app.publish.storage import (
     bundle_storage_key,
     build_bundle_zip,
     skill_storage_key,
+    write_package_objects,
     write_local_package_objects,
 )
+
+
+class FakeObjectStorage:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+
+    def put_bytes(self, key: str, content: bytes, *, content_type: str | None = None) -> None:
+        self.objects[key] = content
 
 
 def package_entries() -> list[PackageEntry]:
@@ -91,3 +100,15 @@ def test_empty_package_writes_empty_bundle_and_disables_download(tmp_path) -> No
     assert not result.download_ready
     with ZipFile(tmp_path / "packages" / "7" / "42" / "bundle.zip") as archive:
         assert archive.namelist() == []
+
+
+def test_write_package_objects_can_use_s3_compatible_storage_adapter() -> None:
+    storage = FakeObjectStorage()
+
+    result = write_package_objects(storage, 7, 42, package_entries())
+
+    assert storage.objects["skills/7/42/SKILL.md"] == b"# Demo\n"
+    assert storage.objects["skills/7/42/src/main.py"] == b"print('ok')\n"
+    assert "packages/7/42/bundle.zip" in storage.objects
+    assert result.bundle_key == "packages/7/42/bundle.zip"
+    assert result.files[0].storage_key == "skills/7/42/SKILL.md"
