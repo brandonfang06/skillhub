@@ -11,7 +11,8 @@ API runtime paths.
 ## Rules
 
 - Keep public API contracts stable unless a milestone explicitly fixes a bug.
-- Keep Java `server/` read-only reference material.
+- Use upstream sync reports for Java reference material; this branch no longer
+  carries the retired Java `server/` tree.
 - Move SQL toward repository/query/helper boundaries before introducing ORM.
 - Introduce SQLAlchemy ORM only through a written milestone plan with targeted
   transaction tests.

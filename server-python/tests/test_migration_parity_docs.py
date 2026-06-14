@@ -24,11 +24,12 @@ def test_java_parity_checklist_exists_and_covers_risk_areas() -> None:
     assert "created_by" in checklist
 
 
-def test_python_agent_entrypoint_links_java_parity_checklist() -> None:
+def test_python_agent_entrypoint_documents_post_cutover_rules() -> None:
     agent_doc = (ROOT / "server-python" / "AGENTS.md").read_text(encoding="utf-8")
 
-    assert "docs/backend-python-migration/java-parity-checklist.md" in agent_doc
-    assert "Java parity checklist" in agent_doc
+    assert "post-cutover" in agent_doc.lower()
+    assert "Do not reintroduce a Java backend runtime" in agent_doc
+    assert "New SQL must live in repository/query/helper modules" in agent_doc
     assert "transaction boundary" in agent_doc
     assert "audit actor" in agent_doc
 

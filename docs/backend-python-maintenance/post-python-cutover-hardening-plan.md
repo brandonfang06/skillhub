@@ -32,7 +32,9 @@ Current observations from the post-cutover scan:
 - Do not re-open Java route ownership. Java is reference-only after the cutover tag.
 - Do not convert every SQL query to ORM. Reporting, search, and projection-heavy lists may remain explicit SQL if they stay behind repository/query functions.
 - Do not change external API envelopes, HTTP statuses, message keys, auth behavior, or E2E user flows unless a milestone explicitly calls out a bug fix.
-- Do not delete the Java `server/` tree as part of these milestones. Java reference retirement is a separate post-launch decision.
+- The Java `server/` tree was retired on the full-Python branch after
+  pre-delete and post-delete verification. Use upstream sync reports for any
+  future Java reference comparisons.
 - Do not blindly merge upstream Java backend changes and assume Python parity. Upstream intake requires a triage note and targeted Python follow-up when Java behavior, schema, API contracts, or security rules change.
 
 ## Milestone 1: Post-Cutover Architecture Inventory And Guardrails

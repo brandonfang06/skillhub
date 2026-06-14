@@ -14,7 +14,6 @@ RUN uv sync --frozen --no-dev
 COPY server-python/alembic.ini ./alembic.ini
 COPY server-python/alembic ./alembic
 COPY server-python/app ./app
-COPY server/skillhub-app/src/main/resources/db/migration ../server/skillhub-app/src/main/resources/db/migration
 
 EXPOSE 8080
 

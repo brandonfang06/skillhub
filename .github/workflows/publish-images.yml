@@ -29,10 +29,10 @@ jobs:
       matrix:
         include:
           - name: server
-            context: ./server
-            dockerfile: ./server/Dockerfile
-            image: ghcr.io/${{ github.repository_owner }}/skillhub-server
-            mirror_image: skillhub-server
+            context: .
+            dockerfile: ./server-python/Dockerfile
+            image: ghcr.io/${{ github.repository_owner }}/skillhub-server-python
+            mirror_image: skillhub-server-python
           - name: web
             context: ./web
             dockerfile: ./web/Dockerfile

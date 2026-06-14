@@ -9,7 +9,8 @@ on:
       - ready_for_review
     paths:
       - 'web/**'
-      - 'server/**'
+      - 'server-python/**'
+      - 'scanner/**'
       - 'scripts/**'
       - 'docker-compose.yml'
       - 'docker-compose.staging.yml'
@@ -46,16 +47,6 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-
-      - name: Ensure Maven wrapper is executable
-        run: chmod +x server/mvnw
 
       - name: Start full dev stack
         run: make dev-all

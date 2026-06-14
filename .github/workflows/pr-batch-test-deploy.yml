@@ -76,15 +76,15 @@ jobs:
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
-          context: ./server
-          file: ./server/Dockerfile
+          context: .
+          file: ./server-python/Dockerfile
           platforms: ${{ env.DOCKER_PLATFORM }}
           push: true
           provenance: false
           sbom: false
           tags: |
-            ghcr.io/${{ github.repository_owner }}/skillhub-server:${{ steps.batch.outputs.deploy_tag }}
-            ghcr.io/${{ github.repository_owner }}/skillhub-server:${{ steps.batch.outputs.immutable_tag }}
+            ghcr.io/${{ github.repository_owner }}/skillhub-server-python:${{ steps.batch.outputs.deploy_tag }}
+            ghcr.io/${{ github.repository_owner }}/skillhub-server-python:${{ steps.batch.outputs.immutable_tag }}
           cache-from: type=gha,scope=manual-test-server
           cache-to: type=gha,mode=max,scope=manual-test-server
 

@@ -1,3 +1,6 @@
+> Full-Python 後端分支：原本的 Java `server/` 後端已移除。後端開發、測試、
+> schema migration 與 runtime image 目前都以 `server-python/` 為準。
+
 <div align="center">
   <img src="./skillhub-logo.svg" alt="SkillHub Logo" width="120" height="120" />
   <h1>SkillHub</h1>
@@ -11,7 +14,7 @@
 [![许可证](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![构建](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
-[![Java](https://img.shields.io/badge/java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 
 </div>
@@ -135,7 +138,7 @@ skillhub list
 
 ### 前置要求
 
-- Java 21+
+- Python 3.12+
 - Node.js 20+
 - Docker & Docker Compose
 - Make
@@ -155,15 +158,15 @@ make dev-backend    # 仅后端
 make dev-web        # 仅前端
 ```
 
-> **国内开发者**：如果 Maven 依赖下载超时，需配置阿里云镜像。详见 [本地开发指南](https://iflytek.github.io/skillhub/quickstart.html#本地开发)。
+> **国内开发者**：如果依赖或镜像下载较慢，请优先使用本地开发指南中的 release/runtime 镜像说明。
 
 ### 常用命令
 
 ```bash
 make help                    # 显示所有可用命令
 make test                    # 运行后端测试
-make test-backend-app        # 运行 skillhub-app 及其依赖模块测试
-make build-backend-app       # 构建 skillhub-app 及其依赖模块
+make test-backend-app        # 运行 Python backend 测试
+make build-backend-app       # 构建 Python backend
 make typecheck-web          # TypeScript 类型检查
 make build-web              # 构建前端
 make generate-api           # 重新生成 OpenAPI 类型
@@ -171,19 +174,16 @@ make generate-api           # 重新生成 OpenAPI 类型
 ./scripts/smoke-test.sh http://localhost:8080  # 运行冒烟测试
 ```
 
-说明：不要在 `server/` 下直接执行 `./mvnw -pl skillhub-app clean test`。`skillhub-app` 依赖同仓库的 sibling modules，单独 clean 构建时会回退到本地 Maven 仓库里的旧产物并出现大量 `cannot find symbol` / 签名不匹配错误。需要使用 `-am`，或者直接使用上面的 `make test-backend-app` / `make build-backend-app`。
+说明：`make test-backend-app` / `make build-backend-app` 现在是 Python backend 的兼容别名，等同于 `make test-backend` / `make build-backend`。
 
 ### 项目结构
 
 ```
 skillhub/
-├── server/                 # 后端（Java/Spring Boot）
-│   ├── skillhub-app/      # 主应用程序
-│   ├── skillhub-domain/   # 核心业务逻辑
-│   ├── skillhub-auth/     # 认证授权
-│   ├── skillhub-search/   # 搜索功能
-│   ├── skillhub-storage/  # 存储层
-│   └── skillhub-infra/    # 基础设施
+├── server-python/          # 後端（Python/FastAPI）
+│   ├── app/               # API、業務流程、遷移與基礎設施
+│   ├── tests/             # 後端 pytest 測試
+│   └── Dockerfile         # 後端容器鏡像
 ├── web/                   # 前端（React/TypeScript）
 ├── docs/                  # 文档
 ├── scripts/               # 实用脚本
@@ -253,14 +253,11 @@ AUTH_JWT_SECRET=your-secret-key
 AUTH_SESSION_TIMEOUT=30m
 ```
 
-完整配置参考请查看 [`application.yml`](./server/skillhub-app/src/main/resources/application.yml)。
+完整配置参考请查看 [`server-python/README.md`](./server-python/README.md) 与 [`deploy/k8s/environment-variables.zh.md`](./deploy/k8s/environment-variables.zh.md)。
 
 ### 上传白名单覆盖
 
-技能包上传校验默认使用
-[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java)
-中的扩展名白名单。`SkillPublishProperties` 默认也会把这份列表作为
-`skillhub.publish.allowed-file-extensions` 的值。
+技能包上传校验默认使用 Python publish policy 中的扩展名白名单。
 
 如果需要在运行时整体替换默认白名单，可以设置：
 
@@ -268,22 +265,20 @@ AUTH_SESSION_TIMEOUT=30m
 SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.pptx
 ```
 
-Spring Boot 会把这个环境变量绑定到
-`skillhub.publish.allowed-file-extensions`。一旦设置，该配置会替换默认白名单，
-而不是在默认列表后追加。
+一旦设置，该配置会替换默认白名单，而不是在默认列表后追加。
 
 ## 架构
 
 SkillHub 采用清晰的分层架构：
 
-- **表现层**：REST API（Spring Boot）+ React 前端
+- **表现层**：REST API（FastAPI）+ React 前端
 - **应用层**：用例编排和 DTO 转换
 - **领域层**：核心业务逻辑和实体
 - **基础设施层**：数据库、存储、搜索
 
 关键设计决策：
 
-- **多模块 Maven 项目**：清晰的模块边界和依赖管理
+- **Python backend 项目**：后端运行时、迁移、测试集中在 `server-python/`
 - **领域驱动设计**：丰富的领域模型和业务规则
 - **CQRS 模式**：读写分离以优化性能
 - **事件溯源**：审计日志和治理操作
@@ -294,8 +289,8 @@ SkillHub 采用清晰的分层架构：
 ## 技术栈
 
 ### 后端
-- **语言**：Java 21
-- **框架**：Spring Boot 3.2.3
+- **语言**：Python 3.12
+- **框架**：FastAPI
 - **数据库**：PostgreSQL 16 + Flyway 迁移
 - **缓存**：Redis 7
 - **存储**：S3/MinIO

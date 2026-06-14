@@ -14,7 +14,7 @@ from app.core.config import get_settings
 BASELINE_FLYWAY_VERSION = 42
 BASELINE_REVISION = "skillhub_flyway_v42_baseline"
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_FLYWAY_DIR = ROOT / "server" / "skillhub-app" / "src" / "main" / "resources" / "db" / "migration"
+DEFAULT_FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 
 
 class DatabaseConnection(Protocol):

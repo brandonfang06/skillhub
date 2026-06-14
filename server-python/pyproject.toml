@@ -1,7 +1,7 @@
 [project]
 name = "skillhub-server-python"
 version = "0.1.0"
-description = "FastAPI backend for gradual SkillHub Java backend migration"
+description = "FastAPI backend for the full-Python SkillHub runtime"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

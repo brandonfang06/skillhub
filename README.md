@@ -1,3 +1,7 @@
+> Full-Python backend branch: the former Java `server/` backend has been
+> removed. Backend development, tests, schema migration, and runtime images now
+> live under `server-python/`.
+
 <div align="center">
   <img src="./skillhub-logo.svg" alt="SkillHub Logo" width="120" height="120" />
   <h1>SkillHub</h1>
@@ -12,7 +16,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
 [![Build](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml/badge.svg)](https://github.com/iflytek/skillhub/actions/workflows/publish-images.yml)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://ghcr.io/iflytek/skillhub)
-[![Java](https://img.shields.io/badge/java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 
 </div>
@@ -135,7 +139,7 @@ skillhub list
 make dev-all
 ```
 
-> **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](https://iflytek.github.io/skillhub/quickstart.html#本地开发) for details.
+> **For developers in China**: use the release/runtime mirror documented in the local development guide if dependency or image downloads are slow.
 
 Then open:
 
@@ -179,11 +183,9 @@ make test-backend-app
 make build-backend-app
 ```
 
-Do not run `./mvnw -pl skillhub-app clean test` directly under `server/`.
-`skillhub-app` depends on sibling modules in the same repo, and a standalone clean build
-can fall back to stale artifacts from the local Maven repository, which surfaces misleading
-`cannot find symbol` and signature-mismatch errors. Use `-am`, or the `make test-backend-app`
-and `make build-backend-app` targets above.
+The `make test-backend-app` and `make build-backend-app` targets are now
+Python-backend aliases. They run the same FastAPI backend checks as
+`make test-backend` and `make build-backend`.
 
 For the full development workflow (local dev → staging → PR), see [docs/dev-workflow.md](docs/dev-workflow.md).
 
@@ -294,10 +296,8 @@ If the GHCR package remains private, run `docker login ghcr.io` before
 
 ### Upload Allowlist Override
 
-Skill package upload validation uses the default extension allowlist from
-[`SkillPackagePolicy.java`](./server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/validation/SkillPackagePolicy.java).
-`SkillPublishProperties` uses that same list by default for
-`skillhub.publish.allowed-file-extensions`.
+Skill package upload validation uses the default extension allowlist in the
+Python publish policy under [`server-python/app/publish/`](./server-python/app/publish/).
 
 If you need to replace the default allowlist at runtime, set:
 
@@ -305,9 +305,8 @@ If you need to replace the default allowlist at runtime, set:
 SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.pptx
 ```
 
-Spring Boot binds this environment variable to
-`skillhub.publish.allowed-file-extensions`. When set, it replaces the default
-allowlist instead of appending to it.
+When set, this environment variable replaces the default allowlist instead of
+appending to it.
 
 ### Monitoring
 
@@ -376,8 +375,8 @@ Run it against a local backend:
                     └──────┬──────┘
                            │
                     ┌──────▼──────┐
-                    │ Spring Boot │  Auth · RBAC · Core Services
-                    │   (Java 21) │  OAuth2 · API Tokens · Audit
+                    │ FastAPI     │  Auth · RBAC · Core Services
+                    │ Python 3.12 │  OAuth2 · API Tokens · Audit
                     └──────┬──────┘
                            │
               ┌────────────┼────────────┐
@@ -388,9 +387,9 @@ Run it against a local backend:
        └──────────┘  └──────────┘  └─────────┘
 ```
 
-**Backend (Spring Boot 3.2.3, Java 21):**
-- Multi-module Maven project with clean architecture
-- Modules: app, domain, auth, search, storage, infra
+**Backend (FastAPI, Python 3.12):**
+- Python-owned backend under `server-python/`
+- API, auth, lifecycle, search, storage, and migration code live in Python modules
 - PostgreSQL 16 with Flyway migrations
 - Redis for session management
 - S3/MinIO for skill package storage

@@ -55,7 +55,8 @@ def test_python_backend_container_has_schema_migration_startup() -> None:
     dockerfile = read("server-python/Dockerfile")
 
     assert "uv sync --frozen --no-dev" in dockerfile
-    assert "COPY server/skillhub-app/src/main/resources/db/migration" in dockerfile
+    assert "COPY server/skillhub-app/src/main/resources/db/migration" not in dockerfile
+    assert "COPY server-python/app ./app" in dockerfile
     assert "python -m app.migrations upgrade" in dockerfile
     assert "uvicorn app.main:app --host 0.0.0.0 --port 8080" in dockerfile
 

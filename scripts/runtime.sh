@@ -243,7 +243,7 @@ prepare_runtime_files() {
       REDIS_IMAGE_VALUE="$mirror_registry/redis:7-alpine"
     fi
     if [ -z "$SKILLHUB_SERVER_IMAGE_VALUE" ]; then
-      SKILLHUB_SERVER_IMAGE_VALUE="$mirror_registry/skillhub-server"
+      SKILLHUB_SERVER_IMAGE_VALUE="$mirror_registry/skillhub-server-python"
     fi
     if [ -z "$SKILLHUB_WEB_IMAGE_VALUE" ]; then
       SKILLHUB_WEB_IMAGE_VALUE="$mirror_registry/skillhub-web"

@@ -7,7 +7,7 @@ from app import migrations
 
 
 ROOT = Path(__file__).resolve().parents[2]
-FLYWAY_DIR = ROOT / "server" / "skillhub-app" / "src" / "main" / "resources" / "db" / "migration"
+FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 
 
 class FakeConnection:
@@ -27,7 +27,7 @@ class FakeConnection:
         return "OK"
 
 
-def test_baseline_revision_tracks_latest_java_flyway_migration() -> None:
+def test_baseline_revision_tracks_bundled_python_migration_snapshot() -> None:
     latest_flyway = max(migrations.flyway_migration_files(FLYWAY_DIR), key=lambda item: item.version)
 
     assert migrations.BASELINE_FLYWAY_VERSION == latest_flyway.version
@@ -80,7 +80,7 @@ def test_pr_workflow_runs_python_schema_migration_tests() -> None:
     workflow = (ROOT / ".github" / "workflows" / "pr-tests.yml").read_text(encoding="utf-8")
 
     assert "Server Python Tests" in workflow
-    assert "uv run pytest tests/test_schema_migration_baseline.py" in workflow
+    assert "uv run pytest tests -q" in workflow
 
 
 def test_schema_migration_takeover_is_recorded_in_cutover_docs() -> None:
