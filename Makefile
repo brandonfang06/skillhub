@@ -194,10 +194,10 @@ build-backend: ## 构建后端
 test-backend: ## 运行后端单元测试
 	cd server-python && uv run pytest tests -q
 
-build-backend-app: ## 构建 Python backend（兼容旧 target 名称）
+build-backend-app: ## Build Python backend (compatibility target)
 	@$(MAKE) build-backend
 
-test-backend-app: ## 运行 Python backend 测试（兼容旧 target 名称）
+test-backend-app: ## Test Python backend (compatibility target)
 	@$(MAKE) test-backend
 
 build: build-backend build-frontend ## 完整构建前后端
