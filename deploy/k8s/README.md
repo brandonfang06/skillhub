@@ -23,6 +23,10 @@ deploy/k8s/
     scanner-deployment.yaml
     secret.yaml.example
     services.yaml
+  plain/
+    backend.yaml
+    frontend.yaml
+    scanner.yaml
   overlays/
     external/
   environment-variables.zh.md
@@ -107,6 +111,15 @@ kubectl apply -k deploy/k8s/overlays/external/
 kubectl wait --for=condition=ready pod --all -n skillhub --timeout=300s
 ```
 
+For a non-kustomize workflow, edit `deploy/k8s/plain/backend.yaml` and apply the
+plain workload files directly:
+
+```bash
+kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml
+kubectl -n skillhub apply -f deploy/k8s/plain/scanner.yaml
+kubectl -n skillhub apply -f deploy/k8s/plain/frontend.yaml
+```
+
 ## Verify
 
 Render manifests before applying:
@@ -114,6 +127,7 @@ Render manifests before applying:
 ```bash
 kubectl kustomize deploy/k8s/base
 kubectl kustomize deploy/k8s/overlays/external
+kubectl apply --dry-run=client --validate=false -f deploy/k8s/plain/
 ```
 
 Check pods and services:

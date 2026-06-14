@@ -135,3 +135,31 @@ def test_web_static_assets_include_keycloak_login_icon() -> None:
 
     assert "<title>Keycloak</title>" in icon
     assert "viewBox=\"0 0 24 24\"" in icon
+
+
+def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
+    frontend = read("deploy/k8s/plain/frontend.yaml")
+    backend = read("deploy/k8s/plain/backend.yaml")
+    scanner = read("deploy/k8s/plain/scanner.yaml")
+    readme = read("deploy/k8s/plain/README.md")
+    combined = "\n".join([frontend, backend, scanner])
+
+    assert "kind: Kustomization" not in combined
+    assert "name: skillhub-web" in frontend
+    assert "ghcr.io/iflytek/skillhub-web:edge" in frontend
+    assert "SKILLHUB_API_UPSTREAM" in frontend
+    assert "name: skillhub-server" in backend
+    assert "ghcr.io/iflytek/skillhub-server-python:edge" in backend
+    assert "name: skillhub-config" in backend
+    assert "name: skillhub-secret" in backend
+    assert "SKILLHUB_DATABASE_URL" in backend
+    assert "SPRING_DATA_REDIS_PASSWORD" in backend
+    assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in backend
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in backend
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in backend
+    assert "OAUTH2_GITHUB" not in backend
+    assert "OAUTH2_GITLAB" not in backend
+    assert "name: skillhub-scanner" in scanner
+    assert "ghcr.io/iflytek/skillhub-scanner:edge" in scanner
+    assert "SKILL_SCANNER_LLM_API_KEY" in scanner
+    assert "kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml" in readme

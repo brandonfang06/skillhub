@@ -1,0 +1,73 @@
+# Plain Kubernetes manifests for the SkillHub scanner.
+# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/scanner.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillhub-scanner
+  labels:
+    app.kubernetes.io/name: skillhub-scanner
+    app.kubernetes.io/part-of: skillhub
+spec:
+  selector:
+    app.kubernetes.io/name: skillhub-scanner
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillhub-scanner
+  labels:
+    app.kubernetes.io/name: skillhub-scanner
+    app.kubernetes.io/part-of: skillhub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillhub-scanner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillhub-scanner
+        app.kubernetes.io/part-of: skillhub
+    spec:
+      containers:
+        - name: scanner
+          image: ghcr.io/iflytek/skillhub-scanner:edge
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: SKILL_SCANNER_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: skill-scanner-llm-api-key
+                  optional: true
+            - name: SKILL_SCANNER_LLM_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: skill-scanner-llm-base-url
+                  optional: true
+            - name: SKILL_SCANNER_LLM_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: skill-scanner-llm-model
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15

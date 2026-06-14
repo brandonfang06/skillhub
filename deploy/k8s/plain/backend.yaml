@@ -1,0 +1,318 @@
+# Plain Kubernetes manifests for the SkillHub Python backend.
+# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml
+#
+# PostgreSQL, Redis, MinIO/S3, and Keycloak are expected to be external services.
+# Replace the placeholder ConfigMap and Secret values before applying.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skillhub-config
+  labels:
+    app.kubernetes.io/part-of: skillhub
+data:
+  storage-provider: s3
+  storage-s3-endpoint: http://minio.example.internal:9000
+  storage-s3-proxy-endpoint: ""
+  storage-s3-public-endpoint: https://objects.example.com
+  storage-s3-bucket: skillhub-packages
+  storage-s3-region: us-east-1
+  storage-s3-force-path-style: "true"
+  storage-s3-disable-chunked-encoding: "false"
+  storage-s3-auto-create-bucket: "false"
+  storage-s3-presign-expiry: PT10M
+  redis-host: redis.example.internal
+  redis-port: "6379"
+  redis-database: "0"
+  public-base-url: ""
+  security-scanner-enabled: "true"
+  security-scanner-base-url: http://skillhub-scanner:8000
+  security-scanner-mode: upload
+  scan-consumer-enabled: "false"
+  session-cookie-secure: "false"
+  auth-direct-enabled: "false"
+  auth-session-bootstrap-enabled: "false"
+  bootstrap-admin-enabled: "true"
+  bootstrap-admin-user-id: docker-admin
+  bootstrap-admin-username: admin
+  bootstrap-admin-display-name: Platform Admin
+  bootstrap-admin-email: admin@example.com
+  oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
+  oauth2-keycloak-scope: openid,profile,email
+  oauth2-keycloak-client-name: Keycloak
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: skillhub-secret
+  labels:
+    app.kubernetes.io/part-of: skillhub
+type: Opaque
+stringData:
+  database-url: postgresql+asyncpg://skillhub:change-me@postgres.example.internal:5432/skillhub
+  redis-password: change-me
+  redis-url: ""
+  storage-s3-access-key: skillhub
+  storage-s3-secret-key: change-me
+  bootstrap-admin-password: ChangeMe!2026
+  oauth2-keycloak-client-id: ""
+  oauth2-keycloak-client-secret: ""
+  skill-scanner-llm-api-key: ""
+  skill-scanner-llm-base-url: ""
+  skill-scanner-llm-model: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillhub-server
+  labels:
+    app.kubernetes.io/name: skillhub-server
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: skillhub
+spec:
+  selector:
+    app.kubernetes.io/name: skillhub-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillhub-server
+  labels:
+    app.kubernetes.io/name: skillhub-server
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: skillhub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillhub-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillhub-server
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: skillhub
+    spec:
+      containers:
+        - name: backend-python
+          image: ghcr.io/iflytek/skillhub-server-python:edge
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: SKILLHUB_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: database-url
+            - name: SKILLHUB_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-url
+                  optional: true
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-port
+            - name: SPRING_DATA_REDIS_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-database
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-password
+                  optional: true
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-provider
+            - name: SKILLHUB_STORAGE_S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-endpoint
+            - name: SKILLHUB_STORAGE_S3_PROXY_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-proxy-endpoint
+                  optional: true
+            - name: SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-public-endpoint
+                  optional: true
+            - name: SKILLHUB_STORAGE_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-bucket
+            - name: SKILLHUB_STORAGE_S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-region
+            - name: SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-force-path-style
+            - name: SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-disable-chunked-encoding
+            - name: SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-auto-create-bucket
+            - name: SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-s3-presign-expiry
+            - name: SKILLHUB_STORAGE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: storage-s3-access-key
+            - name: SKILLHUB_STORAGE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: storage-s3-secret-key
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: security-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: security-scanner-base-url
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: security-scanner-mode
+            - name: SKILLHUB_SCAN_CONSUMER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scan-consumer-enabled
+            - name: SKILLHUB_SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: session-cookie-secure
+            - name: SKILLHUB_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: public-base-url
+                  optional: true
+            - name: SKILLHUB_AUTH_DIRECT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: auth-direct-enabled
+            - name: SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: auth-session-bootstrap-enabled
+            - name: BOOTSTRAP_ADMIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-enabled
+            - name: BOOTSTRAP_ADMIN_USER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-user-id
+            - name: BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-username
+            - name: BOOTSTRAP_ADMIN_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-display-name
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-email
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: bootstrap-admin-password
+                  optional: true
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-keycloak-client-id
+                  optional: true
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-keycloak-client-secret
+                  optional: true
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER
+              value: keycloak
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE
+              value: authorization_code
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_REDIRECT_URI
+              value: "{baseUrl}/login/oauth2/code/{registrationId}"
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_SCOPE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-scope
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-client-name
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: oauth2-keycloak-issuer-uri
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
