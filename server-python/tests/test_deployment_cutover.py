@@ -28,6 +28,8 @@ def test_kubernetes_backend_deployment_uses_python_runtime_contract() -> None:
     assert "SKILLHUB_SESSION_COOKIE_SECURE" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in deployment
+    assert "OAUTH2_GITHUB" not in deployment
+    assert "OAUTH2_GITLAB" not in deployment
     assert "path: /api/v1/health" in deployment
     assert "SKILLHUB_STORAGE_BASE_PATH" not in deployment
     assert "skillhub-storage-pvc" not in deployment
@@ -50,12 +52,15 @@ def test_kubernetes_config_and_secret_examples_expose_python_env_inputs() -> Non
     assert "storage-s3-public-endpoint:" in configmap
     assert "storage-s3-bucket:" in configmap
     assert "oauth2-keycloak-issuer-uri:" in configmap
+    assert "oauth2-gitlab" not in configmap
     assert "security-scanner-base-url:" in configmap
     assert "session-cookie-secure:" in configmap
     assert "PersistentVolumeClaim" not in configmap
     assert "spring-datasource" not in secret_example
     assert "oauth2-keycloak-client-id:" in secret_example
     assert "oauth2-keycloak-client-secret:" in secret_example
+    assert "oauth2-github" not in secret_example
+    assert "oauth2-gitlab" not in secret_example
 
 
 def test_kubernetes_manifests_do_not_deploy_external_infrastructure() -> None:
@@ -81,6 +86,14 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SPRING_DATA_REDIS_PASSWORD:" in release_compose
     assert "--requirepass" in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:" in release_compose
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI:" in release_compose
+    assert "OAUTH2_GITHUB" not in release_compose
+    assert "OAUTH2_GITLAB" not in release_compose
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=" in release_env
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=" in release_env
+    assert "OAUTH2_GITHUB" not in release_env
+    assert "OAUTH2_GITLAB" not in release_env
     assert "http://localhost:8080/api/v1/health" in release_compose
     assert "/actuator/health" not in release_compose
 
@@ -115,3 +128,10 @@ def test_kubernetes_env_manual_documents_external_dependencies() -> None:
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in manual
+
+
+def test_web_static_assets_include_keycloak_login_icon() -> None:
+    icon = read("web/public/keycloak-logo.svg")
+
+    assert "<title>Keycloak</title>" in icon
+    assert "viewBox=\"0 0 24 24\"" in icon

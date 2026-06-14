@@ -204,20 +204,16 @@ def test_oauth_authorization_redirects_when_provider_is_configured() -> None:
     assert query["state"][0] != ""
 
 
-def test_oauth_authorization_uses_java_compatible_environment_config(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_legacy_github_gitlab_env_is_not_advertised_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OAUTH2_GITHUB_CLIENT_ID", "env-client")
     monkeypatch.setenv("OAUTH2_GITHUB_CLIENT_SECRET", "env-secret")
-    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example")
-    app = create_app()
-    client = TestClient(app)
+    monkeypatch.setenv("OAUTH2_GITLAB_CLIENT_ID", "gitlab-client")
+    monkeypatch.setenv("OAUTH2_GITLAB_CLIENT_SECRET", "gitlab-secret")
 
-    response = client.get("/oauth2/authorization/github?returnTo=/dashboard", follow_redirects=False)
+    registrations = {str(item["id"]) for item in oauth_registrations_from_env()}
 
-    assert response.status_code == 307
-    query = parse_qs(urlparse(response.headers["location"]).query)
-    assert query["client_id"] == ["env-client"]
-    assert query["redirect_uri"] == ["https://skillhub.example/login/oauth2/code/github"]
-    assert query["scope"] == ["read:user user:email"]
+    assert "github" not in registrations
+    assert "gitlab" not in registrations
 
 
 def test_keycloak_registration_uses_spring_boot_oidc_env_contract(monkeypatch: pytest.MonkeyPatch) -> None:

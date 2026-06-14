@@ -45,10 +45,6 @@ data:
   bootstrap-admin-display-name: Platform Admin
   bootstrap-admin-email: admin@example.com
 
-  # Optional GitLab OAuth provider metadata
-  oauth2-gitlab-base-uri: https://gitlab.com
-  oauth2-gitlab-display-name: GitLab
-
   # Optional Keycloak / OIDC provider metadata
   oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
   oauth2-keycloak-scope: openid,profile,email

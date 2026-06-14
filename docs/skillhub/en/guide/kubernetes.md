@@ -60,8 +60,8 @@ cp secret.yaml.example secret.yaml
 | spring-datasource-username | Database username | Yes |
 | spring-datasource-password | Database password | Yes |
 | bootstrap-admin-password | Admin password | Yes |
-| oauth2-github-client-id | GitHub OAuth ID | No |
-| oauth2-github-client-secret | GitHub OAuth secret | No |
+| oauth2-keycloak-client-id | Keycloak client ID | No |
+| oauth2-keycloak-client-secret | Keycloak client secret | No |
 | skill-scanner-llm-api-key | LLM API key | No |
 
 ### 3. Choose Deployment Method

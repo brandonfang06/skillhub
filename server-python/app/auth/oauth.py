@@ -15,33 +15,7 @@ DEFAULT_USER_ROLE = "USER"
 
 def oauth_registrations_from_env() -> list[dict[str, object]]:
     public_base_url = os.getenv("SKILLHUB_PUBLIC_BASE_URL", "http://localhost:8081").rstrip("/")
-    gitlab_base_uri = os.getenv("OAUTH2_GITLAB_BASE_URI", "https://gitlab.com").rstrip("/")
-    registrations: list[dict[str, object]] = [
-        {
-            "id": "github",
-            "clientName": "GitHub",
-            "clientId": os.getenv("OAUTH2_GITHUB_CLIENT_ID", "placeholder"),
-            "clientSecret": os.getenv("OAUTH2_GITHUB_CLIENT_SECRET", "placeholder"),
-            "authorizationUri": "https://github.com/login/oauth/authorize",
-            "tokenUri": "https://github.com/login/oauth/access_token",
-            "userInfoUri": "https://api.github.com/user",
-            "redirectUri": f"{public_base_url}/login/oauth2/code/github",
-            "scopes": ["read:user", "user:email"],
-        },
-        {
-            "id": "gitlab",
-            "clientName": os.getenv("OAUTH2_GITLAB_DISPLAY_NAME", "GitLab"),
-            "clientId": os.getenv("OAUTH2_GITLAB_CLIENT_ID", "placeholder"),
-            "clientSecret": os.getenv("OAUTH2_GITLAB_CLIENT_SECRET", "placeholder"),
-            "authorizationUri": f"{gitlab_base_uri}/oauth/authorize",
-            "tokenUri": f"{gitlab_base_uri}/oauth/token",
-            "userInfoUri": f"{gitlab_base_uri}/api/v4/user",
-            "redirectUri": f"{public_base_url}/login/oauth2/code/gitlab",
-            "scopes": ["read_user", "email"],
-        },
-    ]
-    registrations.extend(_spring_oidc_registrations(public_base_url))
-    return registrations
+    return _spring_oidc_registrations(public_base_url)
 
 
 def _spring_oidc_registrations(public_base_url: str) -> list[dict[str, object]]:

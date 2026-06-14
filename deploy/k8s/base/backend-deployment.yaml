@@ -202,43 +202,6 @@ spec:
                   key: bootstrap-admin-password
                   optional: true
 
-            # OAuth2 providers
-            - name: OAUTH2_GITHUB_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: oauth2-github-client-id
-                  optional: true
-            - name: OAUTH2_GITHUB_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: oauth2-github-client-secret
-                  optional: true
-            - name: OAUTH2_GITLAB_BASE_URI
-              valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
-                  key: oauth2-gitlab-base-uri
-                  optional: true
-            - name: OAUTH2_GITLAB_DISPLAY_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
-                  key: oauth2-gitlab-display-name
-                  optional: true
-            - name: OAUTH2_GITLAB_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: oauth2-gitlab-client-id
-                  optional: true
-            - name: OAUTH2_GITLAB_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: skillhub-secret
-                  key: oauth2-gitlab-client-secret
-                  optional: true
             # Keycloak / generic OIDC provider. Spring-style names are kept so
             # existing Java deployment values can be reused during cutover.
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID
