@@ -13,16 +13,31 @@ interface LanguageSwitcherProps {
   className?: string
 }
 
+export const languages = [
+  { code: 'zh-TW', name: '繁體中文' },
+  { code: 'zh', name: '简体中文' },
+  { code: 'en', name: 'English' },
+] as const
+
+export type SupportedLanguageCode = (typeof languages)[number]['code']
+
+export function resolveSupportedLanguageCode(language?: string): SupportedLanguageCode {
+  if (language === 'zh-TW' || language?.startsWith('zh-Hant') || language === 'zh-HK' || language === 'zh-MO') {
+    return 'zh-TW'
+  }
+  if (language?.startsWith('zh')) {
+    return 'zh'
+  }
+  if (language?.startsWith('en')) {
+    return 'en'
+  }
+  return 'zh-TW'
+}
+
 export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const { i18n } = useTranslation()
 
-  const languages = [
-    { code: 'zh', name: '中文' },
-    { code: 'en', name: 'English' },
-  ]
-
-  // 获取当前语言的主要代码（去掉地区代码）
-  const currentLangCode = i18n.language?.split('-')[0] || 'zh'
+  const currentLangCode = resolveSupportedLanguageCode(i18n.language)
   const currentLanguage = languages.find((lang) => lang.code === currentLangCode) || languages[0]
 
   const changeLanguage = (langCode: string) => {

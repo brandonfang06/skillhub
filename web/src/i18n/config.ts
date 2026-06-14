@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import en from './locales/en.json'
 import zh from './locales/zh.json'
+import zhTW from './locales/zh-TW.json'
 
 /**
  * Initializes i18next for the browser app. Language preference is restored from
@@ -16,6 +17,10 @@ i18n
     resources: {
       en: { translation: en },
       zh: { translation: zh },
+      'zh-TW': { translation: zhTW },
+      'zh-Hant': { translation: zhTW },
+      'zh-HK': { translation: zhTW },
+      'zh-MO': { translation: zhTW },
     },
     fallbackLng: 'en',
     interpolation: {

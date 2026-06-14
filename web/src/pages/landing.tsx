@@ -1,7 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
-import { PackageOpen, Terminal, Shield, Users, GitBranch, Search as SearchIcon, Settings } from 'lucide-react'
+import { Search as SearchIcon } from 'lucide-react'
 import { LandingQuickStartSection } from '@/shared/components/landing-quick-start'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
@@ -34,8 +34,6 @@ export function LandingPage() {
   }
 
   const heroView = useInView()
-  const statsView = useInView()
-  const featuresView = useInView()
   const quickStartView = useInView()
   const popularView = useInView()
   const latestView = useInView()
@@ -47,45 +45,6 @@ export function LandingPage() {
       search: { q: normalized, sort: 'relevance', page: 0, starredOnly: false },
     })
   }
-
-  const features = [
-    {
-      icon: <Shield className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.secure.title'),
-      description: t('landing.features.secure.description'),
-    },
-    {
-      icon: <Users className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.community.title'),
-      description: t('landing.features.community.description'),
-    },
-    {
-      icon: <PackageOpen className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.integration.title'),
-      description: t('landing.features.integration.description'),
-    },
-    {
-      icon: <GitBranch className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.versionControl.title', { defaultValue: 'Version control' }),
-      description: t('landing.features.versionControl.description', { defaultValue: 'Managed release flows keep skill packages traceable and easier to review.' }),
-    },
-    {
-      icon: <Terminal className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.cli.title', { defaultValue: 'CLI tooling' }),
-      description: t('landing.features.cli.description', { defaultValue: 'Command-line workflows support publishing, installing, and operating skills quickly.' }),
-    },
-    {
-      icon: <Settings className="w-6 h-6 text-white" strokeWidth={2} />,
-      title: t('landing.features.governance.title', { defaultValue: 'Governance' }),
-      description: t('landing.features.governance.description', { defaultValue: 'Built-in review and permission flows help teams enforce skill quality.' }),
-    },
-  ]
-
-  const stats = [
-    { value: '1000+', label: t('landing.stats.skills', { defaultValue: 'Registry items' }) },
-    { value: '50K+', label: t('landing.stats.downloads', { defaultValue: 'Downloads' }) },
-    { value: '200+', label: t('landing.stats.teams', { defaultValue: 'Teams' }) },
-  ]
 
   return (
     <>
@@ -129,7 +88,7 @@ export function LandingPage() {
         </div>
 
         {/* CTA buttons */}
-        <div className="flex flex-wrap justify-center gap-4 mb-14">
+        <div className="flex flex-wrap justify-center gap-4">
           <Link
             to="/search"
             search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
@@ -150,54 +109,7 @@ export function LandingPage() {
           </Link>
         </div>
 
-        {/* Stats */}
-        <div ref={statsView.ref} className={`flex flex-row justify-center gap-16 md:gap-24 scroll-fade-up${statsView.inView ? ' in-view' : ''}`} style={{ transitionDelay: '0.15s' }}>
-          {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center">
-              <span className="text-3xl md:text-4xl font-bold tracking-tight text-brand-gradient mb-1">
-                {stat.value}
-              </span>
-              <span className="text-sm font-normal" style={{ color: 'hsl(var(--foreground))' }}>
-                {stat.label}
-              </span>
-            </div>
-          ))}
-        </div>
       </main>
-
-      {/* Features Section */}
-      <section ref={featuresView.ref} className={`relative z-10 w-full py-20 md:py-24 px-6 scroll-fade-up${featuresView.inView ? ' in-view' : ''}`} style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-              {t('landing.whySkillHub.title', { defaultValue: '为什么选择 SkillHub' })}
-            </h2>
-            <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
-              {t('landing.whySkillHub.subtitle', { defaultValue: '专为企业打造的私有化 Agent 技能管理平台' })}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="bg-white rounded-xl p-8 border shadow-sm transition-shadow hover:shadow-md"
-                style={{ borderColor: 'hsl(var(--border-card))' }}
-              >
-                <div className="feature-icon w-12 h-12 rounded-2xl flex items-center justify-center mb-6 mx-auto bg-brand-gradient">
-                  {feature.icon}
-                </div>
-                <h3 className="text-lg font-semibold text-center mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-center leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Quick Start */}
       <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
