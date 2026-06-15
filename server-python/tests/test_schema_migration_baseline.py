@@ -11,8 +11,9 @@ FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 
 
 class FakeConnection:
-    def __init__(self, existing_tables: set[str] | None = None) -> None:
+    def __init__(self, existing_tables: set[str] | None = None, existing_columns: set[tuple[str, str]] | None = None) -> None:
         self.existing_tables = existing_tables or set()
+        self.existing_columns = existing_columns or set()
         self.executed: list[str] = []
         self.values: list[object] = []
 
@@ -20,6 +21,8 @@ class FakeConnection:
         self.values.append((sql, params))
         if "to_regclass" in sql and params:
             return params[0] if params[0] in self.existing_tables else None
+        if "information_schema.columns" in sql and len(params) >= 2:
+            return 1 if (str(params[0]), str(params[1])) in self.existing_columns else None
         return None
 
     async def execute(self, sql: str, *params: object) -> str:
@@ -59,11 +62,22 @@ def test_fresh_database_upgrade_applies_flyway_sql_then_stamps_baseline() -> Non
 
 
 def test_existing_flyway_database_stamp_does_not_reapply_legacy_sql() -> None:
-    connection = FakeConnection(existing_tables={"user_account"})
+    connection = FakeConnection(existing_tables={"user_account"}, existing_columns={("user_account", "system_account")})
 
     asyncio.run(migrations.stamp_existing_database(connection))
 
     assert not any("CREATE TABLE user_account" in statement for statement in connection.executed)
+    assert any("CREATE TABLE IF NOT EXISTS alembic_version" in statement for statement in connection.executed)
+    assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
+
+
+def test_existing_v42_python_database_applies_v43_before_stamping_baseline() -> None:
+    connection = FakeConnection(existing_tables={"user_account"})
+
+    asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
+
+    assert not any("CREATE TABLE user_account" in statement for statement in connection.executed)
+    assert any("ADD COLUMN system_account" in statement for statement in connection.executed)
     assert any("CREATE TABLE IF NOT EXISTS alembic_version" in statement for statement in connection.executed)
     assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
 

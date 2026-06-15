@@ -51,9 +51,37 @@ async def table_exists(connection: DatabaseConnection, table_name: str) -> bool:
     return value is not None
 
 
+async def column_exists(connection: DatabaseConnection, table_name: str, column_name: str) -> bool:
+    value = await connection.fetchval(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = $1
+          AND column_name = $2
+        """,
+        table_name,
+        column_name,
+    )
+    return value is not None
+
+
+async def apply_existing_database_compatibility_migrations(
+    connection: DatabaseConnection,
+    flyway_dir: Path = DEFAULT_FLYWAY_DIR,
+) -> None:
+    if await column_exists(connection, "user_account", "system_account"):
+        return
+
+    migration = next((item for item in flyway_migration_files(flyway_dir) if item.version == 43), None)
+    if migration is None:
+        raise RuntimeError("Cannot upgrade existing database: missing Flyway V43")
+    await connection.execute(migration.path.read_text(encoding="utf-8"))
+
+
 async def stamp_existing_database(connection: DatabaseConnection) -> None:
     if not await table_exists(connection, "user_account"):
         raise RuntimeError("Cannot stamp baseline: expected existing Flyway table user_account")
+    await apply_existing_database_compatibility_migrations(connection)
     await _stamp_baseline(connection)
 
 
@@ -62,6 +90,7 @@ async def upgrade_database(
     flyway_dir: Path = DEFAULT_FLYWAY_DIR,
 ) -> None:
     if await table_exists(connection, "user_account"):
+        await apply_existing_database_compatibility_migrations(connection, flyway_dir)
         await _stamp_baseline(connection)
         return
 

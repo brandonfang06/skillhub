@@ -17,8 +17,10 @@ uv run python -m app.migrations status
 
 `upgrade` initializes a fresh database by applying the existing Java Flyway SQL files in numeric
 order through `V43__user_account_system_account.sql`, then stamps the Alembic version table.
-`stamp` marks an existing Flyway-created schema without replaying legacy SQL. Java Flyway files
-under `server/` were not modified.
+Existing Python databases created from the earlier v42 baseline apply the V43 compatibility
+migration before being stamped as v43, so `user_account.system_account` exists before the
+current runtime starts using it. `stamp` marks an existing Flyway-created schema without replaying
+legacy SQL. Java Flyway files under `server/` were not modified.
 
 ## Dependency Change
 
