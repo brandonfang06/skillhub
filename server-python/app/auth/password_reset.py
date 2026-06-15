@@ -94,7 +94,7 @@ async def _find_user_by_email(connection: Any, email: str) -> dict[str, Any] | N
         await connection.execute(
             text(
                 """
-                SELECT id, email, status
+                SELECT id, email, status, system_account
                 FROM user_account
                 WHERE LOWER(email) = LOWER(:email)
                 LIMIT 1
@@ -153,7 +153,12 @@ async def request_password_reset(
             return None
         user_id = str(user["id"])
         credential = await _find_local_credential(connection, user_id)
-        if str(user.get("status")) != "ACTIVE" or not str(user.get("email") or "").strip() or credential is None:
+        if (
+            bool(user.get("system_account"))
+            or str(user.get("status")) != "ACTIVE"
+            or not str(user.get("email") or "").strip()
+            or credential is None
+        ):
             return None
 
         now = datetime.now(UTC)

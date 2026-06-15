@@ -12,11 +12,31 @@ import { Pagination } from '@/shared/components/pagination'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useVisibleLabels } from '@/shared/hooks/use-label-queries'
 import { useMyStars } from '@/shared/hooks/use-user-queries'
-import { normalizeSearchQuery } from '@/shared/lib/search-query'
+import { formatNamespaceSearchInput, normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
+
+interface SearchRouteState {
+  q: string
+  namespace?: string
+  label?: string
+  sort: string
+  page: number
+  starredOnly: boolean
+}
+
+function buildSearchRouteState(state: SearchRouteState): SearchRouteState {
+  return {
+    q: state.q,
+    ...(state.namespace ? { namespace: state.namespace } : {}),
+    label: state.label,
+    sort: state.sort,
+    page: state.page,
+    starredOnly: state.starredOnly,
+  }
+}
 
 function blurActiveElement() {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') {
@@ -55,17 +75,22 @@ function scrollToTopOnPageChange() {
  * Search text, sorting, pagination, and the starred-only filter are mirrored into router search
  * params so the page can be shared, restored, and revisited without losing state.
  */
-function filterStarredSkills(skills: SkillSummary[], query: string): SkillSummary[] {
+function filterStarredSkills(skills: SkillSummary[], query: string, namespace: string): SkillSummary[] {
   const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) {
-    return skills
-  }
+  const normalizedNamespace = namespace.trim().toLowerCase()
 
-  return skills.filter((skill) =>
-    [skill.displayName, skill.summary, skill.namespace, skill.slug]
+  return skills.filter((skill) => {
+    const matchesNamespace = !normalizedNamespace || skill.namespace.toLowerCase() === normalizedNamespace
+    if (!matchesNamespace) {
+      return false
+    }
+    if (!normalizedQuery) {
+      return true
+    }
+    return [skill.displayName, skill.summary, skill.namespace, skill.slug]
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(normalizedQuery))
-  )
+  })
 }
 
 function sortStarredSkills(skills: SkillSummary[], sort: string): SkillSummary[] {
@@ -86,16 +111,17 @@ export function SearchPage() {
   const { isAuthenticated } = useAuth()
 
   const q = normalizeSearchQuery(searchParams.q || '')
+  const namespace = (searchParams.namespace || '').replace(/^@/, '')
   const selectedLabel = searchParams.label || ''
   const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
-  const [queryInput, setQueryInput] = useState(q)
+  const [queryInput, setQueryInput] = useState(formatNamespaceSearchInput(namespace, q))
   const previousPageRef = useRef(page)
 
   useEffect(() => {
-    setQueryInput(q)
-  }, [q])
+    setQueryInput(formatNamespaceSearchInput(namespace, q))
+  }, [namespace, q])
 
   useEffect(() => {
     if (previousPageRef.current !== page) {
@@ -113,6 +139,7 @@ export function SearchPage() {
 
   const { data, isLoading, isFetching } = useSearchSkills({
     q,
+    namespace: namespace || undefined,
     label: selectedLabel || undefined,
     sort,
     page,
@@ -128,47 +155,51 @@ export function SearchPage() {
   useEffect(() => {
     // Debounce URL updates while the user is typing so query state stays shareable without
     // triggering a navigation on every keystroke.
-    const normalizedQuery = normalizeSearchQuery(queryInput)
-    if (normalizedQuery === q) {
+    const parsedInput = parseNamespaceSearchInput(queryInput)
+    if (parsedInput.query === q && parsedInput.namespace === namespace) {
       return
     }
 
-    if (!normalizedQuery) {
+    if (!parsedInput.query && !parsedInput.namespace) {
       startTransition(() => {
-        navigate({ to: '/search', search: { q: '', label: selectedLabel, sort, page: 0, starredOnly }, replace: page === 0 })
+        navigate({ to: '/search', search: buildSearchRouteState({ q: '', label: selectedLabel, sort, page: 0, starredOnly }), replace: page === 0 })
       })
       return
     }
 
     const timeoutId = window.setTimeout(() => {
       startTransition(() => {
-        navigate({ to: '/search', search: { q: normalizedQuery, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
+        navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
       })
     }, 250)
 
     return () => window.clearTimeout(timeoutId)
-  }, [navigate, page, q, queryInput, selectedLabel, sort, starredOnly])
+  }, [navigate, namespace, page, q, queryInput, selectedLabel, sort, starredOnly])
 
   const handleSearch = (query: string) => {
-    const normalizedQuery = normalizeSearchQuery(query)
+    const parsedInput = parseNamespaceSearchInput(query)
     setQueryInput(query)
     startTransition(() => {
-      navigate({ to: '/search', search: { q: normalizedQuery, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
+      navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
     })
   }
 
   const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: buildSearchRouteState({ q, namespace, label: selectedLabel, sort: newSort, page: 0, starredOnly }) })
   }
 
   const handlePageChange = (newPage: number) => {
     blurActiveElement()
-    navigate({ to: '/search', search: { q, label: selectedLabel, sort, page: newPage, starredOnly } })
+    navigate({ to: '/search', search: buildSearchRouteState({ q, namespace, label: selectedLabel, sort, page: newPage, starredOnly }) })
   }
 
   const handleLabelToggle = (label: string) => {
     const nextLabel = selectedLabel === label ? '' : label
-    navigate({ to: '/search', search: { q, label: nextLabel, sort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: buildSearchRouteState({ q, namespace, label: nextLabel, sort, page: 0, starredOnly }) })
+  }
+
+  const handleNamespaceClear = () => {
+    navigate({ to: '/search', search: buildSearchRouteState({ q, label: selectedLabel, sort, page: 0, starredOnly }) })
   }
 
   const handleStarredToggle = () => {
@@ -182,7 +213,7 @@ export function SearchPage() {
       return
     }
 
-    navigate({ to: '/search', search: { q, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly } })
+    navigate({ to: '/search', search: buildSearchRouteState({ q, namespace, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly }) })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -190,7 +221,7 @@ export function SearchPage() {
   }
 
   const filteredStarredSkills = starredOnly
-    ? sortStarredSkills(filterStarredSkills(starredSkills ?? [], q), sort)
+    ? sortStarredSkills(filterStarredSkills(starredSkills ?? [], q, namespace), sort)
     : []
   const starredPageItems = starredOnly
     ? filteredStarredSkills.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -280,6 +311,15 @@ export function SearchPage() {
               {label.displayName}
             </Button>
           ))}
+          {namespace ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleNamespaceClear}
+            >
+              {t('search.namespaceFilter', { namespace })}
+            </Button>
+          ) : null}
         </div>
       </div>
 

@@ -31,8 +31,8 @@ def test_baseline_revision_tracks_bundled_python_migration_snapshot() -> None:
     latest_flyway = max(migrations.flyway_migration_files(FLYWAY_DIR), key=lambda item: item.version)
 
     assert migrations.BASELINE_FLYWAY_VERSION == latest_flyway.version
-    assert migrations.BASELINE_REVISION == "skillhub_flyway_v42_baseline"
-    assert latest_flyway.path.name == "V42__audit_log_created_at_timestamptz.sql"
+    assert migrations.BASELINE_REVISION == "skillhub_flyway_v43_baseline"
+    assert latest_flyway.path.name == "V43__user_account_system_account.sql"
 
 
 def test_alembic_baseline_files_are_present() -> None:

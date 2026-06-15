@@ -7,7 +7,7 @@ Milestone: 119 - Python Schema Migration Takeover
 ## Summary
 
 Python now owns the final cutover schema migration path. `server-python` has an Alembic baseline
-marker at `skillhub_flyway_v42_baseline` and a Python migration command:
+marker at `skillhub_flyway_v43_baseline` and a Python migration command:
 
 ```powershell
 uv run python -m app.migrations upgrade
@@ -16,7 +16,7 @@ uv run python -m app.migrations status
 ```
 
 `upgrade` initializes a fresh database by applying the existing Java Flyway SQL files in numeric
-order through `V42__audit_log_created_at_timestamptz.sql`, then stamps the Alembic version table.
+order through `V43__user_account_system_account.sql`, then stamps the Alembic version table.
 `stamp` marks an existing Flyway-created schema without replaying legacy SQL. Java Flyway files
 under `server/` were not modified.
 
@@ -47,7 +47,7 @@ uv run python -m app.migrations upgrade
 
 Observed:
 
-- `alembic_version.version_num = skillhub_flyway_v42_baseline`
+- `alembic_version.version_num = skillhub_flyway_v43_baseline`
 - `to_regclass('user_account') = user_account`
 - `to_regclass('skill') = skill`
 - `to_regclass('notification') = notification`
@@ -63,7 +63,7 @@ uv run python -m app.migrations stamp
 
 Observed:
 
-- `alembic_version.version_num = skillhub_flyway_v42_baseline`
+- `alembic_version.version_num = skillhub_flyway_v43_baseline`
 - existing tables remained intact
 - legacy Flyway SQL was not replayed
 

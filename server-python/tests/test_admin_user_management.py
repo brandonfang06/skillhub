@@ -68,8 +68,16 @@ class FakeAdminUserConnection:
             "user-3": user_row("user-3", "Disabled User", "disabled@example.test", "DISABLED", 1),
             "user-4": user_row("user-4", "No Credential", "no-credential@example.test", "ACTIVE", 4),
             "user-5": user_row("user-5", "No Email", "", "ACTIVE", 5),
+            "builtin-skill-publisher": user_row(
+                "builtin-skill-publisher",
+                "Built-in Skill Publisher",
+                "builtin-skill-publisher@system.invalid",
+                "ACTIVE",
+                6,
+                system_account=True,
+            ),
         }
-        self.local_credentials = {"user-1", "user-2", "user-3", "user-5"}
+        self.local_credentials = {"user-1", "user-2", "user-3", "user-5", "builtin-skill-publisher"}
         self.reset_requests: list[dict[str, Any]] = [
             {
                 "user_id": "user-2",
@@ -160,12 +168,21 @@ class FakeAdminUserConnection:
         return [row.copy() for row in rows]
 
 
-def user_row(user_id: str, display_name: str, email: str, status: str, day: int) -> dict[str, Any]:
+def user_row(
+    user_id: str,
+    display_name: str,
+    email: str,
+    status: str,
+    day: int,
+    *,
+    system_account: bool = False,
+) -> dict[str, Any]:
     return {
         "id": user_id,
         "display_name": display_name,
         "email": email,
         "status": status,
+        "system_account": system_account,
         "created_at": datetime(2026, 6, day, 8, 0, tzinfo=UTC),
     }
 
@@ -238,6 +255,26 @@ async def test_update_role_replaces_bindings_and_protects_super_admin_assignment
 
 
 @pytest.mark.anyio
+async def test_update_role_and_status_reject_system_accounts() -> None:
+    connection = FakeAdminUserConnection()
+
+    with pytest.raises(AdminUserError, match="error.admin.user.systemAccount.immutable") as role_forbidden:
+        await update_admin_user_role(
+            FakeEngine(connection),
+            user_id="builtin-skill-publisher",
+            role="SKILL_ADMIN",
+            actor_platform_roles=["SUPER_ADMIN"],
+        )
+    assert role_forbidden.value.status_code == 403
+    assert connection.user_roles.get("builtin-skill-publisher") is None
+
+    with pytest.raises(AdminUserError, match="error.admin.user.systemAccount.immutable") as status_forbidden:
+        await update_admin_user_status(FakeEngine(connection), user_id="builtin-skill-publisher", status="DISABLED")
+    assert status_forbidden.value.status_code == 403
+    assert connection.users["builtin-skill-publisher"]["status"] == "ACTIVE"
+
+
+@pytest.mark.anyio
 async def test_update_status_accepts_only_manageable_statuses() -> None:
     connection = FakeAdminUserConnection()
 
@@ -304,6 +341,24 @@ async def test_trigger_admin_password_reset_matches_java_error_cases() -> None:
             actor_platform_roles=["USER"],
         )
     assert forbidden.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_trigger_admin_password_reset_rejects_system_account_before_credential_lookup() -> None:
+    connection = FakeAdminUserConnection()
+
+    with pytest.raises(AdminUserError, match="error.auth.password.reset.not.eligible") as ineligible:
+        await trigger_admin_password_reset(
+            FakeEngine(connection),
+            user_id="builtin-skill-publisher",
+            admin_user_id="admin-1",
+            actor_platform_roles=["SUPER_ADMIN"],
+            code_generator=lambda: "123456",
+            code_hasher=lambda code: f"hashed-{code}",
+        )
+
+    assert ineligible.value.status_code == 400
+    assert all(row["user_id"] != "builtin-skill-publisher" for row in connection.reset_requests)
 
 
 def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:

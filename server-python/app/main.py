@@ -1,4 +1,6 @@
-from contextlib import asynccontextmanager
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
@@ -29,11 +31,24 @@ from app.api.tokens import router as tokens_router
 from app.api.user_profile import router as user_profile_router
 from app.api.well_known import router as well_known_router
 from app.bootstrap import initialize_bootstrap_admin
+from app.builtin_skills import synchronize_builtin_skills
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.core.request_id import RequestIdMiddleware
 from app.notifications.fanout import NotificationFanoutManager
 from app.publish.scan_daemon import create_scan_consumer_daemon
+
+
+log = logging.getLogger(__name__)
+
+
+async def run_builtin_skill_sync(engine: object, settings: object) -> None:
+    try:
+        await synchronize_builtin_skills(engine, settings)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        log.warning("Built-in skill synchronization failed: %s", exc)
 
 
 @asynccontextmanager
@@ -42,6 +57,9 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.db_engine = create_database_engine(settings)
     await initialize_bootstrap_admin(app.state.db_engine)
+    app.state.builtin_skill_sync_task = asyncio.create_task(
+        run_builtin_skill_sync(app.state.db_engine, settings)
+    )
     app.state.notification_fanout = NotificationFanoutManager()
     app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine)
     if app.state.scan_consumer_daemon is not None:
@@ -49,6 +67,9 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        app.state.builtin_skill_sync_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await app.state.builtin_skill_sync_task
         if app.state.scan_consumer_daemon is not None:
             await app.state.scan_consumer_daemon.shutdown()
         await dispose_database_engine(app.state.db_engine)

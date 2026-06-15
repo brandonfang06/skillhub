@@ -56,6 +56,19 @@ def test_normalize_entry_path_accepts_java_compatible_paths(raw_path: str, norma
 
 
 @pytest.mark.parametrize(
+    ("raw_path", "normalized"),
+    [
+        ("skill.md", "SKILL.md"),
+        ("Skill.MD", "SKILL.md"),
+        ("nested/skill.md", "nested/SKILL.md"),
+        ("nested/Skill.MD", "nested/SKILL.md"),
+    ],
+)
+def test_normalize_entry_path_canonicalizes_case_insensitive_skill_md(raw_path: str, normalized: str) -> None:
+    assert normalize_entry_path(raw_path) == normalized
+
+
+@pytest.mark.parametrize(
     "raw_path",
     ["", "   ", "/SKILL.md", "../SKILL.md", "nested/../SKILL.md", "C:/tmp/SKILL.md", "a//b.txt"],
 )
@@ -81,6 +94,18 @@ def test_extract_package_skips_directories_and_os_metadata() -> None:
         ("SKILL.md", skill_md(), "text/markdown"),
         ("src/main.py", b"print('ok')", "text/x-python"),
     ]
+
+
+def test_extract_package_canonicalizes_case_insensitive_skill_md() -> None:
+    archive = make_zip({"skill.md": skill_md(), "src/main.py": b"print('ok')"})
+
+    entries = extract_package(archive)
+    result = validate_package(entries)
+
+    assert [entry.path for entry in entries] == ["SKILL.md", "src/main.py"]
+    assert result.valid
+    assert result.metadata is not None
+    assert result.metadata.name == "demo"
 
 
 def test_extract_package_enforces_limits() -> None:
@@ -116,7 +141,7 @@ def test_extract_package_promotes_single_nested_skill_directory_with_warning() -
     archive = make_zip(
         {
             "docs/README.md": b"# ignored",
-            "package/SKILL.md": skill_md(),
+            "package/skill.md": skill_md(),
             "package/src/main.py": b"print('ok')",
         }
     )

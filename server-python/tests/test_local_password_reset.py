@@ -60,6 +60,12 @@ class FakePasswordResetConnection:
             "user-1": user_row("user-1", "alice@example.test", "ACTIVE"),
             "user-2": user_row("user-2", "disabled@example.test", "DISABLED"),
             "user-3": user_row("user-3", "missing-credential@example.test", "ACTIVE"),
+            "builtin-skill-publisher": user_row(
+                "builtin-skill-publisher",
+                "builtin-skill-publisher@system.invalid",
+                "ACTIVE",
+                system_account=True,
+            ),
         }
         self.credentials: dict[str, dict[str, Any]] = {
             "user-1": {
@@ -68,7 +74,14 @@ class FakePasswordResetConnection:
                 "password_hash": "old-hash",
                 "failed_attempts": 4,
                 "locked_until": datetime(2026, 6, 10, 8, 0, tzinfo=UTC),
-            }
+            },
+            "builtin-skill-publisher": {
+                "user_id": "builtin-skill-publisher",
+                "username": "builtin",
+                "password_hash": "system-hash",
+                "failed_attempts": 0,
+                "locked_until": None,
+            },
         }
         self.reset_requests: list[dict[str, Any]] = [
             {
@@ -132,8 +145,8 @@ class FakePasswordResetConnection:
         raise AssertionError(f"unexpected SQL: {sql}")
 
 
-def user_row(user_id: str, email: str, status: str) -> dict[str, Any]:
-    return {"id": user_id, "email": email, "status": status}
+def user_row(user_id: str, email: str, status: str, *, system_account: bool = False) -> dict[str, Any]:
+    return {"id": user_id, "email": email, "status": status, "system_account": system_account}
 
 
 @pytest.mark.anyio
@@ -163,6 +176,22 @@ async def test_request_password_reset_is_silent_for_unknown_or_ineligible_and_wr
 
     with pytest.raises(PasswordResetError, match="validation.auth.password.reset.email.invalid"):
         await request_password_reset(FakeEngine(connection), email="alice")
+
+
+@pytest.mark.anyio
+async def test_request_password_reset_is_silent_for_system_accounts() -> None:
+    connection = FakePasswordResetConnection()
+    before = len(connection.reset_requests)
+
+    await request_password_reset(
+        FakeEngine(connection),
+        email="builtin-skill-publisher@system.invalid",
+        code_generator=lambda: "123456",
+        code_hasher=lambda code: f"hashed-{code}",
+    )
+
+    assert len(connection.reset_requests) == before
+    assert all(row["user_id"] != "builtin-skill-publisher" for row in connection.reset_requests)
 
 
 @pytest.mark.anyio

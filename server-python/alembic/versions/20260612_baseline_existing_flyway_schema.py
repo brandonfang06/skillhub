@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-revision = "skillhub_flyway_v42_baseline"
+revision = "skillhub_flyway_v43_baseline"
 down_revision = None
 branch_labels = None
 depends_on = None

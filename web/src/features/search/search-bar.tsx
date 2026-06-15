@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Search, X } from 'lucide-react'
-import { MAX_SEARCH_QUERY_LENGTH } from '@/shared/lib/search-query'
+import { MAX_SEARCH_INPUT_LENGTH } from '@/shared/lib/search-query'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 
@@ -59,7 +59,7 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
           type="text"
           value={currentQuery}
           onChange={(e) => handleChange(e.target.value)}
-          maxLength={MAX_SEARCH_QUERY_LENGTH}
+          maxLength={MAX_SEARCH_INPUT_LENGTH}
           placeholder={placeholder || t('searchBar.placeholder')}
           className="pl-10 pr-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
         />

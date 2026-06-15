@@ -199,6 +199,15 @@ def determine_content_type(path: str) -> str:
     return CONTENT_TYPES_BY_EXTENSION.get(package_extension(path), "application/octet-stream")
 
 
+def canonicalize_skill_md_path(normalized_path: str) -> str:
+    prefix, separator, filename = normalized_path.rpartition("/")
+    if filename.lower() != "skill.md":
+        return normalized_path
+    if not separator:
+        return "SKILL.md"
+    return f"{prefix}/SKILL.md"
+
+
 def normalize_entry_path(raw_path: str) -> str:
     sanitized = raw_path.replace("\\", "/").strip()
     if not sanitized:
@@ -213,7 +222,7 @@ def normalize_entry_path(raw_path: str) -> str:
         raise ValueError(f"Parent directory paths are not allowed: {raw_path}")
     if sanitized != canonical:
         raise ValueError(f"Path must be normalized: {raw_path}")
-    return canonical
+    return canonicalize_skill_md_path(canonical)
 
 
 def is_os_metadata_path(path: str) -> bool:

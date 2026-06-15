@@ -21,6 +21,7 @@ class UserAccount(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(512))
     status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
     merged_to_user_id: Mapped[str | None] = mapped_column(String(128))
+    system_account: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

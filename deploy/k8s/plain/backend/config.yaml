@@ -43,6 +43,7 @@ data:
   bootstrap-admin-username: admin
   bootstrap-admin-display-name: Platform Admin
   bootstrap-admin-email: admin@example.com
+  builtin-skills-enabled: "true"
   oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
   oauth2-keycloak-scope: openid,profile,email
   oauth2-keycloak-client-name: Keycloak

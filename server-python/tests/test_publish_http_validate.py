@@ -18,11 +18,11 @@ from tests.support.builders import auth_user as build_auth_user
 from tests.support.builders import bearer_user as build_bearer_user
 
 
-def skill_zip(skill_md: bytes | None = None) -> bytes:
+def skill_zip(skill_md: bytes | None = None, skill_path: str = "SKILL.md") -> bytes:
     buffer = BytesIO()
     with ZipFile(buffer, "w") as archive:
         archive.writestr(
-            "SKILL.md",
+            skill_path,
             skill_md
             or b"---\nname: Agent Helper\ndescription: Helps agents\nversion: 1.0.0\n---\n# Skill\n",
         )
@@ -151,6 +151,40 @@ def test_cli_publish_validate_returns_java_compatible_dry_run_envelope() -> None
         "visibility": "PRIVATE",
         "platform_roles": ["SUPER_ADMIN"],
     }
+
+
+def test_cli_publish_validate_canonicalizes_case_insensitive_skill_md() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        seen["paths"] = [entry.path for entry in entries]
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    app.state.publish_validate_reader = reader
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish/validate",
+        headers={"X-Mock-User-Id": "local-user"},
+        files={"file": ("skill.zip", skill_zip(skill_path="skill.md"), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert seen["paths"] == ["SKILL.md", "src/main.py"]
 
 
 def test_cli_publish_validate_accepts_bearer_with_publish_scope() -> None:
@@ -830,3 +864,84 @@ def test_clawhub_root_publish_route_accepts_payload_files_and_clawhub_response()
             "compat_slug": "team-ai--agent-helper",
         },
     }
+
+
+def test_clawhub_root_publish_route_canonicalizes_case_insensitive_skill_md_file() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
+    seen: dict[str, object] = {}
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        seen["paths"] = [entry.path for entry in entries]
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        seen["write_paths"] = [entry.path for entry in getattr(request, "entries")]
+        return PublishWriteResult(
+            skill_id=71,
+            version_id=421,
+            version_status="PUBLISHED",
+            latest_version_updated=True,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/71/421/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=True,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=None,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=[],
+            replacement_compensation_recorded=False,
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/skills",
+        headers={"X-Mock-User-Id": "local-user"},
+        data={"payload": json.dumps({"slug": "team-ai--agent-helper"}), "confirmWarnings": "true"},
+        files=[
+            (
+                "files",
+                (
+                    "skill.md",
+                    b"---\nname: Agent Helper\ndescription: Helps agents\nversion: 1.0.0\n---\n# Skill\n",
+                    "text/markdown",
+                ),
+            ),
+            ("files", ("src/main.py", b"print('ok')\n", "text/x-python")),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert seen["paths"] == ["SKILL.md", "src/main.py"]
+    assert seen["write_paths"] == ["SKILL.md", "src/main.py"]

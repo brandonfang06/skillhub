@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
+import { resolvePackageRelativeLink } from '@/features/skill/package-relative-link'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
+import type { SkillFile } from '@/api/types'
 import { InstallCommand } from '@/features/skill/install-command'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
@@ -84,6 +86,20 @@ function parseMetadataJson(parsed?: string) {
     return typeof value === 'object' && value !== null ? value : {}
   } catch {
     return {}
+  }
+}
+
+function createPackageFilePreviewNode(file: SkillFile): FileTreeNode {
+  const pathParts = file.filePath.split('/').filter(Boolean)
+  const name = pathParts[pathParts.length - 1] ?? file.filePath
+
+  return {
+    id: file.filePath,
+    name,
+    path: file.filePath,
+    type: 'file',
+    file,
+    depth: Math.max(pathParts.length - 1, 0),
   }
 }
 
@@ -282,6 +298,24 @@ export function SkillDetailPage() {
   const handleFileClick = (node: FileTreeNode) => {
     setPreviewNode(node)
     setPreviewDialogOpen(true)
+  }
+
+  const handleOverviewLinkClick = (href: string, event: MouseEvent<HTMLAnchorElement>) => {
+    const resolution = resolvePackageRelativeLink(href, documentationPath, files)
+
+    if (resolution.status === 'ignored') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (resolution.status === 'matched') {
+      setPreviewNode(createPackageFilePreviewNode(resolution.file))
+      setPreviewDialogOpen(true)
+      return
+    }
+
+    toast.error(t('skillDetail.packageLinkMissingTitle'), t('skillDetail.packageLinkMissingDescription'))
   }
 
   // Download a single file from the skill version
@@ -844,7 +878,7 @@ export function SkillDetailPage() {
                     style={!isOverviewExpanded && isOverviewCollapsible ? { maxHeight: `${overviewMaxHeight}px` } : undefined}
                   >
                     <div ref={overviewContentRef}>
-                      <MarkdownRenderer content={readme} />
+                      <MarkdownRenderer content={readme} onLinkClick={handleOverviewLinkClick} />
                     </div>
                     {!isOverviewExpanded && isOverviewCollapsible ? (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-card via-card/95 to-transparent" />

@@ -192,7 +192,8 @@
     "enterKeyword": "請輸入搜尋關鍵詞",
     "results": "找到 {{count}} 個技能",
     "resultCount": "找到 <1>{{count}}</1> 個結果",
-    "loadingMore": "正在更新搜尋結果..."
+    "loadingMore": "正在更新搜尋結果...",
+    "namespaceFilter": "@{{namespace}}"
   },
   "searchBar": {
     "placeholder": "搜尋技能...",
@@ -790,6 +791,8 @@
     "documentationSource": "來源：{{path}}",
     "documentationUnavailableTitle": "文檔暫時不可用",
     "documentationUnavailable": "當前無法讀取這個技能版本的文檔檔案。你仍然可以在檔案列表裡查看包內容。",
+    "packageLinkMissingTitle": "檔案未找到",
+    "packageLinkMissingDescription": "目前技能版本未包含此連結檔案。",
     "authorLabel": "作者 {{name}}",
     "expandOverview": "展開全文",
     "collapseOverview": "收起內容",

@@ -242,6 +242,11 @@ spec:
                   name: skillhub-secret
                   key: bootstrap-admin-password
                   optional: true
+            - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: builtin-skills-enabled
 
             # Keycloak / generic OIDC provider. Spring-style names are kept so
             # existing Java deployment values can be reused during cutover.

@@ -93,7 +93,7 @@ async def _read_user(connection: Any, user_id: str) -> dict[str, Any]:
         await connection.execute(
             text(
                 """
-                SELECT id, display_name, email, status, created_at
+                SELECT id, display_name, email, status, system_account, created_at
                 FROM user_account
                 WHERE id = :user_id
                 LIMIT 1
@@ -137,6 +137,15 @@ def _user_response(row: dict[str, Any], roles: list[str]) -> dict[str, Any]:
     }
 
 
+def _is_system_account(user: dict[str, Any]) -> bool:
+    return bool(user.get("system_account"))
+
+
+def _reject_system_account_mutation(user: dict[str, Any]) -> None:
+    if _is_system_account(user):
+        raise AdminUserError("error.admin.user.systemAccount.immutable", status_code=403)
+
+
 async def list_admin_users(
     engine: Any,
     *,
@@ -172,7 +181,7 @@ async def list_admin_users(
             await connection.execute(
                 text(
                     f"""
-                    SELECT id, display_name, email, status, created_at
+                    SELECT id, display_name, email, status, system_account, created_at
                     FROM user_account
                     {where_clause}
                     ORDER BY created_at DESC
@@ -205,6 +214,7 @@ async def update_admin_user_role(
         raise AdminUserError("error.admin.user.role.superAdmin.assignDenied", status_code=403)
     async with engine.begin() as connection:
         user = await _read_user(connection, user_id)
+        _reject_system_account_mutation(user)
         await connection.execute(text("DELETE FROM user_role_binding WHERE user_id = :user_id"), {"user_id": user_id})
         if normalized_role != "USER":
             role_row = (
@@ -226,6 +236,7 @@ async def update_admin_user_status(engine: Any, *, user_id: str, status: str) ->
     normalized_status = _normalize_manageable_status(status)
     async with engine.begin() as connection:
         user = await _read_user(connection, user_id)
+        _reject_system_account_mutation(user)
         await connection.execute(
             text("UPDATE user_account SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :user_id"),
             {"user_id": user_id, "status": normalized_status},
@@ -251,7 +262,12 @@ async def _has_local_credential(connection: Any, user_id: str) -> bool:
 
 
 def _is_password_reset_eligible(user: dict[str, Any], has_credential: bool) -> bool:
-    return str(user["status"]) == "ACTIVE" and str(user.get("email") or "").strip() != "" and has_credential
+    return (
+        not _is_system_account(user)
+        and str(user["status"]) == "ACTIVE"
+        and str(user.get("email") or "").strip() != ""
+        and has_credential
+    )
 
 
 async def trigger_admin_password_reset(
@@ -267,6 +283,8 @@ async def trigger_admin_password_reset(
     require_user_admin(actor_platform_roles)
     async with engine.begin() as connection:
         user = await _read_user(connection, user_id)
+        if _is_system_account(user):
+            raise AdminUserError("error.auth.password.reset.not.eligible", status_code=400)
         has_credential = await _has_local_credential(connection, user_id)
         if not _is_password_reset_eligible(user, has_credential):
             raise AdminUserError("error.auth.password.reset.not.eligible", status_code=400)

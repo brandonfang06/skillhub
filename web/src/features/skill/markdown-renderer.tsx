@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type MouseEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
@@ -12,6 +12,7 @@ export const MARKDOWN_IMAGE_CLASS_NAME = 'h-auto max-w-full'
 interface MarkdownRendererProps {
   content: string
   className?: string
+  onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 /**
@@ -20,7 +21,7 @@ interface MarkdownRendererProps {
  * dedicated UI sections and should not appear twice in the document body.
  * Memoized to prevent re-parsing on every render.
  */
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className, onLinkClick }: MarkdownRendererProps) {
   const containerClassName = [
     className,
     'max-w-none break-words text-sm text-foreground/90 [overflow-wrap:anywhere]',
@@ -45,13 +46,15 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               {children}
             </p>
           ),
-          a: ({ className: linkClassName, children, ...props }) => (
+          a: ({ className: linkClassName, children, href, ...props }) => (
             <a
               className={cn(
                 'font-medium text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-primary/80',
                 linkClassName
               )}
               {...props}
+              href={href}
+              onClick={(event) => onLinkClick?.(href ?? '', event)}
             >
               {children}
             </a>

@@ -176,6 +176,13 @@ SKILL_SCANNER_LLM_MODEL=...
 | `skillhub-config/bootstrap-admin-username` | `BOOTSTRAP_ADMIN_USERNAME` | `admin` | Bootstrap admin username。 |
 | `skillhub-secret/bootstrap-admin-password` | `BOOTSTRAP_ADMIN_PASSWORD` | `ChangeMe!2026` | Bootstrap admin password。 |
 
+## Built-in Skills Bootstrap
+
+| K8s key | Pod env | 範例 | 說明 |
+| --- | --- | --- | --- |
+| `skillhub-config/builtin-skills-enabled` | `SKILLHUB_BUILTIN_SKILLS_ENABLED` | `true` | 是否在 backend 啟動後背景同步 upstream 內建 skill manifest。若正式環境不能連外到 `bjcdn.openstorage.cn`，可設為 `false`。 |
+| manifest volume/env override | `SKILLHUB_BUILTIN_SKILLS_MANIFEST_PATH` | `/app/app/builtin_skills/manifest.json` | 可選。預設使用映像內建 manifest；只有要覆蓋 manifest 時才需要設定。 |
+
 ## 最小可用範例
 
 ```text
@@ -193,6 +200,7 @@ SKILLHUB_STORAGE_S3_SECRET_KEY=change-me
 SKILLHUB_STORAGE_S3_REGION=us-east-1
 SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE=true
 SKILLHUB_PUBLIC_BASE_URL=https://skills.example.com
+SKILLHUB_BUILTIN_SKILLS_ENABLED=true
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=skillhub-web
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=change-me
 SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=https://keycloak.example.com/realms/skillhub
