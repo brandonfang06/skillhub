@@ -20,6 +20,30 @@ def test_database_url_can_be_overridden(monkeypatch):
     assert settings.database_url == "postgresql+asyncpg://user:pass@example.test:5432/db"
 
 
+def test_database_url_can_be_built_from_spring_datasource_env(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_DATABASE_URL", raising=False)
+    monkeypatch.setenv("SPRING_DATASOURCE_URL", "jdbc:postgresql://postgres.internal:5432/skillhub?sslmode=require")
+    monkeypatch.setenv("SPRING_DATASOURCE_USERNAME", "skillhub")
+    monkeypatch.setenv("SPRING_DATASOURCE_PASSWORD", "p@ss word")
+
+    settings = get_settings()
+
+    assert settings.database_url == (
+        "postgresql+asyncpg://skillhub:p%40ss%20word@postgres.internal:5432/skillhub?sslmode=require"
+    )
+
+
+def test_database_url_prefers_python_env_over_spring_datasource(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_DATABASE_URL", "postgresql+asyncpg://python:secret@postgres.python:5432/skillhub")
+    monkeypatch.setenv("SPRING_DATASOURCE_URL", "jdbc:postgresql://postgres.java:5432/skillhub")
+    monkeypatch.setenv("SPRING_DATASOURCE_USERNAME", "java")
+    monkeypatch.setenv("SPRING_DATASOURCE_PASSWORD", "secret")
+
+    settings = get_settings()
+
+    assert settings.database_url == "postgresql+asyncpg://python:secret@postgres.python:5432/skillhub"
+
+
 def test_storage_base_path_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_STORAGE_BASE_PATH", "C:/tmp/skillhub-storage")
 
@@ -89,6 +113,62 @@ def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     assert settings.scanner_scan_path == "/scan-upload-custom"
     assert settings.scanner_connect_timeout_ms == 1234
     assert settings.scanner_read_timeout_ms == 5678
+
+
+def test_java_scanner_env_names_are_accepted(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_BASE_URL", raising=False)
+    monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT_MS", raising=False)
+    monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS", raising=False)
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_URL", "http://scanner.java:8000")
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT", "4321")
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT", "8765")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_BEHAVIORAL", "false")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_LLM", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_META", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_AI_DEFENSE", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_AI_DEFENSE_API_KEY", "aidefense-secret")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_VIRUSTOTAL", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_TRIGGER", "true")
+
+    settings = get_settings()
+
+    assert settings.scanner_base_url == "http://scanner.java:8000"
+    assert settings.scanner_connect_timeout_ms == 4321
+    assert settings.scanner_read_timeout_ms == 8765
+    assert settings.scanner_use_behavioral is False
+    assert settings.scanner_use_llm is True
+    assert settings.scanner_llm_provider == "openai"
+    assert settings.scanner_enable_meta is True
+    assert settings.scanner_use_aidefense is True
+    assert settings.scanner_aidefense_api_key == "aidefense-secret"
+    assert settings.scanner_use_virustotal is True
+    assert settings.scanner_use_trigger is True
+
+
+def test_scanner_analyzer_defaults_match_java_baseline(monkeypatch):
+    for name in [
+        "SKILLHUB_SCANNER_USE_BEHAVIORAL",
+        "SKILLHUB_SCANNER_USE_LLM",
+        "SKILLHUB_SCANNER_LLM_PROVIDER",
+        "SKILLHUB_SCANNER_USE_META",
+        "SKILLHUB_SCANNER_USE_AI_DEFENSE",
+        "SKILLHUB_SCANNER_AI_DEFENSE_API_KEY",
+        "SKILLHUB_SCANNER_USE_VIRUSTOTAL",
+        "SKILLHUB_SCANNER_USE_TRIGGER",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings()
+
+    assert settings.scanner_use_behavioral is True
+    assert settings.scanner_use_llm is False
+    assert settings.scanner_llm_provider == "anthropic"
+    assert settings.scanner_enable_meta is False
+    assert settings.scanner_use_aidefense is False
+    assert settings.scanner_aidefense_api_key == ""
+    assert settings.scanner_use_virustotal is False
+    assert settings.scanner_use_trigger is False
 
 
 def test_redis_url_can_be_built_from_java_compatible_env_names(monkeypatch):

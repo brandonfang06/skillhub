@@ -24,9 +24,18 @@ deploy/k8s/
     secret.yaml.example
     services.yaml
   plain/
-    backend.yaml
-    frontend.yaml
-    scanner.yaml
+    backend/
+      config.yaml
+      secret.yaml.example
+      service.yaml
+      deployment.yaml
+    scanner/
+      secret.yaml.example
+      service.yaml
+      deployment.yaml
+    frontend/
+      service.yaml
+      deployment.yaml
   overlays/
     external/
   environment-variables.zh.md
@@ -56,6 +65,26 @@ skillhub-scanner
 The Java backend is not part of this Kubernetes runtime. Spring-compatible
 environment names are intentionally kept where they are part of the existing
 deployment contract, for example Redis and OIDC.
+
+## Java Environment Compatibility
+
+The Python backend accepts the existing Java/Spring environment names for the
+main cutover-sensitive settings. This lets an existing Java Kubernetes
+Deployment switch images with fewer Secret/ConfigMap changes.
+
+| Existing Java env | Python preferred env | Notes |
+| --- | --- | --- |
+| `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | `SKILLHUB_DATABASE_URL` | Java JDBC PostgreSQL URLs are converted to `postgresql+asyncpg://...`. |
+| `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT`, `SPRING_DATA_REDIS_PASSWORD`, `SPRING_DATA_REDIS_DATABASE` | `SKILLHUB_REDIS_URL` or the same Spring names | `SKILLHUB_REDIS_URL`, when non-empty, wins. |
+| `SESSION_COOKIE_SECURE` | `SKILLHUB_SESSION_COOKIE_SECURE` | Both are accepted. |
+| `SKILLHUB_SECURITY_SCANNER_URL` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Both are accepted. |
+| `SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT`, `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT` | `..._CONNECT_TIMEOUT_MS`, `..._READ_TIMEOUT_MS` | Both use milliseconds. |
+| `SKILLHUB_SCANNER_USE_LLM`, `SKILLHUB_SCANNER_USE_BEHAVIORAL`, `SKILLHUB_SCANNER_USE_META`, `SKILLHUB_SCANNER_USE_AI_DEFENSE`, `SKILLHUB_SCANNER_USE_VIRUSTOTAL`, `SKILLHUB_SCANNER_USE_TRIGGER` | Same names | These are backend flags sent to the scanner request body/form. |
+
+For LLM scans, set both sides:
+
+- backend: `SKILLHUB_SCANNER_USE_LLM=true`
+- scanner: `SKILL_SCANNER_LLM_API_KEY`, plus optional base URL/model values
 
 ## Configure
 
@@ -111,13 +140,16 @@ kubectl apply -k deploy/k8s/overlays/external/
 kubectl wait --for=condition=ready pod --all -n skillhub --timeout=300s
 ```
 
-For a non-kustomize workflow, edit `deploy/k8s/plain/backend.yaml` and apply the
-plain workload files directly:
+For a non-kustomize workflow, copy the plain Secret examples, edit the files
+under `deploy/k8s/plain/backend/` and `deploy/k8s/plain/scanner/`, then apply
+the plain workload directories directly:
 
 ```bash
-kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml
-kubectl -n skillhub apply -f deploy/k8s/plain/scanner.yaml
-kubectl -n skillhub apply -f deploy/k8s/plain/frontend.yaml
+cp deploy/k8s/plain/backend/secret.yaml.example deploy/k8s/plain/backend/secret.yaml
+cp deploy/k8s/plain/scanner/secret.yaml.example deploy/k8s/plain/scanner/secret.yaml
+kubectl -n skillhub apply -f deploy/k8s/plain/backend/
+kubectl -n skillhub apply -f deploy/k8s/plain/scanner/
+kubectl -n skillhub apply -f deploy/k8s/plain/frontend/
 ```
 
 ## Verify

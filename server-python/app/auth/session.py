@@ -72,7 +72,7 @@ def _session_store(request: Request) -> Any:
 
 
 def _cookie_secure() -> bool:
-    value = os.getenv("SKILLHUB_SESSION_COOKIE_SECURE")
+    value = os.getenv("SKILLHUB_SESSION_COOKIE_SECURE") or os.getenv("SESSION_COOKIE_SECURE")
     return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
 
 

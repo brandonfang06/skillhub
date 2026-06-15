@@ -2,7 +2,7 @@ import asyncio
 
 from fastapi.testclient import TestClient
 
-from app.auth.session import RedisSessionStore
+from app.auth.session import RedisSessionStore, _cookie_secure
 from app.main import create_app
 
 
@@ -15,6 +15,13 @@ def principal(user_id: str = "session-user", *, provider: str = "local") -> dict
         "oauthProvider": provider,
         "platformRoles": ["USER"],
     }
+
+
+def test_cookie_secure_accepts_java_session_env(monkeypatch) -> None:
+    monkeypatch.delenv("SKILLHUB_SESSION_COOKIE_SECURE", raising=False)
+    monkeypatch.setenv("SESSION_COOKIE_SECURE", "true")
+
+    assert _cookie_secure() is True
 
 
 def test_local_login_creates_session_cookie_used_by_auth_me() -> None:

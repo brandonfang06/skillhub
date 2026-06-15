@@ -33,7 +33,7 @@ class ScanOptions:
     def disabled() -> "ScanOptions":
         return ScanOptions(False, False, "anthropic", False, False, "", False, False)
 
-    def as_query_params(self) -> dict[str, str]:
+    def as_form_fields(self) -> dict[str, str]:
         return {
             "use_behavioral": bool_string(self.use_behavioral),
             "use_llm": bool_string(self.use_llm),
@@ -60,6 +60,11 @@ class ScanOptions:
         if self.use_aidefense and self.aidefense_api_key:
             body["aidefense_api_key"] = self.aidefense_api_key
         return body
+
+    def as_headers(self) -> dict[str, str]:
+        if self.use_aidefense and self.aidefense_api_key:
+            return {"X-AIDefense-Key": self.aidefense_api_key}
+        return {}
 
 
 def bool_string(value: bool) -> str:
@@ -151,7 +156,11 @@ class ScannerHttpClient:
 
     async def scan_directory(self, skill_directory: str) -> SecurityScanResultInput:
         async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
-            response = await client.post(f"{self.base_url}/scan", json=self.options.as_json_body(skill_directory))
+            response = await client.post(
+                f"{self.base_url}/scan",
+                json=self.options.as_json_body(skill_directory),
+                headers=self.options.as_headers(),
+            )
             response.raise_for_status()
             return map_scanner_api_response(response.json())
 
@@ -160,8 +169,9 @@ class ScannerHttpClient:
             with skill_package_path.open("rb") as file_handle:
                 response = await client.post(
                     f"{self.base_url}{self.scan_path}",
-                    params=self.options.as_query_params(),
+                    data=self.options.as_form_fields(),
                     files={"file": (skill_package_path.name, file_handle, "application/zip")},
+                    headers=self.options.as_headers(),
                 )
             response.raise_for_status()
             return map_scanner_api_response(response.json())

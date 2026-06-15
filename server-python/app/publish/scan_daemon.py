@@ -6,7 +6,7 @@ from typing import Any
 
 from app.core.config import Settings
 from app.publish.scan_consumer import RedisStreamClient, ScanConsumerRuntime
-from app.publish.scanner_client import ScannerHttpClient
+from app.publish.scanner_client import ScanOptions, ScannerHttpClient
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,16 @@ def create_scan_consumer_daemon(settings: Settings, engine: Any) -> ScanConsumer
         scan_path=settings.scanner_scan_path,
         connect_timeout_ms=settings.scanner_connect_timeout_ms,
         read_timeout_ms=settings.scanner_read_timeout_ms,
+        options=ScanOptions(
+            use_behavioral=settings.scanner_use_behavioral,
+            use_llm=settings.scanner_use_llm,
+            llm_provider=settings.scanner_llm_provider,
+            enable_meta=settings.scanner_enable_meta,
+            use_aidefense=settings.scanner_use_aidefense,
+            aidefense_api_key=settings.scanner_aidefense_api_key,
+            use_virustotal=settings.scanner_use_virustotal,
+            use_trigger=settings.scanner_use_trigger,
+        ),
     )
     return ScanConsumerDaemon(
         engine=engine,

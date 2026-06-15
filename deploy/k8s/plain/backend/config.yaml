@@ -1,11 +1,15 @@
+# Plain Kubernetes manifests for the SkillHub Python backend.
+# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/backend/
+#
+# PostgreSQL, Redis, MinIO/S3, and Keycloak are expected to be external services.
+# Replace the placeholder ConfigMap and Secret values before applying.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: skillhub-config
+  labels:
+    app.kubernetes.io/part-of: skillhub
 data:
-  # External MinIO / S3 storage. If access must go through an internal proxy,
-  # set storage-s3-proxy-endpoint and keep storage-s3-endpoint as the canonical
-  # MinIO endpoint for documentation parity.
   storage-provider: s3
   storage-s3-endpoint: http://minio.example.internal:9000
   storage-s3-proxy-endpoint: ""
@@ -16,18 +20,10 @@ data:
   storage-s3-disable-chunked-encoding: "false"
   storage-s3-auto-create-bucket: "false"
   storage-s3-presign-expiry: PT10M
-
-  # External Redis. The Python backend also accepts SKILLHUB_REDIS_URL as an
-  # override, but these Spring-compatible keys preserve Java deployment parity.
   redis-host: redis.example.internal
   redis-port: "6379"
   redis-database: "0"
-
-  # Public URL used for OAuth callback construction. Set this to the external
-  # HTTPS origin when ingress is configured, for example https://skills.example.com.
   public-base-url: ""
-
-  # Scanner integration
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000
   security-scanner-mode: upload
@@ -39,20 +35,14 @@ data:
   scanner-use-ai-defense: "false"
   scanner-use-virustotal: "false"
   scanner-use-trigger: "false"
-
-  # Session and auth
   session-cookie-secure: "false"
   auth-direct-enabled: "false"
   auth-session-bootstrap-enabled: "false"
-
-  # Bootstrap admin
   bootstrap-admin-enabled: "true"
   bootstrap-admin-user-id: docker-admin
   bootstrap-admin-username: admin
   bootstrap-admin-display-name: Platform Admin
   bootstrap-admin-email: admin@example.com
-
-  # Optional Keycloak / OIDC provider metadata
   oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
   oauth2-keycloak-scope: openid,profile,email
   oauth2-keycloak-client-name: Keycloak

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import re
 import socket
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit
 
 DEFAULT_DATABASE_URL = "postgresql+asyncpg://skillhub:skillhub_dev@localhost:5432/skillhub"
 DEFAULT_STORAGE_BASE_PATH = str(Path(__file__).resolve().parents[3] / ".dev" / "java-storage")
@@ -57,6 +57,14 @@ class Settings:
     scanner_scan_path: str
     scanner_connect_timeout_ms: int
     scanner_read_timeout_ms: int
+    scanner_use_behavioral: bool
+    scanner_use_llm: bool
+    scanner_llm_provider: str
+    scanner_enable_meta: bool
+    scanner_use_aidefense: bool
+    scanner_aidefense_api_key: str
+    scanner_use_virustotal: bool
+    scanner_use_trigger: bool
     scan_consumer_enabled: bool
     scan_consumer_group_name: str
     scan_consumer_name: str
@@ -70,8 +78,10 @@ class Settings:
         return self.storage_s3_proxy_endpoint or self.storage_s3_endpoint
 
 
-def parse_bool(value: str | None) -> bool:
-    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+def parse_bool(value: str | None, default: bool = False) -> bool:
+    if value is None or value.strip() == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def parse_int(value: str | None, default: int) -> int:
@@ -102,6 +112,46 @@ def default_scan_consumer_name() -> str:
     return f"scanner-python-{socket.gethostname()}"
 
 
+def first_env(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value is not None and value.strip() != "":
+            return value
+    return default
+
+
+def resolve_database_url() -> str:
+    explicit = os.getenv("SKILLHUB_DATABASE_URL")
+    if explicit is not None and explicit.strip() != "":
+        return explicit
+
+    spring_url = os.getenv("SPRING_DATASOURCE_URL")
+    if spring_url is not None and spring_url.strip() != "":
+        return spring_jdbc_postgres_to_asyncpg(
+            spring_url,
+            username=os.getenv("SPRING_DATASOURCE_USERNAME", ""),
+            password=os.getenv("SPRING_DATASOURCE_PASSWORD", ""),
+        )
+    return DEFAULT_DATABASE_URL
+
+
+def spring_jdbc_postgres_to_asyncpg(jdbc_url: str, *, username: str, password: str) -> str:
+    normalized = jdbc_url.strip()
+    if normalized.startswith("jdbc:"):
+        normalized = normalized[len("jdbc:") :]
+    parsed = urlsplit(normalized)
+    if parsed.scheme != "postgresql":
+        return jdbc_url
+
+    netloc = parsed.netloc
+    if parsed.username is None and username.strip() != "":
+        auth = quote(username.strip(), safe="")
+        if password != "":
+            auth = f"{auth}:{quote(password, safe='')}"
+        netloc = f"{auth}@{parsed.netloc}"
+    return urlunsplit(("postgresql+asyncpg", netloc, parsed.path, parsed.query, parsed.fragment))
+
+
 def resolve_redis_url() -> str:
     explicit = os.getenv("SKILLHUB_REDIS_URL")
     if explicit is not None and explicit.strip() != "":
@@ -130,7 +180,7 @@ def resolve_redis_url() -> str:
 
 def get_settings() -> Settings:
     return Settings(
-        database_url=os.getenv("SKILLHUB_DATABASE_URL", DEFAULT_DATABASE_URL),
+        database_url=resolve_database_url(),
         storage_provider=os.getenv("SKILLHUB_STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER).strip().lower(),
         storage_base_path=os.getenv("SKILLHUB_STORAGE_BASE_PATH", DEFAULT_STORAGE_BASE_PATH),
         storage_s3_endpoint=os.getenv("SKILLHUB_STORAGE_S3_ENDPOINT", ""),
@@ -167,17 +217,29 @@ def get_settings() -> Settings:
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", "local"),
         redis_url=resolve_redis_url(),
         scan_stream_key=os.getenv("SKILLHUB_SCAN_STREAM_KEY", DEFAULT_SCAN_STREAM_KEY),
-        scanner_base_url=os.getenv("SKILLHUB_SECURITY_SCANNER_BASE_URL", DEFAULT_SCANNER_BASE_URL),
+        scanner_base_url=first_env(
+            "SKILLHUB_SECURITY_SCANNER_BASE_URL",
+            "SKILLHUB_SECURITY_SCANNER_URL",
+            default=DEFAULT_SCANNER_BASE_URL,
+        ),
         scanner_health_path=os.getenv("SKILLHUB_SECURITY_SCANNER_HEALTH_PATH", DEFAULT_SCANNER_HEALTH_PATH),
         scanner_scan_path=os.getenv("SKILLHUB_SECURITY_SCANNER_SCAN_PATH", DEFAULT_SCANNER_SCAN_PATH),
         scanner_connect_timeout_ms=parse_int(
-            os.getenv("SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT_MS"),
+            first_env("SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT_MS", "SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT"),
             DEFAULT_SCANNER_CONNECT_TIMEOUT_MS,
         ),
         scanner_read_timeout_ms=parse_int(
-            os.getenv("SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS"),
+            first_env("SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS", "SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT"),
             DEFAULT_SCANNER_READ_TIMEOUT_MS,
         ),
+        scanner_use_behavioral=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_BEHAVIORAL"), True),
+        scanner_use_llm=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_LLM")),
+        scanner_llm_provider=os.getenv("SKILLHUB_SCANNER_LLM_PROVIDER", "anthropic"),
+        scanner_enable_meta=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_META")),
+        scanner_use_aidefense=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_AI_DEFENSE")),
+        scanner_aidefense_api_key=os.getenv("SKILLHUB_SCANNER_AI_DEFENSE_API_KEY", ""),
+        scanner_use_virustotal=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_VIRUSTOTAL")),
+        scanner_use_trigger=parse_bool(os.getenv("SKILLHUB_SCANNER_USE_TRIGGER")),
         scan_consumer_enabled=parse_bool(os.getenv("SKILLHUB_SCAN_CONSUMER_ENABLED")),
         scan_consumer_group_name=os.getenv("SKILLHUB_SCAN_CONSUMER_GROUP_NAME", DEFAULT_SCAN_CONSUMER_GROUP_NAME),
         scan_consumer_name=os.getenv("SKILLHUB_SCAN_CONSUMER_NAME", default_scan_consumer_name()),

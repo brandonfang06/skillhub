@@ -1,81 +1,3 @@
-# Plain Kubernetes manifests for the SkillHub Python backend.
-# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml
-#
-# PostgreSQL, Redis, MinIO/S3, and Keycloak are expected to be external services.
-# Replace the placeholder ConfigMap and Secret values before applying.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: skillhub-config
-  labels:
-    app.kubernetes.io/part-of: skillhub
-data:
-  storage-provider: s3
-  storage-s3-endpoint: http://minio.example.internal:9000
-  storage-s3-proxy-endpoint: ""
-  storage-s3-public-endpoint: https://objects.example.com
-  storage-s3-bucket: skillhub-packages
-  storage-s3-region: us-east-1
-  storage-s3-force-path-style: "true"
-  storage-s3-disable-chunked-encoding: "false"
-  storage-s3-auto-create-bucket: "false"
-  storage-s3-presign-expiry: PT10M
-  redis-host: redis.example.internal
-  redis-port: "6379"
-  redis-database: "0"
-  public-base-url: ""
-  security-scanner-enabled: "true"
-  security-scanner-base-url: http://skillhub-scanner:8000
-  security-scanner-mode: upload
-  scan-consumer-enabled: "false"
-  session-cookie-secure: "false"
-  auth-direct-enabled: "false"
-  auth-session-bootstrap-enabled: "false"
-  bootstrap-admin-enabled: "true"
-  bootstrap-admin-user-id: docker-admin
-  bootstrap-admin-username: admin
-  bootstrap-admin-display-name: Platform Admin
-  bootstrap-admin-email: admin@example.com
-  oauth2-keycloak-issuer-uri: https://keycloak.example.com/realms/skillhub
-  oauth2-keycloak-scope: openid,profile,email
-  oauth2-keycloak-client-name: Keycloak
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: skillhub-secret
-  labels:
-    app.kubernetes.io/part-of: skillhub
-type: Opaque
-stringData:
-  database-url: postgresql+asyncpg://skillhub:change-me@postgres.example.internal:5432/skillhub
-  redis-password: change-me
-  redis-url: ""
-  storage-s3-access-key: skillhub
-  storage-s3-secret-key: change-me
-  bootstrap-admin-password: ChangeMe!2026
-  oauth2-keycloak-client-id: ""
-  oauth2-keycloak-client-secret: ""
-  skill-scanner-llm-api-key: ""
-  skill-scanner-llm-base-url: ""
-  skill-scanner-llm-model: ""
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: skillhub-server
-  labels:
-    app.kubernetes.io/name: skillhub-server
-    app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: skillhub
-spec:
-  selector:
-    app.kubernetes.io/name: skillhub-server
-  ports:
-    - name: http
-      port: 8080
-      targetPort: http
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -218,6 +140,47 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: scan-consumer-enabled
+            - name: SKILLHUB_SCANNER_USE_BEHAVIORAL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-behavioral
+            - name: SKILLHUB_SCANNER_USE_LLM
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-llm
+            - name: SKILLHUB_SCANNER_LLM_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-llm-provider
+            - name: SKILLHUB_SCANNER_USE_META
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-meta
+            - name: SKILLHUB_SCANNER_USE_AI_DEFENSE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-ai-defense
+            - name: SKILLHUB_SCANNER_AI_DEFENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: scanner-ai-defense-api-key
+                  optional: true
+            - name: SKILLHUB_SCANNER_USE_VIRUSTOTAL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-virustotal
+            - name: SKILLHUB_SCANNER_USE_TRIGGER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-trigger
             - name: SKILLHUB_SESSION_COOKIE_SECURE
               valueFrom:
                 configMapKeyRef:

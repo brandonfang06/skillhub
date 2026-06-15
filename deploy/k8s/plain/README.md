@@ -5,20 +5,23 @@ This directory contains non-kustomize manifests for operators who prefer direct
 
 The plain manifests deploy only the three SkillHub workloads:
 
-- `frontend.yaml`: `skillhub-web` Service and Deployment
-- `backend.yaml`: shared `skillhub-config`, shared `skillhub-secret`, `skillhub-server` Service and Deployment
-- `scanner.yaml`: `skillhub-scanner` Service and Deployment
+- `backend/`: `skillhub-config`, `skillhub-secret`, `skillhub-server` Service and Deployment
+- `scanner/`: `skillhub-scanner-secret`, `skillhub-scanner` Service and Deployment
+- `frontend/`: `skillhub-web` Service and Deployment
 
 PostgreSQL, Redis, MinIO/S3, and Keycloak/OIDC are external services. Edit the
-placeholder values in `backend.yaml` before applying.
+placeholder values in `backend/config.yaml`, `backend/secret.yaml`, and
+`scanner/secret.yaml` before applying.
 
 ## Apply
 
 ```bash
 kubectl create namespace skillhub
-kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml
-kubectl -n skillhub apply -f deploy/k8s/plain/scanner.yaml
-kubectl -n skillhub apply -f deploy/k8s/plain/frontend.yaml
+cp deploy/k8s/plain/backend/secret.yaml.example deploy/k8s/plain/backend/secret.yaml
+cp deploy/k8s/plain/scanner/secret.yaml.example deploy/k8s/plain/scanner/secret.yaml
+kubectl -n skillhub apply -f deploy/k8s/plain/backend/
+kubectl -n skillhub apply -f deploy/k8s/plain/scanner/
+kubectl -n skillhub apply -f deploy/k8s/plain/frontend/
 kubectl -n skillhub wait --for=condition=ready pod --all --timeout=300s
 ```
 

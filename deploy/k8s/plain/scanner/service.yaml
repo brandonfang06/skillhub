@@ -1,0 +1,16 @@
+# Plain Kubernetes manifests for the SkillHub scanner.
+# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/scanner/
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillhub-scanner
+  labels:
+    app.kubernetes.io/name: skillhub-scanner
+    app.kubernetes.io/part-of: skillhub
+spec:
+  selector:
+    app.kubernetes.io/name: skillhub-scanner
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

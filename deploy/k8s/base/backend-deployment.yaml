@@ -145,6 +145,47 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: scan-consumer-enabled
+            - name: SKILLHUB_SCANNER_USE_BEHAVIORAL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-behavioral
+            - name: SKILLHUB_SCANNER_USE_LLM
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-llm
+            - name: SKILLHUB_SCANNER_LLM_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-llm-provider
+            - name: SKILLHUB_SCANNER_USE_META
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-meta
+            - name: SKILLHUB_SCANNER_USE_AI_DEFENSE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-ai-defense
+            - name: SKILLHUB_SCANNER_AI_DEFENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: scanner-ai-defense-api-key
+                  optional: true
+            - name: SKILLHUB_SCANNER_USE_VIRUSTOTAL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-virustotal
+            - name: SKILLHUB_SCANNER_USE_TRIGGER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scanner-use-trigger
 
             # Session and auth
             - name: SKILLHUB_SESSION_COOKIE_SECURE

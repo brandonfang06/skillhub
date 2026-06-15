@@ -138,10 +138,19 @@ def test_web_static_assets_include_keycloak_login_icon() -> None:
 
 
 def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
-    frontend = read("deploy/k8s/plain/frontend.yaml")
-    backend = read("deploy/k8s/plain/backend.yaml")
-    scanner = read("deploy/k8s/plain/scanner.yaml")
+    frontend_service = read("deploy/k8s/plain/frontend/service.yaml")
+    frontend_deployment = read("deploy/k8s/plain/frontend/deployment.yaml")
+    backend_config = read("deploy/k8s/plain/backend/config.yaml")
+    backend_secret = read("deploy/k8s/plain/backend/secret.yaml.example")
+    backend_service = read("deploy/k8s/plain/backend/service.yaml")
+    backend_deployment = read("deploy/k8s/plain/backend/deployment.yaml")
+    scanner_secret = read("deploy/k8s/plain/scanner/secret.yaml.example")
+    scanner_service = read("deploy/k8s/plain/scanner/service.yaml")
+    scanner_deployment = read("deploy/k8s/plain/scanner/deployment.yaml")
     readme = read("deploy/k8s/plain/README.md")
+    frontend = "\n".join([frontend_service, frontend_deployment])
+    backend = "\n".join([backend_config, backend_secret, backend_service, backend_deployment])
+    scanner = "\n".join([scanner_secret, scanner_service, scanner_deployment])
     combined = "\n".join([frontend, backend, scanner])
 
     assert "kind: Kustomization" not in combined
@@ -155,11 +164,20 @@ def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
     assert "SKILLHUB_DATABASE_URL" in backend
     assert "SPRING_DATA_REDIS_PASSWORD" in backend
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in backend
+    assert "SKILLHUB_SCANNER_USE_LLM" in backend
+    assert "scanner-ai-defense-api-key" in backend_secret
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in backend
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in backend
     assert "OAUTH2_GITHUB" not in backend
     assert "OAUTH2_GITLAB" not in backend
+    assert "SKILL_SCANNER_LLM_API_KEY" not in backend
+    assert "skill-scanner-llm-api-key" not in backend_secret
     assert "name: skillhub-scanner" in scanner
+    assert "name: skillhub-scanner-secret" in scanner_secret
     assert "ghcr.io/iflytek/skillhub-scanner:edge" in scanner
     assert "SKILL_SCANNER_LLM_API_KEY" in scanner
-    assert "kubectl -n skillhub apply -f deploy/k8s/plain/backend.yaml" in readme
+    assert "cp deploy/k8s/plain/backend/secret.yaml.example deploy/k8s/plain/backend/secret.yaml" in readme
+    assert "cp deploy/k8s/plain/scanner/secret.yaml.example deploy/k8s/plain/scanner/secret.yaml" in readme
+    assert "kubectl -n skillhub apply -f deploy/k8s/plain/backend/" in readme
+    assert "kubectl -n skillhub apply -f deploy/k8s/plain/scanner/" in readme
+    assert "kubectl -n skillhub apply -f deploy/k8s/plain/frontend/" in readme

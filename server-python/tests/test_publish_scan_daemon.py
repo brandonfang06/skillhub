@@ -27,6 +27,11 @@ class FakeConnection:
     pass
 
 
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
 class FakeRuntime:
     def __init__(self) -> None:
         self.calls: list[str] = []
@@ -179,6 +184,14 @@ def test_create_scan_consumer_daemon_returns_none_when_disabled(monkeypatch: pyt
 def test_create_scan_consumer_daemon_uses_settings_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SKILLHUB_SCAN_CONSUMER_ENABLED", "true")
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_BEHAVIORAL", "false")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_LLM", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_META", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_AI_DEFENSE", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_AI_DEFENSE_API_KEY", "aidefense-secret")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_VIRUSTOTAL", "true")
+    monkeypatch.setenv("SKILLHUB_SCANNER_USE_TRIGGER", "true")
     settings = get_settings()
 
     daemon = create_scan_consumer_daemon(settings, FakeEngine())
@@ -186,3 +199,11 @@ def test_create_scan_consumer_daemon_uses_settings_when_enabled(monkeypatch: pyt
     assert daemon is not None
     assert daemon.read_count == settings.scan_consumer_read_count
     assert daemon.block_ms == settings.scan_consumer_block_ms
+    assert daemon.scanner.options.use_behavioral is False
+    assert daemon.scanner.options.use_llm is True
+    assert daemon.scanner.options.llm_provider == "openai"
+    assert daemon.scanner.options.enable_meta is True
+    assert daemon.scanner.options.use_aidefense is True
+    assert daemon.scanner.options.aidefense_api_key == "aidefense-secret"
+    assert daemon.scanner.options.use_virustotal is True
+    assert daemon.scanner.options.use_trigger is True

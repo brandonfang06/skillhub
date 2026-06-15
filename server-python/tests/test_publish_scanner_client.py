@@ -15,6 +15,11 @@ from app.publish.scanner_client import (
 )
 
 
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
 def api_response(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "scan_id": "scan-1",
@@ -98,6 +103,7 @@ async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen["url"] = str(request.url)
+        seen["headers"] = request.headers
         seen["content_type"] = request.headers["content-type"]
         seen["body"] = request.content
         return httpx.Response(200, json=api_response(is_safe=True, max_severity=None, findings_count=0, findings=[]))
@@ -107,20 +113,42 @@ async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path
     client = ScannerHttpClient(
         base_url="http://scanner.test/",
         mode="upload",
+        options=ScanOptions(
+            use_behavioral=True,
+            use_llm=True,
+            llm_provider="anthropic",
+            enable_meta=True,
+            use_aidefense=True,
+            aidefense_api_key="aidefense-secret",
+            use_virustotal=True,
+            use_trigger=True,
+        ),
         transport=httpx.MockTransport(handler),
     )
 
     result = await client.scan(SecurityScanTask(task_id="task-1", version_id=202), str(bundle))
 
     assert result.verdict == "SAFE"
-    assert seen["url"] == (
-        "http://scanner.test/scan-upload?"
-        "use_behavioral=false&use_llm=false&llm_provider=anthropic&enable_meta=false&"
-        "use_aidefense=false&use_virustotal=false&use_trigger=false"
-    )
+    assert seen["url"] == "http://scanner.test/scan-upload"
     assert "multipart/form-data" in seen["content_type"]
     assert b'name="file"' in seen["body"]
     assert b"zip-bytes" in seen["body"]
+    for field, value in {
+        "use_behavioral": "true",
+        "use_llm": "true",
+        "llm_provider": "anthropic",
+        "enable_meta": "true",
+        "use_aidefense": "true",
+        "use_virustotal": "true",
+        "use_trigger": "true",
+    }.items():
+        assert f'name="{field}"'.encode() in seen["body"]
+        assert f"\r\n\r\n{value}\r\n".encode() in seen["body"]
+    assert request_header(seen, "X-AIDefense-Key") == "aidefense-secret"
+
+
+def request_header(seen: dict[str, Any], name: str) -> str | None:
+    return seen["headers"].get(name)
 
 
 @pytest.mark.anyio
@@ -163,7 +191,7 @@ def test_normalize_scanner_base_url_rejects_java_invalid_shapes() -> None:
 
 
 def test_scan_options_disabled_matches_java_defaults() -> None:
-    assert ScanOptions.disabled().as_query_params() == {
+    assert ScanOptions.disabled().as_form_fields() == {
         "use_behavioral": "false",
         "use_llm": "false",
         "llm_provider": "anthropic",

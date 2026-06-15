@@ -1,20 +1,3 @@
-# Plain Kubernetes manifests for the SkillHub frontend.
-# Apply with: kubectl -n skillhub apply -f deploy/k8s/plain/frontend.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: skillhub-web
-  labels:
-    app.kubernetes.io/name: skillhub-web
-    app.kubernetes.io/part-of: skillhub
-spec:
-  selector:
-    app.kubernetes.io/name: skillhub-web
-  ports:
-    - name: http
-      port: 80
-      targetPort: http
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
