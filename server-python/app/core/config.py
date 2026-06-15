@@ -11,6 +11,7 @@ DEFAULT_REDIS_URL = "redis://localhost:6379"
 DEFAULT_SCAN_STREAM_KEY = "skillhub:scan:requests"
 DEFAULT_SCANNER_BASE_URL = "http://localhost:8000"
 DEFAULT_SCANNER_HEALTH_PATH = "/health"
+DEFAULT_SCANNER_MODE = "upload"
 DEFAULT_SCANNER_SCAN_PATH = "/scan-upload"
 DEFAULT_SCANNER_CONNECT_TIMEOUT_MS = 5000
 DEFAULT_SCANNER_READ_TIMEOUT_MS = 300000
@@ -214,7 +215,7 @@ def get_settings() -> Settings:
             DEFAULT_STORAGE_S3_API_CALL_TIMEOUT_SECONDS,
         ),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
-        security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", "local"),
+        security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),
         redis_url=resolve_redis_url(),
         scan_stream_key=os.getenv("SKILLHUB_SCAN_STREAM_KEY", DEFAULT_SCAN_STREAM_KEY),
         scanner_base_url=first_env(

@@ -36,6 +36,7 @@ interface ReviewTaskSummary {
   namespace: string
   skillSlug: string
   status: string
+  versionStatus?: string
   submittedBy: string
   version: string
 }
@@ -48,14 +49,16 @@ interface NamespaceCandidate {
 }
 
 interface ApiEnvelope<T> {
-  code: number
-  msg: string
+  code?: number
+  msg?: string
   data: T
+  detail?: unknown
 }
 
 interface ApiFailure extends Error {
   status?: number
   code?: number
+  detail?: string
 }
 
 const cleanupTimeoutMs = process.env.CI ? 8_000 : 5_000
@@ -71,7 +74,10 @@ function asApiErrorBody(value: unknown): string {
   if (!value || typeof value !== 'object') {
     return ''
   }
-  const maybe = value as { msg?: unknown }
+  const maybe = value as { detail?: unknown; msg?: unknown }
+  if (typeof maybe.detail === 'string') {
+    return maybe.detail
+  }
   return typeof maybe.msg === 'string' ? maybe.msg : ''
 }
 
@@ -181,11 +187,13 @@ async function parseEnvelope<T>(response: Awaited<ReturnType<APIRequestContext['
   }
 
   if (!response.ok() || parsed.code !== 0) {
+    const detail = asApiErrorBody(parsed) || parsed.msg || ''
     const error = new Error(
-      `API failed: status=${response.status()} code=${parsed.code} msg=${asApiErrorBody(parsed) || parsed.msg}`,
+      `API failed: status=${response.status()} code=${parsed.code} msg=${detail}`,
     ) as ApiFailure
     error.status = response.status()
     error.code = parsed.code
+    error.detail = detail
     throw error
   }
   return parsed.data
@@ -480,9 +488,28 @@ export class E2eTestDataBuilder {
     throw new Error(`Timed out waiting for pending review ${namespaceSlug}/${skillSlug}@${version}`)
   }
 
+  async waitForReviewScanReady(reviewTaskId: number): Promise<void> {
+    for (let attempt = 0; attempt < 180; attempt += 1) {
+      try {
+        const review = await parseEnvelope<ReviewTaskSummary>(
+          await this.request.get(`/api/web/reviews/${reviewTaskId}`),
+        )
+        if (review.versionStatus && review.versionStatus !== 'SCANNING') {
+          return
+        }
+      } catch {
+        // Review detail can lag behind publish very briefly.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+    throw new Error(`Timed out waiting for review scan to finish: ${reviewTaskId}`)
+  }
+
   async approveReview(reviewTaskId: number, comment = 'Approved by Playwright E2E'): Promise<void> {
+    await this.waitForReviewScanReady(reviewTaskId)
     let lastError: unknown
-    for (let attempt = 0; attempt < 30; attempt += 1) {
+    for (let attempt = 0; attempt < 180; attempt += 1) {
       try {
         await parseEnvelope<ReviewTaskSummary>(
           await this.request.post(`/api/web/reviews/${reviewTaskId}/approve`, {
@@ -493,7 +520,12 @@ export class E2eTestDataBuilder {
       } catch (error) {
         lastError = error
         const message = error instanceof Error ? error.message : ''
-        const isScanInProgress = message.includes('扫描') || message.toLowerCase().includes('scan is still in progress')
+        const detail = typeof (error as ApiFailure).detail === 'string' ? (error as ApiFailure).detail : ''
+        const isScanInProgress =
+          detail === 'review.approve.scan_in_progress' ||
+          message.includes('扫描') ||
+          message.includes('review.approve.scan_in_progress') ||
+          message.toLowerCase().includes('scan is still in progress')
         if (!isScanInProgress) {
           throw error
         }

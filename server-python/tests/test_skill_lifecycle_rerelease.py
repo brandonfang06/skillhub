@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,6 +15,7 @@ from app.lifecycle.skill import (
     rerelease_skill_version,
 )
 from app.main import create_app
+from app.api import lifecycle as lifecycle_api
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult
 from app.publish.side_effects import PublishSideEffectResult
 from app.publish.storage import StoredPackageResult
@@ -285,6 +287,51 @@ def test_rerelease_routes_return_java_envelopes(tmp_path: Path) -> None:
     assert seen[0].version == "1.0.0"
     assert seen[0].target_version == " 2.0.0 "
     assert seen[0].confirm_warnings is True
+
+
+def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = create_app()
+    app.state.db_engine = object()
+    app.state.settings = SimpleNamespace(
+        storage_base_path=str(tmp_path),
+        security_scanner_enabled=True,
+        security_scanner_mode="upload",
+        redis_url="redis://redis.test:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    seen: dict[str, object] = {}
+
+    async def fake_rerelease(
+        engine: object,
+        lifecycle_input: SkillRereleaseInput,
+        *,
+        publish_writer: object | None = None,
+    ) -> dict[str, object]:
+        seen["engine"] = engine
+        seen["scanner_enabled"] = lifecycle_input.scanner_enabled
+        seen["scan_mode"] = lifecycle_input.scan_mode
+        seen["publish_writer_supplied"] = publish_writer is not None
+        return {"skillId": 101, "versionId": 77, "action": "RERELEASE_VERSION", "status": "PENDING_REVIEW"}
+
+    monkeypatch.setattr(lifecycle_api, "rerelease_skill_version", fake_rerelease)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/web/skills/team-a/agent-helper/versions/1.0.0/rerelease",
+        json={"targetVersion": "2.0.0", "confirmWarnings": True},
+        headers={"X-Mock-User-Id": "owner"},
+    )
+
+    assert response.status_code == 200
+    assert seen == {
+        "engine": app.state.db_engine,
+        "scanner_enabled": True,
+        "scan_mode": "upload",
+        "publish_writer_supplied": True,
+    }
 
 
 def test_rerelease_routes_require_mock_user() -> None:

@@ -34,6 +34,8 @@ from app.lifecycle.skill import (
     unarchive_skill as unarchive_skill_workflow,
     withdraw_skill_version_review,
 )
+from app.publish.orchestration import execute_publish_write
+from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 
 router = APIRouter()
@@ -363,11 +365,26 @@ async def rerelease_route_data(
         user_agent=request.headers.get("user-agent"),
     )
     writer = getattr(request.app.state, "skill_rerelease_writer", None)
+    publish_writer = None
+    if writer is None and rerelease_input.scanner_enabled:
+        scan_task_publisher = RedisScanTaskPublisher(settings.redis_url, settings.scan_stream_key)
+
+        async def publish_writer(write_input: Any) -> Any:
+            return await execute_publish_write(
+                request.app.state.db_engine,
+                write_input,
+                scan_task_publisher=scan_task_publisher,
+            )
+
     try:
         data = await _resolve_result(
             writer(rerelease_input)
             if writer is not None
-            else rerelease_skill_version(request.app.state.db_engine, rerelease_input)
+            else rerelease_skill_version(
+                request.app.state.db_engine,
+                rerelease_input,
+                publish_writer=publish_writer,
+            )
         )
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

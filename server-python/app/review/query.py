@@ -94,6 +94,7 @@ def _task_response(row: dict[str, Any]) -> dict[str, Any]:
         "namespace": str(row["namespace_slug"]),
         "skillSlug": str(row["skill_slug"]),
         "version": str(row["version_name"]),
+        "versionStatus": str(row["version_status"]),
         "status": str(row["status"]),
         "submittedBy": str(row["submitted_by"]),
         "submittedByName": row.get("submitted_by_name"),
@@ -471,7 +472,8 @@ async def _read_review_task_rows(
                        n.slug AS namespace_slug,
                        n.type AS namespace_type,
                        s.slug AS skill_slug,
-                       sv.version AS version_name
+                       sv.version AS version_name,
+                       sv.status AS version_status
                 FROM review_task rt
                 JOIN namespace n ON n.id = rt.namespace_id
                 JOIN skill_version sv ON sv.id = rt.skill_version_id
@@ -508,7 +510,8 @@ async def _read_review_task_row(connection: Any, review_task_id: int) -> dict[st
                        n.slug AS namespace_slug,
                        n.type AS namespace_type,
                        s.slug AS skill_slug,
-                       sv.version AS version_name
+                       sv.version AS version_name,
+                       sv.status AS version_status
                 FROM review_task rt
                 JOIN namespace n ON n.id = rt.namespace_id
                 JOIN skill_version sv ON sv.id = rt.skill_version_id

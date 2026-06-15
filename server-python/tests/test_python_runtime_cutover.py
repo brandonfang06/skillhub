@@ -29,11 +29,24 @@ def test_default_make_targets_start_python_without_java_backend() -> None:
     assert "$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID)" in dev_all
     assert "--cwd server-python" in dev_all
     assert "DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true" in makefile
+    assert "SKILLHUB_SECURITY_SCANNER_ENABLED=true" in makefile
+    assert "SKILLHUB_SECURITY_SCANNER_MODE=upload" in makefile
+    assert "SKILLHUB_SCAN_CONSUMER_ENABLED=true" in makefile
     assert "command -v pnpm" in dev_all
     assert "$(DEV_WEB_URL)/api/v1/health" in dev_all
     assert "$(DEV_PROCESS) start --pid-file $(DEV_SERVER_PID)" not in dev_all
     assert "--cwd server --" not in dev_all
     assert "$(DEV_API_URL)/actuator/health" not in dev_all
+
+
+def test_dev_python_environment_processes_scanner_results() -> None:
+    makefile = read("Makefile")
+
+    assert (
+        "DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true "
+        "SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_MODE=upload "
+        "SKILLHUB_SCAN_CONSUMER_ENABLED=true"
+    ) in makefile
 
 
 def test_staging_builds_and_runs_python_backend_image() -> None:

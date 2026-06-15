@@ -13,7 +13,7 @@ STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server-python:staging
 DEV_PROCESS := bash scripts/dev-process.sh
-DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true
+DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_MODE=upload SKILLHUB_SCAN_CONSUMER_ENABLED=true
 DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=

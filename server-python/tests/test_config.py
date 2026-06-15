@@ -115,6 +115,16 @@ def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     assert settings.scanner_read_timeout_ms == 5678
 
 
+def test_scanner_handoff_defaults_to_upload_mode(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_MODE", raising=False)
+    monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_SCAN_PATH", raising=False)
+
+    settings = get_settings()
+
+    assert settings.security_scanner_mode == "upload"
+    assert settings.scanner_scan_path == "/scan-upload"
+
+
 def test_java_scanner_env_names_are_accepted(monkeypatch):
     monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_BASE_URL", raising=False)
     monkeypatch.delenv("SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT_MS", raising=False)

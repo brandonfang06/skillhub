@@ -69,6 +69,7 @@ class FakeReviewDetailConnection:
                     "namespace_type": self.namespace_type,
                     "skill_slug": "agent-helper",
                     "version_name": "1.0.0",
+                    "version_status": "PENDING_REVIEW",
                 }
             )
         if "FROM user_role_binding" in sql:
@@ -109,6 +110,7 @@ async def test_read_review_detail_allows_submitter() -> None:
     assert response["id"] == 801
     assert response["submittedBy"] == "local-user"
     assert response["namespace"] == "team-a"
+    assert response["versionStatus"] == "PENDING_REVIEW"
     assert response["submittedAt"] == "2026-06-09T10:00:00Z"
 
 
