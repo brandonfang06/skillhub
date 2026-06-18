@@ -183,6 +183,10 @@ def test_scanner_analyzer_defaults_match_java_baseline(monkeypatch):
 
 def test_redis_url_can_be_built_from_java_compatible_env_names(monkeypatch):
     monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_NODES", raising=False)
     monkeypatch.setenv("SPRING_DATA_REDIS_HOST", "redis.internal")
     monkeypatch.setenv("SPRING_DATA_REDIS_PORT", "6380")
     monkeypatch.setenv("SPRING_DATA_REDIS_PASSWORD", "redis secret")
@@ -191,10 +195,15 @@ def test_redis_url_can_be_built_from_java_compatible_env_names(monkeypatch):
     settings = get_settings()
 
     assert settings.redis_url == "redis://:redis%20secret@redis.internal:6380/2"
+    assert settings.redis_mode == "single"
 
 
 def test_redis_password_falls_back_to_redis_password_env(monkeypatch):
     monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_NODES", raising=False)
     monkeypatch.delenv("SPRING_DATA_REDIS_PASSWORD", raising=False)
     monkeypatch.setenv("REDIS_HOST", "redis.compat")
     monkeypatch.setenv("REDIS_PORT", "6379")
@@ -203,6 +212,98 @@ def test_redis_password_falls_back_to_redis_password_env(monkeypatch):
     settings = get_settings()
 
     assert settings.redis_url == "redis://:compat-secret@redis.compat:6379/0"
+    assert settings.redis_mode == "single"
+
+
+def test_redis_url_uses_rediss_for_java_compatible_ssl_flag(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.setenv("SPRING_DATA_REDIS_HOST", "redis.tls")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PORT", "6380")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SSL_ENABLED", "true")
+
+    settings = get_settings()
+
+    assert settings.redis_url == "rediss://redis.tls:6380/0"
+    assert settings.redis_ssl_enabled is True
+    assert settings.redis_mode == "single"
+
+
+def test_redis_url_includes_acl_username_for_java_compatible_env_names(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SKILLHUB_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.setenv("SPRING_DATA_REDIS_HOST", "redis.acl")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PORT", "6379")
+    monkeypatch.setenv("SPRING_DATA_REDIS_USERNAME", "skill hub")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PASSWORD", "redis secret")
+
+    settings = get_settings()
+
+    assert settings.redis_url == "redis://skill%20hub:redis%20secret@redis.acl:6379/0"
+    assert settings.redis_username == "skill hub"
+    assert settings.redis_password == "redis secret"
+    assert settings.redis_mode == "single"
+
+
+def test_redis_sentinel_config_uses_spring_env_names(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_MASTER", "mymaster")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_NODES", "redis-sentinel-1:26379, redis-sentinel-2:26379")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_USERNAME", "sentinel-user")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_PASSWORD", "sentinel-secret")
+    monkeypatch.setenv("SPRING_DATA_REDIS_USERNAME", "skillhub")
+    monkeypatch.setenv("SPRING_DATA_REDIS_PASSWORD", "secret")
+    monkeypatch.setenv("SPRING_DATA_REDIS_DATABASE", "3")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SSL_ENABLED", "true")
+    monkeypatch.setenv("SPRING_DATA_REDIS_CONNECT_TIMEOUT", "PT5S")
+    monkeypatch.setenv("SPRING_DATA_REDIS_TIMEOUT", "PT3S")
+
+    settings = get_settings()
+
+    assert settings.redis_mode == "sentinel"
+    assert settings.redis_sentinel_master == "mymaster"
+    assert settings.redis_sentinel_nodes == ["redis-sentinel-1:26379", "redis-sentinel-2:26379"]
+    assert settings.redis_sentinel_username == "sentinel-user"
+    assert settings.redis_sentinel_password == "sentinel-secret"
+    assert settings.redis_username == "skillhub"
+    assert settings.redis_password == "secret"
+    assert settings.redis_database == 3
+    assert settings.redis_ssl_enabled is True
+    assert settings.redis_connect_timeout_seconds == 5
+    assert settings.redis_timeout_seconds == 3
+
+
+def test_redis_sentinel_config_accepts_skillhub_aliases(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_REDIS_URL", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_MASTER", raising=False)
+    monkeypatch.delenv("SPRING_DATA_REDIS_SENTINEL_NODES", raising=False)
+    monkeypatch.setenv("SKILLHUB_REDIS_SENTINEL_MASTER", "skillhub-master")
+    monkeypatch.setenv("SKILLHUB_REDIS_SENTINEL_NODES", "sentinel-a:26379,sentinel-b:26379")
+
+    settings = get_settings()
+
+    assert settings.redis_mode == "sentinel"
+    assert settings.redis_sentinel_master == "skillhub-master"
+    assert settings.redis_sentinel_nodes == ["sentinel-a:26379", "sentinel-b:26379"]
+
+
+def test_explicit_redis_url_wins_over_sentinel_env(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_REDIS_URL", "redis://redis.single:6379/0")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_MASTER", "mymaster")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_NODES", "redis-sentinel-1:26379")
+
+    settings = get_settings()
+
+    assert settings.redis_mode == "single"
+    assert settings.redis_url == "redis://redis.single:6379/0"
+    assert settings.redis_sentinel_master == ""
+    assert settings.redis_sentinel_nodes == []
 
 
 def test_scanner_timeout_settings_fallback_to_defaults(monkeypatch):

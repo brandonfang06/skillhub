@@ -52,6 +52,17 @@ class Settings:
     security_scanner_enabled: bool
     security_scanner_mode: str
     redis_url: str
+    redis_mode: str
+    redis_sentinel_master: str
+    redis_sentinel_nodes: list[str]
+    redis_sentinel_username: str
+    redis_sentinel_password: str
+    redis_username: str
+    redis_password: str
+    redis_database: int
+    redis_ssl_enabled: bool
+    redis_connect_timeout_seconds: int
+    redis_timeout_seconds: int
     scan_stream_key: str
     scanner_base_url: str
     scanner_health_path: str
@@ -121,6 +132,12 @@ def first_env(*names: str, default: str = "") -> str:
     return default
 
 
+def split_csv(value: str | None) -> list[str]:
+    if value is None:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def resolve_database_url() -> str:
     explicit = os.getenv("SKILLHUB_DATABASE_URL")
     if explicit is not None and explicit.strip() != "":
@@ -163,20 +180,75 @@ def resolve_redis_url() -> str:
         "REDIS_HOST",
         "SPRING_DATA_REDIS_PORT",
         "REDIS_PORT",
+        "SPRING_DATA_REDIS_USERNAME",
+        "REDIS_USERNAME",
+        "SKILLHUB_REDIS_USERNAME",
         "SPRING_DATA_REDIS_PASSWORD",
         "REDIS_PASSWORD",
         "SPRING_DATA_REDIS_DATABASE",
         "REDIS_DATABASE",
+        "SPRING_DATA_REDIS_SSL_ENABLED",
+        "SKILLHUB_REDIS_SSL_ENABLED",
     )
     if not any(os.getenv(key) not in {None, ""} for key in legacy_keys):
         return DEFAULT_REDIS_URL
 
     host = os.getenv("SPRING_DATA_REDIS_HOST") or os.getenv("REDIS_HOST") or "localhost"
     port = parse_int(os.getenv("SPRING_DATA_REDIS_PORT") or os.getenv("REDIS_PORT"), 6379)
+    username = redis_username()
     password = os.getenv("SPRING_DATA_REDIS_PASSWORD") or os.getenv("REDIS_PASSWORD") or ""
     database = parse_int(os.getenv("SPRING_DATA_REDIS_DATABASE") or os.getenv("REDIS_DATABASE"), 0)
-    auth = f":{quote(password, safe='')}@" if password else ""
-    return f"redis://{auth}{host}:{port}/{database}"
+    auth = ""
+    if username:
+        auth = quote(username, safe="")
+        if password:
+            auth = f"{auth}:{quote(password, safe='')}"
+        auth = f"{auth}@"
+    elif password:
+        auth = f":{quote(password, safe='')}@"
+    scheme = "rediss" if redis_ssl_enabled() else "redis"
+    return f"{scheme}://{auth}{host}:{port}/{database}"
+
+
+def resolve_redis_mode() -> str:
+    explicit = os.getenv("SKILLHUB_REDIS_URL")
+    if explicit is not None and explicit.strip() != "":
+        return "single"
+    if redis_sentinel_master() and redis_sentinel_nodes():
+        return "sentinel"
+    return "single"
+
+
+def redis_sentinel_master() -> str:
+    return first_env("SPRING_DATA_REDIS_SENTINEL_MASTER", "SKILLHUB_REDIS_SENTINEL_MASTER")
+
+
+def redis_sentinel_nodes() -> list[str]:
+    return split_csv(first_env("SPRING_DATA_REDIS_SENTINEL_NODES", "SKILLHUB_REDIS_SENTINEL_NODES"))
+
+
+def redis_sentinel_username() -> str:
+    return first_env("SPRING_DATA_REDIS_SENTINEL_USERNAME", "SKILLHUB_REDIS_SENTINEL_USERNAME")
+
+
+def redis_sentinel_password() -> str:
+    return first_env("SPRING_DATA_REDIS_SENTINEL_PASSWORD", "SKILLHUB_REDIS_SENTINEL_PASSWORD")
+
+
+def redis_username() -> str:
+    return first_env("SPRING_DATA_REDIS_USERNAME", "REDIS_USERNAME", "SKILLHUB_REDIS_USERNAME")
+
+
+def redis_password() -> str:
+    return first_env("SPRING_DATA_REDIS_PASSWORD", "REDIS_PASSWORD")
+
+
+def redis_database() -> int:
+    return parse_int(first_env("SPRING_DATA_REDIS_DATABASE", "REDIS_DATABASE"), 0)
+
+
+def redis_ssl_enabled() -> bool:
+    return parse_bool(first_env("SPRING_DATA_REDIS_SSL_ENABLED", "SKILLHUB_REDIS_SSL_ENABLED"))
 
 
 def get_settings() -> Settings:
@@ -217,6 +289,23 @@ def get_settings() -> Settings:
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),
         redis_url=resolve_redis_url(),
+        redis_mode=resolve_redis_mode(),
+        redis_sentinel_master=redis_sentinel_master() if resolve_redis_mode() == "sentinel" else "",
+        redis_sentinel_nodes=redis_sentinel_nodes() if resolve_redis_mode() == "sentinel" else [],
+        redis_sentinel_username=redis_sentinel_username(),
+        redis_sentinel_password=redis_sentinel_password(),
+        redis_username=redis_username(),
+        redis_password=redis_password(),
+        redis_database=redis_database(),
+        redis_ssl_enabled=redis_ssl_enabled(),
+        redis_connect_timeout_seconds=parse_duration_seconds(
+            first_env("SPRING_DATA_REDIS_CONNECT_TIMEOUT", "SKILLHUB_REDIS_CONNECT_TIMEOUT"),
+            5,
+        ),
+        redis_timeout_seconds=parse_duration_seconds(
+            first_env("SPRING_DATA_REDIS_TIMEOUT", "SKILLHUB_REDIS_TIMEOUT"),
+            5,
+        ),
         scan_stream_key=os.getenv("SKILLHUB_SCAN_STREAM_KEY", DEFAULT_SCAN_STREAM_KEY),
         scanner_base_url=first_env(
             "SKILLHUB_SECURITY_SCANNER_BASE_URL",

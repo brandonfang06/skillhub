@@ -19,6 +19,11 @@ def test_kubernetes_backend_deployment_uses_python_runtime_contract() -> None:
     assert "SPRING_DATA_REDIS_HOST" in deployment
     assert "SPRING_DATA_REDIS_PASSWORD" in deployment
     assert "SPRING_DATA_REDIS_DATABASE" in deployment
+    assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in deployment
+    assert "SPRING_DATA_REDIS_SENTINEL_NODES" in deployment
+    assert "SPRING_DATA_REDIS_SENTINEL_PASSWORD" in deployment
+    assert "SPRING_DATA_REDIS_USERNAME" in deployment
+    assert "SPRING_DATA_REDIS_SSL_ENABLED" in deployment
     assert "SKILLHUB_STORAGE_PROVIDER" in deployment
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in deployment
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in deployment
@@ -43,7 +48,12 @@ def test_kubernetes_config_and_secret_examples_expose_python_env_inputs() -> Non
     assert "database-url:" in secret_example
     assert "postgresql+asyncpg://skillhub:change-me@postgres.example.internal:5432/skillhub" in secret_example
     assert "redis-host:" in configmap
+    assert "redis-sentinel-master:" in configmap
+    assert "redis-sentinel-nodes:" in configmap
+    assert "redis-ssl-enabled:" in configmap
     assert "redis-password:" in secret_example
+    assert "redis-username:" in secret_example
+    assert "redis-sentinel-password:" in secret_example
     assert "redis-url:" in secret_example
     assert "redis-url:" not in configmap
     assert "storage-provider: s3" in configmap
@@ -106,6 +116,7 @@ def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:
     assert "skillhub-scanner" in readme
     assert "SKILLHUB_DATABASE_URL" in readme
     assert "SPRING_DATA_REDIS_PASSWORD" in readme
+    assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in readme
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in readme
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in readme
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in readme
@@ -124,6 +135,9 @@ def test_kubernetes_env_manual_documents_external_dependencies() -> None:
     assert "SKILLHUB_DATABASE_URL" in manual
     assert "SKILLHUB_REDIS_URL" in manual
     assert "SPRING_DATA_REDIS_PASSWORD" in manual
+    assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in manual
+    assert "SPRING_DATA_REDIS_SENTINEL_NODES" in manual
+    assert "SPRING_DATA_REDIS_SENTINEL_PASSWORD" in manual
     assert "redis://:password@redis.example.internal:6379/0" in manual
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
@@ -163,6 +177,11 @@ def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
     assert "name: skillhub-secret" in backend
     assert "SKILLHUB_DATABASE_URL" in backend
     assert "SPRING_DATA_REDIS_PASSWORD" in backend
+    assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in backend
+    assert "SPRING_DATA_REDIS_SENTINEL_NODES" in backend
+    assert "SPRING_DATA_REDIS_SENTINEL_PASSWORD" in backend
+    assert "redis-sentinel-master:" in backend_config
+    assert "redis-username:" in backend_secret
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in backend
     assert "SKILLHUB_SCANNER_USE_LLM" in backend
     assert "scanner-ai-defense-api-key" in backend_secret

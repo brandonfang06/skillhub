@@ -60,7 +60,15 @@ Python backend 支援完整 URL，也支援 Java/Spring 分離式 env。
 | `skillhub-config/redis-host` | `SPRING_DATA_REDIS_HOST` | 是 | `redis.example.internal` | Redis host。 |
 | `skillhub-config/redis-port` | `SPRING_DATA_REDIS_PORT` | 是 | `6379` | Redis port。 |
 | `skillhub-config/redis-database` | `SPRING_DATA_REDIS_DATABASE` | 是 | `0` | Redis logical database。 |
+| `skillhub-config/redis-sentinel-master` | `SPRING_DATA_REDIS_SENTINEL_MASTER` | 視環境 | `mymaster` | Redis Sentinel master name。若 `SKILLHUB_REDIS_URL` 非空，Sentinel 設定會被忽略。 |
+| `skillhub-config/redis-sentinel-nodes` | `SPRING_DATA_REDIS_SENTINEL_NODES` | 視環境 | `<bitnami-release>-redis:26379` | Redis Sentinel 節點清單，逗號分隔。Bitnami Redis Sentinel 通常可用 chart 產生的 Redis service `26379` port，或確認後改用 headless Pod DNS。 |
+| `skillhub-secret/redis-sentinel-username` | `SPRING_DATA_REDIS_SENTINEL_USERNAME` | 視環境 | `default` | Sentinel ACL username。未啟用 Sentinel AUTH 時留空。 |
+| `skillhub-secret/redis-sentinel-password` | `SPRING_DATA_REDIS_SENTINEL_PASSWORD` | 視環境 | `change-me` | Sentinel AUTH password。Bitnami 若 Sentinel 需要密碼，通常設成 Redis password 相同值。 |
+| `skillhub-secret/redis-username` | `SPRING_DATA_REDIS_USERNAME` | 視環境 | `default` | Redis ACL username。Bitnami 預設通常可留空，只用 password。 |
 | `skillhub-secret/redis-password` | `SPRING_DATA_REDIS_PASSWORD` | 視環境 | `change-me` | Redis 密碼。若 Redis 無密碼可留空。 |
+| `skillhub-config/redis-ssl-enabled` | `SPRING_DATA_REDIS_SSL_ENABLED` | 視環境 | `false` | Redis/Sentinel 是否使用 TLS。 |
+| `skillhub-config/redis-connect-timeout` | `SPRING_DATA_REDIS_CONNECT_TIMEOUT` | 否 | `PT5S` | Redis connect timeout。 |
+| `skillhub-config/redis-timeout` | `SPRING_DATA_REDIS_TIMEOUT` | 否 | `PT5S` | Redis socket/read timeout。 |
 
 Java fallback 也可沿用：
 
@@ -69,6 +77,34 @@ REDIS_HOST
 REDIS_PORT
 REDIS_PASSWORD
 REDIS_DATABASE
+```
+
+### Redis Sentinel 設定範例
+
+若使用 Bitnami Redis Helm chart 並啟用 Sentinel，請確認填入的是 Sentinel 節點與 master name，不要把會輪詢到 replica 的一般 Redis service 當成 backend 寫入目標。
+
+```text
+SKILLHUB_REDIS_URL=
+SPRING_DATA_REDIS_SENTINEL_MASTER=mymaster
+SPRING_DATA_REDIS_SENTINEL_NODES=<bitnami-release>-redis:26379
+SPRING_DATA_REDIS_PASSWORD=change-me
+SPRING_DATA_REDIS_SENTINEL_PASSWORD=change-me
+SPRING_DATA_REDIS_DATABASE=0
+```
+
+Bitnami Redis Sentinel 的 chart 文件說明，在 `architecture=replication` 且
+`sentinel.enabled=true` 時，寫入端需要透過 Sentinel 查目前 master；chart
+服務的 `6379` 是 Redis read-only port，`26379` 是 Sentinel port。若你不想
+依賴 service load balancing，也可以填 headless Pod DNS，例如
+`<release>-redis-node-0.<release>-redis-headless.<namespace>.svc.cluster.local:26379`；
+實際名稱請以 `kubectl get svc,endpoints -n <namespace>` 為準。
+
+優先順序：
+
+```text
+SKILLHUB_REDIS_URL 非空 -> 使用單點 Redis URL，忽略 Sentinel
+Sentinel master/nodes 非空 -> 透過 Sentinel 找目前 master
+否則 -> 使用 SPRING_DATA_REDIS_HOST / PORT / PASSWORD / DATABASE
 ```
 
 ## MinIO / S3

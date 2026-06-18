@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
@@ -11,7 +10,6 @@ from app.publish.scan_worker import (
     parse_scan_task_fields,
     process_scan_task,
 )
-from app.publish.scanner_handoff import encode_resp_command, open_redis_connection, parse_redis_target, read_resp
 
 
 MAX_SCAN_RETRY_COUNT = 3
@@ -85,21 +83,25 @@ def parse_stream_messages(payload: Any) -> list[RedisStreamMessage]:
 
     messages: list[RedisStreamMessage] = []
     for stream_entry in payload:
-        if not isinstance(stream_entry, list) or len(stream_entry) != 2:
+        if not isinstance(stream_entry, (list, tuple)) or len(stream_entry) != 2:
             continue
         raw_messages = stream_entry[1]
-        if not isinstance(raw_messages, list):
+        if not isinstance(raw_messages, (list, tuple)):
             continue
         for raw_message in raw_messages:
-            if not isinstance(raw_message, list) or len(raw_message) != 2:
+            if not isinstance(raw_message, (list, tuple)) or len(raw_message) != 2:
                 continue
             message_id = str(raw_message[0])
             raw_fields = raw_message[1]
-            if not isinstance(raw_fields, list):
-                continue
             fields: dict[str, str] = {}
-            for index in range(0, len(raw_fields) - 1, 2):
-                fields[str(raw_fields[index])] = str(raw_fields[index + 1])
+            if isinstance(raw_fields, dict):
+                for key, value in raw_fields.items():
+                    fields[str(key)] = str(value)
+            elif isinstance(raw_fields, (list, tuple)):
+                for index in range(0, len(raw_fields) - 1, 2):
+                    fields[str(raw_fields[index])] = str(raw_fields[index + 1])
+            else:
+                continue
             messages.append(RedisStreamMessage(message_id, fields))
     return messages
 
@@ -237,13 +239,13 @@ class ScanConsumerRuntime:
 
 
 class RedisStreamClient:
-    def __init__(self, redis_url: str) -> None:
-        self.target = parse_redis_target(redis_url)
+    def __init__(self, redis_client: Any) -> None:
+        self.redis_client = redis_client
 
     async def ensure_group(self, stream_key: str, group_name: str) -> None:
         try:
-            await self._command(["XGROUP", "CREATE", stream_key, group_name, "0", "MKSTREAM"])
-        except ValueError as exc:
+            await self.redis_client.xgroup_create(stream_key, group_name, id="0", mkstream=True)
+        except Exception as exc:
             if "BUSYGROUP" not in str(exc):
                 raise
 
@@ -256,20 +258,12 @@ class RedisStreamClient:
         count: int,
         block_ms: int,
     ) -> list[RedisStreamMessage]:
-        payload = await self._command(
-            [
-                "XREADGROUP",
-                "GROUP",
-                group_name,
-                consumer_name,
-                "COUNT",
-                str(count),
-                "BLOCK",
-                str(block_ms),
-                "STREAMS",
-                stream_key,
-                ">",
-            ]
+        payload = await self.redis_client.xreadgroup(
+            group_name,
+            consumer_name,
+            {stream_key: ">"},
+            count=count,
+            block_ms=block_ms,
         )
         return parse_stream_messages(payload)
 
@@ -283,49 +277,26 @@ class RedisStreamClient:
         start_id: str,
         count: int,
     ) -> tuple[str, list[RedisStreamMessage]]:
-        payload = await self._command(
-            [
-                "XAUTOCLAIM",
-                stream_key,
-                group_name,
-                consumer_name,
-                str(min_idle_ms),
-                start_id,
-                "COUNT",
-                str(count),
-            ]
+        payload = await self.redis_client.xautoclaim(
+            stream_key,
+            group_name,
+            consumer_name,
+            min_idle_ms=min_idle_ms,
+            start_id=start_id,
+            count=count,
         )
-        if not isinstance(payload, list) or len(payload) < 2:
+        if not isinstance(payload, (list, tuple)) or len(payload) < 2:
             return "0-0", []
         return str(payload[0]), _parse_autoclaim_messages(payload[1])
 
     async def ack(self, stream_key: str, group_name: str, message_id: str) -> None:
-        await self._command(["XACK", stream_key, group_name, message_id])
+        await self.redis_client.xack(stream_key, group_name, message_id)
 
     async def add(self, stream_key: str, fields: dict[str, str]) -> str:
-        arguments = ["XADD", stream_key, "*"]
-        for key, value in fields.items():
-            arguments.extend([key, value])
-        response = await self._command(arguments)
-        return str(response)
-
-    async def _command(self, arguments: list[str]) -> Any:
-        reader, writer = await open_redis_connection(self.target)
-        try:
-            writer.write(encode_resp_command(arguments))
-            await writer.drain()
-            response = await read_resp(reader)
-            return response
-        finally:
-            writer.close()
-            await writer.wait_closed()
+        return await self.redis_client.xadd(stream_key, fields)
 
 
 def _parse_autoclaim_messages(payload: Any) -> list[RedisStreamMessage]:
-    if not isinstance(payload, list):
+    if not isinstance(payload, (list, tuple)):
         return []
     return parse_stream_messages([["", payload]])
-
-
-async def _read_resp(reader: asyncio.StreamReader) -> Any:
-    return await read_resp(reader)

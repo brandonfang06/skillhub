@@ -23,6 +23,11 @@ data:
   redis-host: redis.example.internal
   redis-port: "6379"
   redis-database: "0"
+  redis-sentinel-master: ""
+  redis-sentinel-nodes: ""
+  redis-ssl-enabled: "false"
+  redis-connect-timeout: PT5S
+  redis-timeout: PT5S
   public-base-url: ""
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000

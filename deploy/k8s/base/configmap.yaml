@@ -22,6 +22,11 @@ data:
   redis-host: redis.example.internal
   redis-port: "6379"
   redis-database: "0"
+  redis-sentinel-master: ""
+  redis-sentinel-nodes: ""
+  redis-ssl-enabled: "false"
+  redis-connect-timeout: PT5S
+  redis-timeout: PT5S
 
   # Public URL used for OAuth callback construction. Set this to the external
   # HTTPS origin when ingress is configured, for example https://skills.example.com.

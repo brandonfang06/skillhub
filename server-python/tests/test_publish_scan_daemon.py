@@ -63,6 +63,10 @@ class FakeScanner:
     pass
 
 
+class FakeRedisClient:
+    pass
+
+
 def test_scan_consumer_settings_are_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in [
         "SKILLHUB_SCAN_CONSUMER_ENABLED",
@@ -178,7 +182,7 @@ def test_create_scan_consumer_daemon_returns_none_when_disabled(monkeypatch: pyt
     monkeypatch.delenv("SKILLHUB_SCAN_CONSUMER_ENABLED", raising=False)
     settings = get_settings()
 
-    assert create_scan_consumer_daemon(settings, FakeEngine()) is None
+    assert create_scan_consumer_daemon(settings, FakeEngine(), FakeRedisClient()) is None
 
 
 def test_create_scan_consumer_daemon_uses_settings_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -194,9 +198,11 @@ def test_create_scan_consumer_daemon_uses_settings_when_enabled(monkeypatch: pyt
     monkeypatch.setenv("SKILLHUB_SCANNER_USE_TRIGGER", "true")
     settings = get_settings()
 
-    daemon = create_scan_consumer_daemon(settings, FakeEngine())
+    redis_client = FakeRedisClient()
+    daemon = create_scan_consumer_daemon(settings, FakeEngine(), redis_client)
 
     assert daemon is not None
+    assert daemon.runtime.redis.redis_client is redis_client
     assert daemon.read_count == settings.scan_consumer_read_count
     assert daemon.block_ms == settings.scan_consumer_block_ms
     assert daemon.scanner.options.use_behavioral is False

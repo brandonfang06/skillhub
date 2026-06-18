@@ -76,6 +76,7 @@ Deployment switch images with fewer Secret/ConfigMap changes.
 | --- | --- | --- |
 | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | `SKILLHUB_DATABASE_URL` | Java JDBC PostgreSQL URLs are converted to `postgresql+asyncpg://...`. |
 | `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT`, `SPRING_DATA_REDIS_PASSWORD`, `SPRING_DATA_REDIS_DATABASE` | `SKILLHUB_REDIS_URL` or the same Spring names | `SKILLHUB_REDIS_URL`, when non-empty, wins. |
+| `SPRING_DATA_REDIS_SENTINEL_MASTER`, `SPRING_DATA_REDIS_SENTINEL_NODES` | Same names | Python uses Redis Sentinel master discovery when `SKILLHUB_REDIS_URL` is empty and both Sentinel values are present. |
 | `SESSION_COOKIE_SECURE` | `SKILLHUB_SESSION_COOKIE_SECURE` | Both are accepted. |
 | `SKILLHUB_SECURITY_SCANNER_URL` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Both are accepted. |
 | `SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT`, `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT` | `..._CONNECT_TIMEOUT_MS`, `..._READ_TIMEOUT_MS` | Both use milliseconds. |
@@ -107,6 +108,8 @@ Edit these required Secret values:
 | --- | --- |
 | `database-url` | Feeds `SKILLHUB_DATABASE_URL`. PostgreSQL SQLAlchemy async URL, for example `postgresql+asyncpg://skillhub:password@postgres.example.internal:5432/skillhub`. URL-encode special characters. |
 | `redis-password` | Feeds `SPRING_DATA_REDIS_PASSWORD`. Leave empty only when Redis has no password. |
+| `redis-username` | Feeds optional `SPRING_DATA_REDIS_USERNAME` for Redis ACL deployments. |
+| `redis-sentinel-password` | Feeds optional `SPRING_DATA_REDIS_SENTINEL_PASSWORD`. Set it when Sentinel itself requires AUTH; with Bitnami this is commonly the same as `redis-password`. |
 | `redis-url` | Feeds optional `SKILLHUB_REDIS_URL`. If non-empty, it wins over `redis-host`, `redis-port`, `redis-database`, and `redis-password`. |
 | `storage-s3-access-key` | Feeds `SKILLHUB_STORAGE_S3_ACCESS_KEY`. MinIO/S3 access key. |
 | `storage-s3-secret-key` | Feeds `SKILLHUB_STORAGE_S3_SECRET_KEY`. MinIO/S3 secret key. |
@@ -121,6 +124,9 @@ Edit these common ConfigMap values:
 | `redis-host` | `SPRING_DATA_REDIS_HOST` | External Redis hostname. |
 | `redis-port` | `SPRING_DATA_REDIS_PORT` | External Redis port. |
 | `redis-database` | `SPRING_DATA_REDIS_DATABASE` | Redis logical database number. |
+| `redis-sentinel-master` | `SPRING_DATA_REDIS_SENTINEL_MASTER` | Optional Redis Sentinel master name, for example `mymaster`. |
+| `redis-sentinel-nodes` | `SPRING_DATA_REDIS_SENTINEL_NODES` | Optional comma-separated Sentinel nodes on port `26379`. With Bitnami Redis Sentinel, use the chart Redis service `26379` port or explicit headless Pod DNS entries after confirming names with `kubectl get svc,endpoints`. |
+| `redis-ssl-enabled` | `SPRING_DATA_REDIS_SSL_ENABLED` | Set `true` only when Redis/Sentinel requires TLS. |
 | `storage-s3-endpoint` | `SKILLHUB_STORAGE_S3_ENDPOINT` | MinIO/S3 API endpoint. |
 | `storage-s3-proxy-endpoint` | `SKILLHUB_STORAGE_S3_PROXY_ENDPOINT` | Optional proxy endpoint used by the backend when it must reach MinIO through a proxy. |
 | `storage-s3-public-endpoint` | `SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT` | Optional public endpoint used for generated object URLs. |

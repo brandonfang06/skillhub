@@ -34,6 +34,7 @@ from app.bootstrap import initialize_bootstrap_admin
 from app.builtin_skills import synchronize_builtin_skills
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
+from app.core.redis import create_redis_client
 from app.core.request_id import RequestIdMiddleware
 from app.notifications.fanout import NotificationFanoutManager
 from app.publish.scan_daemon import create_scan_consumer_daemon
@@ -56,12 +57,13 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.db_engine = create_database_engine(settings)
+    app.state.redis_client = create_redis_client(settings)
     await initialize_bootstrap_admin(app.state.db_engine)
     app.state.builtin_skill_sync_task = asyncio.create_task(
         run_builtin_skill_sync(app.state.db_engine, settings)
     )
     app.state.notification_fanout = NotificationFanoutManager()
-    app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine)
+    app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine, app.state.redis_client)
     if app.state.scan_consumer_daemon is not None:
         app.state.scan_consumer_daemon.start()
     try:
@@ -72,6 +74,7 @@ async def lifespan(app: FastAPI):
             await app.state.builtin_skill_sync_task
         if app.state.scan_consumer_daemon is not None:
             await app.state.scan_consumer_daemon.shutdown()
+        await app.state.redis_client.aclose()
         await dispose_database_engine(app.state.db_engine)
 
 

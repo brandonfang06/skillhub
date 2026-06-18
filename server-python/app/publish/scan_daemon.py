@@ -85,7 +85,7 @@ class ScanConsumerDaemon:
                 await asyncio.sleep(self.error_sleep_seconds)
 
 
-def create_scan_consumer_daemon(settings: Settings, engine: Any) -> ScanConsumerDaemon | None:
+def create_scan_consumer_daemon(settings: Settings, engine: Any, redis_client: Any) -> ScanConsumerDaemon | None:
     if not settings.scan_consumer_enabled:
         logger.info("Scan consumer daemon disabled")
         return None
@@ -98,7 +98,7 @@ def create_scan_consumer_daemon(settings: Settings, engine: Any) -> ScanConsumer
         settings.scanner_base_url,
     )
     runtime = ScanConsumerRuntime(
-        RedisStreamClient(settings.redis_url),
+        RedisStreamClient(redis_client),
         stream_key=settings.scan_stream_key,
         group_name=settings.scan_consumer_group_name,
         consumer_name=settings.scan_consumer_name,

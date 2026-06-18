@@ -113,23 +113,12 @@ async def read_resp(reader: asyncio.StreamReader) -> Any:
 
 
 class RedisScanTaskPublisher:
-    def __init__(self, redis_url: str, stream_key: str = DEFAULT_SCAN_STREAM_KEY) -> None:
-        self.target = parse_redis_target(redis_url)
+    def __init__(self, redis_client: Any, stream_key: str = DEFAULT_SCAN_STREAM_KEY) -> None:
+        self.redis_client = redis_client
         self.stream_key = stream_key
 
     async def publish_scan_task(self, task: ScanTaskPayload) -> None:
         fields = build_scan_stream_fields(task)
-        arguments = ["XADD", self.stream_key, "*"]
-        for key, value in fields.items():
-            arguments.extend([key, value])
-
-        reader, writer = await open_redis_connection(self.target)
-        try:
-            writer.write(encode_resp_command(arguments))
-            await writer.drain()
-            response = await read_resp(reader)
-            if response is None:
-                raise ValueError("Redis XADD returned null")
-        finally:
-            writer.close()
-            await writer.wait_closed()
+        response = await self.redis_client.xadd(self.stream_key, fields)
+        if response is None:
+            raise ValueError("Redis XADD returned null")

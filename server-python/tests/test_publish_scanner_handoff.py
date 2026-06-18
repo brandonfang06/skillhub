@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from app.publish.scanner_handoff import build_scan_stream_fields, encode_resp_command
+import pytest
+
+from app.publish.scanner_handoff import RedisScanTaskPublisher, build_scan_stream_fields, encode_resp_command
 from app.publish.side_effects import ScanTaskPayload
 
 
@@ -38,3 +40,21 @@ def test_encode_resp_command_uses_bulk_string_arguments() -> None:
         b"$6\r\ntaskId\r\n"
         b"$6\r\ntask-1\r\n"
     )
+
+
+@pytest.mark.anyio
+async def test_redis_scan_task_publisher_uses_shared_client() -> None:
+    class FakeRedisClient:
+        def __init__(self) -> None:
+            self.added: list[tuple[str, dict[str, str]]] = []
+
+        async def xadd(self, stream_key: str, fields: dict[str, str]) -> str:
+            self.added.append((stream_key, fields))
+            return "1781-0"
+
+    redis_client = FakeRedisClient()
+    publisher = RedisScanTaskPublisher(redis_client, "skillhub:scan:requests")
+
+    await publisher.publish_scan_task(scan_task())
+
+    assert redis_client.added == [("skillhub:scan:requests", build_scan_stream_fields(scan_task()))]

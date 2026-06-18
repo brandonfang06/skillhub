@@ -7,6 +7,7 @@ import pytest
 
 from app.publish.scan_consumer import (
     MAX_SCAN_RETRY_COUNT,
+    RedisStreamClient,
     RedisStreamMessage,
     ScanConsumerRuntime,
     build_retry_stream_fields,
@@ -78,6 +79,66 @@ def test_parse_stream_messages_reads_xreadgroup_shape() -> None:
     messages = parse_stream_messages(payload)
 
     assert messages == [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})]
+
+
+def test_parse_stream_messages_reads_redis_py_shape() -> None:
+    payload = [("skillhub:scan:requests", [("1780-0", {"taskId": "task-1", "versionId": "202"})])]
+
+    messages = parse_stream_messages(payload)
+
+    assert messages == [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})]
+
+
+@pytest.mark.anyio
+async def test_redis_stream_client_uses_shared_client() -> None:
+    class FakeSharedRedis:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+        async def xgroup_create(self, *args: object, **kwargs: object) -> None:
+            self.calls.append(("xgroup_create", args, kwargs))
+
+        async def xreadgroup(self, *args: object, **kwargs: object) -> object:
+            self.calls.append(("xreadgroup", args, kwargs))
+            return [("skillhub:scan:requests", [("1780-0", {"taskId": "task-1", "versionId": "202"})])]
+
+        async def xautoclaim(self, *args: object, **kwargs: object) -> object:
+            self.calls.append(("xautoclaim", args, kwargs))
+            return ("0-0", [("1780-0", {"taskId": "task-1", "versionId": "202"})])
+
+        async def xack(self, *args: object, **kwargs: object) -> None:
+            self.calls.append(("xack", args, kwargs))
+
+        async def xadd(self, *args: object, **kwargs: object) -> str:
+            self.calls.append(("xadd", args, kwargs))
+            return "1781-0"
+
+    shared = FakeSharedRedis()
+    client = RedisStreamClient(shared)
+
+    await client.ensure_group("skillhub:scan:requests", "skillhub-scan-workers")
+    messages = await client.read_group(
+        "skillhub:scan:requests",
+        "skillhub-scan-workers",
+        "consumer-1",
+        count=10,
+        block_ms=2000,
+    )
+    reclaimed = await client.reclaim_pending(
+        "skillhub:scan:requests",
+        "skillhub-scan-workers",
+        "consumer-1",
+        min_idle_ms=120000,
+        start_id="0-0",
+        count=20,
+    )
+    await client.ack("skillhub:scan:requests", "skillhub-scan-workers", "1780-0")
+    added = await client.add("skillhub:scan:requests", {"taskId": "task-2"})
+
+    assert messages == [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})]
+    assert reclaimed == ("0-0", [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})])
+    assert added == "1781-0"
+    assert [call[0] for call in shared.calls] == ["xgroup_create", "xreadgroup", "xautoclaim", "xack", "xadd"]
 
 
 def test_build_retry_stream_fields_preserves_java_task_shape() -> None:

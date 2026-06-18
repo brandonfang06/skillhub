@@ -10,8 +10,9 @@ from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Uploa
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles, require_api_token_scope
 from app.core.config import get_settings
-from app.object_storage import object_storage_for_settings
 from app.core.response import ok
+from app.core.redis import create_redis_client
+from app.object_storage import object_storage_for_settings
 from app.publish.dry_run import (
     PublishDryRunInput,
     PublishDryRunRepository,
@@ -206,7 +207,11 @@ async def run_publish_write(request: Request, write_input: PublishWriteInput) ->
     scan_task_publisher = getattr(request.app.state, "publish_scan_task_publisher", None)
     if write_input.scanner_enabled and scan_task_publisher is None:
         settings = getattr(request.app.state, "settings", get_settings())
-        scan_task_publisher = RedisScanTaskPublisher(settings.redis_url, settings.scan_stream_key)
+        redis_client = getattr(request.app.state, "redis_client", None)
+        if redis_client is None:
+            redis_client = create_redis_client(settings)
+            request.app.state.redis_client = redis_client
+        scan_task_publisher = RedisScanTaskPublisher(redis_client, settings.scan_stream_key)
     return await execute_publish_write(
         request.app.state.db_engine,
         write_input,

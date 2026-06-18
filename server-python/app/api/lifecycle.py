@@ -16,6 +16,7 @@ from app.auth.policy import (
     require_platform_role,
 )
 from app.core.response import ok
+from app.core.redis import create_redis_client
 from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
     SkillArchiveInput,
@@ -367,7 +368,11 @@ async def rerelease_route_data(
     writer = getattr(request.app.state, "skill_rerelease_writer", None)
     publish_writer = None
     if writer is None and rerelease_input.scanner_enabled:
-        scan_task_publisher = RedisScanTaskPublisher(settings.redis_url, settings.scan_stream_key)
+        redis_client = getattr(request.app.state, "redis_client", None)
+        if redis_client is None:
+            redis_client = create_redis_client(settings)
+            request.app.state.redis_client = redis_client
+        scan_task_publisher = RedisScanTaskPublisher(redis_client, settings.scan_stream_key)
 
         async def publish_writer(write_input: Any) -> Any:
             return await execute_publish_write(

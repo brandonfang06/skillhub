@@ -6,7 +6,6 @@ import secrets
 from typing import Any, Protocol
 
 from app.auth.tokens import create_api_token
-from app.publish.scanner_handoff import encode_resp_command, open_redis_connection, parse_redis_target, read_resp
 
 DEVICE_CODE_PREFIX = "device:code:"
 DEVICE_CLAIM_PREFIX = "device:claim:"
@@ -33,32 +32,20 @@ class DeviceRedis(Protocol):
 
 
 class RedisDeviceStore:
-    def __init__(self, redis_url: str) -> None:
-        self.target = parse_redis_target(redis_url)
+    def __init__(self, redis_client: Any) -> None:
+        self.redis_client = redis_client
 
     async def get(self, key: str) -> str | None:
-        response = await self._command(["GET", key])
-        return None if response is None else str(response)
+        return await self.redis_client.get(key)
 
     async def set(self, key: str, value: str, ttl_seconds: int) -> None:
-        await self._command(["SET", key, value, "EX", str(ttl_seconds)])
+        await self.redis_client.set(key, value, ex=ttl_seconds)
 
     async def set_if_absent(self, key: str, value: str, ttl_seconds: int) -> bool:
-        response = await self._command(["SET", key, value, "NX", "EX", str(ttl_seconds)])
-        return str(response).upper() == "OK"
+        return bool(await self.redis_client.set(key, value, ex=ttl_seconds, nx=True))
 
     async def delete(self, key: str) -> None:
-        await self._command(["DEL", key])
-
-    async def _command(self, arguments: list[str]) -> Any:
-        reader, writer = await open_redis_connection(self.target)
-        try:
-            writer.write(encode_resp_command(arguments))
-            await writer.drain()
-            return await read_resp(reader)
-        finally:
-            writer.close()
-            await writer.wait_closed()
+        await self.redis_client.delete(key)
 
 
 def generate_random_device_code() -> str:

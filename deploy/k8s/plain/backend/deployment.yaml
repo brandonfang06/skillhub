@@ -52,11 +52,59 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: redis-database
+            - name: SPRING_DATA_REDIS_SENTINEL_MASTER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-master
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_NODES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-nodes
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-sentinel-username
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-sentinel-password
+                  optional: true
+            - name: SPRING_DATA_REDIS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-username
+                  optional: true
             - name: SPRING_DATA_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: skillhub-secret
                   key: redis-password
+                  optional: true
+            - name: SPRING_DATA_REDIS_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-ssl-enabled
+                  optional: true
+            - name: SPRING_DATA_REDIS_CONNECT_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-connect-timeout
+                  optional: true
+            - name: SPRING_DATA_REDIS_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-timeout
                   optional: true
             - name: SKILLHUB_STORAGE_PROVIDER
               valueFrom:

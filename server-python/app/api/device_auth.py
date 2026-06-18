@@ -18,6 +18,7 @@ from app.auth.device import (
     poll_device_token,
 )
 from app.core.response import ok
+from app.core.redis import create_redis_client
 
 router = APIRouter()
 
@@ -32,7 +33,11 @@ def _redis(request: Request) -> RedisDeviceStore:
     configured = getattr(request.app.state, "device_auth_redis", None)
     if configured is not None:
         return configured
-    return RedisDeviceStore(request.app.state.settings.redis_url)
+    redis_client = getattr(request.app.state, "redis_client", None)
+    if redis_client is None:
+        redis_client = create_redis_client(request.app.state.settings)
+        request.app.state.redis_client = redis_client
+    return RedisDeviceStore(redis_client)
 
 
 async def record_device_authorize_audit(
