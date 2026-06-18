@@ -67,7 +67,7 @@ async def download_clawhub_skill_by_query(
     version: str | None = "latest",
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> RedirectResponse:
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         namespace, skill_slug = await resolve_clawhub_download_coordinate(request, slug, current_user_id)
     except SkillResolveError as exc:
@@ -253,7 +253,7 @@ async def resolve_cli_skill(
     version: str | None = None,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "skill_resolve_reader", None)
     try:
         if reader is not None:
@@ -435,7 +435,7 @@ async def compare_skill_versions(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_compare_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, from_version, to_version, current_user_id))
@@ -464,7 +464,7 @@ async def get_skill_version_detail(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_detail_reader", None)
-    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -493,7 +493,7 @@ async def list_skill_versions(
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_versions_reader", None)
     page, size = normalize_page_request(page, size)
-    current_user_id = mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, page, size, current_user_id))
@@ -514,7 +514,7 @@ async def list_skill_version_files(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_files_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -541,7 +541,7 @@ async def list_skill_tag_files(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_tag_files_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, tagName, current_user_id))
@@ -650,7 +650,7 @@ async def get_skill_version_file_content(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_version_file_content_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             content = await _resolve_reader_result(reader(namespace, slug, version, path, current_user_id))

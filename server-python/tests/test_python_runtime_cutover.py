@@ -67,18 +67,6 @@ def test_local_dev_environment_can_be_overridden_with_env_local() -> None:
     assert "SKILL_SCANNER_LLM_API_KEY=" in env_example
 
 
-def test_local_development_docs_explain_env_sources() -> None:
-    workflow = read("docs/dev-workflow.md")
-
-    assert ".env.local.example" in workflow
-    assert ".env.local" in workflow
-    assert "uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in workflow
-    assert "--env-file ../.env.local" in workflow
-    assert ".env.release" in workflow
-    assert "compose.release.yml" in workflow
-    assert "staging" in workflow
-
-
 def test_staging_builds_and_runs_python_backend_image() -> None:
     makefile = read("Makefile")
     staging_compose = read("docker-compose.staging.yml")

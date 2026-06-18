@@ -61,6 +61,39 @@ class _TagFilesConnection:
         raise AssertionError(f"unexpected SQL: {sql}")
 
 
+class _VersionFilesOwnerPreviewWithoutLatestConnection:
+    async def execute(self, statement: object, params: dict[str, object] | None = None) -> _FakeResult:
+        sql = str(statement)
+        if "FROM skill s" in sql:
+            assert "s.latest_version_id IS NOT NULL" not in sql
+            return _FakeResult(
+                {
+                    "id": 11,
+                    "owner_id": "owner-1",
+                    "namespace_id": 7,
+                    "visibility": "PUBLIC",
+                    "latest_version_id": None,
+                }
+            )
+        if "FROM namespace_member" in sql:
+            return _FakeResult(None)
+        if "FROM skill_version" in sql:
+            return _FakeResult({"id": 101, "status": "PENDING_REVIEW"})
+        if "FROM skill_file" in sql:
+            return _FakeResult(
+                [
+                    {
+                        "id": 201,
+                        "file_path": "SKILL.md",
+                        "file_size": 10,
+                        "content_type": "text/markdown",
+                        "sha256": "hash",
+                    }
+                ]
+            )
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+
 class _FakeConnectionContext:
     def __init__(self, connection: object) -> None:
         self.connection = connection
@@ -200,6 +233,60 @@ def test_skill_version_files_route_forwards_blank_current_user_as_none() -> None
 
     assert response.status_code == 200
     assert seen == [None]
+
+
+def test_skill_version_files_route_uses_session_principal_for_owner_preview() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.local_auth_login = lambda payload: {
+        "userId": "owner-1",
+        "displayName": "Owner One",
+        "email": "owner@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+
+    def reader(
+        namespace: str,
+        slug: str,
+        version: str,
+        current_user_id: str | None,
+    ) -> list[dict[str, object]]:
+        seen.append(current_user_id)
+        return files_response()
+
+    app.state.skill_version_files_reader = reader
+    client = TestClient(app)
+    client.post("/api/v1/auth/local/login", json={"username": "owner", "password": "Abcd123!"})
+
+    response = client.get("/api/web/skills/global/demo/versions/1.0.0/files")
+
+    assert response.status_code == 200
+    assert seen == ["owner-1"]
+
+
+def test_read_skill_version_files_allows_owner_preview_without_latest_pointer() -> None:
+    result = asyncio.run(
+        skills.read_skill_version_files(
+            _FakeEngine(_VersionFilesOwnerPreviewWithoutLatestConnection()),
+            "global",
+            "demo",
+            "1.0.0",
+            "owner-1",
+        )
+    )
+
+    assert result == [
+        {
+            "id": 201,
+            "filePath": "SKILL.md",
+            "fileSize": 10,
+            "contentType": "text/markdown",
+            "sha256": "hash",
+        }
+    ]
+
 
 def test_skill_tag_files_route_forwards_params_and_current_user_to_reader() -> None:
     seen: list[tuple[str, str, str, str | None]] = []

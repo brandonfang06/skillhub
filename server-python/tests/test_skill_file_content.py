@@ -34,13 +34,14 @@ class _VersionFileContentConnection:
         sql = str(statement)
         if "FROM skill s" in sql:
             assert "s.visibility = 'PUBLIC'" not in sql
+            assert "s.latest_version_id IS NOT NULL" not in sql
             return _FakeResult(
                 {
                     "id": 11,
                     "owner_id": "owner-1",
                     "namespace_id": 7,
                     "visibility": "PRIVATE",
-                    "latest_version_id": 101,
+                    "latest_version_id": None,
                 }
             )
         if "FROM namespace_member" in sql:
@@ -216,6 +217,41 @@ def test_skill_version_file_content_web_alias_forwards_params_and_current_user()
     assert seen == [("team", "demo", "1.1.0", "src/app.py", "owner-1")]
 
 
+def test_skill_version_file_content_route_uses_session_principal_for_owner_preview() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.local_auth_login = lambda payload: {
+        "userId": "owner-1",
+        "displayName": "Owner One",
+        "email": "owner@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+
+    def reader(
+        namespace: str,
+        slug: str,
+        version: str,
+        file_path: str,
+        current_user_id: str | None,
+    ) -> bytes:
+        seen.append(current_user_id)
+        return b"# readme"
+
+    app.state.skill_version_file_content_reader = reader
+    client = TestClient(app)
+    client.post("/api/v1/auth/local/login", json={"username": "owner", "password": "Abcd123!"})
+
+    response = client.get(
+        "/api/web/skills/global/demo/versions/1.0.0/file",
+        params={"path": "SKILL.md"},
+    )
+
+    assert response.status_code == 200
+    assert seen == ["owner-1"]
+
+
 def test_skill_tag_file_content_route_forwards_params_and_current_user() -> None:
     seen: list[tuple[str, str, str, str, str | None]] = []
     app = create_app()
@@ -372,7 +408,9 @@ def test_read_file_content_from_row_maps_missing_storage_to_file_not_found(tmp_p
         read_file_content_from_row(str(tmp_path), {"file_path": "missing.md", "storage_key": "objects/missing.md"})
 
 
-def test_read_skill_version_file_content_does_not_hardcode_public_skill_visibility(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_read_skill_version_file_content_allows_owner_preview_without_latest_pointer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(skill_repository, "read_file_content_from_row", lambda storage_base_path, file_row: b"preview")
 
     result = asyncio.run(

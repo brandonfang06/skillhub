@@ -1083,14 +1083,13 @@ async def read_skill_versions(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1104,6 +1103,7 @@ async def read_skill_versions(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         visible_statuses = lifecycle_visible_statuses(can_manage)
         status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
@@ -1152,14 +1152,13 @@ async def read_skill_version_detail(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1173,6 +1172,7 @@ async def read_skill_version_detail(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         row = (
             await connection.execute(
@@ -1665,7 +1665,6 @@ async def read_skill_version_files(
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1753,7 +1752,6 @@ async def read_skill_version_compare(
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -1866,7 +1864,6 @@ async def read_skill_tag_files(
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
@@ -2238,7 +2235,6 @@ async def read_skill_version_file_content(
                       AND n.status = 'ACTIVE'
                       AND s.slug = :slug
                       AND s.status = 'ACTIVE'
-                      AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
                     ORDER BY s.id ASC
                     LIMIT 1
