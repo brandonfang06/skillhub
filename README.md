@@ -48,7 +48,7 @@ firewall, with the same polish you'd expect from a public registry.
 
 - **Self-Hosted & Private** — Deploy on your own infrastructure.
   Keep proprietary skills behind your firewall with full data
-  sovereignty. One `make dev-all` command to get running locally.
+  sovereignty. Run the Python backend locally with `uv`.
 - **Publish & Version** — Upload agent skill packages with semantic
   versioning, custom tags (`beta`, `stable`), and automatic
   `latest` tracking.
@@ -135,8 +135,17 @@ skillhub list
 
 ### Local Development
 
+Start dependency containers:
+
 ```bash
-make dev-all
+docker compose up -d postgres redis minio skill-scanner
+```
+
+Start the Python backend with `uv`:
+
+```bash
+cd server-python
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 ```
 
 > **For developers in China**: use the release/runtime mirror documented in the local development guide if dependency or image downloads are slow.
@@ -144,9 +153,9 @@ make dev-all
 Then open:
 
 - Web UI: `http://localhost:3000`
-- Backend API: `http://localhost:8080`
+- Backend API: `http://localhost:8081`
 
-By default, `make dev-all` starts the backend with the `local` profile.
+By default, the local backend starts with the `local` profile.
 In that mode, local development keeps the mock-auth users below and also
 creates a password-based bootstrap admin account by default:
 
@@ -161,16 +170,23 @@ The local bootstrap admin is enabled by default in `application-local.yml`:
 - password: `ChangeMe!2026`
 - To disable it, set `BOOTSTRAP_ADMIN_ENABLED=false` before starting the backend.
 
+Local development is zero-config by default. To override local dependency or
+backend settings, copy `.env.local.example` to `.env.local`; pass it to Docker
+Compose with `--env-file .env.local` and to the Python backend with
+`uv run uvicorn ... --env-file ../.env.local`.
+Use `.env.release.example` / `.env.release` only for the release Compose
+runtime.
+
 Stop everything with:
 
 ```bash
-make dev-all-down
+docker compose down
 ```
 
 Reset local dependencies and start from a clean slate with:
 
 ```bash
-make dev-all-reset
+docker compose down -v
 ```
 
 Run `make help` to see all available commands.
@@ -272,7 +288,7 @@ docker compose --env-file .env.release -f compose.release.yml down
 ```
 
 The runtime stack uses its own Compose project name, so it does not
-collide with containers from `make dev-all`.
+collide with local dependency containers.
 
 The production Compose stack now defaults to the `docker` profile only.
 It does not enable local mock auth. The release template (`.env.release.example`)

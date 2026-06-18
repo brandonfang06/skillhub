@@ -5,7 +5,7 @@ This document describes the recommended workflow for developing SkillHub locally
 ## Prerequisites
 
 - Docker Desktop (for dependency services and staging)
-- Java 21 (for running the backend locally)
+- Python 3.12 and `uv` (for running the backend locally)
 - Node.js 22 + pnpm (for running the frontend locally)
 - `gh` CLI (for creating pull requests): https://cli.github.com/
 
@@ -13,32 +13,84 @@ This document describes the recommended workflow for developing SkillHub locally
 
 Use this stage for active development — writing code, fixing bugs, iterating quickly.
 
-### Start the full local stack
+### Start the local stack
+
+Start dependency containers:
 
 ```bash
-make dev-all
+docker compose up -d postgres redis minio skill-scanner
+```
+
+Start the Python backend with `uv`:
+
+```bash
+cd server-python
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+```
+
+Start the frontend:
+
+```bash
+cd web
+pnpm dev
 ```
 
 This starts:
 - Dependency services (Postgres, Redis, MinIO) via Docker
-- Backend (Spring Boot) directly on your machine at http://localhost:8080
+- Backend (FastAPI) directly on your machine at http://localhost:8081
 - Frontend (Vite) directly on your machine at http://localhost:3000
 
 SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `5432`, `6379`, and `9000`.
+
+### Local environment variables
+
+Local development is zero-config by default. Run dependency containers from
+`docker-compose.yml`, run the Python backend directly with `uv`, and run Vite
+from `web/`.
+
+To override local values, copy the template and edit the ignored file:
+
+```bash
+cp .env.local.example .env.local
+```
+
+When `.env.local` exists:
+
+- `docker-compose.yml` receives it through `docker compose --env-file .env.local`
+  for dependency settings such as PostgreSQL, Redis, MinIO, and scanner LLM
+  variables.
+- The Python backend receives it through `uv run uvicorn ... --env-file ../.env.local`.
+- `.env.local` can override bootstrap admin, scanner upload mode, and scan
+  consumer behavior.
+
+Use `.env.local` for local-only changes such as Redis password testing,
+MinIO/S3 adapter testing, Keycloak/OIDC client settings, and scanner LLM
+credentials. Do not commit `.env.local`; commit only `.env.local.example`.
+
+Environment source summary:
+
+| Runtime | Env source | Notes |
+| --- | --- | --- |
+| Local backend | Optional `.env.local` via `uv run uvicorn ... --env-file ../.env.local` | FastAPI backend running on the host. |
+| Local dependencies | Optional `.env.local` via `docker compose --env-file .env.local` | PostgreSQL, Redis, MinIO, and scanner containers from `docker-compose.yml`. |
+| `make staging` | `docker-compose.yml` + `docker-compose.staging.yml` | Builds local backend image and frontend static files; does not use `.env.release`. |
+| Release compose | `.env.release` + `compose.release.yml` | Container runtime path for manual deployment or release validation. |
 
 ### Backend restarts
 
 **Frontend:** Vite HMR is enabled by default. Save a file and the browser updates instantly.
 
-**Backend:** the local server now runs from a packaged Spring Boot jar instead of `spring-boot:run`. This avoids mixed classpaths across `skillhub-app`, `skillhub-auth`, `skillhub-domain`, and other sibling modules.
+**Backend:** the local server runs the Python FastAPI app from `server-python/`.
 
 After editing backend code, restart the backend explicitly:
 
 ```bash
-make dev-server-restart
+cd server-python
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 ```
 
-If you are running the server in a foreground terminal instead of `make dev-all`, stop it and run `make dev-server` again. Expect a full restart in about 5-10 seconds, including rebuilding the backend modules.
+If you use `.env.local`, include `--env-file ../.env.local`. Stop the foreground
+server and run the command again when you need a clean restart.
 
 ### Mock authentication
 
@@ -62,13 +114,13 @@ or the Compose environment.
 
 | Command                          | Description                      |
 |----------------------------------|----------------------------------|
-| `make dev-all`                   | Start full local stack           |
-| `make dev-all-down`              | Stop all local services          |
+| `docker compose up -d postgres redis minio skill-scanner` | Start local dependency services |
+| `cd server-python; uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload` | Start backend locally |
+| `docker compose down`            | Stop local dependency services   |
 | `make dev-status`                | Check status of all services     |
 | `make dev-logs`                  | Tail backend logs                |
 | `SERVICE=frontend make dev-logs` | Tail frontend logs               |
-| `make dev-all-reset`             | Full reset (clears data volumes) |
-| `make dev-server-restart`        | Restart backend after Java changes |
+| `docker compose down -v`         | Full reset of local dependency volumes |
 | `make namespace-smoke`           | Run namespace workflow smoke test |
 | `make db-reset`                  | Reset database only              |
 
@@ -98,7 +150,7 @@ If you need to inspect or resolve merge conflicts before starting the app, you c
 ```bash
 cd ../skillhub-integration-legal-pages
 make parallel-sync
-make dev-all
+docker compose up -d postgres redis minio skill-scanner
 ```
 
 See [13-parallel-workflow.md](./13-parallel-workflow.md) for the full workflow, responsibilities, merge rules, and recovery guidance.
@@ -166,7 +218,9 @@ The PR title and body are auto-populated from your commit messages.
 ## Full workflow summary
 
 ```
-make dev-all          # start local dev
+docker compose up -d postgres redis minio skill-scanner
+cd server-python
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 # ... write code, test in browser ...
 make staging          # regression test in Docker
 make staging-down     # stop staging

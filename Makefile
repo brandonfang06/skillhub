@@ -9,17 +9,21 @@ DEV_WEB_URL := http://localhost:3000
 DEV_API_URL := http://localhost:8080
 DEV_PYTHON_URL := http://localhost:8081
 DEV_SCANNER_URL := http://localhost:8000
+DEV_ENV_FILE := .env.local
+DEV_ENV_SOURCE := set -a; if [ -f ../$(DEV_ENV_FILE) ]; then . ../$(DEV_ENV_FILE); fi; set +a;
+DEV_COMPOSE_ENV_FILE := $(if $(wildcard $(DEV_ENV_FILE)),--env-file $(DEV_ENV_FILE),)
 STAGING_API_URL := http://localhost:8080
 STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server-python:staging
 DEV_PROCESS := bash scripts/dev-process.sh
-DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache BOOTSTRAP_ADMIN_ENABLED=true SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_MODE=upload SKILLHUB_SCAN_CONSUMER_ENABLED=true
+DEV_PYTHON_DEFAULTS := : $${BOOTSTRAP_ADMIN_ENABLED:=true}; export BOOTSTRAP_ADMIN_ENABLED; : $${SKILLHUB_SECURITY_SCANNER_ENABLED:=true}; export SKILLHUB_SECURITY_SCANNER_ENABLED; : $${SKILLHUB_SECURITY_SCANNER_MODE:=upload}; export SKILLHUB_SECURITY_SCANNER_MODE; : $${SKILLHUB_SCAN_CONSUMER_ENABLED:=true}; export SKILLHUB_SCAN_CONSUMER_ENABLED;
+DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache
 DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
 DEV_COMPOSE_PROJECT_NAME ?= skillhub
 STAGING_COMPOSE_PROJECT_NAME ?= skillhub-staging
-DEV_COMPOSE := docker compose -p $(DEV_COMPOSE_PROJECT_NAME)
+DEV_COMPOSE := docker compose -p $(DEV_COMPOSE_PROJECT_NAME) $(DEV_COMPOSE_ENV_FILE)
 STAGING_BASE_COMPOSE := docker compose -p $(STAGING_COMPOSE_PROJECT_NAME)
 STAGING_COMPOSE := $(STAGING_BASE_COMPOSE) -f docker-compose.yml -f docker-compose.staging.yml
 
@@ -42,13 +46,13 @@ dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端�
 		echo "Python backend already running with PID $$(cat $(DEV_PYTHON_PID))"; \
 	else \
 		echo "Starting Python backend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_ENV_SOURCE) $(DEV_PYTHON_DEFAULTS) $(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null; \
 	fi
 	@if $(DEV_PROCESS) status --pid-file $(DEV_WEB_PID) >/dev/null 2>&1; then \
 		echo "Frontend already running with PID $$(cat $(DEV_WEB_PID))"; \
 	else \
 		echo "Starting frontend..."; \
-		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- /bin/sh -lc 'if command -v pnpm >/dev/null 2>&1; then exec pnpm exec vite --host 0.0.0.0 --strictPort; else exec ./node_modules/.bin/vite --host 0.0.0.0 --strictPort; fi' >/dev/null; \
+		$(DEV_PROCESS) start --pid-file $(DEV_WEB_PID) --log-file $(DEV_WEB_LOG) --cwd web -- /bin/sh -lc '$(DEV_ENV_SOURCE) if command -v pnpm >/dev/null 2>&1; then exec pnpm exec vite --host 0.0.0.0 --strictPort; else exec ./node_modules/.bin/vite --host 0.0.0.0 --strictPort; fi' >/dev/null; \
 	fi
 	@echo "Waiting for Python backend on $(DEV_PYTHON_URL) ..."
 	@python_ready=0; \
@@ -121,15 +125,15 @@ dev-all: ## 一键启动本地开发环境（依赖 + scanner + 后端 + 前端�
 	@echo "  Frontend: $(DEV_WEB_LOG)"
 
 dev-server: ## 启动后端开发服务器
-	cd server-python && $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
+	cd server-python && $(DEV_ENV_SOURCE) $(DEV_PYTHON_DEFAULTS) $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
 
 dev-python: ## Start Python FastAPI backend in the foreground
-	cd server-python && $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
+	cd server-python && $(DEV_ENV_SOURCE) $(DEV_PYTHON_DEFAULTS) $(DEV_PYTHON_ENV) $(DEV_PYTHON_CMD)
 
 dev-server-restart: ## 重启后端开发服务器
 	@mkdir -p $(DEV_DIR)
 	@$(DEV_PROCESS) stop --pid-file $(DEV_PYTHON_PID)
-	@$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null
+	@$(DEV_PROCESS) start --pid-file $(DEV_PYTHON_PID) --log-file $(DEV_PYTHON_LOG) --cwd server-python -- /bin/sh -lc '$(DEV_ENV_SOURCE) $(DEV_PYTHON_DEFAULTS) $(DEV_PYTHON_ENV) exec $(DEV_PYTHON_CMD)' >/dev/null
 	@echo "Waiting for Python backend on $(DEV_PYTHON_URL) ..."
 	@for i in $$(seq 1 30); do \
 		if curl -sf $(DEV_PYTHON_URL)/api/v1/health >/dev/null; then \
@@ -235,7 +239,7 @@ web-install-ci: ## 以 CI 方式安装前端依赖
 	cd web && CI=true pnpm install --frozen-lockfile
 
 dev-web: ## 启动前端开发服务器
-	cd web && pnpm run dev
+	cd web && $(DEV_ENV_SOURCE) pnpm run dev
 
 build-frontend: web-deps ## 构建前端
 	cd web && pnpm run build
