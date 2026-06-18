@@ -1,8 +1,5 @@
-from difflib import SequenceMatcher
-from hashlib import sha256
 import re
 from typing import Any
-from urllib.parse import quote
 
 from fastapi import HTTPException, Request
 from sqlalchemy import text
@@ -10,6 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, is_namespace_member
+from app.skills.read_compare import (
+    BINARY_FILE_EXTENSIONS,
+    COMPARE_MAX_FILE_BYTES,
+    COMPARE_MAX_LINES,
+    build_compare_file,
+    build_compare_hunks,
+    build_compare_response,
+    is_binary_compare_path,
+    split_compare_lines,
+)
 from app.skills.read_compat import (
     build_clawhub_resolve_response,
     build_clawhub_search_response,
@@ -44,6 +51,14 @@ from app.skills.read_files import (
     read_local_storage_text,
     sanitize_download_filename,
 )
+from app.skills.read_resolve import (
+    build_resolve_response,
+    compute_version_fingerprint,
+    find_latest_version,
+    has_text,
+    matched_value,
+    resolve_version_row,
+)
 from app.skills.read_responses import (
     build_skill_detail_response,
     build_skill_search_response,
@@ -61,34 +76,6 @@ from app.skills.read_responses import (
 
 VersionRow = dict[str, Any]
 FileRow = dict[str, Any]
-
-COMPARE_MAX_FILE_BYTES = 1024 * 1024
-COMPARE_MAX_LINES = 5000
-BINARY_FILE_EXTENSIONS = (
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".ico",
-    ".woff",
-    ".woff2",
-    ".ttf",
-    ".eot",
-    ".zip",
-    ".tar",
-    ".gz",
-    ".jar",
-    ".war",
-    ".class",
-    ".so",
-    ".dll",
-    ".exe",
-    ".pdf",
-)
-
-
-def has_text(value: str | None) -> bool:
-    return value is not None and value.strip() != ""
 
 
 def normalized_current_user_id(mock_user_id: str | None) -> str | None:
@@ -191,245 +178,6 @@ def build_skill_search_ts_query(keyword: str | None) -> str | None:
         for term in compatible_terms
     ]
     return " & ".join(ts_terms)
-
-
-def compute_version_fingerprint(files: list[FileRow]) -> str:
-    digest = sha256()
-    for file in sorted(files, key=lambda row: str(row["file_path"])):
-        line = f"{file['file_path']}:{file['sha256']}\n"
-        digest.update(line.encode("utf-8"))
-    return f"sha256:{digest.hexdigest()}"
-
-
-def find_latest_version(versions_by_id: dict[int, VersionRow], latest_version_id: int | None) -> VersionRow:
-    if latest_version_id is None or latest_version_id not in versions_by_id:
-        raise SkillResolveError("error.skill.version.latest.unavailable")
-    return versions_by_id[latest_version_id]
-
-
-def matched_value(hash_value: str | None, version_id: int, fingerprints: dict[int, str]) -> bool | None:
-    if not has_text(hash_value):
-        return None
-    return hash_value == fingerprints[version_id]
-
-
-def resolve_version_row(
-    versions: list[VersionRow],
-    latest_version_id: int | None,
-    tags: dict[str, int],
-    fingerprints: dict[int, str],
-    version: str | None,
-    tag: str | None,
-    hash_value: str | None,
-) -> tuple[VersionRow, bool | None]:
-    if has_text(version) and has_text(tag):
-        raise SkillResolveError("error.skill.resolve.versionTag.conflict")
-
-    versions_by_id = {int(row["id"]): row for row in versions}
-    versions_by_name = {str(row["version"]): row for row in versions}
-
-    if has_text(version):
-        selected = versions_by_name.get(str(version).strip())
-        if selected is None:
-            raise SkillResolveError("error.skill.version.notFound")
-        selected_id = int(selected["id"])
-        return selected, matched_value(hash_value, selected_id, fingerprints)
-
-    if has_text(tag):
-        normalized_tag = str(tag).strip()
-        if normalized_tag.lower() == "latest":
-            selected = find_latest_version(versions_by_id, latest_version_id)
-            selected_id = int(selected["id"])
-            return selected, matched_value(hash_value, selected_id, fingerprints)
-        tag_version_id = tags.get(normalized_tag)
-        if tag_version_id is None:
-            raise SkillResolveError("error.skill.tag.notFound")
-        selected = versions_by_id.get(tag_version_id)
-        if selected is None:
-            raise SkillResolveError("error.skill.tag.version.notFound")
-        return selected, matched_value(hash_value, tag_version_id, fingerprints)
-
-    if not versions:
-        raise SkillResolveError("error.skill.version.latest.unavailable")
-
-    if has_text(hash_value):
-        for candidate in versions:
-            candidate_id = int(candidate["id"])
-            if hash_value == fingerprints[candidate_id]:
-                return candidate, True
-
-    selected = find_latest_version(versions_by_id, latest_version_id)
-    return selected, False if has_text(hash_value) else None
-
-
-def build_resolve_response(
-    skill_id: int,
-    namespace: str,
-    slug: str,
-    version_row: VersionRow,
-    fingerprint: str,
-    matched: bool | None,
-) -> dict[str, object]:
-    version = str(version_row["version"])
-    return {
-        "skillId": skill_id,
-        "namespace": namespace,
-        "slug": slug,
-        "version": version,
-        "versionId": int(version_row["id"]),
-        "fingerprint": fingerprint,
-        "matched": matched,
-        "downloadUrl": (
-            f"/api/v1/skills/{quote(namespace, safe='')}/{quote(slug, safe='')}"
-            f"/versions/{quote(version, safe='')}/download"
-        ),
-    }
-
-
-def is_binary_compare_path(path: str) -> bool:
-    lower_path = path.lower()
-    return any(lower_path.endswith(extension) for extension in BINARY_FILE_EXTENSIONS)
-
-
-def split_compare_lines(content: str | None) -> list[str]:
-    if not content:
-        return []
-    lines = content.splitlines()
-    if content.endswith(("\n", "\r")):
-        lines.append("")
-    return lines
-
-
-def build_compare_hunks(old_content: str, new_content: str) -> list[dict[str, object]]:
-    old_lines = split_compare_lines(old_content)
-    new_lines = split_compare_lines(new_content)
-    hunks: list[dict[str, object]] = []
-    matcher = SequenceMatcher(a=old_lines, b=new_lines, autojunk=False)
-    for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
-        if tag == "equal":
-            continue
-
-        lines: list[dict[str, object]] = []
-        for offset, line in enumerate(old_lines[old_start:old_end], start=old_start + 1):
-            lines.append(
-                {
-                    "type": "DELETE",
-                    "content": line,
-                    "oldLineNumber": offset,
-                    "newLineNumber": None,
-                }
-            )
-        for offset, line in enumerate(new_lines[new_start:new_end], start=new_start + 1):
-            lines.append(
-                {
-                    "type": "ADD",
-                    "content": line,
-                    "oldLineNumber": None,
-                    "newLineNumber": offset,
-                }
-            )
-
-        hunks.append(
-            {
-                "oldStart": old_start + 1,
-                "oldLines": old_end - old_start,
-                "newStart": new_start + 1,
-                "newLines": new_end - new_start,
-                "lines": lines,
-            }
-        )
-    return hunks
-
-
-def build_compare_file(
-    path: str,
-    from_file: dict[str, object] | None,
-    to_file: dict[str, object] | None,
-) -> dict[str, object] | None:
-    if from_file is not None and to_file is not None and from_file.get("sha256") == to_file.get("sha256"):
-        return None
-
-    if from_file is None:
-        change_type = "ADDED"
-        old_size = None
-        new_size = int(to_file["file_size"]) if to_file is not None else None
-        old_content = ""
-        new_content = str(to_file.get("content") or "") if to_file is not None else ""
-    elif to_file is None:
-        change_type = "REMOVED"
-        old_size = int(from_file["file_size"])
-        new_size = None
-        old_content = str(from_file.get("content") or "")
-        new_content = ""
-    else:
-        change_type = "MODIFIED"
-        old_size = int(from_file["file_size"])
-        new_size = int(to_file["file_size"])
-        old_content = str(from_file.get("content") or "")
-        new_content = str(to_file.get("content") or "")
-
-    binary = is_binary_compare_path(path)
-    old_lines = split_compare_lines(old_content)
-    new_lines = split_compare_lines(new_content)
-    truncated = (
-        (old_size is not None and old_size > COMPARE_MAX_FILE_BYTES)
-        or (new_size is not None and new_size > COMPARE_MAX_FILE_BYTES)
-        or len(old_lines) > COMPARE_MAX_LINES
-        or len(new_lines) > COMPARE_MAX_LINES
-    )
-    hunks = [] if binary or truncated else build_compare_hunks(old_content, new_content)
-    return {
-        "path": path,
-        "changeType": change_type,
-        "oldSize": old_size,
-        "newSize": new_size,
-        "binary": binary,
-        "truncated": truncated,
-        "hunks": hunks,
-    }
-
-
-def build_compare_response(
-    from_version: str,
-    to_version: str,
-    from_files: dict[str, dict[str, object]],
-    to_files: dict[str, dict[str, object]],
-) -> dict[str, object]:
-    files = [
-        file
-        for path in sorted(set(from_files) | set(to_files))
-        if (file := build_compare_file(path, from_files.get(path), to_files.get(path))) is not None
-    ]
-    added_files = sum(1 for file in files if file["changeType"] == "ADDED")
-    removed_files = sum(1 for file in files if file["changeType"] == "REMOVED")
-    modified_files = sum(1 for file in files if file["changeType"] == "MODIFIED")
-    added_lines = sum(
-        1
-        for file in files
-        for hunk in file["hunks"]
-        for line in hunk["lines"]
-        if line["type"] == "ADD"
-    )
-    removed_lines = sum(
-        1
-        for file in files
-        for hunk in file["hunks"]
-        for line in hunk["lines"]
-        if line["type"] == "DELETE"
-    )
-    return {
-        "from": from_version,
-        "to": to_version,
-        "summary": {
-            "totalFiles": len(files),
-            "addedFiles": added_files,
-            "modifiedFiles": modified_files,
-            "removedFiles": removed_files,
-            "addedLines": added_lines,
-            "removedLines": removed_lines,
-        },
-        "files": files,
-    }
 
 
 async def increment_published_download_counters(connection: Any, skill_id: int, version_id: int) -> None:
