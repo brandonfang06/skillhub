@@ -17,7 +17,6 @@ DEFAULT_SCANNER_CONNECT_TIMEOUT_MS = 5000
 DEFAULT_SCANNER_READ_TIMEOUT_MS = 300000
 DEFAULT_STORAGE_PROVIDER = "local"
 DEFAULT_STORAGE_S3_REGION = "us-east-1"
-DEFAULT_STORAGE_S3_PRESIGN_EXPIRY_SECONDS = 600
 DEFAULT_STORAGE_S3_MAX_CONNECTIONS = 50
 DEFAULT_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT_SECONDS = 10
 DEFAULT_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT_SECONDS = 30
@@ -44,7 +43,6 @@ class Settings:
     storage_s3_force_path_style: bool
     storage_s3_disable_chunked_encoding: bool
     storage_s3_auto_create_bucket: bool
-    storage_s3_presign_expiry_seconds: int
     storage_s3_max_connections: int
     storage_s3_connection_acquisition_timeout_seconds: int
     storage_s3_api_call_attempt_timeout_seconds: int
@@ -266,10 +264,6 @@ def get_settings() -> Settings:
         storage_s3_force_path_style=parse_bool(os.getenv("SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE")),
         storage_s3_disable_chunked_encoding=parse_bool(os.getenv("SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING")),
         storage_s3_auto_create_bucket=parse_bool(os.getenv("SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET")),
-        storage_s3_presign_expiry_seconds=parse_duration_seconds(
-            os.getenv("SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY"),
-            DEFAULT_STORAGE_S3_PRESIGN_EXPIRY_SECONDS,
-        ),
         storage_s3_max_connections=parse_int(
             os.getenv("SKILLHUB_STORAGE_S3_MAX_CONNECTIONS"),
             DEFAULT_STORAGE_S3_MAX_CONNECTIONS,

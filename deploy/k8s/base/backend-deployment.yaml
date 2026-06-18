@@ -156,11 +156,6 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: storage-s3-auto-create-bucket
-            - name: SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY
-              valueFrom:
-                configMapKeyRef:
-                  name: skillhub-config
-                  key: storage-s3-presign-expiry
             - name: SKILLHUB_STORAGE_S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef:

@@ -15,7 +15,6 @@ data:
   storage-s3-force-path-style: "true"
   storage-s3-disable-chunked-encoding: "false"
   storage-s3-auto-create-bucket: "false"
-  storage-s3-presign-expiry: PT10M
 
   # External Redis. The Python backend also accepts SKILLHUB_REDIS_URL as an
   # override, but these Spring-compatible keys preserve Java deployment parity.

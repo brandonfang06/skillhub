@@ -104,6 +104,8 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=" in release_env
     assert "OAUTH2_GITHUB" not in release_env
     assert "OAUTH2_GITLAB" not in release_env
+    assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_env
+    assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_compose
     assert "http://localhost:8080/api/v1/health" in release_compose
     assert "/actuator/health" not in release_compose
 
@@ -142,6 +144,33 @@ def test_kubernetes_env_manual_documents_external_dependencies() -> None:
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in manual
+    assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manual
+    assert "Presigned URL" not in manual
+
+
+def test_python_backend_env_manual_lists_runtime_env_vars_without_presign() -> None:
+    manual = read("server-python/ENVIRONMENT_VARIABLES.md")
+
+    assert "SKILLHUB_DATABASE_URL" in manual
+    assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in manual
+    assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
+    assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
+    assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in manual
+    assert "SKILLHUB_SECURITY_SCANNER_BASE_URL" in manual
+    assert "SKILL_SCANNER_LLM_API_KEY" not in manual
+    assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manual
+    assert "presigned" not in manual.lower()
+
+
+def test_kubernetes_manifests_do_not_expose_s3_presign_configuration() -> None:
+    manifest_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "deploy/k8s").rglob("*.yaml")
+        if path.name != "secret.yaml.example"
+    )
+
+    assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manifest_text
+    assert "storage-s3-presign-expiry" not in manifest_text
 
 
 def test_web_static_assets_include_keycloak_login_icon() -> None:

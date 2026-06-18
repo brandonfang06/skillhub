@@ -122,8 +122,6 @@ Sentinel master/nodes 非空 -> 透過 Sentinel 找目前 master
 | `skillhub-config/storage-s3-force-path-style` | `SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE` | 是 | `true` | MinIO 通常設 `true`。 |
 | `skillhub-config/storage-s3-disable-chunked-encoding` | `SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING` | 是 | `false` | proxy 或 OSS 不支援 chunked upload 時設 `true`。 |
 | `skillhub-config/storage-s3-auto-create-bucket` | `SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET` | 是 | `false` | 正式環境建議由平台預先建立 bucket。 |
-| `skillhub-config/storage-s3-presign-expiry` | `SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY` | 是 | `PT10M` | Presigned URL 有效時間。 |
-
 Proxy 範例：
 
 ```text

@@ -1,4 +1,4 @@
-from app.core.config import DEFAULT_DATABASE_URL, DEFAULT_STORAGE_BASE_PATH, get_settings
+from app.core.config import DEFAULT_DATABASE_URL, DEFAULT_STORAGE_BASE_PATH, Settings, get_settings
 
 
 def test_default_database_url_matches_local_docker_compose(monkeypatch):
@@ -64,7 +64,6 @@ def test_s3_storage_settings_use_java_compatible_env_names(monkeypatch):
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE", "true")
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING", "true")
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET", "false")
-    monkeypatch.setenv("SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY", "PT15M")
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_MAX_CONNECTIONS", "64")
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT", "PT5S")
     monkeypatch.setenv("SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT", "PT20S")
@@ -84,11 +83,19 @@ def test_s3_storage_settings_use_java_compatible_env_names(monkeypatch):
     assert settings.storage_s3_force_path_style is True
     assert settings.storage_s3_disable_chunked_encoding is True
     assert settings.storage_s3_auto_create_bucket is False
-    assert settings.storage_s3_presign_expiry_seconds == 900
     assert settings.storage_s3_max_connections == 64
     assert settings.storage_s3_connection_acquisition_timeout_seconds == 5
     assert settings.storage_s3_api_call_attempt_timeout_seconds == 20
     assert settings.storage_s3_api_call_timeout_seconds == 60
+
+
+def test_s3_storage_settings_do_not_include_presigned_url_configuration(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY", "PT15M")
+
+    settings = get_settings()
+
+    assert "storage_s3_presign_expiry_seconds" not in Settings.__annotations__
+    assert not hasattr(settings, "storage_s3_presign_expiry_seconds")
 
 
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):

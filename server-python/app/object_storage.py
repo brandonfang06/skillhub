@@ -155,14 +155,6 @@ class S3ObjectStorage:
         )
         return keys
 
-    def presigned_url(self, key: str) -> str:
-        return self.client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": self.settings.storage_s3_bucket, "Key": _assert_safe_key(key)},
-            ExpiresIn=self.settings.storage_s3_presign_expiry_seconds,
-        )
-
-
 def _looks_like_s3_not_found(exc: Exception) -> bool:
     response = getattr(exc, "response", None)
     if not isinstance(response, dict):
