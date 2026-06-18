@@ -192,4 +192,3 @@ Expected final result: all backend tests pass and `git diff --check` exits `0`.
 - Targeted boundary and behavior tests pass.
 - Full backend pytest suite passes.
 - Result note records scope, verification, and follow-up.
-

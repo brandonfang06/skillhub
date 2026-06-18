@@ -66,4 +66,3 @@ git diff --check
 - Keep legacy import identity through `read_repository.py` and `app.api.skills`.
 - Stop after this helper split; do not split SQL query functions in this
   milestone.
-
