@@ -22,6 +22,17 @@ from app.api.skills import (
 from app.main import create_app
 
 
+def session_principal(user_id: str = "local-user") -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+
+
 def test_clawhub_download_path_latest_redirects_to_portal_latest() -> None:
     app = create_app()
 
@@ -257,6 +268,25 @@ def test_web_version_download_alias_forwards_params_and_current_user() -> None:
     assert seen == [("team-ai", "demo", "1.1.0", "local-user")]
 
 
+def test_version_download_route_uses_session_principal() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.local_auth_login = lambda payload: session_principal()
+
+    def reader(namespace: str, slug: str, version: str, current_user_id: str | None) -> DownloadResult:
+        seen.append(current_user_id)
+        return DownloadResult(content=b"version", content_type="application/zip", filename="Demo-1.1.0.zip")
+
+    app.state.skill_download_version_reader = reader
+
+    client = TestClient(app)
+    client.post("/api/v1/auth/local/login", json={"username": "local-user", "password": "Abcd123!"})
+    response = client.get("/api/web/skills/team-ai/demo/versions/1.1.0/download")
+
+    assert response.status_code == 200
+    assert seen == ["local-user"]
+
+
 def test_portal_tag_download_route_streams_bytes() -> None:
     app = create_app()
     app.state.skill_download_tag_reader = lambda namespace, slug, tag, current_user_id: DownloadResult(
@@ -285,6 +315,25 @@ def test_web_tag_download_alias_streams_bytes() -> None:
 
     assert response.status_code == 200
     assert response.content == b"web-tag"
+
+
+def test_tag_download_route_uses_session_principal() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.local_auth_login = lambda payload: session_principal()
+
+    def reader(namespace: str, slug: str, tag: str, current_user_id: str | None) -> DownloadResult:
+        seen.append(current_user_id)
+        return DownloadResult(content=b"tag", content_type="application/zip", filename="Demo-1.0.0.zip")
+
+    app.state.skill_download_tag_reader = reader
+
+    client = TestClient(app)
+    client.post("/api/v1/auth/local/login", json={"username": "local-user", "password": "Abcd123!"})
+    response = client.get("/api/web/skills/team-ai/demo/tags/stable/download")
+
+    assert response.status_code == 200
+    assert seen == ["local-user"]
 
 
 def test_portal_download_route_maps_reader_error_to_http_status() -> None:

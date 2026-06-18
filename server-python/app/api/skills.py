@@ -708,7 +708,7 @@ async def download_skill_latest(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_latest_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, current_user_id))
@@ -735,7 +735,7 @@ async def download_skill_version(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_version_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -784,7 +784,7 @@ async def download_skill_tag(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_tag_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, tagName, current_user_id))
