@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile, symlink, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runDoctor } from '../../../src/services/doctor-service'
+import { canCreateDirectorySymlink } from '../../helpers/symlink-support'
 
 type InventoryFile = {
   items: Array<{
@@ -19,6 +20,8 @@ async function setupSkillDir(cwd: string, agentDir: string, slug: string, metada
   await writeFile(join(metaDir, 'metadata.json'), JSON.stringify(metadata))
   return skillDir
 }
+
+const symlinkTest = canCreateDirectorySymlink() ? test : test.skip
 
 describe('doctor-service', () => {
   test('rebuilds inventory from metadata files', async () => {
@@ -73,7 +76,7 @@ describe('doctor-service', () => {
     expect(result.conflicts[0]!.versions).toContain('2.0.0')
   })
 
-  test('skips symlinked skill directories', async () => {
+  symlinkTest('skips symlinked skill directories', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
 
@@ -91,7 +94,7 @@ describe('doctor-service', () => {
     expect(result.skipped.some(s => s.reason === 'not a regular directory')).toBe(true)
   })
 
-  test('skips symlinked agent directories', async () => {
+  symlinkTest('skips symlinked agent directories', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
 
@@ -107,7 +110,7 @@ describe('doctor-service', () => {
     expect(result.targetsScanned).toBe(1)
   })
 
-  test('skips symlinked .skillhub directories', async () => {
+  symlinkTest('skips symlinked .skillhub directories', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
 

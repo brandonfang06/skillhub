@@ -23,7 +23,13 @@ const contents =
   `export const PKG_NAME = ${JSON.stringify(pkg.name)}\n` +
   `export const PKG_VERSION = ${JSON.stringify(pkg.version)}\n`
 
-await mkdir(dirname(outPath), { recursive: true })
+try {
+  await mkdir(dirname(outPath), { recursive: true })
+} catch (error) {
+  if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
+    throw error
+  }
+}
 await writeFile(outPath, contents, 'utf8')
 
 console.log(`generated ${outPath}`)

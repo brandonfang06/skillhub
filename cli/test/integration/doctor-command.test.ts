@@ -3,6 +3,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createTempHome } from '../helpers/temp-env'
 import { runCli } from '../helpers/run-cli'
+import { canCreateDirectorySymlink } from '../helpers/symlink-support'
 
 /**
  * Seed a single skill metadata file under the given scan root.
@@ -26,6 +27,8 @@ async function seedSkill(scanRoot: string, options: {
   await mkdir(metaDir, { recursive: true })
   await writeFile(join(metaDir, 'metadata.json'), JSON.stringify(options.metadata))
 }
+
+const symlinkTest = canCreateDirectorySymlink() ? test : test.skip
 
 describe('doctor command', () => {
   test('doctor --json empty home exits 0 and returns parseable JSON', async () => {
@@ -367,7 +370,7 @@ describe('doctor command', () => {
   // accidental symlinks that would otherwise let metadata be slurped from
   // arbitrary filesystem locations.
   // -------------------------------------------------------------------------
-  test('doctor skips an agent dir that is a symlink', async () => {
+  symlinkTest('doctor skips an agent dir that is a symlink', async () => {
     const { home, cwd } = await createTempHome()
     const { symlink, mkdir: mkdirP } = await import('node:fs/promises')
 
@@ -396,7 +399,7 @@ describe('doctor command', () => {
     expect(json.skipped.some(s => s.path.endsWith('.codex') && s.reason.includes('regular directory'))).toBe(true)
   })
 
-  test('doctor skips a slug dir that is a symlink (real agent dir, symlinked slug)', async () => {
+  symlinkTest('doctor skips a slug dir that is a symlink (real agent dir, symlinked slug)', async () => {
     const { home, cwd } = await createTempHome()
     const { symlink, mkdir: mkdirP } = await import('node:fs/promises')
 
@@ -430,7 +433,7 @@ describe('doctor command', () => {
     expect(symlinked?.reason).toContain('regular directory')
   })
 
-  test('doctor skips a .skillhub dir that is a symlink', async () => {
+  symlinkTest('doctor skips a .skillhub dir that is a symlink', async () => {
     const { home, cwd } = await createTempHome()
     const { symlink, mkdir: mkdirP } = await import('node:fs/promises')
 
