@@ -120,6 +120,57 @@ def test_session_user_can_publish_review_approve_and_download_namespace_skill() 
             "reviewedAt": "2026-06-18T10:05:00Z",
         }
 
+    def review_detail(review_task_id, user_id):
+        flow["review_detail"] = {
+            "review_task_id": review_task_id,
+            "user_id": user_id,
+        }
+        return {
+            "id": review_task_id,
+            "skillVersionId": 52,
+            "namespace": "team-a",
+            "skillSlug": "flow-skill",
+            "version": "1.0.0",
+            "status": "PENDING",
+            "submittedBy": "local-user",
+            "submittedByName": "local-user",
+            "reviewedBy": None,
+            "reviewedByName": None,
+            "reviewComment": None,
+            "submittedAt": "2026-06-18T10:00:00Z",
+            "reviewedAt": None,
+        }
+
+    async def review_skill_detail(engine, storage_base_path, *, review_task_id, user_id):
+        flow["review_skill_detail"] = {
+            "review_task_id": review_task_id,
+            "user_id": user_id,
+            "storage_base_path": storage_base_path,
+        }
+        return {
+            "skill": {
+                "id": 17,
+                "slug": "flow-skill",
+                "namespace": "team-a",
+                "resolutionMode": "REVIEW_TASK",
+            },
+            "versions": [{"id": 52, "version": "1.0.0", "status": "PENDING_REVIEW"}],
+            "files": [{"id": 201, "filePath": "SKILL.md", "fileSize": 84}],
+            "documentationPath": "SKILL.md",
+            "documentationContent": "# Flow\n",
+            "downloadUrl": f"/api/v1/reviews/{review_task_id}/download",
+            "activeVersion": "1.0.0",
+        }
+
+    async def review_file(engine, storage_base_path, *, review_task_id, file_path, user_id):
+        flow["review_file"] = {
+            "review_task_id": review_task_id,
+            "file_path": file_path,
+            "user_id": user_id,
+            "storage_base_path": storage_base_path,
+        }
+        return b"# Flow\n"
+
     def download_latest(namespace, slug, current_user_id):
         flow["download"] = {
             "namespace": namespace,
@@ -134,6 +185,9 @@ def test_session_user_can_publish_review_approve_and_download_namespace_skill() 
 
     app.state.publish_validate_reader = validate_publish
     app.state.publish_write_reader = write_publish
+    app.state.review_detail_reader = review_detail
+    app.state.review_skill_detail_reader = review_skill_detail
+    app.state.review_file_reader = review_file
     app.state.review_approve_writer = approve_review
     app.state.skill_download_latest_reader = download_latest
 
@@ -164,6 +218,33 @@ def test_session_user_can_publish_review_approve_and_download_namespace_skill() 
         "publisher_id": "local-user",
         "visibility": "NAMESPACE_ONLY",
         "auto_publish": False,
+    }
+
+    review_detail_response = admin_client.get("/api/web/reviews/901")
+    assert review_detail_response.status_code == 200
+    assert review_detail_response.json()["data"]["status"] == "PENDING"
+    assert flow["review_detail"] == {
+        "review_task_id": 901,
+        "user_id": "team-admin",
+    }
+
+    review_skill_response = admin_client.get("/api/web/reviews/901/skill-detail")
+    assert review_skill_response.status_code == 200
+    assert review_skill_response.json()["data"]["documentationPath"] == "SKILL.md"
+    assert flow["review_skill_detail"] == {
+        "review_task_id": 901,
+        "user_id": "team-admin",
+        "storage_base_path": "C:/tmp/skillhub-flow-test-storage",
+    }
+
+    review_file_response = admin_client.get("/api/web/reviews/901/file", params={"path": "SKILL.md"})
+    assert review_file_response.status_code == 200
+    assert review_file_response.content == b"# Flow\n"
+    assert flow["review_file"] == {
+        "review_task_id": 901,
+        "file_path": "SKILL.md",
+        "user_id": "team-admin",
+        "storage_base_path": "C:/tmp/skillhub-flow-test-storage",
     }
 
     approve_response = admin_client.post(
