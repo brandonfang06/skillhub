@@ -127,6 +127,16 @@ def assert_download_access(version_row: dict[str, Any], can_manage: bool) -> Non
     raise SkillResolveError("error.skill.version.notDownloadable")
 
 
+def assert_installable_download_access(version_row: dict[str, Any]) -> None:
+    if (
+        str(version_row["status"]) == "PUBLISHED"
+        and bool(version_row.get("download_ready"))
+        and version_row.get("yanked_at") is None
+    ):
+        return
+    raise SkillResolveError("error.skill.version.notDownloadable")
+
+
 def build_download_response(result: DownloadResult) -> Response:
     return Response(
         content=result.content,
@@ -142,6 +152,7 @@ __all__ = [
     "DownloadResult",
     "SkillResolveError",
     "assert_download_access",
+    "assert_installable_download_access",
     "assert_version_file_content_access",
     "build_download_filename",
     "build_download_response",

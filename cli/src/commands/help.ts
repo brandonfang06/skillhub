@@ -28,8 +28,8 @@ export const commands = {
   },
   search: {
     summary: 'Search published skills',
-    usage: 'skillhub search [query] [--limit <n>] [--registry <url>] [--json]',
-    examples: ['skillhub search', 'skillhub search pdf']
+    usage: 'skillhub search [query] [--limit <n>] [--registry <url>] [--token <token>] [--json]',
+    examples: ['skillhub search', 'skillhub search pdf', 'skillhub search pdf --token sk_xxx']
   },
   install: {
     summary: 'Install a skill locally',

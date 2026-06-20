@@ -270,8 +270,22 @@ async def test_reject_promotion_updates_request_audits_and_notifies_submitter() 
 
 
 @pytest.mark.anyio
-async def test_reject_promotion_forbids_submitter_self_review() -> None:
+async def test_reject_promotion_allows_super_admin_self_review_and_audits_marker() -> None:
     connection = FakePromotionWriteConnection(platform_roles=["SUPER_ADMIN"], submitted_by="admin")
+
+    response = await reject_promotion(
+        FakeEngine(connection),
+        PromotionRejectInput(promotion_id=301, reviewer_id="admin", comment=None),
+    )
+
+    assert response["status"] == "REJECTED"
+    audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    assert json.loads(connection.params[audit_insert]["detail_json"]) == {"selfReview": True}
+
+
+@pytest.mark.anyio
+async def test_reject_promotion_forbids_skill_admin_submitter_self_review() -> None:
+    connection = FakePromotionWriteConnection(platform_roles=["SKILL_ADMIN"], submitted_by="admin")
 
     with pytest.raises(ValueError, match="promotion.no_permission"):
         await reject_promotion(
@@ -330,8 +344,22 @@ async def test_approve_promotion_forbids_duplicate_target_skill_before_materiali
 
 
 @pytest.mark.anyio
-async def test_approve_promotion_forbids_submitter_self_review() -> None:
+async def test_approve_promotion_allows_super_admin_self_review_and_audits_marker() -> None:
     connection = FakePromotionWriteConnection(platform_roles=["SUPER_ADMIN"], submitted_by="admin")
+
+    response = await approve_promotion(FakeEngine(connection), approve_input())
+
+    assert response["status"] == "APPROVED"
+    audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    assert json.loads(connection.params[audit_insert]["detail_json"]) == {
+        "comment": "ship it",
+        "selfReview": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_approve_promotion_forbids_skill_admin_submitter_self_review() -> None:
+    connection = FakePromotionWriteConnection(platform_roles=["SKILL_ADMIN"], submitted_by="admin")
 
     with pytest.raises(ValueError, match="promotion.no_permission"):
         await approve_promotion(FakeEngine(connection), approve_input())

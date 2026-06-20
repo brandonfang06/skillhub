@@ -10,6 +10,109 @@ afterEach(() => {
 })
 
 describe('search command', () => {
+  test('--token sends bearer auth and takes priority over SKILLHUB_TOKEN', async () => {
+    let capturedAuth = ''
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (url.pathname === '/api/cli/v1/skills/search') {
+          capturedAuth = req.headers.get('authorization') ?? ''
+          return Response.json({
+            code: 0,
+            data: {
+              items: [{ namespace: 'global', slug: 'pdf-parser', latestVersion: '1.2.0', summary: 'Parse PDFs' }],
+              total: 1,
+              limit: 20
+            }
+          })
+        }
+        return Response.json({ code: 404 }, { status: 404 })
+      }
+    })
+
+    try {
+      const result = await runCli(
+        ['search', 'pdf', '--registry', `http://localhost:${server.port}`, '--token', 'sk_ok'],
+        { SKILLHUB_TOKEN: 'sk_bad' }
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(capturedAuth).toBe('Bearer sk_ok')
+      expect(result.stdout).toContain('global/pdf-parser')
+    } finally {
+      server.stop()
+    }
+  })
+
+  test('bad --token fails with auth output and does not retry anonymously', async () => {
+    const authHeaders: Array<string | null> = []
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (url.pathname === '/api/cli/v1/skills/search') {
+          const auth = req.headers.get('authorization')
+          authHeaders.push(auth)
+          if (auth === 'Bearer sk_bad') {
+            return Response.json({ code: 401, message: 'unauthorized' }, { status: 401 })
+          }
+          return Response.json({
+            code: 0,
+            data: {
+              items: [{ namespace: 'global', slug: 'anonymous-only', latestVersion: '1.0.0', summary: 'anonymous fallback' }],
+              total: 1,
+              limit: 20
+            }
+          })
+        }
+        return Response.json({ code: 404 }, { status: 404 })
+      }
+    })
+
+    try {
+      const registryUrl = `http://localhost:${server.port}`
+      const result = await runCli(['search', 'pdf', '--registry', registryUrl, '--token', 'sk_bad'])
+
+      expect(result.exitCode).toBe(2)
+      expect(result.stderr).toContain('Error: authentication failed')
+      expect(result.stderr).toContain(`Context: registry ${registryUrl}`)
+      expect(result.stderr).toContain('Next:')
+      expect(authHeaders).toEqual(['Bearer sk_bad'])
+    } finally {
+      server.stop()
+    }
+  })
+
+  test('bad --token returns structured json auth error', async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (url.pathname === '/api/cli/v1/skills/search') {
+          return Response.json({ code: 401, message: 'unauthorized' }, { status: 401 })
+        }
+        return Response.json({ code: 404 }, { status: 404 })
+      }
+    })
+
+    try {
+      const registryUrl = `http://localhost:${server.port}`
+      const result = await runCli(['search', 'pdf', '--registry', registryUrl, '--token', 'sk_bad', '--json'])
+
+      expect(result.exitCode).toBe(2)
+      const parsed = JSON.parse(result.stderr)
+      expect(parsed.ok).toBe(false)
+      expect(parsed.message).toBe('authentication failed')
+      expect(parsed.exitCode).toBe(2)
+      expect(parsed.details.registry).toBe(registryUrl)
+      expect(typeof parsed.details.next).toBe('string')
+      expect(parsed.details.next).toContain('skillhub login')
+    } finally {
+      server.stop()
+    }
+  })
+
   test('prints compact search table', async () => {
     registry = await startFakeRegistry({
       searchItems: [{ namespace: 'global', slug: 'pdf-parser', latestVersion: '1.2.0', summary: 'Parse PDFs' }]

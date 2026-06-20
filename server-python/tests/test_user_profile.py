@@ -69,6 +69,8 @@ class FakeProfileConnection:
         }
         self.change_requests: list[dict[str, Any]] = []
         self.audit_logs: list[dict[str, Any]] = []
+        self.notifications: list[dict[str, Any]] = []
+        self.profile_review_recipients = ["user-admin", "super-admin"]
         self.statements: list[str] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
@@ -98,11 +100,12 @@ class FakeProfileConnection:
             self.users[str(bound["user_id"])]["display_name"] = bound["display_name"]
             return FakeResult()
         if normalized.startswith("INSERT INTO profile_change_request"):
+            request_id = len(self.change_requests) + 1
             changes = bound["changes"]
             old_values = bound["old_values"]
             self.change_requests.append(
                 {
-                    "id": len(self.change_requests) + 1,
+                    "id": request_id,
                     "user_id": bound["user_id"],
                     "changes": json.loads(changes) if isinstance(changes, str) else changes,
                     "old_values": json.loads(old_values) if isinstance(old_values, str) else old_values,
@@ -113,7 +116,14 @@ class FakeProfileConnection:
                     "created_at": bound["created_at"],
                 }
             )
-            return FakeResult()
+            return FakeResult([{"id": request_id}])
+        if "FROM user_role_binding" in normalized and "USER_ADMIN" in normalized:
+            return FakeResult([{"user_id": user_id} for user_id in self.profile_review_recipients])
+        if normalized.startswith("INSERT INTO notification"):
+            notification_id = len(self.notifications) + 1
+            row = {"id": notification_id, **bound}
+            self.notifications.append(row)
+            return FakeResult([row])
         if normalized.startswith("INSERT INTO audit_log"):
             self.audit_logs.append(dict(bound))
             return FakeResult()
@@ -170,6 +180,11 @@ async def test_get_user_profile_rejected_change_does_not_overlay_current_values(
 @pytest.mark.anyio
 async def test_update_user_profile_default_human_review_queues_pending_request() -> None:
     connection = FakeProfileConnection()
+    published: list[tuple[str, dict[str, Any]]] = []
+
+    class FakeFanout:
+        async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+            published.append((user_id, payload))
 
     result = await update_user_profile(
         FakeEngine(connection),
@@ -181,6 +196,7 @@ async def test_update_user_profile_default_human_review_queues_pending_request()
         human_review=True,
         machine_review=True,
         now=datetime(2026, 6, 11, 10, 0),
+        notification_fanout=FakeFanout(),
     )
 
     assert result == {"status": "PENDING_REVIEW", "message": "response.profile.pendingReview"}
@@ -189,6 +205,38 @@ async def test_update_user_profile_default_human_review_queues_pending_request()
     assert connection.change_requests[-1]["machine_result"] == "PASS"
     assert connection.change_requests[-1]["changes"] == {"displayName": "New Name"}
     assert connection.change_requests[-1]["old_values"] == {"displayName": "Current Name"}
+    assert [row["recipient_id"] for row in connection.notifications] == ["user-admin", "super-admin"]
+    assert {row["event_type"] for row in connection.notifications} == {"PROFILE_REVIEW_SUBMITTED"}
+    body = json.loads(connection.notifications[0]["body_json"])
+    assert body == {"profileReviewId": 1, "submitterId": "user-1", "fields": ["displayName"]}
+    assert published == [
+        (
+            "user-admin",
+            {
+                "id": 1,
+                "category": "REVIEW",
+                "eventType": "PROFILE_REVIEW_SUBMITTED",
+                "title": "Profile review submitted",
+                "bodyJson": connection.notifications[0]["body_json"],
+                "entityType": "PROFILE_REVIEW",
+                "entityId": 1,
+                "createdAt": "2026-06-11T10:00:00Z",
+            },
+        ),
+        (
+            "super-admin",
+            {
+                "id": 2,
+                "category": "REVIEW",
+                "eventType": "PROFILE_REVIEW_SUBMITTED",
+                "title": "Profile review submitted",
+                "bodyJson": connection.notifications[1]["body_json"],
+                "entityType": "PROFILE_REVIEW",
+                "entityId": 1,
+                "createdAt": "2026-06-11T10:00:00Z",
+            },
+        ),
+    ]
     assert connection.audit_logs == []
 
 

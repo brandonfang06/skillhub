@@ -11,6 +11,7 @@ from app.api.skills import (
     DownloadResult,
     SkillResolveError,
     assert_download_access,
+    assert_installable_download_access,
     build_download_filename,
     build_download_response,
     read_skill_download_latest,
@@ -190,6 +191,16 @@ def test_assert_download_access_allows_java_public_preview_statuses() -> None:
 def test_assert_download_access_allows_uploaded_or_pending_for_manager() -> None:
     assert_download_access({"status": "UPLOADED"}, can_manage=True)
     assert_download_access({"status": "PENDING_REVIEW"}, can_manage=True)
+
+
+def test_assert_installable_download_access_requires_ready_published_not_yanked() -> None:
+    assert_installable_download_access({"status": "PUBLISHED", "download_ready": True, "yanked_at": None})
+    with pytest.raises(SkillResolveError, match="error.skill.version.notDownloadable"):
+        assert_installable_download_access({"status": "PUBLISHED", "download_ready": False, "yanked_at": None})
+    with pytest.raises(SkillResolveError, match="error.skill.version.notDownloadable"):
+        assert_installable_download_access({"status": "PUBLISHED", "download_ready": True, "yanked_at": "2026-06-20"})
+    with pytest.raises(SkillResolveError, match="error.skill.version.notDownloadable"):
+        assert_installable_download_access({"status": "PENDING_REVIEW", "download_ready": True, "yanked_at": None})
 
 
 def test_portal_latest_download_route_streams_bytes_and_headers() -> None:

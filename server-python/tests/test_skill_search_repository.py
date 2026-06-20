@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
+
 from app.api.skills import (
     build_skill_search_response,
     build_skill_search_ts_query,
@@ -8,7 +10,22 @@ from app.api.skills import (
     normalize_search_sort,
     parse_non_negative_int,
     parse_positive_int,
+    read_skill_search,
 )
+from tests.support.fake_db import FakeEngine, FakeResult, normalized_sql
+
+
+class FakeSkillSearchConnection:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+        self.params: list[dict[str, object]] = []
+
+    async def execute(self, statement: object, params: dict[str, object] | None = None) -> FakeResult:
+        self.statements.append(normalized_sql(statement))
+        self.params.append(params or {})
+        if "COUNT(*)" in self.statements[-1]:
+            return FakeResult(scalar=0)
+        return FakeResult(rows=[])
 
 
 def test_build_skill_search_response_maps_java_summary_fields() -> None:
@@ -90,3 +107,28 @@ def test_normalize_label_slugs_trims_lowercases_and_deduplicates() -> None:
 
 def test_build_skill_search_ts_query_uses_prefix_terms() -> None:
     assert build_skill_search_ts_query("Agent Ops 2026") == "agent:* & ops:*"
+
+
+@pytest.mark.anyio
+async def test_read_skill_search_can_filter_installable_latest_versions_before_pagination() -> None:
+    connection = FakeSkillSearchConnection()
+
+    response = await read_skill_search(
+        FakeEngine(connection),
+        keyword="agent",
+        namespace=None,
+        labels=[],
+        sort="newest",
+        page=0,
+        size=5,
+        installable_only=True,
+    )
+
+    assert response == {"items": [], "total": 0, "page": 0, "size": 5}
+    assert len(connection.statements) == 2
+    for statement in connection.statements:
+        assert "JOIN skill_version isv ON isv.id = s.latest_version_id" in statement
+        assert "isv.status = 'PUBLISHED'" in statement
+        assert "isv.download_ready = TRUE" in statement
+        assert "isv.yanked_at IS NULL" in statement
+    assert connection.params[0]["limit"] == 5

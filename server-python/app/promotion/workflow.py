@@ -62,10 +62,15 @@ def _now(value: datetime | None) -> datetime:
     return value or datetime.now(UTC)
 
 
-def _detail_with_comment(comment: str | None) -> str | None:
-    if comment is None or comment.strip() == "":
+def _detail_with_comment(comment: str | None, *, self_review: bool = False) -> str | None:
+    detail: dict[str, object] = {}
+    if comment is not None and comment.strip() != "":
+        detail["comment"] = comment
+    if self_review:
+        detail["selfReview"] = True
+    if not detail:
         return None
-    return json.dumps({"comment": comment}, separators=(",", ":"))
+    return json.dumps(detail, separators=(",", ":"))
 
 
 def _copy_jsonb(value: Any) -> Any:
@@ -263,7 +268,9 @@ async def _read_user_display_name(connection: Any, user_id: str) -> str | None:
 
 
 def _can_review(submitted_by: str, reviewer_id: str, platform_roles: set[str]) -> bool:
-    return submitted_by != reviewer_id and bool(platform_roles & PLATFORM_PROMOTION_ROLES)
+    if submitted_by == reviewer_id:
+        return "SUPER_ADMIN" in platform_roles
+    return bool(platform_roles & PLATFORM_PROMOTION_ROLES)
 
 
 async def _read_approval_source_context(connection: Any, promotion_row: dict[str, Any]) -> dict[str, Any]:
@@ -585,7 +592,10 @@ async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict
             request_id=request.request_id,
             client_ip=request.client_ip,
             user_agent=request.user_agent,
-            detail_json=_detail_with_comment(request.comment),
+            detail_json=_detail_with_comment(
+                request.comment,
+                self_review=str(row["submitted_by"]) == request.reviewer_id,
+            ),
             created_at=reviewed_at,
         )
 
@@ -672,7 +682,10 @@ async def reject_promotion(engine: Any, request: PromotionRejectInput) -> dict[s
             request_id=request.request_id,
             client_ip=request.client_ip,
             user_agent=request.user_agent,
-            detail_json=_detail_with_comment(request.comment),
+            detail_json=_detail_with_comment(
+                request.comment,
+                self_review=str(row["submitted_by"]) == request.reviewer_id,
+            ),
             created_at=reviewed_at,
         )
 

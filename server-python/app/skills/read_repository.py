@@ -5,7 +5,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.auth.context import resolve_current_user_or_401
+from app.auth.context import bearer_token, has_bearer_authorization, resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, is_namespace_member
 from app.skills.read_compare import (
     BINARY_FILE_EXTENSIONS,
@@ -41,6 +41,7 @@ from app.skills.read_files import (
     DownloadResult,
     SkillResolveError,
     assert_download_access,
+    assert_installable_download_access,
     assert_version_file_content_access,
     build_download_filename,
     build_download_response,
@@ -82,10 +83,21 @@ def normalized_current_user_id(mock_user_id: str | None) -> str | None:
     return mock_user_id.strip() if mock_user_id is not None and mock_user_id.strip() != "" else None
 
 
-async def optional_current_user_id(request: Request, mock_user_id: str | None) -> str | None:
+async def optional_current_user_id(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> str | None:
     header_user_id = normalized_current_user_id(mock_user_id)
     if header_user_id is not None:
         return header_user_id
+
+    if has_bearer_authorization(authorization):
+        if bearer_token(authorization) is None:
+            raise HTTPException(status_code=401, detail="error.auth.required")
+        user = await resolve_current_user_or_401(request, None, authorization)
+        return str(user["userId"])
+
     try:
         user = await resolve_current_user_or_401(request, None, None)
     except HTTPException as exc:
@@ -207,6 +219,7 @@ async def read_skill_resolve(
     tag: str | None,
     hash_value: str | None,
     current_user_id: str | None = None,
+    installable_only: bool = False,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
         skill_row = (
@@ -232,14 +245,17 @@ async def read_skill_resolve(
         if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
 
+        version_filters = ["skill_id = :skill_id", "status = 'PUBLISHED'"]
+        if installable_only:
+            version_filters.extend(["download_ready = TRUE", "yanked_at IS NULL"])
+        version_where_sql = " AND ".join(version_filters)
         version_rows = (
             await connection.execute(
                 text(
-                    """
+                    f"""
                     SELECT id, version
                     FROM skill_version
-                    WHERE skill_id = :skill_id
-                      AND status = 'PUBLISHED'
+                    WHERE {version_where_sql}
                     ORDER BY id ASC
                     """
                 ),
@@ -785,6 +801,7 @@ async def read_skill_search(
     sort: str,
     page: int,
     size: int,
+    installable_only: bool = False,
 ) -> dict[str, object]:
     normalized_keyword = normalize_search_keyword(keyword)
     ts_query = build_skill_search_ts_query(normalized_keyword)
@@ -798,6 +815,16 @@ async def read_skill_search(
         "s.hidden = FALSE",
         "n.status <> 'ARCHIVED'",
     ]
+    installable_join_sql = ""
+    if installable_only:
+        installable_join_sql = "JOIN skill_version isv ON isv.id = s.latest_version_id"
+        filters.extend(
+            [
+                "isv.status = 'PUBLISHED'",
+                "isv.download_ready = TRUE",
+                "isv.yanked_at IS NULL",
+            ]
+        )
     params: dict[str, object] = {
         "limit": size,
         "offset": page * size,
@@ -861,6 +888,7 @@ async def read_skill_search(
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
+                    {installable_join_sql}
                     WHERE {where_sql}
                     """
                 ),
@@ -891,6 +919,7 @@ async def read_skill_search(
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
+                    {installable_join_sql}
                     LEFT JOIN LATERAL (
                         SELECT sv.id, sv.version, sv.status
                         FROM skill_version sv
@@ -1661,6 +1690,7 @@ async def read_skill_download_version(
     slug: str,
     version: str,
     current_user_id: str | None = None,
+    installable_only: bool = False,
 ) -> DownloadResult:
     async with engine.begin() as connection:
         skill_row = (
@@ -1693,7 +1723,7 @@ async def read_skill_download_version(
             await connection.execute(
                 text(
                     """
-                    SELECT id, version, status
+                    SELECT id, version, status, download_ready, yanked_at
                     FROM skill_version
                     WHERE skill_id = :skill_id
                       AND version = :version
@@ -1706,7 +1736,10 @@ async def read_skill_download_version(
 
         if version_row is None:
             raise SkillResolveError("error.skill.version.notFound")
-        assert_download_access(dict(version_row), can_manage)
+        if installable_only:
+            assert_installable_download_access(dict(version_row))
+        else:
+            assert_download_access(dict(version_row), can_manage)
 
         file_rows = (
             await connection.execute(
@@ -1746,6 +1779,7 @@ async def read_skill_download_latest(
     namespace: str,
     slug: str,
     current_user_id: str | None = None,
+    installable_only: bool = False,
 ) -> DownloadResult:
     async with engine.connect() as connection:
         version = (
@@ -1772,7 +1806,15 @@ async def read_skill_download_latest(
 
     if version is None:
         raise SkillResolveError("error.skill.version.latest.unavailable")
-    return await read_skill_download_version(engine, storage_base_path, namespace, slug, str(version), current_user_id)
+    return await read_skill_download_version(
+        engine,
+        storage_base_path,
+        namespace,
+        slug,
+        str(version),
+        current_user_id,
+        installable_only=installable_only,
+    )
 
 
 async def read_skill_download_tag(
@@ -1782,6 +1824,7 @@ async def read_skill_download_tag(
     slug: str,
     tag_name: str,
     current_user_id: str | None = None,
+    installable_only: bool = False,
 ) -> DownloadResult:
     async with engine.connect() as connection:
         version = (
@@ -1810,4 +1853,12 @@ async def read_skill_download_tag(
 
     if version is None:
         raise SkillResolveError("error.skill.tag.notFound")
-    return await read_skill_download_version(engine, storage_base_path, namespace, slug, str(version), current_user_id)
+    return await read_skill_download_version(
+        engine,
+        storage_base_path,
+        namespace,
+        slug,
+        str(version),
+        current_user_id,
+        installable_only=installable_only,
+    )

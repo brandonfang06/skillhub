@@ -4,6 +4,7 @@ import { createElement } from 'react'
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
+  useSearch: () => searchMock(),
 }))
 
 vi.mock('lucide-react', () => ({
@@ -66,6 +67,8 @@ vi.mock('@/features/review/use-review-list', () => ({
   useReviewList: (...args: unknown[]) => useReviewListMock(...args),
 }))
 
+const searchMock = vi.fn()
+
 const hasRoleMock = vi.fn()
 const userMock = { platformRoles: ['SKILL_ADMIN'] }
 vi.mock('@/features/auth/use-auth', () => ({
@@ -114,6 +117,7 @@ describe('ReviewsPage', () => {
     useReviewListMock.mockReset()
     useMyNamespacesMock.mockReset()
     hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN')
+    searchMock.mockReturnValue({})
     userMock.platformRoles = ['SKILL_ADMIN']
     useMyNamespacesMock.mockReturnValue({
       data: [],
@@ -179,5 +183,16 @@ describe('ReviewsPage', () => {
     expect(paginationProps).toHaveLength(1)
     expect(paginationProps[0]?.page).toBe(0)
     expect(paginationProps[0]?.totalPages).toBe(1)
+  })
+
+  it('does not fetch skill reviews when the profile review tab is requested', () => {
+    hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN' || role === 'USER_ADMIN')
+    userMock.platformRoles = ['SKILL_ADMIN', 'USER_ADMIN']
+    searchMock.mockReturnValue({ type: 'profile' })
+
+    renderToStaticMarkup(createElement(ReviewsPage))
+
+    expect(useReviewListMock).toHaveBeenCalledTimes(3)
+    expect(useReviewListMock.mock.calls.every((call) => call[5] === false)).toBe(true)
   })
 })

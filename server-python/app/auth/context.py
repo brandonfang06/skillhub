@@ -177,10 +177,20 @@ async def read_mock_user_or_401(request: Request, mock_user_id: str | None) -> d
 
 
 def bearer_token(authorization: str | None) -> str | None:
-    if authorization is None or not authorization.startswith("Bearer "):
+    if authorization is None:
         return None
-    token = authorization[len("Bearer ") :].strip()
+    parts = authorization.strip().split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+    token = parts[1].strip()
     return token if token else None
+
+
+def has_bearer_authorization(authorization: str | None) -> bool:
+    if authorization is None or authorization.strip() == "":
+        return False
+    parts = authorization.strip().split(None, 1)
+    return bool(parts) and parts[0].lower() == "bearer"
 
 
 async def resolve_current_user_or_401(
@@ -192,7 +202,9 @@ async def resolve_current_user_or_401(
         return await read_mock_user_or_401(request, mock_user_id)
 
     token = bearer_token(authorization)
-    if token is not None:
+    if has_bearer_authorization(authorization):
+        if token is None:
+            raise HTTPException(status_code=401, detail="error.auth.required")
         reader = getattr(request.app.state, "auth_bearer_reader", None)
         if reader is not None:
             data = await resolve_reader_result(reader(token))

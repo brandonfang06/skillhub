@@ -223,9 +223,10 @@ cli
 cli
   .command('search [query]', 'Search published skills')
   .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
   .option('--limit <n>', 'Max results', { default: 20 })
   .option('--json', 'Output JSON')
-  .action((query: string | undefined, options: { registry?: string; limit?: number; json?: boolean }) => {
+  .action((query: string | undefined, options: { registry?: string; token?: string; limit?: number; json?: boolean }) => {
     return runCommand(() => searchCommand(query ?? '', options), Boolean(options.json))
   })
 

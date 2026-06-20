@@ -6,6 +6,8 @@ export function resolveNotificationTarget(item: NotificationItem): string {
   }
 
   switch (item.entityType?.toLowerCase()) {
+    case 'profile_review':
+      return '/dashboard/reviews?type=profile'
     case 'review':
       return item.entityId ? `/dashboard/reviews/${item.entityId}` : '/dashboard/reviews'
     case 'report':

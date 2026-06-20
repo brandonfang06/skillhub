@@ -104,6 +104,7 @@ async def update_user_profile_route(
                 user_agent=meta["user_agent"],
                 human_review=profile_human_review_enabled(getattr(request.app.state, "profile_human_review_enabled", None)),
                 machine_review=profile_machine_review_enabled(getattr(request.app.state, "profile_machine_review_enabled", None)),
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
     except UserProfileError as exc:

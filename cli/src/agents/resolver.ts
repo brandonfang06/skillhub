@@ -160,6 +160,7 @@ function dedupeByRoot(candidates: AgentCandidate[]): AgentCandidate[] {
 
 async function selectTargetsInteractively(candidates: AgentCandidate[]): Promise<AgentCandidate[]> {
   const prompts = await import('prompts')
+  let highlightedIndex = 0
   const { selected } = await prompts.default({
     type: 'multiselect',
     name: 'selected',
@@ -167,7 +168,13 @@ async function selectTargetsInteractively(candidates: AgentCandidate[]): Promise
     choices: candidates.map(c => ({
       title: `${c.agent} (${c.rootDir})`,
       value: c
-    }))
+    })),
+    onRender: function (this: { cursor?: number }) {
+      highlightedIndex = this.cursor ?? highlightedIndex
+    },
+    format: (selectedTargets: AgentCandidate[]) => (
+      selectedTargets.length > 0 ? selectedTargets : [candidates[highlightedIndex] ?? candidates[0]!]
+    )
   })
   if (!selected || selected.length === 0) {
     throw new CliError('installation cancelled', EXIT.usage)

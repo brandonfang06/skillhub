@@ -55,6 +55,19 @@ describe('resolveNotificationTarget', () => {
     })).toBe('/dashboard/reviews/12')
   })
 
+  it('routes profile review notifications to the profile review tab', () => {
+    expect(resolveNotificationTarget({
+      id: 1,
+      category: 'REVIEW',
+      eventType: 'PROFILE_REVIEW_SUBMITTED',
+      title: 'Profile review submitted',
+      entityType: 'PROFILE_REVIEW',
+      entityId: 12,
+      status: 'UNREAD',
+      createdAt: '2026-03-20T00:00:00Z',
+    })).toBe('/dashboard/reviews?type=profile')
+  })
+
   it('routes legacy report notifications to the reports page', () => {
     expect(resolveNotificationTarget({
       id: 1,

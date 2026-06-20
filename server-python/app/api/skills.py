@@ -169,8 +169,10 @@ async def search_cli_skills(
     request: Request,
     q: str | None = None,
     limit: int = 20,
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     normalized_limit = limit if limit > 0 else 20
+    await optional_current_user_id(request, None, authorization)
     reader = getattr(request.app.state, "cli_skill_search_reader", None)
     try:
         if reader is not None:
@@ -182,6 +184,7 @@ async def search_cli_skills(
                     sort="newest",
                     page=0,
                     size=normalized_limit,
+                    installable_only=True,
                 )
             )
         else:
@@ -193,6 +196,7 @@ async def search_cli_skills(
                 sort="newest",
                 page=0,
                 size=normalized_limit,
+                installable_only=True,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -252,8 +256,9 @@ async def resolve_cli_skill(
     slug: str,
     version: str | None = None,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     reader = getattr(request.app.state, "skill_resolve_reader", None)
     try:
         if reader is not None:
@@ -267,6 +272,7 @@ async def resolve_cli_skill(
                 None,
                 None,
                 current_user_id,
+                installable_only=True,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -759,8 +765,25 @@ async def download_cli_skill_latest(
     slug: str,
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
-    return await download_skill_latest(namespace, slug, request, mock_user_id)
+    reader = getattr(request.app.state, "skill_download_latest_reader", None)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(reader(namespace, slug, current_user_id))
+        else:
+            result = await read_skill_download_latest(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                current_user_id,
+                installable_only=True,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_response(result)
 
 
 @router.get("/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download")
@@ -770,8 +793,26 @@ async def download_cli_skill_version(
     version: str,
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
-    return await download_skill_version(namespace, slug, version, request, mock_user_id)
+    reader = getattr(request.app.state, "skill_download_version_reader", None)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
+    try:
+        if reader is not None:
+            result = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
+        else:
+            result = await read_skill_download_version(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                namespace,
+                slug,
+                version,
+                current_user_id,
+                installable_only=True,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return build_download_response(result)
 
 
 @router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download")

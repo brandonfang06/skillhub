@@ -306,6 +306,9 @@ const dashboardReviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reviews',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { type?: 'skill' | 'profile' } => ({
+    type: search.type === 'skill' || search.type === 'profile' ? search.type : undefined,
+  }),
   component: ReviewsPage,
 })
 

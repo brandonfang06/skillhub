@@ -112,6 +112,9 @@ Logout only removes the token for the specified registry, preserving registry co
 # Keyword search
 skillhub search pdf
 
+# Search with a one-off token
+skillhub search pdf --token sk_xxx
+
 # List all skills (empty query)
 skillhub search "" --limit 50
 
@@ -333,7 +336,7 @@ Update mechanism:
 | `skillhub login --token <token> [--registry <url>] [--json]` | Save token and registry configuration |
 | `skillhub logout [--registry <url>] [--json]` | Remove token for specified registry |
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
-| `skillhub search <query> [--registry <url>] [--limit <n>] [--json]` | Search published skills |
+| `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <slug> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <slug> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |

@@ -194,3 +194,23 @@ def test_current_principal_routes_reject_bad_bearer_headers() -> None:
     assert client.get("/api/v1/auth/me", headers={"Authorization": "Token sk_valid"}).status_code == 401
     assert client.get("/api/v1/auth/me", headers={"Authorization": "Bearer "}).status_code == 401
     assert client.get("/api/v1/auth/me", headers={"Authorization": "Bearer sk_missing"}).status_code == 401
+
+
+def test_current_principal_routes_reject_bad_bearer_before_session_fallback() -> None:
+    app = create_app()
+    app.state.local_auth_login = lambda payload: {
+        "userId": "session-user",
+        "displayName": "Session User",
+        "email": "session-user@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+    client = TestClient(app)
+    login = client.post("/api/v1/auth/local/login", json={"username": "session-user", "password": "Abcd123!"})
+    assert login.status_code == 200
+
+    response = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer "})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"

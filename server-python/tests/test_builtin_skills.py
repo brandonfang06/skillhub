@@ -10,6 +10,7 @@ from zipfile import ZipFile
 import pytest
 
 from app.builtin_skills import (
+    DEFAULT_MANIFEST_PATH,
     SYSTEM_PUBLISHER_ID,
     download_builtin_skill_package,
     is_allowed_builtin_skill_url,
@@ -148,6 +149,12 @@ def test_builtin_skill_manifest_loader_validates_limits_and_duplicates(tmp_path:
     assert [(item.slug, item.version, item.url) for item in items] == [
         ("skillhub-hello", "1.0.0", "https://bjcdn.openstorage.cn/hello.zip")
     ]
+
+
+def test_default_builtin_manifest_includes_agentguard() -> None:
+    items = load_builtin_skill_manifest(DEFAULT_MANIFEST_PATH)
+
+    assert ("agentguard", "1.1") in {(item.slug, item.version) for item in items}
 
 
 def test_builtin_skill_downloader_restricts_remote_urls() -> None:

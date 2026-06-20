@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { FileCheck2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
@@ -38,6 +38,7 @@ const PAGE_SIZE = 20
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const search = useSearch({ from: '/dashboard/reviews' })
   const { hasRole, user } = useAuth()
   const { data: myNamespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const [pages, setPages] = useState<Record<ReviewStatus, number>>({
@@ -56,6 +57,9 @@ export function ReviewsPage() {
 
   // Determine default top-level tab
   const defaultType = isSkillAdmin ? 'skill' : 'profile'
+  const requestedType = search.type === 'skill' || search.type === 'profile' ? search.type : undefined
+  const activeType = showTypeTabs ? requestedType ?? defaultType : defaultType
+  const skillReviewEnabled = hasGlobalReviewAccess && isSkillAdmin && activeType === 'skill'
 
   useEffect(() => {
     if (hasGlobalReviewAccess || isLoadingNamespaces) {
@@ -70,9 +74,9 @@ export function ReviewsPage() {
     void navigate({ to: '/dashboard', replace: true })
   }, [hasGlobalReviewAccess, isLoadingNamespaces, namespaceReviewEntry, navigate])
 
-  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'PENDING')
-  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'APPROVED')
-  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, hasGlobalReviewAccess && activeStatus === 'REJECTED')
+  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'PENDING')
+  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'APPROVED')
+  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'REJECTED')
 
   const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
 
@@ -90,6 +94,14 @@ export function ReviewsPage() {
       PENDING: 0,
       APPROVED: 0,
       REJECTED: 0,
+    })
+  }
+
+  function handleTypeChange(value: string) {
+    void navigate({
+      to: '/dashboard/reviews',
+      search: { type: value === 'profile' ? 'profile' : 'skill' },
+      replace: true,
     })
   }
 
@@ -249,7 +261,7 @@ export function ReviewsPage() {
       <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
 
       {showTypeTabs ? (
-        <Tabs defaultValue={defaultType}>
+        <Tabs value={activeType} onValueChange={handleTypeChange}>
           <TabsList className="gap-2 rounded-2xl border-b-0 bg-muted/80 p-1 shadow-sm">
             <TabsTrigger
               value="skill"

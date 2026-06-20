@@ -1,6 +1,14 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { zipSync, unzipSync } from 'fflate'
+import { MAX_PACKAGE_BYTES } from './download'
+
+const MAX_ZIP_ENTRIES = 500
+const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024
+const EOCD_SIGNATURE = 0x06054b50
+const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50
+const ZIP64_MARKER_16 = 0xffff
+const ZIP64_MARKER_32 = 0xffffffff
 
 /**
  * Extract a zip archive buffer into the target directory.
@@ -8,9 +16,15 @@ import { zipSync, unzipSync } from 'fflate'
  */
 export async function extractZip(buffer: ArrayBuffer, targetDir: string): Promise<void> {
   await mkdir(targetDir, { recursive: true })
-  const files = unzipSync(new Uint8Array(buffer))
-  for (const [name, data] of Object.entries(files)) {
-    const filePath = safeJoin(targetDir, name)
+  const archive = new Uint8Array(buffer)
+  validateZipCentralDirectory(archive)
+  const files = unzipSync(archive)
+  const entries = Object.entries(files).map(([name, data]) => ({
+    name,
+    data,
+    filePath: safeJoin(targetDir, name)
+  }))
+  for (const { name, data, filePath } of entries) {
     if (name.endsWith('/')) {
       await mkdir(filePath, { recursive: true })
       continue
@@ -18,6 +32,78 @@ export async function extractZip(buffer: ArrayBuffer, targetDir: string): Promis
     await mkdir(dirname(filePath), { recursive: true })
     await writeFile(filePath, data)
   }
+}
+
+function validateZipCentralDirectory(archive: Uint8Array): void {
+  const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength)
+  const eocdOffset = findEndOfCentralDirectory(view)
+  if (eocdOffset < 0) {
+    throw new Error('invalid zip central directory')
+  }
+
+  const diskNumber = view.getUint16(eocdOffset + 4, true)
+  const centralDirectoryDisk = view.getUint16(eocdOffset + 6, true)
+  const entriesOnDisk = view.getUint16(eocdOffset + 8, true)
+  const totalEntries = view.getUint16(eocdOffset + 10, true)
+  const centralDirectorySize = view.getUint32(eocdOffset + 12, true)
+  const centralDirectoryOffset = view.getUint32(eocdOffset + 16, true)
+
+  if (
+    entriesOnDisk === ZIP64_MARKER_16 ||
+    totalEntries === ZIP64_MARKER_16 ||
+    centralDirectorySize === ZIP64_MARKER_32 ||
+    centralDirectoryOffset === ZIP64_MARKER_32
+  ) {
+    throw new Error('zip64 archives are not supported')
+  }
+  if (diskNumber !== 0 || centralDirectoryDisk !== 0 || entriesOnDisk !== totalEntries) {
+    throw new Error('multi-disk zip archives are not supported')
+  }
+  if (totalEntries > MAX_ZIP_ENTRIES) {
+    throw new Error('zip entry count exceeds limit')
+  }
+  if (centralDirectoryOffset + centralDirectorySize > archive.byteLength) {
+    throw new Error('invalid zip central directory')
+  }
+
+  let offset = centralDirectoryOffset
+  let totalUncompressedSize = 0
+  const decoder = new TextDecoder()
+  for (let i = 0; i < totalEntries; i += 1) {
+    if (offset + 46 > archive.byteLength || view.getUint32(offset, true) !== CENTRAL_DIRECTORY_SIGNATURE) {
+      throw new Error('invalid zip central directory')
+    }
+    const uncompressedSize = view.getUint32(offset + 24, true)
+    const nameLength = view.getUint16(offset + 28, true)
+    const extraLength = view.getUint16(offset + 30, true)
+    const commentLength = view.getUint16(offset + 32, true)
+    const nameStart = offset + 46
+    const nameEnd = nameStart + nameLength
+    const nextOffset = nameEnd + extraLength + commentLength
+    if (nameEnd > archive.byteLength || nextOffset > archive.byteLength) {
+      throw new Error('invalid zip central directory')
+    }
+
+    const entryName = decoder.decode(archive.subarray(nameStart, nameEnd))
+    if (!entryName.endsWith('/') && uncompressedSize > MAX_SINGLE_FILE_BYTES) {
+      throw new Error('zip entry size exceeds limit')
+    }
+    totalUncompressedSize += uncompressedSize
+    if (totalUncompressedSize > MAX_PACKAGE_BYTES) {
+      throw new Error('zip total uncompressed size exceeds limit')
+    }
+    offset = nextOffset
+  }
+}
+
+function findEndOfCentralDirectory(view: DataView): number {
+  const minOffset = Math.max(0, view.byteLength - 0xffff - 22)
+  for (let offset = view.byteLength - 22; offset >= minOffset; offset -= 1) {
+    if (view.getUint32(offset, true) === EOCD_SIGNATURE) {
+      return offset
+    }
+  }
+  return -1
 }
 
 /**

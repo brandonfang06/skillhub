@@ -5,6 +5,7 @@ import https from 'node:https'
 import path from 'path'
 
 const LEGACY_BROWSER_TARGETS = ['chrome83', 'edge83', 'firefox78', 'safari14']
+const JS_BUILD_TARGET = 'es2020'
 
 export type MethodAwareProxyRule = {
   methods: string[]
@@ -797,12 +798,12 @@ export default defineConfig({
     },
   },
   build: {
-    target: LEGACY_BROWSER_TARGETS,
+    target: JS_BUILD_TARGET,
     cssTarget: LEGACY_BROWSER_TARGETS,
   },
   optimizeDeps: {
     esbuildOptions: {
-      target: LEGACY_BROWSER_TARGETS,
+      target: JS_BUILD_TARGET,
     },
   },
   test: {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.skills import DownloadResult
@@ -78,6 +79,7 @@ def test_cli_search_returns_java_envelope_and_forwards_query_params() -> None:
             "sort": "newest",
             "page": 0,
             "size": 5,
+            "installable_only": True,
         }
     ]
 
@@ -92,6 +94,19 @@ def test_cli_search_uses_java_default_limit_and_positive_limit_fallback() -> Non
     assert client.get("/api/cli/v1/skills/search?limit=0").status_code == 200
 
     assert [entry["size"] for entry in seen] == [20, 20]
+    assert [entry["installable_only"] for entry in seen] == [True, True]
+
+
+def test_cli_search_fails_closed_for_invalid_bearer_token() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: None
+    app.state.cli_skill_search_reader = lambda **kwargs: pytest.fail("invalid bearer must not search")
+    client = TestClient(app)
+
+    response = client.get("/api/cli/v1/skills/search", headers={"Authorization": "Bearer missing"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
 
 
 def test_cli_resolve_returns_java_envelope_shape() -> None:
@@ -122,6 +137,21 @@ def test_cli_resolve_returns_java_envelope_shape() -> None:
         "downloadUrl": "/api/v1/skills/global/agent-helper/versions/1.2.0/download",
     }
     assert seen == [("global", "agent-helper", "1.2.0", None, None, None)]
+
+
+def test_cli_resolve_fails_closed_for_invalid_bearer_token() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: None
+    app.state.skill_resolve_reader = lambda *args: pytest.fail("invalid bearer must not resolve")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/cli/v1/skills/global/agent-helper/resolve",
+        headers={"Authorization": "Bearer missing"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
 
 
 def test_cli_download_routes_stream_existing_python_download_results() -> None:
@@ -166,3 +196,18 @@ def test_cli_download_routes_stream_existing_python_download_results() -> None:
         ("latest", "global", "agent-helper", None),
         ("version", "global", "agent-helper", "1.2.0", "user-1"),
     ]
+
+
+def test_cli_download_fails_closed_for_invalid_bearer_token() -> None:
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: None
+    app.state.skill_download_latest_reader = lambda *args: pytest.fail("invalid bearer must not download")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/cli/v1/skills/global/agent-helper/download",
+        headers={"Authorization": "Bearer missing"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"

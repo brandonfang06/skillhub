@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.core.config import parse_bool
+from app.notifications.publisher import NotificationFanout, publish_notification_rows
 
 
 DISPLAY_NAME_PATTERN = re.compile(r"^[\u4e00-\u9fa5a-zA-Z0-9_ -]+$")
@@ -166,29 +167,106 @@ async def _insert_change_request(
     machine_result: str,
     machine_reason: str | None,
     created_at: datetime,
-) -> None:
-    await connection.execute(
-        text(
-            """
-            INSERT INTO profile_change_request (
-                user_id, changes, old_values, status, machine_result, machine_reason, created_at
+) -> int | None:
+    row = (
+        await connection.execute(
+            text(
+                """
+                INSERT INTO profile_change_request (
+                    user_id, changes, old_values, status, machine_result, machine_reason, created_at
+                )
+                VALUES (
+                    :user_id, CAST(:changes AS jsonb), CAST(:old_values AS jsonb), :status,
+                    :machine_result, :machine_reason, :created_at
+                )
+                RETURNING id
+                """
+            ),
+            {
+                "user_id": user_id,
+                "changes": _json_dumps(changes),
+                "old_values": _json_dumps(old_values),
+                "status": status,
+                "machine_result": machine_result,
+                "machine_reason": machine_reason,
+                "created_at": created_at,
+            },
+        )
+    ).mappings().one_or_none()
+    return int(row["id"]) if row is not None else None
+
+
+async def _read_platform_user_admins(connection: Any) -> list[str]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT DISTINCT urb.user_id
+                FROM user_role_binding urb
+                JOIN role r ON r.id = urb.role_id
+                LEFT JOIN notification_preference np
+                  ON np.user_id = urb.user_id
+                 AND np.category = 'REVIEW'
+                 AND np.channel = 'IN_APP'
+                WHERE r.code IN ('USER_ADMIN', 'SUPER_ADMIN')
+                  AND COALESCE(np.enabled, TRUE) = TRUE
+                ORDER BY urb.user_id
+                """
             )
-            VALUES (
-                :user_id, CAST(:changes AS jsonb), CAST(:old_values AS jsonb), :status,
-                :machine_result, :machine_reason, :created_at
-            )
-            """
-        ),
+        )
+    ).mappings().all()
+    return [str(row["user_id"]) for row in rows]
+
+
+async def _write_profile_review_submitted_notifications(
+    connection: Any,
+    *,
+    recipients: list[str],
+    profile_review_id: int,
+    submitter_id: str,
+    fields: list[str],
+    created_at: datetime,
+) -> list[dict[str, Any]]:
+    created_rows: list[dict[str, Any]] = []
+    body_json = _json_dumps(
         {
-            "user_id": user_id,
-            "changes": _json_dumps(changes),
-            "old_values": _json_dumps(old_values),
-            "status": status,
-            "machine_result": machine_result,
-            "machine_reason": machine_reason,
-            "created_at": created_at,
-        },
+            "profileReviewId": profile_review_id,
+            "submitterId": submitter_id,
+            "fields": fields,
+        }
     )
+    for recipient_id in dict.fromkeys(recipients):
+        rows = (
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO notification (
+                        recipient_id, category, event_type, title, body_json,
+                        entity_type, entity_id, status, created_at
+                    )
+                    VALUES (
+                        :recipient_id, :category, :event_type, :title, :body_json,
+                        :entity_type, :entity_id, :status, :created_at
+                    )
+                    RETURNING id, recipient_id, category, event_type, title, body_json,
+                              entity_type, entity_id, created_at
+                    """
+                ),
+                {
+                    "recipient_id": recipient_id,
+                    "category": "REVIEW",
+                    "event_type": "PROFILE_REVIEW_SUBMITTED",
+                    "title": "Profile review submitted",
+                    "body_json": body_json,
+                    "entity_type": "PROFILE_REVIEW",
+                    "entity_id": profile_review_id,
+                    "status": "UNREAD",
+                    "created_at": created_at,
+                },
+            )
+        ).mappings().all()
+        created_rows.extend(dict(row) for row in rows)
+    return created_rows
 
 
 async def _write_profile_update_audit(
@@ -240,10 +318,13 @@ async def update_user_profile(
     human_review: bool = True,
     machine_review: bool = True,
     now: datetime | None = None,
+    notification_fanout: NotificationFanout | None = None,
 ) -> dict[str, Any]:
     changes = _validate_display_name(payload)
     timestamp = _db_timestamp(_now(now))
     machine_result = "PASS" if machine_review else "SKIPPED"
+    notification_rows: list[dict[str, Any]] = []
+    result: dict[str, Any]
 
     async with engine.begin() as connection:
         user = await _read_active_user(connection, user_id)
@@ -253,7 +334,7 @@ async def update_user_profile(
         old_values = {"displayName": str(user.get("display_name"))}
         if human_review:
             await _cancel_pending_requests(connection, user_id)
-            await _insert_change_request(
+            profile_review_id = await _insert_change_request(
                 connection,
                 user_id=user_id,
                 changes=changes,
@@ -263,40 +344,53 @@ async def update_user_profile(
                 machine_reason=None,
                 created_at=timestamp,
             )
-            return {"status": "PENDING_REVIEW", "message": "response.profile.pendingReview"}
+            if profile_review_id is not None:
+                notification_rows = await _write_profile_review_submitted_notifications(
+                    connection,
+                    recipients=await _read_platform_user_admins(connection),
+                    profile_review_id=profile_review_id,
+                    submitter_id=user_id,
+                    fields=list(changes.keys()),
+                    created_at=timestamp,
+                )
+            result = {"status": "PENDING_REVIEW", "message": "response.profile.pendingReview"}
 
-        await connection.execute(
-            text(
-                """
-                UPDATE user_account
-                SET display_name = :display_name,
-                    updated_at = :updated_at
-                WHERE id = :user_id
-                """
-            ),
-            {"display_name": changes["displayName"], "updated_at": timestamp, "user_id": user_id},
-        )
-        await _insert_change_request(
-            connection,
-            user_id=user_id,
-            changes=changes,
-            old_values=old_values,
-            status="APPROVED",
-            machine_result=machine_result,
-            machine_reason=None,
-            created_at=timestamp,
-        )
-        await _write_profile_update_audit(
-            connection,
-            user_id=user_id,
-            request_id=request_id,
-            client_ip=client_ip,
-            user_agent=user_agent,
-            changes=changes,
-            old_values=old_values,
-            created_at=timestamp,
-        )
-    return {"status": "APPLIED", "message": "response.profile.updated"}
+        else:
+            await connection.execute(
+                text(
+                    """
+                    UPDATE user_account
+                    SET display_name = :display_name,
+                        updated_at = :updated_at
+                    WHERE id = :user_id
+                    """
+                ),
+                {"display_name": changes["displayName"], "updated_at": timestamp, "user_id": user_id},
+            )
+            await _insert_change_request(
+                connection,
+                user_id=user_id,
+                changes=changes,
+                old_values=old_values,
+                status="APPROVED",
+                machine_result=machine_result,
+                machine_reason=None,
+                created_at=timestamp,
+            )
+            await _write_profile_update_audit(
+                connection,
+                user_id=user_id,
+                request_id=request_id,
+                client_ip=client_ip,
+                user_agent=user_agent,
+                changes=changes,
+                old_values=old_values,
+                created_at=timestamp,
+            )
+            result = {"status": "APPLIED", "message": "response.profile.updated"}
+
+    await publish_notification_rows(notification_fanout, notification_rows)
+    return result
 
 
 def profile_human_review_enabled(configured: bool | None = None) -> bool:

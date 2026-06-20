@@ -218,6 +218,65 @@ describe('install command — P1', () => {
     expect(result.stderr.toLowerCase()).toMatch(/auth|unauthorized|401/)
   })
 
+  test('bad token stops on 401 without retrying resolve anonymously', async () => {
+    const env = await createTempHome()
+    const installDir = join(env.cwd, 'skills-no-anon-retry')
+    await mkdir(installDir, { recursive: true })
+
+    const resolveAuthHeaders: Array<string | null> = []
+    let downloadRequests = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        const resolveMatch = url.pathname.match(/^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/resolve$/)
+        if (resolveMatch) {
+          const auth = req.headers.get('authorization')
+          resolveAuthHeaders.push(auth)
+          if (auth === 'Bearer sk_bad') {
+            return Response.json({ code: 401, message: 'unauthorized' }, { status: 401 })
+          }
+          return Response.json({
+            code: 0,
+            data: {
+              namespace: resolveMatch[1],
+              slug: resolveMatch[2],
+              version: '1.0.0',
+              versionId: 1,
+              fingerprint: 'abc123',
+              downloadUrl: `${url.protocol}//${url.host}/api/cli/v1/skills/${resolveMatch[1]}/${resolveMatch[2]}/download`
+            }
+          })
+        }
+        if (url.pathname.endsWith('/download')) {
+          downloadRequests += 1
+          return new Response(makeSkillZip() as BodyInit, {
+            status: 200,
+            headers: { 'Content-Type': 'application/zip' }
+          })
+        }
+        return Response.json({ code: 404 }, { status: 404 })
+      }
+    })
+
+    try {
+      const registryUrl = `http://localhost:${server.port}`
+      const result = await runCli(
+        ['install', 'pdf-parser', '--dir', installDir, '--registry', registryUrl, '--token', 'sk_bad'],
+        { HOME: env.home, USERPROFILE: env.home }
+      )
+
+      expect(result.exitCode).toBe(2)
+      expect(result.stderr).toContain('Error: authentication failed')
+      expect(result.stderr).toContain(`Context: registry ${registryUrl}`)
+      expect(result.stderr).toContain('Next:')
+      expect(resolveAuthHeaders).toEqual(['Bearer sk_bad'])
+      expect(downloadRequests).toBe(0)
+    } finally {
+      server.stop()
+    }
+  })
+
   // -------------------------------------------------------------------------
   // P1 — --namespace override
   // -------------------------------------------------------------------------
