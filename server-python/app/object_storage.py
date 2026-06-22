@@ -112,7 +112,9 @@ class S3ObjectStorage:
     def _ensure_bucket(self) -> None:
         try:
             self.client.head_bucket(Bucket=self.settings.storage_s3_bucket)
-        except Exception:
+        except Exception as exc:
+            if not _looks_like_s3_not_found(exc):
+                raise
             self.client.create_bucket(Bucket=self.settings.storage_s3_bucket)
 
     def put_bytes(self, key: str, content: bytes, *, content_type: str | None = None) -> None:
