@@ -203,6 +203,7 @@ def test_create_scan_consumer_daemon_uses_settings_when_enabled(monkeypatch: pyt
 
     assert daemon is not None
     assert daemon.runtime.redis.redis_client is redis_client
+    assert daemon.runtime.storage is not None
     assert daemon.read_count == settings.scan_consumer_read_count
     assert daemon.block_ms == settings.scan_consumer_block_ms
     assert daemon.scanner.options.use_behavioral is False

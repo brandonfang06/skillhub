@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
+from app.object_storage import ObjectStorage
 from app.publish.scan_worker import (
     ScannerClient,
     SecurityScanTask,
@@ -17,6 +19,8 @@ DEFAULT_SCAN_GROUP_NAME = "skillhub-scan-workers"
 DEFAULT_SCAN_CONSUMER_NAME = "scanner-python"
 DEFAULT_READ_COUNT = 10
 DEFAULT_BLOCK_MS = 2000
+
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass(frozen=True)
@@ -137,6 +141,7 @@ class ScanConsumerRuntime:
         consumer_name: str = DEFAULT_SCAN_CONSUMER_NAME,
         storage_base_path: str,
         scan_temp_dir: str,
+        storage: ObjectStorage | None = None,
         clock_millis: Callable[[], int] | None = None,
     ) -> None:
         self.redis = redis
@@ -145,6 +150,7 @@ class ScanConsumerRuntime:
         self.consumer_name = consumer_name
         self.storage_base_path = storage_base_path
         self.scan_temp_dir = scan_temp_dir
+        self.storage = storage
         self.clock_millis = clock_millis or (lambda: int(time.time() * 1000))
         self._group_ready = False
 
@@ -211,22 +217,37 @@ class ScanConsumerRuntime:
     ) -> ScanConsumerResult:
         task = parse_scan_task_fields(message.fields)
         if task is None:
+            logger.warning("Ignoring invalid scan task message: id=%s fields=%s", message.message_id, message.fields)
             await self.redis.ack(self.stream_key, self.group_name, message.message_id)
             return ScanConsumerResult(acknowledged=1, invalid=1)
 
         try:
+            logger.info(
+                "Processing scan task: message_id=%s version_id=%s retry_count=%s",
+                message.message_id,
+                task.version_id,
+                task.retry_count,
+            )
             await process_scan_task(
                 connection,
                 task,
                 scanner,
                 storage_base_path=self.storage_base_path,
                 scan_temp_dir=self.scan_temp_dir,
+                storage=self.storage,
                 mark_failed_on_error=task.retry_count >= MAX_SCAN_RETRY_COUNT,
             )
             await self.redis.ack(self.stream_key, self.group_name, message.message_id)
             return ScanConsumerResult(processed=1, acknowledged=1)
-        except Exception:
+        except Exception as exc:
             if task.retry_count < MAX_SCAN_RETRY_COUNT:
+                logger.warning(
+                    "Scan task failed; retrying: message_id=%s version_id=%s retry_count=%s error=%s",
+                    message.message_id,
+                    task.version_id,
+                    task.retry_count,
+                    exc,
+                )
                 await self.redis.add(
                     self.stream_key,
                     build_retry_stream_fields(task, retry_count=task.retry_count + 1, created_at_millis=self.clock_millis()),
@@ -234,6 +255,12 @@ class ScanConsumerRuntime:
                 await self.redis.ack(self.stream_key, self.group_name, message.message_id)
                 return ScanConsumerResult(processed=1, acknowledged=1, retried=1)
 
+            logger.exception(
+                "Scan task failed permanently: message_id=%s version_id=%s retry_count=%s",
+                message.message_id,
+                task.version_id,
+                task.retry_count,
+            )
             await self.redis.ack(self.stream_key, self.group_name, message.message_id)
             return ScanConsumerResult(processed=1, acknowledged=1, failed=1)
 

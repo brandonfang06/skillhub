@@ -7,6 +7,7 @@ from typing import Any, Protocol
 
 from sqlalchemy import text
 
+from app.object_storage import ObjectStorage
 from app.publish.scanner_result import AppliedSecurityScanResult, SecurityScanResultInput, apply_security_scan_result
 
 
@@ -95,21 +96,34 @@ def resolve_safe_child(base: Path, relative_path: str) -> Path:
     return resolved
 
 
-def resolve_working_skill_path(task: SecurityScanTask, *, storage_base_path: str, scan_temp_dir: str) -> ResolvedScanPath:
+def stage_bundle_bytes(task: SecurityScanTask, bundle: bytes, *, scan_temp_dir: str) -> ResolvedScanPath:
+    temp_dir = Path(scan_temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    target = temp_dir / f"{task.version_id}-{task.task_id or 'scan'}.zip"
+    target.write_bytes(bundle)
+    return ResolvedScanPath(skill_path=str(target), cleanup_path=str(target))
+
+
+def resolve_working_skill_path(
+    task: SecurityScanTask,
+    *,
+    storage_base_path: str,
+    scan_temp_dir: str,
+    storage: ObjectStorage | None = None,
+) -> ResolvedScanPath:
     if task.bundle_key is None:
         if task.skill_path is None:
             raise ValueError("Security scan task missing skillPath and bundleKey")
         return ResolvedScanPath(skill_path=task.skill_path, cleanup_path=None)
 
+    if storage is not None:
+        resolve_safe_child(Path(scan_temp_dir), task.bundle_key)
+        return stage_bundle_bytes(task, storage.read_bytes(task.bundle_key), scan_temp_dir=scan_temp_dir)
+
     source = resolve_safe_child(Path(storage_base_path), task.bundle_key)
     if not source.exists():
         raise FileNotFoundError(f"Scan bundle not found: {task.bundle_key}")
-
-    temp_dir = Path(scan_temp_dir)
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    target = temp_dir / f"{task.version_id}-{task.task_id or 'scan'}.zip"
-    shutil.copyfile(source, target)
-    return ResolvedScanPath(skill_path=str(target), cleanup_path=str(target))
+    return stage_bundle_bytes(task, source.read_bytes(), scan_temp_dir=scan_temp_dir)
 
 
 def cleanup_scan_path(path: str | None, *, scan_temp_dir: str) -> None:
@@ -134,9 +148,15 @@ async def process_scan_task(
     *,
     storage_base_path: str,
     scan_temp_dir: str,
+    storage: ObjectStorage | None = None,
     mark_failed_on_error: bool = True,
 ) -> AppliedSecurityScanResult:
-    resolved = resolve_working_skill_path(task, storage_base_path=storage_base_path, scan_temp_dir=scan_temp_dir)
+    resolved = resolve_working_skill_path(
+        task,
+        storage_base_path=storage_base_path,
+        scan_temp_dir=scan_temp_dir,
+        storage=storage,
+    )
     try:
         scan_result = await scanner.scan(task, resolved.skill_path)
         return await apply_security_scan_result(

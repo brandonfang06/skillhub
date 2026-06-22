@@ -5,11 +5,12 @@ import logging
 from typing import Any
 
 from app.core.config import Settings
+from app.object_storage import object_storage_for_settings
 from app.publish.scan_consumer import RedisStreamClient, ScanConsumerRuntime
 from app.publish.scanner_client import ScanOptions, ScannerHttpClient
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 
 class ScanConsumerDaemon:
@@ -104,6 +105,7 @@ def create_scan_consumer_daemon(settings: Settings, engine: Any, redis_client: A
         consumer_name=settings.scan_consumer_name,
         storage_base_path=settings.storage_base_path,
         scan_temp_dir=str(settings.storage_base_path.rstrip("/\\") + "-scan-temp"),
+        storage=object_storage_for_settings(settings),
     )
     scanner = ScannerHttpClient(
         base_url=settings.scanner_base_url,

@@ -45,6 +45,28 @@ class FakeConnection:
         return FakeResult()
 
 
+class FakeObjectStorage:
+    def __init__(self, objects: dict[str, bytes]) -> None:
+        self.objects = objects
+
+    def put_bytes(self, key: str, content: bytes, *, content_type: str | None = None) -> None:
+        self.objects[key] = content
+
+    def read_bytes(self, key: str) -> bytes:
+        return self.objects[key]
+
+    def exists(self, key: str) -> bool:
+        return key in self.objects
+
+    def delete_many(self, keys: list[str]) -> list[str]:
+        deleted: list[str] = []
+        for key in keys:
+            if key in self.objects:
+                del self.objects[key]
+                deleted.append(key)
+        return deleted
+
+
 def test_parse_scan_task_fields_accepts_java_compatible_payload() -> None:
     task = parse_scan_task_fields(
         {
@@ -128,6 +150,33 @@ async def test_process_scan_task_calls_scanner_applies_result_and_cleans_bundle(
 
     assert isinstance(result, AppliedSecurityScanResult)
     assert result.new_status == "PENDING_REVIEW"
+    assert scanner.seen_tasks[0].skill_path.endswith(".zip")
+    assert not Path(scanner.seen_tasks[0].skill_path).exists()
+
+
+@pytest.mark.anyio
+async def test_process_scan_task_reads_bundle_from_object_storage(tmp_path: Path) -> None:
+    task = SecurityScanTask(
+        task_id="task-1",
+        version_id=202,
+        skill_path=None,
+        bundle_key="packages/101/202/bundle.zip",
+    )
+    storage = FakeObjectStorage({"packages/101/202/bundle.zip": b"zip-bytes"})
+    scanner = StaticScannerClient(SecurityScanResultInput("scan-1", "SAFE", 0, "LOW", [], 1.0))
+    connection = FakeConnection()
+
+    result = await process_scan_task(
+        connection,
+        task,
+        scanner,
+        storage_base_path="unused-for-object-storage",
+        scan_temp_dir=str(tmp_path / "scans"),
+        storage=storage,
+    )
+
+    assert isinstance(result, AppliedSecurityScanResult)
+    assert scanner.seen_tasks[0].bundle_key == "packages/101/202/bundle.zip"
     assert scanner.seen_tasks[0].skill_path.endswith(".zip")
     assert not Path(scanner.seen_tasks[0].skill_path).exists()
 
