@@ -21,6 +21,7 @@ from app.api.skills import (
     sanitize_download_filename,
 )
 from app.main import create_app
+from app.skills import read_files as read_files_module
 
 
 def session_principal(user_id: str = "local-user") -> dict[str, object]:
@@ -123,6 +124,34 @@ def test_read_bundle_or_build_fallback_zip_reads_bundle_exact_bytes(tmp_path) ->
     assert result.content_type == "application/x-zip-compressed"
     assert result.content_length == 12
     assert result.filename == "Demo-1.0.0.zip"
+
+
+def test_read_bundle_or_build_fallback_zip_reads_bundle_from_object_storage(
+    tmp_path,
+    monkeypatch,
+    fake_object_storage_factory,
+) -> None:
+    storage = fake_object_storage_factory({"packages/1/20/bundle.zip": b"object-storage-bundle"})
+    monkeypatch.setattr(read_files_module, "object_storage_for_base_path", lambda storage_base_path: storage)
+
+    result = read_bundle_or_build_fallback_zip(
+        str(tmp_path / "missing-local-storage"),
+        {
+            "skill_id": 1,
+            "version_id": 20,
+            "version": "1.0.0",
+            "display_name": "Demo",
+            "slug": "demo",
+            "content_type": "application/zip",
+            "content_length": None,
+        },
+        [],
+    )
+
+    assert result.content == b"object-storage-bundle"
+    assert result.content_type == "application/zip"
+    assert result.content_length == len(b"object-storage-bundle")
+    assert not (tmp_path / "missing-local-storage").exists()
 
 
 def test_read_bundle_or_build_fallback_zip_builds_sorted_zip_from_files(tmp_path) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -158,6 +158,35 @@ async def test_execute_publish_write_prepares_storage_finalizes_and_applies_side
     assert "UPDATE skill_version" in connection.statements[5]
     assert "UPDATE skill" in connection.statements[6]
     assert "INSERT INTO review_task" in connection.statements[7]
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_uses_supplied_object_storage(
+    tmp_path,
+    fake_object_storage_factory,
+) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    storage = fake_object_storage_factory()
+    request = replace(publish_input(str(tmp_path / "missing-local-storage")), storage=storage)
+
+    result = await execute_publish_write(FakeEngine([connection]), request)
+
+    assert result.stored_package.bundle_key == "packages/7/42/bundle.zip"
+    assert storage.objects["skills/7/42/SKILL.md"] == b"# Demo\n"
+    assert storage.objects["skills/7/42/src/main.py"] == b"print('ok')\n"
+    assert storage.objects["packages/7/42/bundle.zip"].startswith(b"PK")
+    assert not (tmp_path / "missing-local-storage").exists()
 
 
 @pytest.mark.anyio

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.lifecycle import skill as lifecycle_skill_module
 from app.lifecycle.skill import (
     SkillLifecycleError,
     SkillRereleaseInput,
@@ -208,6 +209,41 @@ async def test_rerelease_rebuilds_entries_delegates_publish_and_audits(tmp_path:
         "sourceVersion": "1.0.0",
         "targetVersion": "2.0.0",
     }
+
+
+@pytest.mark.anyio
+async def test_rerelease_rebuilds_entries_from_object_storage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_object_storage_factory,
+) -> None:
+    storage = fake_object_storage_factory(
+        {
+            "skills/101/42/SKILL.md": (
+                b"---\nname: Agent Helper\ndescription: Source summary\nversion: 1.0.0\n---\n# Agent Helper\n"
+            ),
+            "skills/101/42/src/main.py": b"print('object storage')\n",
+        }
+    )
+    monkeypatch.setattr(lifecycle_skill_module, "object_storage_for_base_path", lambda storage_base_path: storage)
+    connection = FakeRereleaseConnection()
+    seen: list[PublishWriteInput] = []
+
+    async def publisher(write_input: PublishWriteInput) -> PublishWriteResult:
+        seen.append(write_input)
+        return fake_publish_result("PENDING_REVIEW")
+
+    response = await rerelease_skill_version(
+        FakeEngine(connection),
+        rerelease_input(str(tmp_path / "missing-local-storage")),
+        publish_writer=publisher,
+    )
+
+    assert response["status"] == "PENDING_REVIEW"
+    assert [entry.path for entry in seen[0].entries] == ["SKILL.md", "src/main.py"]
+    assert b"version: 2.0.0" in seen[0].entries[0].content
+    assert seen[0].entries[1].content == b"print('object storage')\n"
+    assert not (tmp_path / "missing-local-storage").exists()
 
 
 @pytest.mark.anyio

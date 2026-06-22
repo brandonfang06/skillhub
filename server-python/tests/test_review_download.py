@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.review import query as review_query_module
 from app.review.query import ReviewDownloadResult, read_review_download_package
 
 
@@ -137,6 +138,28 @@ async def test_read_review_download_prefers_prebuilt_bundle(tmp_path: Path) -> N
     assert result.filename == "Review Download Skill-1.0.0.zip"
     assert result.content_length == len(b"prebuilt-zip")
     assert not any("UPDATE skill SET download_count" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_read_review_download_prefers_object_storage_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_object_storage_factory,
+) -> None:
+    storage = fake_object_storage_factory({"packages/17/52/bundle.zip": b"object-storage-review-zip"})
+    monkeypatch.setattr(review_query_module, "object_storage_for_base_path", lambda storage_base_path: storage)
+    connection = FakeReviewDownloadConnection(namespace_role="ADMIN")
+
+    result = await read_review_download_package(
+        FakeEngine(connection),
+        storage_base_path=str(tmp_path / "missing-local-storage"),
+        review_task_id=801,
+        user_id="team-admin",
+    )
+
+    assert result.content == b"object-storage-review-zip"
+    assert result.filename == "Review Download Skill-1.0.0.zip"
+    assert not (tmp_path / "missing-local-storage").exists()
 
 
 @pytest.mark.anyio

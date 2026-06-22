@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from app.publish import replacement as replacement_module
 from app.publish.replacement import (
     ReplaceableVersion,
     find_replaceable_version,
@@ -128,6 +129,29 @@ def test_delete_local_storage_objects_removes_existing_files(tmp_path) -> None:
     assert deleted == ["skills/7/42/SKILL.md", "packages/7/42/bundle.zip"]
     assert not file_path.exists()
     assert not bundle_path.exists()
+
+
+def test_delete_local_storage_objects_uses_object_storage_adapter(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_object_storage_factory,
+) -> None:
+    storage = fake_object_storage_factory(
+        {
+            "skills/7/42/SKILL.md": b"skill",
+            "packages/7/42/bundle.zip": b"zip",
+        }
+    )
+    monkeypatch.setattr(replacement_module, "object_storage_for_base_path", lambda storage_base_path: storage)
+
+    deleted = delete_local_storage_objects(
+        str(tmp_path / "missing-local-storage"),
+        ["skills/7/42/SKILL.md", "packages/7/42/bundle.zip", "missing/object.txt"],
+    )
+
+    assert deleted == ["skills/7/42/SKILL.md", "packages/7/42/bundle.zip"]
+    assert storage.deleted_keys == ["skills/7/42/SKILL.md", "packages/7/42/bundle.zip"]
+    assert not (tmp_path / "missing-local-storage").exists()
 
 
 def test_delete_local_storage_objects_rejects_escape(tmp_path) -> None:
