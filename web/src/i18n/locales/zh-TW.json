@@ -1313,10 +1313,6 @@
     }
   },
   "footer": {
-    "resources": "資源",
-    "docs": "文檔",
-    "api": "API",
-    "community": "社群",
     "privacy": "隱私政策",
     "terms": "服務條款",
     "copyright": "© 2026 SkillHub. 保留所有權利。"

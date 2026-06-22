@@ -1325,10 +1325,6 @@
     }
   },
   "footer": {
-    "resources": "Resources",
-    "docs": "Documentation",
-    "api": "API",
-    "community": "Community",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "copyright": "© 2026 SkillHub. All rights reserved."

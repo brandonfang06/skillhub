@@ -174,28 +174,6 @@ export function Layout() {
                   </li>
                 </ul>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                  {t('footer.resources')}
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.docs')}
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.api')}
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="hover:opacity-80 transition-opacity" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t('footer.community')}
-                    </a>
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
           <div

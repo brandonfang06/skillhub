@@ -1314,10 +1314,6 @@
     }
   },
   "footer": {
-    "resources": "资源",
-    "docs": "文档",
-    "api": "API",
-    "community": "社区",
     "privacy": "隐私政策",
     "terms": "服务条款",
     "copyright": "© 2026 SkillHub. 保留所有权利。"
