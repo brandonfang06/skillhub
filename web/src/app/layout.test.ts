@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 // Layout is a component-only file with no exported pure functions or constants.
 // We verify that the named export exists for the router to consume.
@@ -35,6 +37,10 @@ vi.mock('@/shared/components/user-menu', () => ({
   UserMenu: () => null,
 }))
 
+vi.mock('@/features/notification/notification-bell', () => ({
+  NotificationBell: () => null,
+}))
+
 vi.mock('./layout-header-style', () => ({
   getAppHeaderClassName: () => 'header-class',
 }))
@@ -53,5 +59,22 @@ describe('Layout', () => {
   it('exports a named Layout component function', () => {
     expect(typeof Layout).toBe('function')
     expect(Layout.name).toBe('Layout')
+  })
+
+  it('does not render the deprecated external resources footer links', () => {
+    const html = renderToStaticMarkup(createElement(Layout))
+
+    expect(html).not.toContain('landing.footerDocs')
+    expect(html).not.toContain('landing.footerGithub')
+    expect(html).not.toContain('landing.footerCommunity')
+    expect(html).not.toContain('Resources')
+    expect(html).not.toContain('Documentation')
+    expect(html).not.toContain('API')
+    expect(html).not.toContain('Community')
+    expect(html).not.toContain('footer.copyright')
+    expect(html).not.toContain('footer.privacy')
+    expect(html).not.toContain('footer.terms')
+    expect(html).not.toContain('Privacy Policy')
+    expect(html).not.toContain('Terms of Service')
   })
 })

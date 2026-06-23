@@ -176,21 +176,6 @@ export function Layout() {
               </div>
             </div>
           </div>
-          <div
-            className="mt-10 pt-6 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs"
-            style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
-          >
-            <span>{t('footer.copyright')}</span>
-            <div className="flex items-center gap-2">
-              <Link to="/privacy" className="hover:opacity-80 transition-opacity">
-                {t('footer.privacy')}
-              </Link>
-              <span>|</span>
-              <Link to="/terms" className="hover:opacity-80 transition-opacity">
-                {t('footer.terms')}
-              </Link>
-            </div>
-          </div>
         </div>
       </footer>
     </div>

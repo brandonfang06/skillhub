@@ -93,9 +93,6 @@
     "ctaDescription": "一條命令即可啟動本地開發環境，體驗完整的技能管理流程",
     "ctaButton": "立即體驗",
     "footerLicense": "© 2026 SkillHub。Apache License 2.0。",
-    "footerDocs": "文檔",
-    "footerGithub": "GitHub",
-    "footerCommunity": "社群",
     "quickStart": {
       "title": "快速開始",
       "subtitle": "Quick Start",
