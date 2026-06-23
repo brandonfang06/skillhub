@@ -1,4 +1,4 @@
-.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install db-migrate-python db-reset dev dev-all dev-all-down dev-all-reset dev-down dev-logs dev-python dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor publish-scan-smoke staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-smoke-frontend test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
+.PHONY: build build-backend build-backend-app build-cli build-frontend build-web check clean cli-install cli-staging-smoke db-migrate-python db-reset dev dev-all dev-all-down dev-all-reset dev-down dev-logs dev-python dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor publish-scan-smoke staging staging-down staging-logs test test-backend test-backend-app test-cli test-e2e-frontend test-e2e-smoke-frontend test-frontend test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
 
 DEV_DIR := .dev
 DEV_PYTHON_PID := $(DEV_DIR)/python.pid
@@ -150,6 +150,9 @@ namespace-smoke: ## 运行命名空间工作流 smoke test
 
 publish-scan-smoke: ## Run containerized publish -> scanner -> review -> download smoke test
 	BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' bash scripts/publish-scan-download-smoke-test.sh $(STAGING_API_URL)
+
+cli-staging-smoke: ## Run CLI search/publish/install smoke test against staging
+	BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' bash scripts/cli-staging-smoke-test.sh $(STAGING_API_URL)
 
 dev-down: ## 停止本地开发环境（含 skill-scanner）
 	$(DEV_COMPOSE) down --remove-orphans
@@ -318,7 +321,9 @@ staging: ## 构建并启动 staging 环境，运行 smoke test（混合模式：
 	@if BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' \
 		bash scripts/smoke-test.sh $(STAGING_API_URL) && \
 		BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' \
-		bash scripts/publish-scan-download-smoke-test.sh $(STAGING_API_URL); then \
+		bash scripts/publish-scan-download-smoke-test.sh $(STAGING_API_URL) && \
+		BOOTSTRAP_ADMIN_USERNAME=admin BOOTSTRAP_ADMIN_PASSWORD='Admin@staging2026' \
+		bash scripts/cli-staging-smoke-test.sh $(STAGING_API_URL); then \
 		echo ""; \
 		echo "Staging passed. Environment is running:"; \
 		echo "  Web UI:  $(STAGING_WEB_URL)"; \
