@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,9 @@ from sqlalchemy import text
 
 from app.object_storage import ObjectStorage
 from app.publish.scanner_result import AppliedSecurityScanResult, SecurityScanResultInput, apply_security_scan_result
+
+
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass(frozen=True)
@@ -159,12 +163,22 @@ async def process_scan_task(
     )
     try:
         scan_result = await scanner.scan(task, resolved.skill_path)
-        return await apply_security_scan_result(
+        applied = await apply_security_scan_result(
             connection,
             version_id=task.version_id,
             scanner_type=task.scanner_type,
             scan_result=scan_result,
         )
+        logger.info(
+            "Applied scan result: version_id=%s scanner_type=%s scan_id=%s verdict=%s findings_count=%s new_status=%s",
+            task.version_id,
+            task.scanner_type,
+            scan_result.scan_id,
+            scan_result.verdict,
+            scan_result.findings_count,
+            applied.new_status,
+        )
+        return applied
     except Exception:
         if mark_failed_on_error:
             await mark_scan_task_failed(connection, version_id=task.version_id)

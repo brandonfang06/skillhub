@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -145,6 +146,43 @@ async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path
         assert f'name="{field}"'.encode() in seen["body"]
         assert f"\r\n\r\n{value}\r\n".encode() in seen["body"]
     assert request_header(seen, "X-AIDefense-Key") == "aidefense-secret"
+
+
+@pytest.mark.anyio
+async def test_upload_mode_logs_scanner_request_and_response(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=api_response(is_safe=True, max_severity=None, findings_count=0, findings=[]))
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        mode="upload",
+        options=ScanOptions(
+            use_behavioral=True,
+            use_llm=True,
+            llm_provider="anthropic",
+            enable_meta=False,
+            use_aidefense=False,
+            aidefense_api_key="",
+            use_virustotal=False,
+            use_trigger=False,
+        ),
+        transport=httpx.MockTransport(handler),
+    )
+    caplog.set_level(logging.INFO, logger="uvicorn.error")
+
+    await client.scan(SecurityScanTask(task_id="task-1", version_id=202), str(bundle))
+
+    assert "Calling scanner API" in caplog.text
+    assert "mode=upload" in caplog.text
+    assert "version_id=202" in caplog.text
+    assert "use_llm=True" in caplog.text
+    assert "Scanner API response" in caplog.text
+    assert "status_code=200" in caplog.text
 
 
 def request_header(seen: dict[str, Any], name: str) -> str | None:

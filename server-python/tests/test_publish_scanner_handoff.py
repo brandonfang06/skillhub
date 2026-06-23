@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from app.publish.scanner_handoff import RedisScanTaskPublisher, build_scan_stream_fields, encode_resp_command
@@ -58,3 +60,19 @@ async def test_redis_scan_task_publisher_uses_shared_client() -> None:
     await publisher.publish_scan_task(scan_task())
 
     assert redis_client.added == [("skillhub:scan:requests", build_scan_stream_fields(scan_task()))]
+
+
+@pytest.mark.anyio
+async def test_redis_scan_task_publisher_logs_enqueued_task(caplog: pytest.LogCaptureFixture) -> None:
+    class FakeRedisClient:
+        async def xadd(self, stream_key: str, fields: dict[str, str]) -> str:
+            return "1781-0"
+
+    caplog.set_level(logging.INFO, logger="uvicorn.error")
+    publisher = RedisScanTaskPublisher(FakeRedisClient(), "skillhub:scan:requests")
+
+    await publisher.publish_scan_task(scan_task())
+
+    assert "Enqueued scan task" in caplog.text
+    assert "version_id=42" in caplog.text
+    assert "message_id=1781-0" in caplog.text

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -9,6 +10,7 @@ from app.publish.side_effects import ScanTaskPayload
 
 
 DEFAULT_SCAN_STREAM_KEY = "skillhub:scan:requests"
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass(frozen=True)
@@ -122,3 +124,13 @@ class RedisScanTaskPublisher:
         response = await self.redis_client.xadd(self.stream_key, fields)
         if response is None:
             raise ValueError("Redis XADD returned null")
+        logger.info(
+            "Enqueued scan task: stream=%s message_id=%s task_id=%s version_id=%s scanner_type=%s has_bundle=%s has_skill_path=%s",
+            self.stream_key,
+            response,
+            task.task_id,
+            task.version_id,
+            task.metadata.get("scannerType", "skill-scanner"),
+            task.bundle_key is not None,
+            task.skill_path is not None,
+        )

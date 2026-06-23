@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ DEFAULT_SCANNER_HEALTH_PATH = "/health"
 DEFAULT_SCANNER_SCAN_PATH = "/scan-upload"
 DEFAULT_SCANNER_CONNECT_TIMEOUT_MS = 5000
 DEFAULT_SCANNER_READ_TIMEOUT_MS = 300000
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass(frozen=True)
@@ -151,27 +153,58 @@ class ScannerHttpClient:
 
     async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
         if self.mode.lower() == "local":
-            return await self.scan_directory(skill_path)
-        return await self.scan_upload(Path(skill_path))
+            return await self.scan_directory(task, skill_path)
+        return await self.scan_upload(task, Path(skill_path))
 
-    async def scan_directory(self, skill_directory: str) -> SecurityScanResultInput:
+    def _log_request(self, *, mode: str, version_id: int, url: str) -> None:
+        logger.info(
+            "Calling scanner API: mode=%s version_id=%s url=%s use_behavioral=%s use_llm=%s llm_provider=%s "
+            "enable_meta=%s use_aidefense=%s use_virustotal=%s use_trigger=%s",
+            mode,
+            version_id,
+            url,
+            self.options.use_behavioral,
+            self.options.use_llm,
+            self.options.llm_provider,
+            self.options.enable_meta,
+            self.options.use_aidefense,
+            self.options.use_virustotal,
+            self.options.use_trigger,
+        )
+
+    @staticmethod
+    def _log_response(*, mode: str, version_id: int, status_code: int) -> None:
+        logger.info(
+            "Scanner API response: mode=%s version_id=%s status_code=%s",
+            mode,
+            version_id,
+            status_code,
+        )
+
+    async def scan_directory(self, task: SecurityScanTask, skill_directory: str) -> SecurityScanResultInput:
+        url = f"{self.base_url}/scan"
+        self._log_request(mode="local", version_id=task.version_id, url=url)
         async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             response = await client.post(
-                f"{self.base_url}/scan",
+                url,
                 json=self.options.as_json_body(skill_directory),
                 headers=self.options.as_headers(),
             )
+            self._log_response(mode="local", version_id=task.version_id, status_code=response.status_code)
             response.raise_for_status()
             return map_scanner_api_response(response.json())
 
-    async def scan_upload(self, skill_package_path: Path) -> SecurityScanResultInput:
+    async def scan_upload(self, task: SecurityScanTask, skill_package_path: Path) -> SecurityScanResultInput:
+        url = f"{self.base_url}{self.scan_path}"
+        self._log_request(mode="upload", version_id=task.version_id, url=url)
         async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             with skill_package_path.open("rb") as file_handle:
                 response = await client.post(
-                    f"{self.base_url}{self.scan_path}",
+                    url,
                     data=self.options.as_form_fields(),
                     files={"file": (skill_package_path.name, file_handle, "application/zip")},
                     headers=self.options.as_headers(),
                 )
+            self._log_response(mode="upload", version_id=task.version_id, status_code=response.status_code)
             response.raise_for_status()
             return map_scanner_api_response(response.json())

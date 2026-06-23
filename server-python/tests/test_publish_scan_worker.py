@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -152,6 +153,39 @@ async def test_process_scan_task_calls_scanner_applies_result_and_cleans_bundle(
     assert result.new_status == "PENDING_REVIEW"
     assert scanner.seen_tasks[0].skill_path.endswith(".zip")
     assert not Path(scanner.seen_tasks[0].skill_path).exists()
+
+
+@pytest.mark.anyio
+async def test_process_scan_task_logs_applied_result(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    task = SecurityScanTask(
+        task_id="task-1",
+        version_id=202,
+        skill_path=None,
+        bundle_key="packages/101/202/bundle.zip",
+    )
+    scanner = StaticScannerClient(SecurityScanResultInput("scan-1", "SAFE", 0, "LOW", [], 1.0))
+    connection = FakeConnection()
+    caplog.set_level(logging.INFO, logger="uvicorn.error")
+
+    await process_scan_task(
+        connection,
+        task,
+        scanner,
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+    )
+
+    assert "Applied scan result" in caplog.text
+    assert "version_id=202" in caplog.text
+    assert "scan_id=scan-1" in caplog.text
+    assert "verdict=SAFE" in caplog.text
 
 
 @pytest.mark.anyio
