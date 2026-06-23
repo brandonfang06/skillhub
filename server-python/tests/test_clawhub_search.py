@@ -61,6 +61,34 @@ def test_clawhub_search_route_forwards_query_params_and_sort() -> None:
             "sort": "relevance",
             "page": 2,
             "size": 5,
+            "current_user_id": None,
+        }
+    ]
+
+
+def test_clawhub_search_route_forwards_optional_current_user_id() -> None:
+    seen: list[dict[str, object]] = []
+    app = create_app()
+
+    def reader(**kwargs: object) -> dict[str, object]:
+        seen.append(kwargs)
+        return portal_search_response()
+
+    app.state.clawhub_search_reader = reader
+
+    client = TestClient(app)
+    response = client.get("/api/v1/search?q=demo", headers={"X-Mock-User-Id": " user-a "})
+
+    assert response.status_code == 200
+    assert seen == [
+        {
+            "keyword": "demo",
+            "namespace": None,
+            "labels": [],
+            "sort": "relevance",
+            "page": 0,
+            "size": 20,
+            "current_user_id": "user-a",
         }
     ]
 

@@ -93,11 +93,14 @@ async def search_skills(
     sort: str | None = None,
     page: str | None = None,
     size: str | None = None,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     normalized_labels = normalize_label_slugs(label)
     normalized_sort = normalize_search_sort(sort)
     normalized_page = parse_non_negative_int(page, 0)
     normalized_size = parse_positive_int(size, 20)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     reader = getattr(request.app.state, "skill_search_reader", None)
     try:
         if reader is not None:
@@ -109,6 +112,7 @@ async def search_skills(
                     sort=normalized_sort,
                     page=normalized_page,
                     size=normalized_size,
+                    current_user_id=current_user_id,
                 )
             )
         else:
@@ -120,6 +124,7 @@ async def search_skills(
                 sort=normalized_sort,
                 page=normalized_page,
                 size=normalized_size,
+                current_user_id=current_user_id,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -132,10 +137,13 @@ async def search_clawhub_skills(
     q: str = "",
     page: int = 0,
     limit: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     normalized_page = max(page, 0)
     normalized_limit = limit if limit > 0 else 20
     sort = "newest" if q.strip() == "" else "relevance"
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     reader = getattr(request.app.state, "clawhub_search_reader", None)
     try:
         if reader is not None:
@@ -147,6 +155,7 @@ async def search_clawhub_skills(
                     sort=sort,
                     page=normalized_page,
                     size=normalized_limit,
+                    current_user_id=current_user_id,
                 )
             )
         else:
@@ -158,6 +167,7 @@ async def search_clawhub_skills(
                 sort=sort,
                 page=normalized_page,
                 size=normalized_limit,
+                current_user_id=current_user_id,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -169,10 +179,11 @@ async def search_cli_skills(
     request: Request,
     q: str | None = None,
     limit: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     normalized_limit = limit if limit > 0 else 20
-    await optional_current_user_id(request, None, authorization)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     reader = getattr(request.app.state, "cli_skill_search_reader", None)
     try:
         if reader is not None:
@@ -185,6 +196,7 @@ async def search_cli_skills(
                     page=0,
                     size=normalized_limit,
                     installable_only=True,
+                    current_user_id=current_user_id,
                 )
             )
         else:
@@ -197,6 +209,7 @@ async def search_cli_skills(
                 page=0,
                 size=normalized_limit,
                 installable_only=True,
+                current_user_id=current_user_id,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -311,10 +324,13 @@ async def list_clawhub_skills(
     page: str | None = None,
     limit: str | None = None,
     sort: str | None = None,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     normalized_page = parse_non_negative_int(page, 0)
     normalized_limit = parse_positive_int(limit, 25)
     normalized_sort = normalize_search_sort(sort)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     reader = getattr(request.app.state, "clawhub_skills_list_reader", None)
     try:
         if reader is not None:
@@ -326,6 +342,7 @@ async def list_clawhub_skills(
                     sort=normalized_sort,
                     page=normalized_page,
                     size=normalized_limit,
+                    current_user_id=current_user_id,
                 )
             )
         else:
@@ -337,6 +354,7 @@ async def list_clawhub_skills(
                 sort=normalized_sort,
                 page=normalized_page,
                 size=normalized_limit,
+                current_user_id=current_user_id,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

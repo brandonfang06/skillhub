@@ -214,6 +214,7 @@ def test_session_user_can_search_view_files_and_download_skill() -> None:
                 "sort": "newest",
                 "page": 0,
                 "size": 20,
+                "current_user_id": "flow-user",
             },
         ),
         ("detail", "global", "flow-skill", "flow-user"),

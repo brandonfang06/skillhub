@@ -75,6 +75,7 @@ def test_clawhub_skills_list_route_forwards_query_params() -> None:
             "sort": "downloads",
             "page": 2,
             "size": 5,
+            "current_user_id": None,
         }
     ]
 
@@ -96,6 +97,7 @@ def test_clawhub_skills_list_route_normalizes_invalid_pagination() -> None:
     assert seen[0]["page"] == 0
     assert seen[0]["size"] == 25
     assert seen[0]["sort"] == "newest"
+    assert seen[0]["current_user_id"] is None
 
 
 def test_clawhub_skills_list_post_is_owned_by_python_publish_router() -> None:

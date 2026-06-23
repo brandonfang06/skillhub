@@ -132,3 +132,49 @@ async def test_read_skill_search_can_filter_installable_latest_versions_before_p
         assert "isv.download_ready = TRUE" in statement
         assert "isv.yanked_at IS NULL" in statement
     assert connection.params[0]["limit"] == 5
+
+
+@pytest.mark.anyio
+async def test_read_skill_search_keeps_anonymous_visibility_public_only() -> None:
+    connection = FakeSkillSearchConnection()
+
+    await read_skill_search(
+        FakeEngine(connection),
+        keyword=None,
+        namespace=None,
+        labels=[],
+        sort="newest",
+        page=0,
+        size=20,
+    )
+
+    for statement in connection.statements:
+        assert "d.visibility = 'PUBLIC'" in statement
+        assert "NAMESPACE_ONLY" not in statement
+        assert "namespace_member" not in statement
+    assert "current_user_id" not in connection.params[0]
+
+
+@pytest.mark.anyio
+async def test_read_skill_search_includes_namespace_only_for_authenticated_members() -> None:
+    connection = FakeSkillSearchConnection()
+
+    await read_skill_search(
+        FakeEngine(connection),
+        keyword="agent",
+        namespace=None,
+        labels=[],
+        sort="newest",
+        page=0,
+        size=20,
+        current_user_id="user-a",
+    )
+
+    for statement in connection.statements:
+        assert "d.visibility = 'PUBLIC'" in statement
+        assert "d.visibility = 'NAMESPACE_ONLY'" in statement
+        assert "namespace_member" in statement
+        assert "nm.namespace_id = d.namespace_id" in statement
+        assert "nm.user_id = :current_user_id" in statement
+        assert "s.visibility = 'PRIVATE'" not in statement
+    assert connection.params[0]["current_user_id"] == "user-a"

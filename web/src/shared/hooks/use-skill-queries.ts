@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { useAuth } from '@/features/auth/use-auth'
 import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
-import { getSkillDetailQueryKey } from './query-keys'
+import { getSkillDetailQueryKey, getSkillSearchQueryKey } from './query-keys'
 import { buildSkillSearchUrl } from './skill-query-helpers'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
@@ -60,10 +61,12 @@ async function publishSkill(params: { namespace: string; file: File; visibility:
 }
 
 export function useSearchSkills(params: SearchParams) {
+  const { user, isLoading: isAuthLoading } = useAuth()
+
   return useQuery({
-    queryKey: ['skills', 'search', params],
+    queryKey: getSkillSearchQueryKey(params, user?.userId),
     queryFn: () => searchSkills(params),
-    enabled: params.starredOnly !== true,
+    enabled: params.starredOnly !== true && !isAuthLoading,
   })
 }
 

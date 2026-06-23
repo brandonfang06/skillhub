@@ -1,4 +1,5 @@
 import i18n from '@/i18n/config'
+import type { SearchParams } from '@/api/types'
 
 export function getI18nCacheKey() {
   return i18n.resolvedLanguage || i18n.language || 'en'
@@ -6,6 +7,10 @@ export function getI18nCacheKey() {
 
 export function getSkillDetailQueryKey(namespace: string, slug: string) {
   return ['skills', namespace, slug, getI18nCacheKey()] as const
+}
+
+export function getSkillSearchQueryKey(params: SearchParams, userId?: string | null) {
+  return ['skills', 'search', userId || 'anonymous', params, getI18nCacheKey()] as const
 }
 
 export function getVisibleLabelsQueryKey() {

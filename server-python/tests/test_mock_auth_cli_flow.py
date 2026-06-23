@@ -200,6 +200,7 @@ def test_cli_mock_user_can_search_resolve_download_validate_and_publish() -> Non
                 "page": 0,
                 "size": 10,
                 "installable_only": True,
+                "current_user_id": "cli-user",
             },
         ),
         ("resolve", "global", "cli-skill", "1.0.0", None, None, "cli-user"),

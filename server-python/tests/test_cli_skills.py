@@ -80,6 +80,7 @@ def test_cli_search_returns_java_envelope_and_forwards_query_params() -> None:
             "page": 0,
             "size": 5,
             "installable_only": True,
+            "current_user_id": None,
         }
     ]
 
@@ -95,6 +96,20 @@ def test_cli_search_uses_java_default_limit_and_positive_limit_fallback() -> Non
 
     assert [entry["size"] for entry in seen] == [20, 20]
     assert [entry["installable_only"] for entry in seen] == [True, True]
+    assert [entry["current_user_id"] for entry in seen] == [None, None]
+
+
+def test_cli_search_forwards_current_user_id_from_bearer_token() -> None:
+    app = create_app()
+    seen: list[dict[str, object]] = []
+    app.state.auth_bearer_reader = lambda token: {"userId": "user-a", "platformRoles": ["USER"], "oauthProvider": "api_token"}
+    app.state.cli_skill_search_reader = lambda **kwargs: seen.append(kwargs) or search_response()
+    client = TestClient(app)
+
+    response = client.get("/api/cli/v1/skills/search?q=agent", headers={"Authorization": "Bearer valid"})
+
+    assert response.status_code == 200
+    assert seen[0]["current_user_id"] == "user-a"
 
 
 def test_cli_search_fails_closed_for_invalid_bearer_token() -> None:

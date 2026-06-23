@@ -802,18 +802,36 @@ async def read_skill_search(
     page: int,
     size: int,
     installable_only: bool = False,
+    current_user_id: str | None = None,
 ) -> dict[str, object]:
     normalized_keyword = normalize_search_keyword(keyword)
     ts_query = build_skill_search_ts_query(normalized_keyword)
     has_keyword = normalized_keyword is not None
     use_relevance_ordering = sort == "relevance" and has_keyword
 
+    member_namespace_exists_sql = (
+        "EXISTS ("
+        "SELECT 1 FROM namespace_member nm "
+        "WHERE nm.namespace_id = d.namespace_id "
+        "AND nm.user_id = :current_user_id"
+        ")"
+    )
+    if current_user_id is None:
+        visibility_filter = "d.visibility = 'PUBLIC'"
+        namespace_status_filter = "n.status <> 'ARCHIVED'"
+    else:
+        visibility_filter = (
+            "(d.visibility = 'PUBLIC' "
+            f"OR (d.visibility = 'NAMESPACE_ONLY' AND {member_namespace_exists_sql}))"
+        )
+        namespace_status_filter = f"(n.status <> 'ARCHIVED' OR {member_namespace_exists_sql})"
+
     filters = [
-        "d.visibility = 'PUBLIC'",
+        visibility_filter,
         "d.status = 'ACTIVE'",
         "s.status = 'ACTIVE'",
         "s.hidden = FALSE",
-        "n.status <> 'ARCHIVED'",
+        namespace_status_filter,
     ]
     installable_join_sql = ""
     if installable_only:
@@ -829,6 +847,8 @@ async def read_skill_search(
         "limit": size,
         "offset": page * size,
     }
+    if current_user_id is not None:
+        params["current_user_id"] = current_user_id
 
     if namespace is not None and namespace.strip() != "":
         filters.append("d.namespace_slug = :namespace")

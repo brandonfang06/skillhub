@@ -73,6 +73,34 @@ def test_skill_search_route_forwards_normalized_query_params() -> None:
             "sort": "downloads",
             "page": 2,
             "size": 5,
+            "current_user_id": None,
+        }
+    ]
+
+
+def test_skill_search_route_forwards_optional_current_user_id() -> None:
+    seen: list[dict[str, object]] = []
+    app = create_app()
+
+    def reader(**kwargs: object) -> dict[str, object]:
+        seen.append(kwargs)
+        return search_response()
+
+    app.state.skill_search_reader = reader
+
+    client = TestClient(app)
+    response = client.get("/api/web/skills?q=agent", headers={"X-Mock-User-Id": " user-a "})
+
+    assert response.status_code == 200
+    assert seen == [
+        {
+            "keyword": "agent",
+            "namespace": None,
+            "labels": [],
+            "sort": "newest",
+            "page": 0,
+            "size": 20,
+            "current_user_id": "user-a",
         }
     ]
 
@@ -93,6 +121,7 @@ def test_skill_search_route_uses_java_style_invalid_page_defaults() -> None:
     assert response.status_code == 200
     assert seen[0]["page"] == 0
     assert seen[0]["size"] == 20
+    assert seen[0]["current_user_id"] is None
 
 
 def test_v1_skills_root_uses_clawhub_list_shape() -> None:
