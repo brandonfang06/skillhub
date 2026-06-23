@@ -16,14 +16,18 @@ from app.main import create_app
 
 
 class FakeResult:
-    def __init__(self, row: dict[str, Any] | None = None) -> None:
+    def __init__(self, row: dict[str, Any] | None = None, rows: list[dict[str, Any]] | None = None) -> None:
         self.row = row
+        self.rows = rows or []
 
     def mappings(self) -> "FakeResult":
         return self
 
     def one_or_none(self) -> dict[str, Any] | None:
         return self.row
+
+    def all(self) -> list[dict[str, Any]]:
+        return self.rows
 
 
 class FakeScalarResult(FakeResult):
@@ -69,6 +73,7 @@ class FakeSubmitReviewConnection:
         self.duplicate_count = duplicate_count
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
+        self.notifications: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -90,6 +95,10 @@ class FakeSubmitReviewConnection:
                     "latest_version_id": None,
                 }
             )
+        if "FROM user_role_binding" in sql and "SKILL_ADMIN" in sql:
+            return FakeResult(rows=[{"user_id": "platform-admin"}])
+        if "FROM namespace_member nm" in sql and "notification_preference" in sql:
+            return FakeResult(rows=[{"user_id": "team-admin"}])
         if "FROM namespace_member" in sql:
             return FakeResult({"role": self.namespace_role}) if self.namespace_role else FakeResult()
         if "FROM skill_version" in sql:
@@ -102,7 +111,29 @@ class FakeSubmitReviewConnection:
             return FakeResult({"id": 701})
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
+        if "INSERT INTO notification" in sql:
+            row = {
+                "id": 7200 + len(self.notifications),
+                "recipient_id": values["recipient_id"],
+                "category": values["category"],
+                "event_type": values["event_type"],
+                "title": values["title"],
+                "body_json": values["body_json"],
+                "entity_type": values["entity_type"],
+                "entity_id": values["entity_id"],
+                "created_at": values["created_at"],
+            }
+            self.notifications.append(row)
+            return FakeResult(rows=[row])
         raise AssertionError(f"unexpected SQL: {sql}")
+
+
+class FakeNotificationFanout:
+    def __init__(self) -> None:
+        self.published: list[tuple[str, dict[str, Any]]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload))
 
 
 def submit_input(**overrides: Any) -> SkillSubmitReviewInput:
@@ -143,6 +174,29 @@ async def test_submit_skill_version_for_review_updates_version_creates_task_and_
         "version": "1.1.0",
         "targetVisibility": "NAMESPACE_ONLY",
     }
+
+
+@pytest.mark.anyio
+async def test_submit_skill_version_for_review_notifies_reviewers() -> None:
+    connection = FakeSubmitReviewConnection()
+    fanout = FakeNotificationFanout()
+
+    await submit_skill_version_for_review(
+        FakeEngine(connection),
+        submit_input(),
+        notification_fanout=fanout,
+    )
+
+    assert {row["recipient_id"] for row in connection.notifications} == {"platform-admin", "team-admin"}
+    assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
+    body = json.loads(connection.notifications[0]["body_json"])
+    assert body["reviewId"] == 701
+    assert body["skillId"] == 101
+    assert body["versionId"] == 42
+    assert body["submitterId"] == "owner"
+    assert body["namespace"] == "team-a"
+    assert body["slug"] == "agent-helper"
+    assert {recipient for recipient, _payload in fanout.published} == {"platform-admin", "team-admin"}
 
 
 @pytest.mark.anyio

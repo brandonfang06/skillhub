@@ -216,6 +216,7 @@ async def run_publish_write(request: Request, write_input: PublishWriteInput) ->
         request.app.state.db_engine,
         write_input,
         scan_task_publisher=scan_task_publisher,
+        notification_fanout=getattr(request.app.state, "notification_fanout", None),
     )
 
 

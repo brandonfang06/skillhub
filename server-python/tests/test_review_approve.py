@@ -38,6 +38,7 @@ class FakeReviewApproveConnection:
     def __init__(self) -> None:
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
+        self.notifications: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -100,6 +101,23 @@ class FakeReviewApproveConnection:
             return FakeResult(rows=[])
         if "INSERT INTO skill_search_document" in sql:
             return FakeResult()
+        if "notification_preference" in sql:
+            return FakeResult(row={"enabled": True})
+        if "INSERT INTO notification" in sql:
+            values = params or {}
+            row = {
+                "id": 7100 + len(self.notifications),
+                "recipient_id": values["recipient_id"],
+                "category": values["category"],
+                "event_type": values["event_type"],
+                "title": values["title"],
+                "body_json": values["body_json"],
+                "entity_type": values["entity_type"],
+                "entity_id": values["entity_id"],
+                "created_at": values["created_at"],
+            }
+            self.notifications.append(row)
+            return FakeResult(rows=[row])
 
         raise AssertionError(f"unexpected SQL: {sql}")
 
@@ -121,6 +139,14 @@ class FakeEngine:
 
     def begin(self) -> FakeBegin:
         return FakeBegin(self.connection)
+
+
+class FakeNotificationFanout:
+    def __init__(self) -> None:
+        self.published: list[tuple[str, dict[str, Any]]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload))
 
 
 def approve_input(**overrides: Any) -> ReviewApproveInput:
@@ -164,6 +190,49 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     assert connection.params[audit_insert]["target_type"] == "REVIEW_TASK"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "ship it"}
     assert connection.params[search_upsert]["skill_id"] == 7
+
+
+@pytest.mark.anyio
+async def test_approve_review_task_notifies_submitter() -> None:
+    connection = FakeReviewApproveConnection()
+    fanout = FakeNotificationFanout()
+
+    await approve_review_task(
+        FakeEngine(connection),
+        approve_input(),
+        notification_fanout=fanout,
+    )
+
+    assert len(connection.notifications) == 1
+    notification = connection.notifications[0]
+    assert notification["recipient_id"] == "local-user"
+    assert notification["category"] == "REVIEW"
+    assert notification["event_type"] == "REVIEW_APPROVED"
+    assert notification["entity_type"] == "SKILL"
+    assert notification["entity_id"] == 7
+    body = json.loads(notification["body_json"])
+    assert body["reviewId"] == 701
+    assert body["skillId"] == 7
+    assert body["versionId"] == 42
+    assert body["reviewerId"] == "team-admin"
+    assert body["namespace"] == "team-a"
+    assert body["slug"] == "agent-helper"
+    assert body["skillName"] == "Agent Helper"
+    assert fanout.published == [
+        (
+            "local-user",
+            {
+                "id": 7100,
+                "category": "REVIEW",
+                "eventType": "REVIEW_APPROVED",
+                "title": "Review approved: Agent Helper",
+                "bodyJson": notification["body_json"],
+                "entityType": "SKILL",
+                "entityId": 7,
+                "createdAt": "2026-06-09T11:00:00Z",
+            },
+        )
+    ]
 
 
 def test_review_approve_route_returns_java_envelope() -> None:

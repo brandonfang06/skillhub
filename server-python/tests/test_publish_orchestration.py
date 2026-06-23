@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
@@ -66,12 +67,33 @@ class FakeConnection:
         self.results = results
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
+        self.notifications: list[dict[str, Any]] = []
 
     async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> FakeResult:
         self.statements.append(str(statement))
         self.params.append(params or {})
-        if "status = 'PENDING_REVIEW'" in str(statement):
+        sql = str(statement)
+        if "status = 'PENDING_REVIEW'" in sql:
             return FakeResult(rows=[])
+        if "FROM user_role_binding" in sql and "SKILL_ADMIN" in sql:
+            return FakeResult(rows=[{"user_id": "local-user"}, {"user_id": "platform-admin"}])
+        if "FROM namespace_member nm" in sql and "notification_preference" in sql:
+            return FakeResult(rows=[{"user_id": "team-admin"}, {"user_id": "local-user"}])
+        if "INSERT INTO notification" in sql:
+            values = params or {}
+            row = {
+                "id": 7000 + len(self.notifications),
+                "recipient_id": values["recipient_id"],
+                "category": values["category"],
+                "event_type": values["event_type"],
+                "title": values["title"],
+                "body_json": values["body_json"],
+                "entity_type": values["entity_type"],
+                "entity_id": values["entity_id"],
+                "created_at": values["created_at"],
+            }
+            self.notifications.append(row)
+            return FakeResult(rows=[row])
         if self.results:
             return self.results.pop(0)
         return FakeResult()
@@ -107,6 +129,14 @@ class FakeScanTaskPublisher:
 
     async def publish_scan_task(self, task: Any) -> None:
         self.tasks.append(task)
+
+
+class FakeNotificationFanout:
+    def __init__(self) -> None:
+        self.published: list[tuple[str, dict[str, Any]]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload))
 
 
 class AutoWithdrawFakeConnection(FakeConnection):
@@ -212,6 +242,42 @@ async def test_execute_publish_write_runs_after_publish_callback_in_same_transac
 
     assert seen == [(connection, 7, 42, 8)]
     assert "INSERT INTO review_task" in connection.statements[7]
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_notifies_reviewers_when_review_task_created(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    fanout = FakeNotificationFanout()
+
+    await execute_publish_write(
+        FakeEngine([connection]),
+        publish_input(str(tmp_path)),
+        notification_fanout=fanout,
+    )
+
+    assert {row["recipient_id"] for row in connection.notifications} == {"local-user", "platform-admin", "team-admin"}
+    assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
+    body = json.loads(connection.notifications[0]["body_json"])
+    assert body["reviewId"] == 900
+    assert body["skillId"] == 7
+    assert body["versionId"] == 42
+    assert body["submitterId"] == "local-user"
+    assert body["namespace"] == "global"
+    assert body["slug"] == "agent-helper"
+    assert body["skillName"] == "Agent Helper"
+    assert {recipient for recipient, _payload in fanout.published} == {"local-user", "platform-admin", "team-admin"}
+    assert {payload["eventType"] for _recipient, payload in fanout.published} == {"REVIEW_SUBMITTED"}
 
 
 @pytest.mark.anyio

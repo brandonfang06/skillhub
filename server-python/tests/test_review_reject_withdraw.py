@@ -40,6 +40,7 @@ class FakeReviewLifecycleConnection:
     def __init__(self) -> None:
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
+        self.notifications: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -83,6 +84,23 @@ class FakeReviewLifecycleConnection:
             return FakeResult(scalar=1)
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
+        if "notification_preference" in sql:
+            return FakeResult(row={"enabled": True})
+        if "INSERT INTO notification" in sql:
+            values = params or {}
+            row = {
+                "id": 7300 + len(self.notifications),
+                "recipient_id": values["recipient_id"],
+                "category": values["category"],
+                "event_type": values["event_type"],
+                "title": values["title"],
+                "body_json": values["body_json"],
+                "entity_type": values["entity_type"],
+                "entity_id": values["entity_id"],
+                "created_at": values["created_at"],
+            }
+            self.notifications.append(row)
+            return FakeResult(rows=[row])
 
         raise AssertionError(f"unexpected SQL: {sql}")
 
@@ -104,6 +122,14 @@ class FakeEngine:
 
     def begin(self) -> FakeBegin:
         return FakeBegin(self.connection)
+
+
+class FakeNotificationFanout:
+    def __init__(self) -> None:
+        self.published: list[tuple[str, dict[str, Any]]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload))
 
 
 @pytest.mark.anyio
@@ -133,6 +159,41 @@ async def test_reject_review_task_rejects_task_version_and_audits() -> None:
     assert connection.params[version_update]["status"] == "REJECTED"
     assert connection.params[audit_insert]["action"] == "REVIEW_REJECT"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "needs changes"}
+
+
+@pytest.mark.anyio
+async def test_reject_review_task_notifies_submitter() -> None:
+    connection = FakeReviewLifecycleConnection()
+    fanout = FakeNotificationFanout()
+
+    await reject_review_task(
+        FakeEngine(connection),
+        ReviewRejectInput(
+            review_task_id=801,
+            reviewer_id="team-admin",
+            comment="needs changes",
+            request_id="req-reject",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+            now=datetime(2026, 6, 9, 11, 0, tzinfo=UTC),
+        ),
+        notification_fanout=fanout,
+    )
+
+    assert len(connection.notifications) == 1
+    notification = connection.notifications[0]
+    assert notification["recipient_id"] == "local-user"
+    assert notification["event_type"] == "REVIEW_REJECTED"
+    assert notification["entity_type"] == "SKILL"
+    assert notification["entity_id"] == 17
+    body = json.loads(notification["body_json"])
+    assert body["reviewId"] == 801
+    assert body["skillId"] == 17
+    assert body["versionId"] == 52
+    assert body["reviewerId"] == "team-admin"
+    assert body["status"] == "REJECTED"
+    assert fanout.published[0][0] == "local-user"
+    assert fanout.published[0][1]["eventType"] == "REVIEW_REJECTED"
 
 
 @pytest.mark.anyio

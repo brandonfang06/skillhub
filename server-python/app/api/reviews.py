@@ -87,7 +87,13 @@ async def approve_review(
     writer = getattr(request.app.state, "review_approve_writer", None)
     try:
         data = await _resolve_approval_result(
-            writer(approval_input) if writer is not None else approve_review_task(request.app.state.db_engine, approval_input)
+            writer(approval_input)
+            if writer is not None
+            else approve_review_task(
+                request.app.state.db_engine,
+                approval_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
         )
     except ReviewApprovalError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -113,7 +119,13 @@ async def reject_review(
     writer = getattr(request.app.state, "review_reject_writer", None)
     try:
         data = await _resolve_approval_result(
-            writer(reject_input) if writer is not None else reject_review_task(request.app.state.db_engine, reject_input)
+            writer(reject_input)
+            if writer is not None
+            else reject_review_task(
+                request.app.state.db_engine,
+                reject_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
         )
     except ReviewApprovalError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -161,7 +173,13 @@ async def submit_review(
     writer = getattr(request.app.state, "review_submit_writer", None)
     try:
         data = await _resolve_approval_result(
-            writer(submit_input) if writer is not None else submit_review_task(request.app.state.db_engine, submit_input)
+            writer(submit_input)
+            if writer is not None
+            else submit_review_task(
+                request.app.state.db_engine,
+                submit_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
         )
     except ReviewApprovalError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

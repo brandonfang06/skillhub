@@ -12,6 +12,7 @@ from app.audit.writer import write_audit_log
 from app.db.unit_of_work import transaction_connection
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.notifications.publisher import NotificationFanout
 from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
@@ -19,6 +20,11 @@ from app.publish.replacement import (
     StorageDeleteCompensationInput,
     bundle_storage_key,
     delete_local_storage_objects_or_record_compensation,
+)
+from app.review.notifications import (
+    publish_review_notifications,
+    read_review_submission_recipients,
+    write_review_submitted_notifications,
 )
 
 
@@ -671,11 +677,17 @@ async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublis
     return {"skillId": skill_id, "versionId": version_id, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}
 
 
-async def submit_skill_version_for_review(engine: Any, request: SkillSubmitReviewInput) -> dict[str, Any]:
+async def submit_skill_version_for_review(
+    engine: Any,
+    request: SkillSubmitReviewInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+) -> dict[str, Any]:
     if request.target_visibility not in SUBMIT_REVIEW_VISIBILITIES:
         raise SkillLifecycleError("error.skill.review.visibility.invalid")
 
     timestamp = _now(request.now)
+    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         skill = await _read_skill_context(connection, request.namespace, request.slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
@@ -707,24 +719,30 @@ async def submit_skill_version_for_review(engine: Any, request: SkillSubmitRevie
                 "version_id": version_id,
             },
         )
-        await connection.execute(
-            text(
-                """
-                INSERT INTO review_task (
-                    skill_version_id, namespace_id, status, version, submitted_by, submitted_at
-                )
-                VALUES (
-                    :version_id, :namespace_id, 'PENDING', 1, :submitted_by, :submitted_at
-                )
-                """
-            ),
-            {
-                "version_id": version_id,
-                "namespace_id": namespace_id,
-                "submitted_by": request.user_id,
-                "submitted_at": timestamp,
-            },
-        )
+        review_task_row = (
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO review_task (
+                        skill_version_id, namespace_id, status, version, submitted_by, submitted_at
+                    )
+                    VALUES (
+                        :version_id, :namespace_id, 'PENDING', 1, :submitted_by, :submitted_at
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "version_id": version_id,
+                    "namespace_id": namespace_id,
+                    "submitted_by": request.user_id,
+                    "submitted_at": timestamp,
+                },
+            )
+        ).mappings().one_or_none()
+        if review_task_row is None:
+            raise SkillLifecycleError("review.submit.duplicate")
+        review_task_id = int(review_task_row["id"])
         await _write_audit(
             connection,
             actor_user_id=request.user_id,
@@ -740,7 +758,25 @@ async def submit_skill_version_for_review(engine: Any, request: SkillSubmitRevie
             ),
             created_at=timestamp,
         )
+        if notification_fanout is not None:
+            notification_rows = await write_review_submitted_notifications(
+                connection,
+                recipients=await read_review_submission_recipients(
+                    connection,
+                    namespace_id=namespace_id,
+                ),
+                review_task_id=review_task_id,
+                skill_id=skill_id,
+                version_id=version_id,
+                submitter_id=request.user_id,
+                namespace=str(skill["namespace_slug"]),
+                slug=str(skill["skill_slug"]),
+                skill_name=str(skill["skill_slug"]),
+                version=version_name,
+                created_at=timestamp,
+            )
 
+    await publish_review_notifications(notification_fanout, notification_rows)
     return {"skillId": skill_id, "versionId": version_id, "action": "SUBMIT_REVIEW", "status": "PENDING_REVIEW"}
 
 
@@ -805,6 +841,7 @@ async def rerelease_skill_version(
     request: SkillRereleaseInput,
     *,
     publish_writer: Any | None = None,
+    notification_fanout: NotificationFanout | None = None,
 ) -> dict[str, Any]:
     timestamp = _now(request.now)
     target_version = request.target_version.strip()
@@ -874,7 +911,12 @@ async def rerelease_skill_version(
         async with transaction_connection(engine) as connection:
             await write_rerelease_audit(connection)
     else:
-        publish_result = await execute_publish_write(engine, write_input, after_publish=write_rerelease_audit)
+        publish_result = await execute_publish_write(
+            engine,
+            write_input,
+            notification_fanout=notification_fanout,
+            after_publish=write_rerelease_audit,
+        )
 
     return {
         "skillId": publish_result.skill_id,

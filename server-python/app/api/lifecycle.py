@@ -334,7 +334,11 @@ async def submit_review_route_data(
         data = await _resolve_result(
             writer(submit_input)
             if writer is not None
-            else submit_skill_version_for_review(request.app.state.db_engine, submit_input)
+            else submit_skill_version_for_review(
+                request.app.state.db_engine,
+                submit_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
         )
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -379,6 +383,7 @@ async def rerelease_route_data(
                 request.app.state.db_engine,
                 write_input,
                 scan_task_publisher=scan_task_publisher,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
 
     try:
@@ -389,6 +394,7 @@ async def rerelease_route_data(
                 request.app.state.db_engine,
                 rerelease_input,
                 publish_writer=publish_writer,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
     except SkillLifecycleError as exc:

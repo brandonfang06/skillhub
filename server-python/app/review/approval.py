@@ -14,6 +14,13 @@ from app.admin.search import upsert_skill_search_document
 from sqlalchemy.exc import IntegrityError
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.notifications.publisher import NotificationFanout
+from app.review.notifications import (
+    publish_review_notifications,
+    read_review_submission_recipients,
+    write_review_decision_notification,
+    write_review_submitted_notifications,
+)
 
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -330,8 +337,14 @@ async def _assert_can_submit(connection: Any, version_row: dict[str, Any], user_
         raise ReviewApprovalError("review.submit.no_permission", status_code=403)
 
 
-async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[str, Any]:
+async def submit_review_task(
+    engine: Any,
+    request: ReviewSubmitInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+) -> dict[str, Any]:
     submitted_at = _now(request.now)
+    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         version_row = await _read_review_submit_context(connection, request.skill_version_id, request.user_id)
         _assert_namespace_active(version_row)
@@ -414,7 +427,25 @@ async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[st
             detail_json=json.dumps({"skillVersionId": int(request.skill_version_id)}, separators=(",", ":")),
             created_at=submitted_at,
         )
+        if notification_fanout is not None:
+            notification_rows = await write_review_submitted_notifications(
+                connection,
+                recipients=await read_review_submission_recipients(
+                    connection,
+                    namespace_id=int(version_row["namespace_id"]),
+                ),
+                review_task_id=review_task_id,
+                skill_id=int(version_row["skill_id"]),
+                version_id=int(request.skill_version_id),
+                submitter_id=request.user_id,
+                namespace=str(version_row["namespace_slug"]),
+                slug=str(version_row["skill_slug"]),
+                skill_name=_metadata_value(version_row.get("parsed_metadata_json"), "name"),
+                version=str(version_row["version_name"]),
+                created_at=submitted_at,
+            )
 
+    await publish_review_notifications(notification_fanout, notification_rows)
     return _review_submit_response(
         version_row,
         review_task_id=review_task_id,
@@ -423,8 +454,14 @@ async def submit_review_task(engine: Any, request: ReviewSubmitInput) -> dict[st
     )
 
 
-async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[str, Any]:
+async def approve_review_task(
+    engine: Any,
+    request: ReviewApproveInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+) -> dict[str, Any]:
     reviewed_at = _now(request.now)
+    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
@@ -542,12 +579,35 @@ async def approve_review_task(engine: Any, request: ReviewApproveInput) -> dict[
             created_at=reviewed_at,
         )
         await upsert_skill_search_document(connection, int(task["skill_id"]))
+        if notification_fanout is not None:
+            notification_rows = await write_review_decision_notification(
+                connection,
+                recipient_id=str(task["submitted_by"]),
+                approved=True,
+                review_task_id=request.review_task_id,
+                skill_id=int(task["skill_id"]),
+                version_id=int(task["skill_version_id"]),
+                reviewer_id=request.reviewer_id,
+                namespace=str(task["namespace_slug"]),
+                slug=str(task["skill_slug"]),
+                skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
+                version=str(task["version_name"]),
+                comment=request.comment,
+                created_at=reviewed_at,
+            )
 
+    await publish_review_notifications(notification_fanout, notification_rows)
     return _review_response(task, status="APPROVED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
 
 
-async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[str, Any]:
+async def reject_review_task(
+    engine: Any,
+    request: ReviewRejectInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+) -> dict[str, Any]:
     reviewed_at = _now(request.now)
+    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
@@ -608,7 +668,24 @@ async def reject_review_task(engine: Any, request: ReviewRejectInput) -> dict[st
             detail_json=_detail_with_comment(request.comment),
             created_at=reviewed_at,
         )
+        if notification_fanout is not None:
+            notification_rows = await write_review_decision_notification(
+                connection,
+                recipient_id=str(task["submitted_by"]),
+                approved=False,
+                review_task_id=request.review_task_id,
+                skill_id=int(task["skill_id"]),
+                version_id=int(task["skill_version_id"]),
+                reviewer_id=request.reviewer_id,
+                namespace=str(task["namespace_slug"]),
+                slug=str(task["skill_slug"]),
+                skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
+                version=str(task["version_name"]),
+                comment=request.comment,
+                created_at=reviewed_at,
+            )
 
+    await publish_review_notifications(notification_fanout, notification_rows)
     return _review_response(task, status="REJECTED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
 
 

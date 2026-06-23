@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Awaitable, Callable, Protocol
 
 from app.db.unit_of_work import transaction_connection
@@ -24,6 +24,12 @@ from app.publish.transaction import (
     finalize_publish_db_records,
 )
 from app.admin.search import upsert_skill_search_document
+from app.notifications.publisher import NotificationFanout
+from app.review.notifications import (
+    publish_review_notifications,
+    read_review_submission_recipients,
+    write_review_submitted_notifications,
+)
 
 
 @dataclass(frozen=True)
@@ -87,9 +93,11 @@ async def execute_publish_write(
     request: PublishWriteInput,
     *,
     scan_task_publisher: ScanTaskPublisher | None = None,
+    notification_fanout: NotificationFanout | None = None,
     after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
     replacement_storage_keys: list[str] = []
+    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         if request.replacement is not None:
             await auto_withdraw_pending_review_versions(
@@ -166,10 +174,29 @@ async def execute_publish_write(
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
+        if side_effects.review_task_id is not None and notification_fanout is not None:
+            notification_rows = await write_review_submitted_notifications(
+                connection,
+                recipients=await read_review_submission_recipients(
+                    connection,
+                    namespace_id=request.namespace_id,
+                ),
+                review_task_id=side_effects.review_task_id,
+                skill_id=prepared.skill_id,
+                version_id=prepared.version_id,
+                submitter_id=request.publisher_id,
+                namespace=request.namespace_slug,
+                slug=request.slug,
+                skill_name=request.display_name,
+                version=request.version,
+                created_at=request.now or datetime.now(UTC),
+            )
         if after_publish is not None:
             await after_publish(connection, prepared.skill_id, prepared.version_id)
         if prepared.latest_version_updated:
             await upsert_skill_search_document(connection, prepared.skill_id)
+
+    await publish_review_notifications(notification_fanout, notification_rows)
 
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False

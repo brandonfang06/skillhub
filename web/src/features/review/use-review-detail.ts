@@ -60,6 +60,7 @@ export function useApproveReview(callbacks?: { onSuccess?: () => void; onError?:
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
       callbacks?.onSuccess?.()
     },
     onError: callbacks?.onError,
@@ -78,6 +79,7 @@ export function useRejectReview(callbacks?: { onSuccess?: () => void; onError?: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
       callbacks?.onSuccess?.()
     },
     onError: callbacks?.onError,

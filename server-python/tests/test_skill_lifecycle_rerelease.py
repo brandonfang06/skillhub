@@ -331,6 +331,7 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
 ) -> None:
     app = create_app()
     app.state.db_engine = object()
+    app.state.notification_fanout = object()
     app.state.settings = SimpleNamespace(
         storage_base_path=str(tmp_path),
         security_scanner_enabled=True,
@@ -345,11 +346,13 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         lifecycle_input: SkillRereleaseInput,
         *,
         publish_writer: object | None = None,
+        notification_fanout: object | None = None,
     ) -> dict[str, object]:
         seen["engine"] = engine
         seen["scanner_enabled"] = lifecycle_input.scanner_enabled
         seen["scan_mode"] = lifecycle_input.scan_mode
         seen["publish_writer_supplied"] = publish_writer is not None
+        seen["notification_fanout_supplied"] = notification_fanout is not None
         return {"skillId": 101, "versionId": 77, "action": "RERELEASE_VERSION", "status": "PENDING_REVIEW"}
 
     monkeypatch.setattr(lifecycle_api, "rerelease_skill_version", fake_rerelease)
@@ -367,6 +370,7 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         "scanner_enabled": True,
         "scan_mode": "upload",
         "publish_writer_supplied": True,
+        "notification_fanout_supplied": True,
     }
 
 
