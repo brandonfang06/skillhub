@@ -23,24 +23,6 @@ def _skill_name(name: str | None, slug: str) -> str:
 
 
 async def read_review_submission_recipients(connection: Any, *, namespace_id: int) -> list[str]:
-    platform_rows = (
-        await connection.execute(
-            text(
-                """
-                SELECT DISTINCT urb.user_id
-                FROM user_role_binding urb
-                JOIN role r ON r.id = urb.role_id
-                LEFT JOIN notification_preference np
-                  ON np.user_id = urb.user_id
-                 AND np.category = 'REVIEW'
-                 AND np.channel = 'IN_APP'
-                WHERE r.code IN ('SKILL_ADMIN', 'SUPER_ADMIN')
-                  AND COALESCE(np.enabled, TRUE) = TRUE
-                ORDER BY urb.user_id
-                """
-            ),
-        )
-    ).mappings().all()
     namespace_rows = (
         await connection.execute(
             text(
@@ -60,7 +42,7 @@ async def read_review_submission_recipients(connection: Any, *, namespace_id: in
             {"namespace_id": namespace_id},
         )
     ).mappings().all()
-    return list(dict.fromkeys([str(row["user_id"]) for row in platform_rows + namespace_rows]))
+    return list(dict.fromkeys([str(row["user_id"]) for row in namespace_rows]))
 
 
 async def _in_app_review_notifications_enabled(connection: Any, user_id: str) -> bool:

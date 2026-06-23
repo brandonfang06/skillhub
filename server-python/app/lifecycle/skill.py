@@ -758,23 +758,22 @@ async def submit_skill_version_for_review(
             ),
             created_at=timestamp,
         )
-        if notification_fanout is not None:
-            notification_rows = await write_review_submitted_notifications(
+        notification_rows = await write_review_submitted_notifications(
+            connection,
+            recipients=await read_review_submission_recipients(
                 connection,
-                recipients=await read_review_submission_recipients(
-                    connection,
-                    namespace_id=namespace_id,
-                ),
-                review_task_id=review_task_id,
-                skill_id=skill_id,
-                version_id=version_id,
-                submitter_id=request.user_id,
-                namespace=str(skill["namespace_slug"]),
-                slug=str(skill["skill_slug"]),
-                skill_name=str(skill["skill_slug"]),
-                version=version_name,
-                created_at=timestamp,
-            )
+                namespace_id=namespace_id,
+            ),
+            review_task_id=review_task_id,
+            skill_id=skill_id,
+            version_id=version_id,
+            submitter_id=request.user_id,
+            namespace=str(skill["namespace_slug"]),
+            slug=str(skill["skill_slug"]),
+            skill_name=str(skill["skill_slug"]),
+            version=version_name,
+            created_at=timestamp,
+        )
 
     await publish_review_notifications(notification_fanout, notification_rows)
     return {"skillId": skill_id, "versionId": version_id, "action": "SUBMIT_REVIEW", "status": "PENDING_REVIEW"}

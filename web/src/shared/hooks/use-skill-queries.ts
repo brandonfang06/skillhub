@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
-import { useAuth } from '@/features/auth/use-auth'
-import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
+import { useAuth } from '@/shared/hooks/use-auth'
 import { getSkillDetailQueryKey, getSkillSearchQueryKey } from './query-keys'
+import { clearDeletedSkillQueries } from './skill-delete-cache'
 import { buildSkillSearchUrl } from './skill-query-helpers'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000

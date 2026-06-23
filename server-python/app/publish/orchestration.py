@@ -174,7 +174,7 @@ async def execute_publish_write(
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
-        if side_effects.review_task_id is not None and notification_fanout is not None:
+        if side_effects.review_task_id is not None:
             notification_rows = await write_review_submitted_notifications(
                 connection,
                 recipients=await read_review_submission_recipients(

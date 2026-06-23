@@ -235,6 +235,17 @@ async def test_approve_review_task_notifies_submitter() -> None:
     ]
 
 
+@pytest.mark.anyio
+async def test_approve_review_task_persists_notification_without_fanout() -> None:
+    connection = FakeReviewApproveConnection()
+
+    await approve_review_task(FakeEngine(connection), approve_input())
+
+    assert len(connection.notifications) == 1
+    assert connection.notifications[0]["recipient_id"] == "local-user"
+    assert connection.notifications[0]["event_type"] == "REVIEW_APPROVED"
+
+
 def test_review_approve_route_returns_java_envelope() -> None:
     app = create_app()
     seen: list[ReviewApproveInput] = []

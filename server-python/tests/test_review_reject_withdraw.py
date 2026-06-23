@@ -197,6 +197,28 @@ async def test_reject_review_task_notifies_submitter() -> None:
 
 
 @pytest.mark.anyio
+async def test_reject_review_task_persists_notification_without_fanout() -> None:
+    connection = FakeReviewLifecycleConnection()
+
+    await reject_review_task(
+        FakeEngine(connection),
+        ReviewRejectInput(
+            review_task_id=801,
+            reviewer_id="team-admin",
+            comment="needs changes",
+            request_id="req-reject",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+            now=datetime(2026, 6, 9, 11, 0, tzinfo=UTC),
+        ),
+    )
+
+    assert len(connection.notifications) == 1
+    assert connection.notifications[0]["recipient_id"] == "local-user"
+    assert connection.notifications[0]["event_type"] == "REVIEW_REJECTED"
+
+
+@pytest.mark.anyio
 async def test_withdraw_review_task_deletes_pending_task_reopens_version_and_audits() -> None:
     connection = FakeReviewLifecycleConnection()
 

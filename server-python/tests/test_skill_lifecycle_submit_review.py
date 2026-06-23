@@ -95,8 +95,6 @@ class FakeSubmitReviewConnection:
                     "latest_version_id": None,
                 }
             )
-        if "FROM user_role_binding" in sql and "SKILL_ADMIN" in sql:
-            return FakeResult(rows=[{"user_id": "platform-admin"}])
         if "FROM namespace_member nm" in sql and "notification_preference" in sql:
             return FakeResult(rows=[{"user_id": "team-admin"}])
         if "FROM namespace_member" in sql:
@@ -187,7 +185,7 @@ async def test_submit_skill_version_for_review_notifies_reviewers() -> None:
         notification_fanout=fanout,
     )
 
-    assert {row["recipient_id"] for row in connection.notifications} == {"platform-admin", "team-admin"}
+    assert {row["recipient_id"] for row in connection.notifications} == {"team-admin"}
     assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
     body = json.loads(connection.notifications[0]["body_json"])
     assert body["reviewId"] == 701
@@ -196,7 +194,20 @@ async def test_submit_skill_version_for_review_notifies_reviewers() -> None:
     assert body["submitterId"] == "owner"
     assert body["namespace"] == "team-a"
     assert body["slug"] == "agent-helper"
-    assert {recipient for recipient, _payload in fanout.published} == {"platform-admin", "team-admin"}
+    assert {recipient for recipient, _payload in fanout.published} == {"team-admin"}
+
+
+@pytest.mark.anyio
+async def test_submit_skill_version_for_review_persists_notification_without_fanout() -> None:
+    connection = FakeSubmitReviewConnection()
+
+    await submit_skill_version_for_review(
+        FakeEngine(connection),
+        submit_input(),
+    )
+
+    assert {row["recipient_id"] for row in connection.notifications} == {"team-admin"}
+    assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
 
 
 @pytest.mark.anyio

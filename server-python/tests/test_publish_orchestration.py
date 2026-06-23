@@ -75,8 +75,6 @@ class FakeConnection:
         sql = str(statement)
         if "status = 'PENDING_REVIEW'" in sql:
             return FakeResult(rows=[])
-        if "FROM user_role_binding" in sql and "SKILL_ADMIN" in sql:
-            return FakeResult(rows=[{"user_id": "local-user"}, {"user_id": "platform-admin"}])
         if "FROM namespace_member nm" in sql and "notification_preference" in sql:
             return FakeResult(rows=[{"user_id": "team-admin"}, {"user_id": "local-user"}])
         if "INSERT INTO notification" in sql:
@@ -240,8 +238,12 @@ async def test_execute_publish_write_runs_after_publish_callback_in_same_transac
 
     await execute_publish_write(FakeEngine([connection]), publish_input(str(tmp_path)), after_publish=callback)
 
-    assert seen == [(connection, 7, 42, 8)]
-    assert "INSERT INTO review_task" in connection.statements[7]
+    assert len(seen) == 1
+    callback_connection, skill_id, version_id, callback_statement_count = seen[0]
+    assert (callback_connection, skill_id, version_id) == (connection, 7, 42)
+    review_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO review_task" in sql)
+    notification_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO notification" in sql)
+    assert review_insert < notification_insert < callback_statement_count
 
 
 @pytest.mark.anyio
@@ -266,7 +268,7 @@ async def test_execute_publish_write_notifies_reviewers_when_review_task_created
         notification_fanout=fanout,
     )
 
-    assert {row["recipient_id"] for row in connection.notifications} == {"local-user", "platform-admin", "team-admin"}
+    assert {row["recipient_id"] for row in connection.notifications} == {"local-user", "team-admin"}
     assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
     body = json.loads(connection.notifications[0]["body_json"])
     assert body["reviewId"] == 900
@@ -276,8 +278,32 @@ async def test_execute_publish_write_notifies_reviewers_when_review_task_created
     assert body["namespace"] == "global"
     assert body["slug"] == "agent-helper"
     assert body["skillName"] == "Agent Helper"
-    assert {recipient for recipient, _payload in fanout.published} == {"local-user", "platform-admin", "team-admin"}
+    assert {recipient for recipient, _payload in fanout.published} == {"local-user", "team-admin"}
     assert {payload["eventType"] for _recipient, payload in fanout.published} == {"REVIEW_SUBMITTED"}
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_persists_review_notification_without_fanout(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+
+    await execute_publish_write(
+        FakeEngine([connection]),
+        publish_input(str(tmp_path)),
+    )
+
+    assert {row["recipient_id"] for row in connection.notifications} == {"local-user", "team-admin"}
+    assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
 
 
 @pytest.mark.anyio

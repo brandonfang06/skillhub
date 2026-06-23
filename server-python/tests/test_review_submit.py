@@ -37,6 +37,7 @@ class FakeReviewSubmitConnection:
         self.version_status = version_status
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
+        self.notifications: list[dict[str, Any]] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -61,6 +62,8 @@ class FakeReviewSubmitConnection:
             )
         if "FROM user_role_binding" in sql:
             return FakeResult(rows=[])
+        if "FROM namespace_member nm" in sql and "notification_preference" in sql:
+            return FakeResult(rows=[{"user_id": "team-admin"}])
         if "FROM namespace_member" in sql:
             return FakeResult(row=None)
         if "FROM review_task" in sql and "COUNT" in sql:
@@ -71,6 +74,21 @@ class FakeReviewSubmitConnection:
             return FakeResult(row={"id": 901, "submitted_at": datetime(2026, 6, 9, 12, 0, tzinfo=UTC)})
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
+        if "INSERT INTO notification" in sql:
+            values = params or {}
+            row = {
+                "id": 7400 + len(self.notifications),
+                "recipient_id": values["recipient_id"],
+                "category": values["category"],
+                "event_type": values["event_type"],
+                "title": values["title"],
+                "body_json": values["body_json"],
+                "entity_type": values["entity_type"],
+                "entity_id": values["entity_id"],
+                "created_at": values["created_at"],
+            }
+            self.notifications.append(row)
+            return FakeResult(rows=[row])
 
         raise AssertionError(f"unexpected SQL: {sql}")
 
@@ -130,6 +148,16 @@ async def test_submit_review_task_moves_version_creates_task_and_audits() -> Non
     assert connection.params[audit_insert]["target_type"] == "REVIEW_TASK"
     assert connection.params[audit_insert]["target_id"] == 901
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"skillVersionId": 52}
+
+
+@pytest.mark.anyio
+async def test_submit_review_task_persists_review_notification_without_fanout() -> None:
+    connection = FakeReviewSubmitConnection()
+
+    await submit_review_task(FakeEngine(connection), submit_input())
+
+    assert {row["recipient_id"] for row in connection.notifications} == {"team-admin"}
+    assert {row["event_type"] for row in connection.notifications} == {"REVIEW_SUBMITTED"}
 
 
 @pytest.mark.anyio

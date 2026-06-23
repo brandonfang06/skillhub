@@ -427,23 +427,22 @@ async def submit_review_task(
             detail_json=json.dumps({"skillVersionId": int(request.skill_version_id)}, separators=(",", ":")),
             created_at=submitted_at,
         )
-        if notification_fanout is not None:
-            notification_rows = await write_review_submitted_notifications(
+        notification_rows = await write_review_submitted_notifications(
+            connection,
+            recipients=await read_review_submission_recipients(
                 connection,
-                recipients=await read_review_submission_recipients(
-                    connection,
-                    namespace_id=int(version_row["namespace_id"]),
-                ),
-                review_task_id=review_task_id,
-                skill_id=int(version_row["skill_id"]),
-                version_id=int(request.skill_version_id),
-                submitter_id=request.user_id,
-                namespace=str(version_row["namespace_slug"]),
-                slug=str(version_row["skill_slug"]),
-                skill_name=_metadata_value(version_row.get("parsed_metadata_json"), "name"),
-                version=str(version_row["version_name"]),
-                created_at=submitted_at,
-            )
+                namespace_id=int(version_row["namespace_id"]),
+            ),
+            review_task_id=review_task_id,
+            skill_id=int(version_row["skill_id"]),
+            version_id=int(request.skill_version_id),
+            submitter_id=request.user_id,
+            namespace=str(version_row["namespace_slug"]),
+            slug=str(version_row["skill_slug"]),
+            skill_name=_metadata_value(version_row.get("parsed_metadata_json"), "name"),
+            version=str(version_row["version_name"]),
+            created_at=submitted_at,
+        )
 
     await publish_review_notifications(notification_fanout, notification_rows)
     return _review_submit_response(
@@ -579,22 +578,21 @@ async def approve_review_task(
             created_at=reviewed_at,
         )
         await upsert_skill_search_document(connection, int(task["skill_id"]))
-        if notification_fanout is not None:
-            notification_rows = await write_review_decision_notification(
-                connection,
-                recipient_id=str(task["submitted_by"]),
-                approved=True,
-                review_task_id=request.review_task_id,
-                skill_id=int(task["skill_id"]),
-                version_id=int(task["skill_version_id"]),
-                reviewer_id=request.reviewer_id,
-                namespace=str(task["namespace_slug"]),
-                slug=str(task["skill_slug"]),
-                skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
-                version=str(task["version_name"]),
-                comment=request.comment,
-                created_at=reviewed_at,
-            )
+        notification_rows = await write_review_decision_notification(
+            connection,
+            recipient_id=str(task["submitted_by"]),
+            approved=True,
+            review_task_id=request.review_task_id,
+            skill_id=int(task["skill_id"]),
+            version_id=int(task["skill_version_id"]),
+            reviewer_id=request.reviewer_id,
+            namespace=str(task["namespace_slug"]),
+            slug=str(task["skill_slug"]),
+            skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
+            version=str(task["version_name"]),
+            comment=request.comment,
+            created_at=reviewed_at,
+        )
 
     await publish_review_notifications(notification_fanout, notification_rows)
     return _review_response(task, status="APPROVED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
@@ -668,22 +666,21 @@ async def reject_review_task(
             detail_json=_detail_with_comment(request.comment),
             created_at=reviewed_at,
         )
-        if notification_fanout is not None:
-            notification_rows = await write_review_decision_notification(
-                connection,
-                recipient_id=str(task["submitted_by"]),
-                approved=False,
-                review_task_id=request.review_task_id,
-                skill_id=int(task["skill_id"]),
-                version_id=int(task["skill_version_id"]),
-                reviewer_id=request.reviewer_id,
-                namespace=str(task["namespace_slug"]),
-                slug=str(task["skill_slug"]),
-                skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
-                version=str(task["version_name"]),
-                comment=request.comment,
-                created_at=reviewed_at,
-            )
+        notification_rows = await write_review_decision_notification(
+            connection,
+            recipient_id=str(task["submitted_by"]),
+            approved=False,
+            review_task_id=request.review_task_id,
+            skill_id=int(task["skill_id"]),
+            version_id=int(task["skill_version_id"]),
+            reviewer_id=request.reviewer_id,
+            namespace=str(task["namespace_slug"]),
+            slug=str(task["skill_slug"]),
+            skill_name=_metadata_value(task.get("parsed_metadata_json"), "name"),
+            version=str(task["version_name"]),
+            comment=request.comment,
+            created_at=reviewed_at,
+        )
 
     await publish_review_notifications(notification_fanout, notification_rows)
     return _review_response(task, status="REJECTED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
