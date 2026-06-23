@@ -13,8 +13,11 @@ def test_makefile_defines_python_backend_process_only() -> None:
 
     assert "DEV_PYTHON_PID := $(DEV_DIR)/python.pid" in makefile
     assert "DEV_PYTHON_LOG := $(DEV_DIR)/python.log" in makefile
-    assert "DEV_PYTHON_URL := http://localhost:8081" in makefile
-    assert "DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload" in makefile
+    assert "DEV_PYTHON_URL := http://localhost:8080" in makefile
+    assert "DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload" in makefile
+    assert "8081" not in "\n".join(
+        line for line in makefile.splitlines() if "DEV_PYTHON" in line or "DEV_API_URL" in line
+    )
     assert "DEV_SERVER_PID" not in makefile
     assert "DEV_SERVER_LOG" not in makefile
     assert "BACKEND_TEST_JAVA_OPTIONS" not in makefile

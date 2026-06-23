@@ -4,7 +4,7 @@ import path from 'path'
 
 const LEGACY_BROWSER_TARGETS = ['chrome83', 'edge83', 'firefox78', 'safari14']
 const JS_BUILD_TARGET = 'es2020'
-const PYTHON_BACKEND_TARGET = 'http://localhost:8081'
+const PYTHON_BACKEND_TARGET = 'http://localhost:8080'
 
 export const PYTHON_BACKEND_PROXY_PREFIXES = [
   '/api',

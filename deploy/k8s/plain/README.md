@@ -29,15 +29,15 @@ kubectl -n skillhub wait --for=condition=ready pod --all --timeout=300s
 
 ```bash
 kubectl -n skillhub get deploy,svc
-kubectl -n skillhub port-forward svc/skillhub-web 8080:80
-kubectl -n skillhub port-forward svc/skillhub-server 8081:8080
+kubectl -n skillhub port-forward svc/skillhub-web 3000:80
+kubectl -n skillhub port-forward svc/skillhub-server 8080:8080
 ```
 
 Health checks:
 
 ```bash
-curl http://localhost:8081/api/v1/health
 curl http://localhost:8080/api/v1/health
+curl http://localhost:3000/api/v1/health
 ```
 
 For the environment variable manual, see

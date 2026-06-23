@@ -49,6 +49,29 @@ def test_dev_python_environment_processes_scanner_results() -> None:
     assert ": $${SKILLHUB_SCAN_CONSUMER_ENABLED:=true}; export SKILLHUB_SCAN_CONSUMER_ENABLED;" in makefile
 
 
+def test_active_python_runtime_docs_and_configs_do_not_use_hybrid_8081_port() -> None:
+    active_paths = [
+        "AGENTS.md",
+        "Makefile",
+        "README.md",
+        "server-python/AGENTS.md",
+        "server-python/README.md",
+        "server-python/app/auth/oauth.py",
+        "web/vite.config.ts",
+        "docs/dev-workflow.md",
+        "docs/local-python-skillhub-test-manual.zh.md",
+        "docs/backend-python-maintenance/2026-06-20-mock-auth-flow-scenarios.md",
+        "deploy/k8s/README.md",
+        "deploy/k8s/plain/README.md",
+        "docs/skillhub/guide/kubernetes.md",
+        "docs/skillhub/en/guide/kubernetes.md",
+    ]
+
+    offenders = [path for path in active_paths if "8081" in read(path)]
+
+    assert offenders == []
+
+
 def test_local_dev_environment_can_be_overridden_with_env_local() -> None:
     makefile = read("Makefile")
     env_example = read(".env.local.example")

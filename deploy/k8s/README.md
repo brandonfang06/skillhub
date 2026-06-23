@@ -178,15 +178,15 @@ kubectl get svc -n skillhub
 Port-forward:
 
 ```bash
-kubectl port-forward svc/skillhub-web -n skillhub 8080:80
-kubectl port-forward svc/skillhub-server -n skillhub 8081:8080
+kubectl port-forward svc/skillhub-web -n skillhub 3000:80
+kubectl port-forward svc/skillhub-server -n skillhub 8080:8080
 ```
 
 Health checks:
 
 ```bash
-curl http://localhost:8081/api/v1/health
 curl http://localhost:8080/api/v1/health
+curl http://localhost:3000/api/v1/health
 ```
 
 ## Images

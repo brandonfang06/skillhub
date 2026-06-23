@@ -25,7 +25,7 @@ Start the Python backend with `uv`:
 
 ```bash
 cd server-python
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Start the frontend:
@@ -37,7 +37,7 @@ pnpm dev
 
 This starts:
 - Dependency services (Postgres, Redis, MinIO) via Docker
-- Backend (FastAPI) directly on your machine at http://localhost:8081
+- Backend (FastAPI) directly on your machine at http://localhost:8080
 - Frontend (Vite) directly on your machine at http://localhost:3000
 
 SkillHub now pins a shared Docker Compose project name for local development, so multiple git worktrees can reuse the same dependency containers instead of fighting over `5432`, `6379`, and `9000`.
@@ -86,7 +86,7 @@ After editing backend code, restart the backend explicitly:
 
 ```bash
 cd server-python
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 If you use `.env.local`, include `--env-file ../.env.local`. Stop the foreground
@@ -115,7 +115,7 @@ or the Compose environment.
 | Command                          | Description                      |
 |----------------------------------|----------------------------------|
 | `docker compose up -d postgres redis minio skill-scanner` | Start local dependency services |
-| `cd server-python; uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload` | Start backend locally |
+| `cd server-python; uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload` | Start backend locally |
 | `docker compose down`            | Stop local dependency services   |
 | `make dev-status`                | Check status of all services     |
 | `make dev-logs`                  | Tail backend logs                |
@@ -220,7 +220,7 @@ The PR title and body are auto-populated from your commit messages.
 ```
 docker compose up -d postgres redis minio skill-scanner
 cd server-python
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 # ... write code, test in browser ...
 make staging          # regression test in Docker
 make staging-down     # stop staging

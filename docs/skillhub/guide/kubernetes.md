@@ -110,13 +110,13 @@ kubectl wait --for=condition=ready pod --all -n skillhub --timeout=300s
 
 ```bash
 # 前端
-kubectl port-forward svc/skillhub-web -n skillhub 8080:80
+kubectl port-forward svc/skillhub-web -n skillhub 3000:80
 
 # 后端 API
-kubectl port-forward svc/skillhub-server -n skillhub 8081:8080
+kubectl port-forward svc/skillhub-server -n skillhub 8080:8080
 ```
 
-访问 http://localhost:8080
+访问 http://localhost:3000
 
 **方式二：Ingress 域名访问**
 

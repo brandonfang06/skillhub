@@ -10,7 +10,7 @@
 | 服務 | URL |
 | --- | --- |
 | Web UI | `http://localhost:3000` |
-| Python backend | `http://localhost:8081` |
+| Python backend | `http://localhost:8080` |
 | Web proxy 到 backend | `http://localhost:3000/api/v1/health` |
 | Scanner | `http://localhost:8000/health` |
 | MinIO Console | `http://localhost:9001` |
@@ -158,24 +158,24 @@ Compress-Archive -Path "$work\*" -DestinationPath ".dev\manual-test-skill.zip" -
 
 ## 5. API 快速檢查
 
-以下 API 直接打 Python backend `8081`。
+以下 API 直接打 Python backend `8080`。
 
 ### 5.1 Health
 
 ```powershell
-Invoke-RestMethod http://localhost:8081/api/v1/health
+Invoke-RestMethod http://localhost:8080/api/v1/health
 ```
 
 ### 5.2 Auth me
 
 ```powershell
-Invoke-RestMethod http://localhost:8081/api/v1/auth/me -Headers @{ "X-Mock-User-Id" = "docker-admin" }
+Invoke-RestMethod http://localhost:8080/api/v1/auth/me -Headers @{ "X-Mock-User-Id" = "docker-admin" }
 ```
 
 ### 5.3 List namespaces
 
 ```powershell
-Invoke-RestMethod http://localhost:8081/api/v1/namespaces -Headers @{ "X-Mock-User-Id" = "docker-admin" }
+Invoke-RestMethod http://localhost:8080/api/v1/namespaces -Headers @{ "X-Mock-User-Id" = "docker-admin" }
 ```
 
 ### 5.4 Upload skill
@@ -186,20 +186,20 @@ curl.exe `
   -H "X-Mock-User-Id: local-user" `
   -F "file=@$zip" `
   -F "visibility=PUBLIC" `
-  "http://localhost:8081/api/web/skills/global/publish"
+  "http://localhost:8080/api/web/skills/global/publish"
 ```
 
 ### 5.5 Search
 
 ```powershell
-Invoke-RestMethod "http://localhost:8081/api/v1/search?q=manual-test-skill&page=0&size=10" `
+Invoke-RestMethod "http://localhost:8080/api/v1/search?q=manual-test-skill&page=0&size=10" `
   -Headers @{ "X-Mock-User-Id" = "docker-admin" }
 ```
 
 ### 5.6 Review list
 
 ```powershell
-Invoke-RestMethod "http://localhost:8081/api/web/reviews?status=PENDING&page=0&size=20" `
+Invoke-RestMethod "http://localhost:8080/api/web/reviews?status=PENDING&page=0&size=20" `
   -Headers @{ "X-Mock-User-Id" = "docker-admin" }
 ```
 
@@ -209,7 +209,7 @@ Invoke-RestMethod "http://localhost:8081/api/web/reviews?status=PENDING&page=0&s
 
 ```powershell
 Invoke-RestMethod `
-  -Uri "http://localhost:8081/api/web/reviews/<review_id>/approve" `
+  -Uri "http://localhost:8080/api/web/reviews/<review_id>/approve" `
   -Method Post `
   -Headers @{ "X-Mock-User-Id" = "docker-admin" } `
   -ContentType "application/json" `

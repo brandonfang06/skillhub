@@ -9,7 +9,7 @@ uv venv .venv
 uv sync
 uv run pytest
 uv run python -m app.migrations upgrade
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ## Schema Migrations

@@ -66,4 +66,4 @@ covered here.
   tests remain the process-level guard for install/publish commands.
 - Scenario 5 is covered for the public search/detail/download browser path by
   `web/e2e/browser-flow-mock-api.spec.ts`. It uses Playwright API mocks because
-  the existing Real API smoke suite requires a live backend on port 8081.
+  the existing Real API smoke suite requires a live backend on port 8080.

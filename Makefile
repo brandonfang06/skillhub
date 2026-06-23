@@ -7,7 +7,7 @@ DEV_PYTHON_LOG := $(DEV_DIR)/python.log
 DEV_WEB_LOG := $(DEV_DIR)/web.log
 DEV_WEB_URL := http://localhost:3000
 DEV_API_URL := http://localhost:8080
-DEV_PYTHON_URL := http://localhost:8081
+DEV_PYTHON_URL := http://localhost:8080
 DEV_SCANNER_URL := http://localhost:8000
 DEV_ENV_FILE := .env.local
 DEV_ENV_SOURCE := set -a; if [ -f ../$(DEV_ENV_FILE) ]; then . ../$(DEV_ENV_FILE); fi; set +a;
@@ -18,7 +18,7 @@ STAGING_SERVER_IMAGE := skillhub-server-python:staging
 DEV_PROCESS := bash scripts/dev-process.sh
 DEV_PYTHON_DEFAULTS := : $${BOOTSTRAP_ADMIN_ENABLED:=true}; export BOOTSTRAP_ADMIN_ENABLED; : $${SKILLHUB_SECURITY_SCANNER_ENABLED:=true}; export SKILLHUB_SECURITY_SCANNER_ENABLED; : $${SKILLHUB_SECURITY_SCANNER_MODE:=upload}; export SKILLHUB_SECURITY_SCANNER_MODE; : $${SKILLHUB_SCAN_CONSUMER_ENABLED:=true}; export SKILLHUB_SCAN_CONSUMER_ENABLED;
 DEV_PYTHON_ENV := UV_CACHE_DIR=.uv-cache
-DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+DEV_PYTHON_CMD := uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 PARALLEL_BASE_REF ?= origin/main
 PARALLEL_WORKTREE_ROOT ?=
 DEV_COMPOSE_PROJECT_NAME ?= skillhub

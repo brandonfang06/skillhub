@@ -19,12 +19,10 @@ def test_route_registry_has_no_java_owned_rows() -> None:
     assert java_owned_rows == []
 
 
-def test_vite_proxy_has_no_java_backend_target() -> None:
+def test_vite_proxy_has_no_hybrid_python_backend_target() -> None:
     vite_config = read_text(ROOT / "web" / "vite.config.ts")
-    vite_config_test = read_text(ROOT / "web" / "vite.config.test.ts")
 
-    assert "target: 'http://localhost:8080'" not in vite_config
-    assert "toBe('http://localhost:8080')" not in vite_config_test
+    assert "http://localhost:8081" not in vite_config
 
 
 def test_final_cutover_deferred_categories_are_explicit() -> None:

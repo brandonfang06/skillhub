@@ -145,7 +145,7 @@ Start the Python backend with `uv`:
 
 ```bash
 cd server-python
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 > **For developers in China**: use the release/runtime mirror documented in the local development guide if dependency or image downloads are slow.
@@ -153,7 +153,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 Then open:
 
 - Web UI: `http://localhost:3000`
-- Backend API: `http://localhost:8081`
+- Backend API: `http://localhost:8080`
 
 By default, the local backend starts with the `local` profile.
 In that mode, local development keeps the mock-auth users below and also
