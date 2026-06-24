@@ -1,10 +1,9 @@
-import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, Check, Copy, Terminal, UserRound } from 'lucide-react'
+import { Check, Copy, Terminal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
 
-type LandingQuickStartTabId = 'agent' | 'human' | 'cli'
+type LandingQuickStartTabId = 'cli'
 
 interface LandingQuickStartTab {
   id: LandingQuickStartTabId
@@ -14,28 +13,7 @@ interface LandingQuickStartTab {
 }
 
 const tabIcons: Record<LandingQuickStartTabId, LucideIcon> = {
-  agent: Bot,
-  human: UserRound,
   cli: Terminal,
-}
-
-/**
- * Get the base URL for the application.
- * Prefers the runtime config if set and not localhost.
- * Falls back to the current page origin.
- */
-function getAppBaseUrl(): string {
-  if (typeof window === 'undefined') {
-    return ''
-  }
-  const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
-  const configuredUrl = runtimeConfig?.appBaseUrl
-  // Use configured URL only if it's set and not localhost
-  if (configuredUrl && !configuredUrl.includes('localhost')) {
-    return configuredUrl
-  }
-  // Fallback to current page origin
-  return `${window.location.protocol}//${window.location.host}`
 }
 
 function CompactCopyButton({ text }: { text: string }) {
@@ -68,28 +46,10 @@ function CompactCopyButton({ text }: { text: string }) {
 
 export function LandingQuickStartSection() {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<LandingQuickStartTabId>('agent')
-  const baseUrl = useMemo(() => getAppBaseUrl(), [])
-
-  // Build dynamic agent command with actual registry URL
-  const agentCommand = t('landing.quickStart.agent.commandTemplate', {
-    defaultValue: t('landing.quickStart.agent.command'),
-    url: `${baseUrl}/registry/skill.md`,
-  })
 
   const tabs: LandingQuickStartTab[] = [
-    {
-      id: 'agent',
-      label: t('landing.quickStart.tabs.agent'),
-      description: t('landing.quickStart.agent.description'),
-      command: agentCommand,
-    },
-    {
-      id: 'human',
-      label: t('landing.quickStart.tabs.human'),
-      description: t('landing.quickStart.human.description'),
-      command: t('landing.quickStart.human.command'),
-    },
+    // ClawHub-based Agent/Human onboarding is disabled for internal deployment.
+    // Keep the locale keys in place so the tabs can be restored if ClawHub is supported later.
     {
       id: 'cli',
       label: t('landing.quickStart.tabs.cli'),
@@ -98,7 +58,7 @@ export function LandingQuickStartSection() {
     },
   ]
 
-  const currentTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0]
+  const currentTab = tabs[0]
 
   return (
     <section className="relative z-10 w-full px-6 py-14 md:py-16" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
@@ -117,7 +77,7 @@ export function LandingQuickStartSection() {
           style={{ borderColor: 'hsl(var(--border-card))' }}
         >
           <div
-            className="grid grid-cols-1 gap-2 rounded-2xl p-1.5 md:grid-cols-3"
+            className="grid grid-cols-1 gap-2 rounded-2xl p-1.5"
             style={{ background: 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.92) 100%)' }}
           >
             {tabs.map((tab) => {
@@ -128,7 +88,6 @@ export function LandingQuickStartSection() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
                   aria-pressed={isActive}
                   className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] px-4 py-3 text-base font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
                   style={{
@@ -159,7 +118,7 @@ export function LandingQuickStartSection() {
               <div className="overflow-x-auto whitespace-nowrap">
                 <code
                   className="font-mono text-sm md:text-base"
-                  style={{ color: currentTab.id === 'agent' ? '#16A34A' : '#0F172A' }}
+                  style={{ color: '#0F172A' }}
                 >
                   {currentTab.command}
                 </code>

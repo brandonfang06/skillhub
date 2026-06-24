@@ -83,22 +83,25 @@ function CommandBlock({ command }: CommandBlockProps) {
 export function InstallCommand({ namespace, slug }: InstallCommandProps) {
   const { t } = useTranslation()
   const baseUrl = useMemo(() => getBaseUrl(), [])
-  const clawhubCommand = useMemo(() => buildInstallCommand(namespace, slug, baseUrl), [baseUrl, namespace, slug])
   const skillhubCommand = useMemo(() => buildSkillhubInstallCommand(namespace, slug, baseUrl), [baseUrl, namespace, slug])
 
   return (
-    <Tabs defaultValue="clawhub" className="space-y-3">
+    <Tabs defaultValue="skillhub" className="space-y-3">
       <TabsList className="w-full gap-6 border-border/70 bg-transparent p-0 text-xs">
+        {/* ClawHub CLI is disabled for the internal deployment until ClawHub support is available.
         <TabsTrigger value="clawhub" className={installMethodTabTriggerClass}>
           {t('skillDetail.installMethodClawhub')}
         </TabsTrigger>
+        */}
         <TabsTrigger value="skillhub" className={installMethodTabTriggerClass}>
           {t('skillDetail.installMethodSkillhub')}
         </TabsTrigger>
       </TabsList>
+      {/* ClawHub CLI is disabled for the internal deployment until ClawHub support is available.
       <TabsContent value="clawhub">
         <CommandBlock command={clawhubCommand} />
       </TabsContent>
+      */}
       <TabsContent value="skillhub">
         <CommandBlock command={skillhubCommand} />
       </TabsContent>

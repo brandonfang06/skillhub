@@ -125,7 +125,7 @@ describe('install-command', () => {
     expect(html).not.toContain('flex-1 rounded-md')
   })
 
-  it('renders ClawHub CLI as the default install method', () => {
+  it('renders only the SkillHub CLI install method', () => {
     setMockWindow('https://app.example.com')
 
     const html = renderToStaticMarkup(createElement(InstallCommand, {
@@ -133,10 +133,9 @@ describe('install-command', () => {
       slug: 'meeting-minutes-generator',
     }))
 
-    expect(html).toContain('skillDetail.installMethodClawhub')
     expect(html).toContain('skillDetail.installMethodSkillhub')
-    expect(html).toContain('aria-selected="true"')
-    expect(html).toContain('npx clawhub install team-alpha--meeting-minutes-generator --registry https://app.example.com')
-    expect(html).not.toContain('npx @astron-team/skillhub@latest install meeting-minutes-generator --namespace team-alpha --registry https://app.example.com')
+    expect(html).toContain('npx @astron-team/skillhub@latest install meeting-minutes-generator --namespace team-alpha --registry https://app.example.com')
+    expect(html).not.toContain('skillDetail.installMethodClawhub')
+    expect(html).not.toContain('npx clawhub install team-alpha--meeting-minutes-generator --registry https://app.example.com')
   })
 })
