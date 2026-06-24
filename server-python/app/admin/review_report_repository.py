@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.api.skills import to_java_instant
+from app.notifications.publisher import NotificationFanout, publish_notification_rows
 
 
 SKILL_REPORT_READ_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -271,6 +272,113 @@ async def _write_report_notification(
     )
 
 
+async def _read_skill_notification_context(connection: Any, skill_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT s.id AS skill_id,
+                       s.slug AS slug,
+                       s.display_name AS display_name,
+                       n.slug AS namespace
+                FROM skill s
+                JOIN namespace n ON n.id = s.namespace_id
+                WHERE s.id = :skill_id
+                LIMIT 1
+                """
+            ),
+            {"skill_id": skill_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise AdminReviewReportError("error.skill.notFound", status_code=404)
+    return dict(row)
+
+
+async def _in_app_report_notifications_enabled(connection: Any, user_id: str) -> bool:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT COALESCE(np.enabled, TRUE) AS enabled
+                FROM (SELECT :user_id AS user_id) target
+                LEFT JOIN notification_preference np
+                  ON np.user_id = target.user_id
+                 AND np.category = 'REPORT'
+                 AND np.channel = 'IN_APP'
+                """
+            ),
+            {"user_id": user_id},
+        )
+    ).mappings().one_or_none()
+    return True if row is None else bool(row["enabled"])
+
+
+def _skill_display_name(skill: dict[str, Any]) -> str:
+    display_name = skill.get("display_name")
+    if display_name is not None and str(display_name).strip() != "":
+        return str(display_name)
+    return str(skill["slug"])
+
+
+async def _write_report_resolved_notification(
+    connection: Any,
+    *,
+    reporter_id: str,
+    report_id: int,
+    skill_id: int,
+    handler_id: str,
+    action: str,
+    created_at: datetime,
+) -> list[dict[str, Any]]:
+    if not await _in_app_report_notifications_enabled(connection, reporter_id):
+        return []
+    skill = await _read_skill_notification_context(connection, skill_id)
+    display_name = _skill_display_name(skill)
+    body_json = json.dumps(
+        {
+            "skillId": int(skill["skill_id"]),
+            "skillName": display_name,
+            "slug": str(skill["slug"]),
+            "namespace": str(skill["namespace"]),
+            "reportId": report_id,
+            "handlerId": handler_id,
+            "action": action,
+        },
+        separators=(",", ":"),
+    )
+    rows = (
+        await connection.execute(
+            text(
+                """
+                INSERT INTO notification (
+                    recipient_id, category, event_type, title, body_json,
+                    entity_type, entity_id, status, created_at
+                )
+                VALUES (
+                    :recipient_id, :category, :event_type, :title, :body_json,
+                    :entity_type, :entity_id, :status, :created_at
+                )
+                RETURNING id, recipient_id, category, event_type, title, body_json,
+                          entity_type, entity_id, created_at
+                """
+            ),
+            {
+                "recipient_id": reporter_id,
+                "category": "REPORT",
+                "event_type": "REPORT_RESOLVED",
+                "title": f"Report resolved: {display_name}",
+                "body_json": body_json,
+                "entity_type": "SKILL",
+                "entity_id": skill_id,
+                "status": "UNREAD",
+                "created_at": created_at,
+            },
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
 async def _apply_report_disposition(
     connection: Any,
     *,
@@ -349,6 +457,7 @@ async def resolve_admin_skill_report(
     client_ip: str | None,
     user_agent: str | None,
     now: datetime | None = None,
+    notification_fanout: NotificationFanout | None = None,
 ) -> dict[str, Any]:
     require_skill_report_reader(platform_roles)
     normalized_disposition = _normalize_disposition(disposition)
@@ -358,6 +467,7 @@ async def resolve_admin_skill_report(
 
     timestamp = _now(now)
     normalized_comment = _normalize_comment(comment)
+    notification_rows: list[dict[str, Any]] = []
     async with engine.begin() as connection:
         report = await _read_skill_report(connection, report_id)
         if str(report["status"]) != "PENDING":
@@ -413,6 +523,16 @@ async def resolve_admin_skill_report(
             body_json='{"status":"RESOLVED"}',
             created_at=timestamp,
         )
+        notification_rows = await _write_report_resolved_notification(
+            connection,
+            reporter_id=str(report["reporter_id"]),
+            report_id=report_id,
+            skill_id=int(report["skill_id"]),
+            handler_id=actor_user_id,
+            action="resolved",
+            created_at=timestamp,
+        )
+    await publish_notification_rows(notification_fanout, notification_rows)
     return {"id": report_id, "status": "RESOLVED"}
 
 
@@ -427,10 +547,12 @@ async def dismiss_admin_skill_report(
     client_ip: str | None,
     user_agent: str | None,
     now: datetime | None = None,
+    notification_fanout: NotificationFanout | None = None,
 ) -> dict[str, Any]:
     require_skill_report_reader(platform_roles)
     timestamp = _now(now)
     normalized_comment = _normalize_comment(comment)
+    notification_rows: list[dict[str, Any]] = []
     async with engine.begin() as connection:
         report = await _read_skill_report(connection, report_id)
         if str(report["status"]) != "PENDING":
@@ -475,6 +597,16 @@ async def dismiss_admin_skill_report(
             body_json='{"status":"DISMISSED"}',
             created_at=timestamp,
         )
+        notification_rows = await _write_report_resolved_notification(
+            connection,
+            reporter_id=str(report["reporter_id"]),
+            report_id=report_id,
+            skill_id=int(report["skill_id"]),
+            handler_id=actor_user_id,
+            action="dismissed",
+            created_at=timestamp,
+        )
+    await publish_notification_rows(notification_fanout, notification_rows)
     return {"id": report_id, "status": "DISMISSED"}
 
 

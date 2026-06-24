@@ -50,6 +50,7 @@ class FakeTransaction:
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.connection.transaction_closed = True
         return None
 
 
@@ -69,8 +70,22 @@ class FakeMutationConnection:
             12: {"id": 12, "skill_id": 102, "reporter_id": "reporter-3", "status": "RESOLVED"},
         }
         self.skills: dict[int, dict[str, Any]] = {
-            100: {"id": 100, "hidden": False, "status": "ACTIVE"},
-            101: {"id": 101, "hidden": False, "status": "ACTIVE"},
+            100: {
+                "id": 100,
+                "hidden": False,
+                "status": "ACTIVE",
+                "slug": "reported-skill",
+                "display_name": "Reported Skill",
+                "namespace_slug": "team-ai",
+            },
+            101: {
+                "id": 101,
+                "hidden": False,
+                "status": "ACTIVE",
+                "slug": "dismissed-skill",
+                "display_name": None,
+                "namespace_slug": "global",
+            },
         }
         self.profile_reviews: dict[int, dict[str, Any]] = {
             20: {
@@ -95,6 +110,9 @@ class FakeMutationConnection:
         self.users: dict[str, dict[str, Any]] = {"profile-user": {"id": "profile-user", "display_name": "Old Profile"}}
         self.audit_logs: list[dict[str, Any]] = []
         self.notifications: list[dict[str, Any]] = []
+        self.bell_notifications: list[dict[str, Any]] = []
+        self.report_notifications_enabled = True
+        self.transaction_closed = False
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -103,6 +121,22 @@ class FakeMutationConnection:
         if "FROM skill_report" in normalized and "WHERE id = :report_id" in normalized:
             row = self.skill_reports.get(int(bound["report_id"]))
             return FakeResult(rows=[row.copy()] if row else [])
+        if "FROM skill s" in normalized and "JOIN namespace n" in normalized:
+            skill = self.skills.get(int(bound["skill_id"]))
+            if skill is None:
+                return FakeResult(rows=[])
+            return FakeResult(
+                rows=[
+                    {
+                        "skill_id": skill["id"],
+                        "slug": skill["slug"],
+                        "display_name": skill["display_name"],
+                        "namespace": skill["namespace_slug"],
+                    }
+                ]
+            )
+        if "notification_preference np" in normalized and "np.category = 'REPORT'" in normalized:
+            return FakeResult(rows=[{"enabled": self.report_notifications_enabled}])
         if normalized.startswith("UPDATE skill_report"):
             report = self.skill_reports[int(bound["report_id"])]
             report.update(
@@ -128,6 +162,10 @@ class FakeMutationConnection:
         if normalized.startswith("INSERT INTO user_notification"):
             self.notifications.append(dict(bound))
             return FakeResult()
+        if normalized.startswith("INSERT INTO notification"):
+            row = {"id": 9000 + len(self.bell_notifications), **dict(bound)}
+            self.bell_notifications.append(row)
+            return FakeResult(rows=[row])
         if "FROM profile_change_request" in normalized and "WHERE id = :request_id" in normalized:
             row = self.profile_reviews.get(int(bound["request_id"]))
             return FakeResult(rows=[row.copy()] if row else [])
@@ -149,6 +187,15 @@ class FakeMutationConnection:
             )
             return FakeResult()
         raise AssertionError(f"unexpected SQL: {sql}")
+
+
+class FakeNotificationFanout:
+    def __init__(self, connection: FakeMutationConnection) -> None:
+        self.connection = connection
+        self.published: list[tuple[str, dict[str, Any], bool]] = []
+
+    async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        self.published.append((user_id, payload, self.connection.transaction_closed))
 
 
 @pytest.mark.anyio
@@ -188,6 +235,65 @@ async def test_resolve_skill_report_updates_report_hides_skill_and_writes_side_e
 
 
 @pytest.mark.anyio
+async def test_resolve_skill_report_publishes_report_resolved_notification_after_commit() -> None:
+    connection = FakeMutationConnection()
+    fanout = FakeNotificationFanout(connection)
+
+    result = await resolve_admin_skill_report(
+        FakeEngine(connection),
+        report_id=10,
+        actor_user_id="admin-1",
+        platform_roles=["SUPER_ADMIN"],
+        disposition="RESOLVE_AND_ARCHIVE",
+        comment="handled",
+        request_id="req-archive",
+        client_ip="127.0.0.1",
+        user_agent="pytest",
+        now=datetime(2026, 6, 10, 10, 0, tzinfo=UTC),
+        notification_fanout=fanout,
+    )
+
+    assert result == {"id": 10, "status": "RESOLVED"}
+    assert connection.skills[100]["status"] == "ARCHIVED"
+    assert connection.bell_notifications == [
+        {
+            "id": 9000,
+            "recipient_id": "reporter-1",
+            "category": "REPORT",
+            "event_type": "REPORT_RESOLVED",
+            "title": "Report resolved: Reported Skill",
+            "body_json": (
+                '{"skillId":100,"skillName":"Reported Skill","slug":"reported-skill",'
+                '"namespace":"team-ai","reportId":10,"handlerId":"admin-1","action":"resolved"}'
+            ),
+            "entity_type": "SKILL",
+            "entity_id": 100,
+            "status": "UNREAD",
+            "created_at": datetime(2026, 6, 10, 10, 0, tzinfo=UTC),
+        }
+    ]
+    assert fanout.published == [
+        (
+            "reporter-1",
+            {
+                "id": 9000,
+                "category": "REPORT",
+                "eventType": "REPORT_RESOLVED",
+                "title": "Report resolved: Reported Skill",
+                "bodyJson": (
+                    '{"skillId":100,"skillName":"Reported Skill","slug":"reported-skill",'
+                    '"namespace":"team-ai","reportId":10,"handlerId":"admin-1","action":"resolved"}'
+                ),
+                "entityType": "SKILL",
+                "entityId": 100,
+                "createdAt": "2026-06-10T10:00:00Z",
+            },
+            True,
+        )
+    ]
+
+
+@pytest.mark.anyio
 async def test_dismiss_skill_report_updates_report_and_rejects_non_pending() -> None:
     connection = FakeMutationConnection()
     result = await dismiss_admin_skill_report(
@@ -207,6 +313,12 @@ async def test_dismiss_skill_report_updates_report_and_rejects_non_pending() -> 
     assert connection.audit_logs[-1]["action"] == "DISMISS_SKILL_REPORT"
     assert connection.notifications[-1]["title"] == "Report dismissed"
     assert connection.notifications[-1]["body_json"] == '{"status":"DISMISSED"}'
+    assert connection.bell_notifications[-1]["recipient_id"] == "reporter-2"
+    assert connection.bell_notifications[-1]["event_type"] == "REPORT_RESOLVED"
+    assert connection.bell_notifications[-1]["body_json"] == (
+        '{"skillId":101,"skillName":"dismissed-skill","slug":"dismissed-skill",'
+        '"namespace":"global","reportId":11,"handlerId":"admin-1","action":"dismissed"}'
+    )
 
     with pytest.raises(AdminReviewReportError, match="error.skill.report.alreadyHandled"):
         await dismiss_admin_skill_report(
@@ -220,6 +332,27 @@ async def test_dismiss_skill_report_updates_report_and_rejects_non_pending() -> 
             user_agent=None,
             now=datetime(2026, 6, 10, 10, 2, tzinfo=UTC),
         )
+
+
+@pytest.mark.anyio
+async def test_report_resolved_notification_respects_report_preference() -> None:
+    connection = FakeMutationConnection()
+    connection.report_notifications_enabled = False
+
+    await dismiss_admin_skill_report(
+        FakeEngine(connection),
+        report_id=11,
+        actor_user_id="admin-1",
+        platform_roles=["SKILL_ADMIN"],
+        comment=None,
+        request_id=None,
+        client_ip=None,
+        user_agent=None,
+        now=datetime(2026, 6, 10, 10, 1, tzinfo=UTC),
+    )
+
+    assert connection.notifications[-1]["title"] == "Report dismissed"
+    assert connection.bell_notifications == []
 
 
 @pytest.mark.anyio
@@ -402,3 +535,30 @@ def test_admin_review_report_mutation_routes_use_java_envelopes_and_roles() -> N
     )
     assert reject_response.status_code == 200
     assert reject_response.json()["data"] == {"id": 21, "status": "REJECTED"}
+
+
+def test_admin_skill_report_resolve_route_passes_notification_fanout() -> None:
+    app = create_app()
+    connection = FakeMutationConnection()
+    fanout = FakeNotificationFanout(connection)
+    app.state.db_engine = FakeEngine(connection)
+    app.state.notification_fanout = fanout
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["SUPER_ADMIN"],
+    }
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/admin/skill-reports/10/resolve",
+        headers={"X-Mock-User-Id": "super-admin"},
+        json={"disposition": "RESOLVE_ONLY", "comment": "handled"},
+    )
+
+    assert response.status_code == 200
+    assert fanout.published[0][0] == "reporter-1"
+    assert fanout.published[0][1]["eventType"] == "REPORT_RESOLVED"

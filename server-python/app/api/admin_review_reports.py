@@ -159,6 +159,7 @@ async def resolve_admin_skill_report_route(
                 request_id=meta["request_id"],
                 client_ip=meta["client_ip"],
                 user_agent=meta["user_agent"],
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
     except AdminReviewReportError as exc:
@@ -192,6 +193,7 @@ async def dismiss_admin_skill_report_route(
                 request_id=meta["request_id"],
                 client_ip=meta["client_ip"],
                 user_agent=meta["user_agent"],
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
     except AdminReviewReportError as exc:
