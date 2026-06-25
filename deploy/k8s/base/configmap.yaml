@@ -32,6 +32,7 @@ data:
   public-base-url: ""
 
   # Scanner integration
+  publish-allowed-file-extensions: ""
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000
   security-scanner-mode: upload

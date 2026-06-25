@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from io import BytesIO
 from types import SimpleNamespace
 from zipfile import ZipFile
@@ -457,6 +458,44 @@ def test_cli_publish_write_rejects_invalid_preflight_before_write() -> None:
     assert response.status_code == 400
     assert response.json()["detail"] == "Publisher is not a member of namespace: global"
     assert not writer_called
+
+
+def test_cli_publish_write_logs_invalid_preflight_for_forensics(caplog) -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user()
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=False,
+            errors=[],
+            warnings=["Disallowed file extension: docs/flow.dot"],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    app.state.publish_validate_reader = validate_reader
+    client = TestClient(app)
+    caplog.set_level(logging.WARNING, logger="uvicorn.error")
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user", "X-Request-Id": "publish-invalid-extension"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Disallowed file extension: docs/flow.dot"
+    assert "Skill publish validation rejected" in caplog.text
+    assert "request_id=publish-invalid-extension" in caplog.text
+    assert "publisher_id=local-user" in caplog.text
+    assert "namespace=global" in caplog.text
+    assert "warnings=['Disallowed file extension: docs/flow.dot']" in caplog.text
 
 
 def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:

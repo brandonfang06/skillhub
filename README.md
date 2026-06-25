@@ -322,7 +322,8 @@ SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=.md,.json,.xsd,.xsl,.dtd,.docx,.xlsx,.p
 ```
 
 When set, this environment variable replaces the default allowlist instead of
-appending to it.
+appending to it. It does not automatically expand the pre-publish credential
+scanner's text-file extension list.
 
 ### Monitoring
 

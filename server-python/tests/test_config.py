@@ -98,6 +98,14 @@ def test_s3_storage_settings_do_not_include_presigned_url_configuration(monkeypa
     assert not hasattr(settings, "storage_s3_presign_expiry_seconds")
 
 
+def test_publish_allowed_file_extensions_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS", ".md,.dot,dot")
+
+    settings = get_settings()
+
+    assert settings.publish_allowed_file_extensions == {".md", ".dot"}
+
+
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")

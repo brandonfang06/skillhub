@@ -72,6 +72,7 @@ async def run_dry_run(
     entries: list[PackageEntry] | None = None,
     platform_roles: set[str] | None = None,
     visibility: str = "PUBLIC",
+    allowed_extensions: set[str] | None = None,
 ) -> Any:
     return await validate_publish_dry_run(
         PublishDryRunInput(
@@ -81,6 +82,7 @@ async def run_dry_run(
             visibility=visibility,
             platform_roles=platform_roles or set(),
             now=datetime(2026, 6, 8, 12, 30, 45, tzinfo=UTC),
+            allowed_extensions=allowed_extensions,
         ),
         repository,
     )
@@ -204,6 +206,30 @@ async def test_warning_only_package_is_invalid_for_dry_run() -> None:
     assert not result.valid
     assert result.errors == []
     assert "Disallowed file extension: binary.exe" in result.warnings
+
+
+@pytest.mark.anyio
+async def test_runtime_allowed_extension_override_accepts_dot_files() -> None:
+    result = await run_dry_run(
+        FakeDryRunRepository(),
+        entries=[
+            PackageEntry("SKILL.md", skill_md(), "text/markdown"),
+            PackageEntry("docs/diagram.dot", b"digraph G { a -> b }\n", "text/vnd.graphviz"),
+        ],
+        allowed_extensions={".md", ".dot"},
+    )
+
+    assert result.valid
+    assert result.warnings == []
+
+
+@pytest.mark.anyio
+async def test_runtime_allowed_extension_override_replaces_default_allowlist_for_dry_run() -> None:
+    result = await run_dry_run(FakeDryRunRepository(), allowed_extensions={".md", ".dot"})
+
+    assert not result.valid
+    assert result.errors == []
+    assert "Disallowed file extension: src/main.py" in result.warnings
 
 
 @pytest.mark.anyio

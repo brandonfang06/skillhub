@@ -66,6 +66,7 @@ class FakeRereleaseConnection:
         namespace_role: str | None = None,
         visibility: str = "PUBLIC",
         include_warning_file: bool = False,
+        include_dot_file: bool = False,
     ) -> None:
         self.source_status = source_status
         self.target_exists = target_exists
@@ -73,6 +74,7 @@ class FakeRereleaseConnection:
         self.namespace_role = namespace_role
         self.visibility = visibility
         self.include_warning_file = include_warning_file
+        self.include_dot_file = include_dot_file
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -127,6 +129,14 @@ class FakeRereleaseConnection:
                         "storage_key": "skills/101/42/tools/demo.exe",
                     }
                 )
+            if self.include_dot_file:
+                rows.append(
+                    {
+                        "file_path": "docs/flow.dot",
+                        "content_type": "text/vnd.graphviz",
+                        "storage_key": "skills/101/42/docs/flow.dot",
+                    }
+                )
             return FakeResult(
                 rows=rows
             )
@@ -165,6 +175,9 @@ def seed_source_files(base: Path) -> None:
     warning_file = base / "skills" / "101" / "42" / "tools" / "demo.exe"
     warning_file.parent.mkdir(parents=True, exist_ok=True)
     warning_file.write_bytes(b"MZ")
+    dot_file = base / "skills" / "101" / "42" / "docs" / "flow.dot"
+    dot_file.parent.mkdir(parents=True, exist_ok=True)
+    dot_file.write_bytes(b"digraph G { A -> B }\n")
 
 
 def fake_publish_result(version_status: str) -> PublishWriteResult:
@@ -263,6 +276,26 @@ async def test_rerelease_private_skill_uses_uploaded_publish_status(tmp_path: Pa
 
 
 @pytest.mark.anyio
+async def test_rerelease_uses_runtime_allowed_extension_override(tmp_path: Path) -> None:
+    seed_source_files(tmp_path)
+    connection = FakeRereleaseConnection(include_dot_file=True)
+    seen: list[PublishWriteInput] = []
+
+    async def publisher(write_input: PublishWriteInput) -> PublishWriteResult:
+        seen.append(write_input)
+        return fake_publish_result("PENDING_REVIEW")
+
+    response = await rerelease_skill_version(
+        FakeEngine(connection),
+        rerelease_input(str(tmp_path), allowed_extensions={".md", ".py", ".dot"}),
+        publish_writer=publisher,
+    )
+
+    assert response["status"] == "PENDING_REVIEW"
+    assert [entry.path for entry in seen[0].entries] == ["SKILL.md", "src/main.py", "docs/flow.dot"]
+
+
+@pytest.mark.anyio
 async def test_rerelease_rejects_non_published_source_before_publish(tmp_path: Path) -> None:
     seed_source_files(tmp_path)
     connection = FakeRereleaseConnection(source_status="UPLOADED")
@@ -336,6 +369,7 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         storage_base_path=str(tmp_path),
         security_scanner_enabled=True,
         security_scanner_mode="upload",
+        publish_allowed_file_extensions={".md", ".py", ".dot"},
         redis_url="redis://redis.test:6379",
         scan_stream_key="skillhub:scan:requests",
     )
@@ -351,6 +385,7 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         seen["engine"] = engine
         seen["scanner_enabled"] = lifecycle_input.scanner_enabled
         seen["scan_mode"] = lifecycle_input.scan_mode
+        seen["allowed_extensions"] = lifecycle_input.allowed_extensions
         seen["publish_writer_supplied"] = publish_writer is not None
         seen["notification_fanout_supplied"] = notification_fanout is not None
         return {"skillId": 101, "versionId": 77, "action": "RERELEASE_VERSION", "status": "PENDING_REVIEW"}
@@ -369,6 +404,7 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         "engine": app.state.db_engine,
         "scanner_enabled": True,
         "scan_mode": "upload",
+        "allowed_extensions": {".md", ".py", ".dot"},
         "publish_writer_supplied": True,
         "notification_fanout_supplied": True,
     }

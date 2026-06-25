@@ -363,6 +363,7 @@ async def rerelease_route_data(
         confirm_warnings=body.confirmWarnings,
         user_id=user_id,
         storage_base_path=settings.storage_base_path if settings is not None else "",
+        allowed_extensions=getattr(settings, "publish_allowed_file_extensions", None) if settings is not None else None,
         scanner_enabled=bool(getattr(settings, "security_scanner_enabled", False)) if settings is not None else False,
         scan_mode=str(getattr(settings, "security_scanner_mode", "local")) if settings is not None else "local",
         request_id=getattr(request.state, "request_id", None),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -105,6 +106,7 @@ class SkillRereleaseInput:
     confirm_warnings: bool
     user_id: str
     storage_base_path: str
+    allowed_extensions: AbstractSet[str] | None = None
     scanner_enabled: bool = False
     scan_mode: str = "local"
     request_id: str | None = None
@@ -824,8 +826,12 @@ def _rebuild_rerelease_entries(
     return entries
 
 
-def _validate_rerelease_entries(entries: list[PackageEntry], confirm_warnings: bool) -> SkillMetadata:
-    validation = validate_package(entries)
+def _validate_rerelease_entries(
+    entries: list[PackageEntry],
+    confirm_warnings: bool,
+    allowed_extensions: AbstractSet[str] | None,
+) -> SkillMetadata:
+    validation = validate_package(entries, allowed_extensions=allowed_extensions)
     if not validation.valid:
         raise SkillLifecycleError("error.skill.publish.package.invalid")
     if validation.warnings and not confirm_warnings:
@@ -867,7 +873,7 @@ async def rerelease_skill_version(
         files = await _read_source_files(connection, source_version_id)
 
     entries = _rebuild_rerelease_entries(request.storage_base_path, files, target_version)
-    metadata = _validate_rerelease_entries(entries, request.confirm_warnings)
+    metadata = _validate_rerelease_entries(entries, request.confirm_warnings, request.allowed_extensions)
     write_input = PublishWriteInput(
         namespace_id=int(skill["namespace_id"]),
         namespace_slug=str(skill["namespace_slug"]),

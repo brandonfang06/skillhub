@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import posixpath
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import PurePosixPath
@@ -199,6 +200,20 @@ def determine_content_type(path: str) -> str:
     return CONTENT_TYPES_BY_EXTENSION.get(package_extension(path), "application/octet-stream")
 
 
+def normalize_allowed_extensions(allowed_extensions: AbstractSet[str] | None) -> set[str] | None:
+    if allowed_extensions is None:
+        return None
+    normalized = set()
+    for extension in allowed_extensions:
+        value = extension.strip().lower()
+        if not value:
+            continue
+        if not value.startswith("."):
+            value = f".{value}"
+        normalized.add(value)
+    return normalized
+
+
 def canonicalize_skill_md_path(normalized_path: str) -> str:
     prefix, separator, filename = normalized_path.rpartition("/")
     if filename.lower() != "skill.md":
@@ -362,8 +377,14 @@ def parse_skill_metadata(content: bytes) -> SkillMetadata:
     )
 
 
-def validate_package(entries: list[PackageEntry], limits: PackageLimits | None = None) -> ValidationResult:
+def validate_package(
+    entries: list[PackageEntry],
+    limits: PackageLimits | None = None,
+    *,
+    allowed_extensions: AbstractSet[str] | None = None,
+) -> ValidationResult:
     active_limits = limits or PackageLimits()
+    active_allowed_extensions = normalize_allowed_extensions(allowed_extensions)
     errors: list[str] = []
     warnings: list[str] = []
     seen_paths: set[str] = set()
@@ -383,7 +404,7 @@ def validate_package(entries: list[PackageEntry], limits: PackageLimits | None =
 
         normalized_entry = PackageEntry(normalized_path, entry.content, determine_content_type(normalized_path))
         normalized_entries.append(normalized_entry)
-        if not is_allowed_extension(normalized_path):
+        if not is_allowed_extension(normalized_path, active_allowed_extensions):
             warnings.append(f"Disallowed file extension: {normalized_path}")
         if not content_signature_matches(normalized_path, entry.content):
             warnings.append(f"Content signature mismatch for {normalized_path}")
@@ -414,8 +435,9 @@ def validate_package(entries: list[PackageEntry], limits: PackageLimits | None =
     return ValidationResult(valid=not errors, errors=errors, warnings=warnings, metadata=metadata)
 
 
-def is_allowed_extension(path: str) -> bool:
-    return package_extension(path) in ALLOWED_EXTENSIONS
+def is_allowed_extension(path: str, allowed_extensions: AbstractSet[str] | None = None) -> bool:
+    active_allowed_extensions = normalize_allowed_extensions(allowed_extensions) or ALLOWED_EXTENSIONS
+    return package_extension(path) in active_allowed_extensions
 
 
 def is_valid_utf8_text(content: bytes) -> bool:

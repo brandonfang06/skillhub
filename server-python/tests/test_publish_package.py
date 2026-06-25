@@ -184,6 +184,31 @@ def test_validate_package_reports_duplicate_disallowed_and_signature_warnings() 
     assert "Content signature mismatch for image.png" in result.warnings
 
 
+def test_validate_package_accepts_runtime_allowed_extension_override() -> None:
+    result = validate_package(
+        [
+            PackageEntry("SKILL.md", skill_md(), "text/markdown"),
+            PackageEntry("docs/diagram.dot", b"digraph G { a -> b }\n", "text/vnd.graphviz"),
+        ],
+        allowed_extensions={".md", ".dot"},
+    )
+
+    assert result.valid
+    assert result.warnings == []
+
+
+def test_runtime_allowed_extension_override_replaces_default_allowlist() -> None:
+    result = validate_package(
+        [
+            PackageEntry("SKILL.md", skill_md(), "text/markdown"),
+            PackageEntry("src/main.py", b"print('ok')", "text/x-python"),
+        ],
+        allowed_extensions={".md", ".dot"},
+    )
+
+    assert "Disallowed file extension: src/main.py" in result.warnings
+
+
 def test_parse_skill_metadata_reads_yaml_frontmatter() -> None:
     metadata = parse_skill_metadata(skill_md(name="agent-helper", description="Helps agents"))
 

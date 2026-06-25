@@ -22,6 +22,12 @@ For full Kubernetes examples, see `deploy/k8s/environment-variables.zh.md`.
 | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | ConfigMap | `http://skillhub-scanner:8000` | Backend-to-scanner service URL. |
 | `SKILLHUB_SECURITY_SCANNER_MODE` | ConfigMap | `upload` | Keep `upload` for the current scanner API. |
 
+## Publish Package Policy
+
+| Env var | Source | Default | Notes |
+| --- | --- | --- | --- |
+| `SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS` | ConfigMap | unset | Optional Java-compatible override for skill package upload extensions. When set, it replaces the default allowlist instead of appending to it. Include every extension you want to allow, for example all defaults plus `.dot`. This does not automatically expand pre-publish credential scanning. |
+
 ## PostgreSQL
 
 Prefer `SKILLHUB_DATABASE_URL`.

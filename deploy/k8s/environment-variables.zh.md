@@ -171,6 +171,12 @@ https://skills.example.com/login/oauth2/code/keycloak
 | `skillhub-config/scanner-use-virustotal` | `SKILLHUB_SCANNER_USE_VIRUSTOTAL` | `false` | 是否啟用 VirusTotal analyzer。 |
 | `skillhub-config/scanner-use-trigger` | `SKILLHUB_SCANNER_USE_TRIGGER` | `false` | 是否啟用 trigger specificity analyzer。 |
 
+## Publish Upload Allowlist
+
+| K8s key | Pod env | Required | Example | Notes |
+| --- | --- | --- | --- | --- |
+| `skillhub-config/publish-allowed-file-extensions` | `SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS` | No | `.md,.txt,.json,.yaml,.yml,.py,.sh,.dot` | Optional Java-compatible override for skill package upload extensions. When set, it replaces the default allowlist instead of appending to it, so include every extension you want to allow. It does not automatically expand pre-publish credential scanning. |
+
 ## Scanner Container LLM
 
 這些 env 只應該放在 **scanner** deployment。backend 不需要也不應該拿這些值。

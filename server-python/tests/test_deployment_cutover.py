@@ -95,6 +95,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_DATABASE_URL:" in release_compose
     assert "SPRING_DATA_REDIS_PASSWORD:" in release_compose
     assert "--requirepass" in release_compose
+    assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS:" in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI:" in release_compose
@@ -102,6 +103,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "OAUTH2_GITLAB" not in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=" in release_env
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=" in release_env
+    assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=" in release_env
     assert "OAUTH2_GITHUB" not in release_env
     assert "OAUTH2_GITLAB" not in release_env
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_env
@@ -140,6 +142,7 @@ def test_kubernetes_env_manual_documents_external_dependencies() -> None:
     assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in manual
     assert "SPRING_DATA_REDIS_SENTINEL_NODES" in manual
     assert "SPRING_DATA_REDIS_SENTINEL_PASSWORD" in manual
+    assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS" in manual
     assert "redis://:password@redis.example.internal:6379/0" in manual
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
@@ -157,6 +160,7 @@ def test_python_backend_env_manual_lists_runtime_env_vars_without_presign() -> N
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in manual
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL" in manual
+    assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS" in manual
     assert "SKILL_SCANNER_LLM_API_KEY" not in manual
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manual
     assert "presigned" not in manual.lower()
@@ -212,6 +216,8 @@ def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
     assert "redis-sentinel-master:" in backend_config
     assert "redis-username:" in backend_secret
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in backend
+    assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS" in backend
+    assert "publish-allowed-file-extensions:" in backend_config
     assert "SKILLHUB_SCANNER_USE_LLM" in backend
     assert "scanner-ai-defense-api-key" in backend_secret
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in backend

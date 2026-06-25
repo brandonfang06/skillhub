@@ -47,6 +47,7 @@ class Settings:
     storage_s3_connection_acquisition_timeout_seconds: int
     storage_s3_api_call_attempt_timeout_seconds: int
     storage_s3_api_call_timeout_seconds: int
+    publish_allowed_file_extensions: set[str] | None
     security_scanner_enabled: bool
     security_scanner_mode: str
     redis_url: str
@@ -134,6 +135,16 @@ def split_csv(value: str | None) -> list[str]:
     if value is None:
         return []
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def parse_extension_set(value: str | None) -> set[str] | None:
+    extensions = set()
+    for item in split_csv(value):
+        normalized = item.lower()
+        if not normalized.startswith("."):
+            normalized = f".{normalized}"
+        extensions.add(normalized)
+    return extensions or None
 
 
 def resolve_database_url() -> str:
@@ -280,6 +291,7 @@ def get_settings() -> Settings:
             os.getenv("SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT"),
             DEFAULT_STORAGE_S3_API_CALL_TIMEOUT_SECONDS,
         ),
+        publish_allowed_file_extensions=parse_extension_set(os.getenv("SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS")),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),
         redis_url=resolve_redis_url(),

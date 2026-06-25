@@ -39,6 +39,7 @@ data:
   scanner-use-ai-defense: "false"
   scanner-use-virustotal: "false"
   scanner-use-trigger: "false"
+  publish-allowed-file-extensions: ""
   session-cookie-secure: "false"
   auth-direct-enabled: "false"
   auth-session-bootstrap-enabled: "false"

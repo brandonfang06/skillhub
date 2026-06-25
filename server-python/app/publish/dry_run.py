@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
@@ -93,6 +94,7 @@ class PublishDryRunInput:
     visibility: str
     platform_roles: set[str] = field(default_factory=set)
     now: datetime | None = None
+    allowed_extensions: AbstractSet[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -280,7 +282,7 @@ async def validate_publish_dry_run(
     if not namespace.is_super_admin and not namespace.publisher_is_member:
         errors.append(f"Publisher is not a member of namespace: {request.namespace_slug}")
 
-    package_validation = validate_package(request.entries)
+    package_validation = validate_package(request.entries, allowed_extensions=request.allowed_extensions)
     errors.extend(package_validation.errors)
     warnings.extend(package_validation.warnings)
     if not package_validation.valid:

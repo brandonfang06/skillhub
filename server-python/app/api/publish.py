@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
@@ -25,6 +26,7 @@ from app.publish.replacement import ReplaceableVersion, find_replaceable_version
 from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
+logger = logging.getLogger("uvicorn.error")
 
 VALID_VISIBILITIES = {"PUBLIC", "PRIVATE", "NAMESPACE_ONLY"}
 GLOBAL_NAMESPACE = "global"
@@ -65,6 +67,25 @@ def normalize_namespace(namespace: str | None) -> str:
     if normalized.startswith("@"):
         normalized = normalized[1:]
     return normalized or GLOBAL_NAMESPACE
+
+
+def log_publish_validation_rejection(
+    request: Request,
+    *,
+    namespace: str,
+    publisher_id: str,
+    visibility: str,
+    result: PublishDryRunResult,
+) -> None:
+    logger.warning(
+        "Skill publish validation rejected request_id=%s publisher_id=%s namespace=%s visibility=%s errors=%s warnings=%s",
+        getattr(request.state, "request_id", None),
+        publisher_id,
+        namespace,
+        visibility,
+        result.errors,
+        result.warnings,
+    )
 
 
 def namespace_from_payload(payload: dict[str, object] | None) -> str:
@@ -125,6 +146,8 @@ async def run_publish_validate(
         return await resolve_publish_validate_result(reader(namespace, entries, publisher_id, visibility, platform_roles))
 
     repository = PublishDryRunRepository(request.app.state.db_engine)
+    settings = getattr(request.app.state, "settings", get_settings())
+    allowed_extensions = getattr(settings, "publish_allowed_file_extensions", None)
     return await validate_publish_dry_run(
         PublishDryRunInput(
             namespace_slug=namespace,
@@ -132,6 +155,7 @@ async def run_publish_validate(
             publisher_id=publisher_id,
             visibility=visibility,
             platform_roles=platform_roles,
+            allowed_extensions=allowed_extensions,
         ),
         repository,
     )
@@ -238,18 +262,26 @@ async def publish_entries(
 
     dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_role_set)
     if not dry_run.valid:
+        log_publish_validation_rejection(
+            request,
+            namespace=namespace,
+            publisher_id=publisher_id,
+            visibility=resolved_visibility,
+            result=dry_run,
+        )
         messages = dry_run.errors or dry_run.warnings
         raise HTTPException(status_code=400, detail=", ".join(messages))
     if dry_run.resolved_slug is None or dry_run.resolved_version is None:
         raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
 
-    package_validation = validate_package(entries)
+    settings = getattr(request.app.state, "settings", get_settings())
+    allowed_extensions = getattr(settings, "publish_allowed_file_extensions", None)
+    package_validation = validate_package(entries, allowed_extensions=allowed_extensions)
     metadata = package_validation.metadata
     if metadata is None:
         raise HTTPException(status_code=400, detail="error.skill.publish.skillMd.notFound")
 
     namespace_id = await resolve_namespace_id_for_write(request, namespace, publisher_id, platform_role_set)
-    settings = getattr(request.app.state, "settings", get_settings())
     replacement = await find_publish_replacement(
         request,
         namespace_id,
@@ -323,6 +355,14 @@ async def validate_cli_publish(
         resolved_visibility,
         set(platform_roles(user)),
     )
+    if not result.valid:
+        log_publish_validation_rejection(
+            request,
+            namespace=namespace,
+            publisher_id=str(user["userId"]),
+            visibility=resolved_visibility,
+            result=result,
+        )
     return ok("response.success.read", dry_run_response(result), request)
 
 

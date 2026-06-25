@@ -167,6 +167,14 @@ spec:
                   name: skillhub-secret
                   key: storage-s3-secret-key
 
+            # Publish package policy
+            - name: SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: publish-allowed-file-extensions
+                  optional: true
+
             # Scanner
             - name: SKILLHUB_SECURITY_SCANNER_ENABLED
               valueFrom:
