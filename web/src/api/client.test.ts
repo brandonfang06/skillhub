@@ -39,6 +39,7 @@ import {
   buildApiUrl,
   fetchText,
   getDirectAuthRuntimeConfig,
+  getLocalRegistrationRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
   namespaceApi,
 } from './client'
@@ -205,6 +206,20 @@ describe('getDirectAuthRuntimeConfig', () => {
       }
       expect(getDirectAuthRuntimeConfig().enabled).toBe(true)
     }
+  })
+})
+
+describe('getLocalRegistrationRuntimeConfig', () => {
+  it('defaults local registration to enabled', () => {
+    expect(getLocalRegistrationRuntimeConfig().enabled).toBe(true)
+  })
+
+  it('can disable local registration through runtime config', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = {
+      localRegistrationEnabled: 'false',
+    }
+
+    expect(getLocalRegistrationRuntimeConfig().enabled).toBe(false)
   })
 })
 

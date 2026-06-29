@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const runtimeConfigMock = vi.hoisted(() => ({
+  localRegistrationEnabled: true,
+}))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
   useNavigate: () => vi.fn(),
@@ -24,6 +28,7 @@ vi.mock('lucide-react', () => ({
 
 vi.mock('@/api/client', () => ({
   getDirectAuthRuntimeConfig: () => ({ enabled: false }),
+  getLocalRegistrationRuntimeConfig: () => ({ enabled: runtimeConfigMock.localRegistrationEnabled }),
 }))
 
 vi.mock('@/features/auth/login-button', () => ({
@@ -70,10 +75,20 @@ describe('LoginPage', () => {
   })
 
   it('renders the login title and form elements', () => {
+    runtimeConfigMock.localRegistrationEnabled = true
     const html = renderToStaticMarkup(<LoginPage />)
 
     expect(html).toContain('login.title')
     expect(html).toContain('login.subtitle')
     expect(html).toContain('login.submit')
+    expect(html).toContain('login.register')
+  })
+
+  it('hides the registration link when local registration is disabled', () => {
+    runtimeConfigMock.localRegistrationEnabled = false
+
+    const html = renderToStaticMarkup(<LoginPage />)
+
+    expect(html).not.toContain('login.register')
   })
 })

@@ -108,6 +108,7 @@ returns the file response itself; it does not redirect clients to object storage
 | --- | --- | --- | --- |
 | `SKILLHUB_AUTH_DIRECT_ENABLED` | ConfigMap | `false` | Direct username/password login toggle. |
 | `SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED` | ConfigMap | `false` | Test/session bootstrap toggle. |
+| `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | ConfigMap | `true` | Set `false` to block `/api/v1/auth/local/register` while keeping local/admin login available. |
 | `BOOTSTRAP_ADMIN_ENABLED` | ConfigMap | `false` | Creates or updates a bootstrap admin on startup. |
 | `BOOTSTRAP_ADMIN_USER_ID` | ConfigMap | `docker-admin` | Bootstrap admin user id. |
 | `BOOTSTRAP_ADMIN_USERNAME` | ConfigMap | `admin` | Bootstrap admin username. |

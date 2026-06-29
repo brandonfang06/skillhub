@@ -60,6 +60,7 @@ type RuntimeConfig = {
   appBaseUrl?: string
   authDirectEnabled?: string
   authDirectProvider?: string
+  localRegistrationEnabled?: string
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
@@ -144,12 +145,23 @@ export type DirectAuthRuntimeConfig = {
   provider?: string
 }
 
+export type LocalRegistrationRuntimeConfig = {
+  enabled: boolean
+}
+
 export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
   const config = getRuntimeConfig()
   const provider = config.authDirectProvider?.trim()
   return {
     enabled: parseBooleanFlag(config.authDirectEnabled) && !!provider,
     provider: provider || undefined,
+  }
+}
+
+export function getLocalRegistrationRuntimeConfig(): LocalRegistrationRuntimeConfig {
+  const value = getRuntimeConfig().localRegistrationEnabled
+  return {
+    enabled: value === undefined || value.trim() === '' ? true : parseBooleanFlag(value),
   }
 }
 

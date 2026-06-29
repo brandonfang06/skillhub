@@ -251,6 +251,11 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: auth-session-bootstrap-enabled
+            - name: SKILLHUB_LOCAL_REGISTRATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: local-registration-enabled
             - name: BOOTSTRAP_ADMIN_ENABLED
               valueFrom:
                 configMapKeyRef:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
@@ -16,9 +17,16 @@ from app.auth.password_reset import (
     validate_password_reset_request,
 )
 from app.auth.session import establish_session
+from app.core.config import parse_bool
 from app.core.response import ok
 
 router = APIRouter()
+
+
+def _as_bool(value: bool | str) -> bool:
+    if isinstance(value, str):
+        return parse_bool(value, True)
+    return value
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -27,8 +35,23 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
+def _local_registration_enabled(request: Request) -> bool:
+    app_state_value = getattr(request.app.state, "local_registration_enabled", None)
+    if app_state_value is not None:
+        return _as_bool(app_state_value)
+
+    settings = getattr(request.app.state, "settings", None)
+    if settings is not None:
+        return _as_bool(getattr(settings, "local_registration_enabled", True))
+
+    return parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True)
+
+
 @router.post("/api/v1/auth/local/register")
 async def register_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
+    if not _local_registration_enabled(request):
+        raise HTTPException(status_code=403, detail="error.auth.local.registrationDisabled")
+
     registrar = getattr(request.app.state, "local_auth_registrar", None)
     try:
         data = await _resolve_result(

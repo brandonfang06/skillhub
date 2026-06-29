@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const runtimeConfigMock = vi.hoisted(() => ({
+  localRegistrationEnabled: true,
+}))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
   useNavigate: () => vi.fn(),
@@ -18,6 +22,22 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/features/auth/login-button', () => ({
   LoginButton: () => null,
+}))
+
+vi.mock('@/api/client', () => ({
+  ApiError: class ApiError extends Error {
+    status: number
+    serverMessage?: string
+    serverMessageKey?: string
+
+    constructor(message: string, status: number, serverMessage?: string, serverMessageKey?: string) {
+      super(message)
+      this.status = status
+      this.serverMessage = serverMessage
+      this.serverMessageKey = serverMessageKey
+    }
+  },
+  getLocalRegistrationRuntimeConfig: () => ({ enabled: runtimeConfigMock.localRegistrationEnabled }),
 }))
 
 vi.mock('@/features/auth/use-local-auth', () => ({
@@ -60,10 +80,20 @@ describe('RegisterPage', () => {
   })
 
   it('renders the registration title and form fields', () => {
+    runtimeConfigMock.localRegistrationEnabled = true
     const html = renderToStaticMarkup(<RegisterPage />)
 
     expect(html).toContain('register.title')
     expect(html).toContain('register.subtitle')
     expect(html).toContain('register.submit')
+  })
+
+  it('hides the local registration form when local registration is disabled', () => {
+    runtimeConfigMock.localRegistrationEnabled = false
+
+    const html = renderToStaticMarkup(<RegisterPage />)
+
+    expect(html).toContain('register.disabledTitle')
+    expect(html).not.toContain('register.submit')
   })
 })

@@ -206,6 +206,7 @@ SKILL_SCANNER_LLM_MODEL=...
 | `skillhub-config/session-cookie-secure` | `SKILLHUB_SESSION_COOKIE_SECURE` | `true` | HTTPS ingress 請設 `true`。也可沿用 Java 的 `SESSION_COOKIE_SECURE`。 |
 | `skillhub-config/auth-direct-enabled` | `SKILLHUB_AUTH_DIRECT_ENABLED` | `false` | 是否啟用 username/password direct auth API。 |
 | `skillhub-config/auth-session-bootstrap-enabled` | `SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED` | `false` | local/dev session bootstrap，正式環境建議 `false`。 |
+| `skillhub-config/local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | `false` | 是否開放本機帳號自助註冊；設為 `false` 只會隱藏/阻擋註冊，不會關閉 local/admin 登入。 |
 
 ## Bootstrap Admin
 

@@ -106,6 +106,14 @@ def test_publish_allowed_file_extensions_can_be_overridden(monkeypatch):
     assert settings.publish_allowed_file_extensions == {".md", ".dot"}
 
 
+def test_local_registration_can_be_disabled_for_organization_deployments(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED", "false")
+
+    settings = get_settings()
+
+    assert settings.local_registration_enabled is False
+
+
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")

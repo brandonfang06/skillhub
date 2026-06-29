@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
-import { getDirectAuthRuntimeConfig } from '@/api/client'
+import { getDirectAuthRuntimeConfig, getLocalRegistrationRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
@@ -23,6 +23,7 @@ export function LoginPage() {
   const search = useSearch({ from: '/login' })
   const loginMutation = usePasswordLogin()
   const directAuthConfig = getDirectAuthRuntimeConfig()
+  const localRegistrationConfig = getLocalRegistrationRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -165,17 +166,19 @@ export function LoginPage() {
                       {t('login.forgotPassword')}
                     </Link>
                   </p>
-                  <p className="text-center text-sm text-muted-foreground">
-                    {t('login.noAccount')}
-                    {' '}
-                    <Link
-                      to="/register"
-                      search={{ returnTo }}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {t('login.register')}
-                    </Link>
-                  </p>
+                  {localRegistrationConfig.enabled ? (
+                    <p className="text-center text-sm text-muted-foreground">
+                      {t('login.noAccount')}
+                      {' '}
+                      <Link
+                        to="/register"
+                        search={{ returnTo }}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {t('login.register')}
+                      </Link>
+                    </p>
+                  ) : null}
                 </form>
               </TabsContent>
 

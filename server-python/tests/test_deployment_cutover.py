@@ -31,6 +31,7 @@ def test_kubernetes_backend_deployment_uses_python_runtime_contract() -> None:
     assert "SKILLHUB_STORAGE_S3_BUCKET" in deployment
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL" in deployment
     assert "SKILLHUB_SESSION_COOKIE_SECURE" in deployment
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in deployment
     assert "OAUTH2_GITHUB" not in deployment
@@ -65,6 +66,7 @@ def test_kubernetes_config_and_secret_examples_expose_python_env_inputs() -> Non
     assert "oauth2-gitlab" not in configmap
     assert "security-scanner-base-url:" in configmap
     assert "session-cookie-secure:" in configmap
+    assert "local-registration-enabled: \"false\"" in configmap
     assert "PersistentVolumeClaim" not in configmap
     assert "spring-datasource" not in secret_example
     assert "oauth2-keycloak-client-id:" in secret_example
@@ -97,6 +99,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "--requirepass" in release_compose
     assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS:" in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI:" in release_compose
     assert "OAUTH2_GITHUB" not in release_compose
@@ -104,6 +107,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=" in release_env
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=" in release_env
     assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=" in release_env
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED=true" in release_env
     assert "OAUTH2_GITHUB" not in release_env
     assert "OAUTH2_GITLAB" not in release_env
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_env
@@ -123,6 +127,7 @@ def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:
     assert "SPRING_DATA_REDIS_SENTINEL_MASTER" in readme
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in readme
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in readme
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in readme
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in readme
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL" in readme
     assert "/api/v1/health" in readme
@@ -147,6 +152,7 @@ def test_kubernetes_env_manual_documents_external_dependencies() -> None:
     assert "SKILLHUB_STORAGE_S3_ENDPOINT" in manual
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in manual
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in manual
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in manual
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manual
     assert "Presigned URL" not in manual
 
@@ -161,6 +167,7 @@ def test_python_backend_env_manual_lists_runtime_env_vars_without_presign() -> N
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in manual
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL" in manual
     assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS" in manual
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in manual
     assert "SKILL_SCANNER_LLM_API_KEY" not in manual
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in manual
     assert "presigned" not in manual.lower()
@@ -218,6 +225,9 @@ def test_plain_kubernetes_manifests_cover_three_python_workloads() -> None:
     assert "SKILLHUB_STORAGE_S3_PROXY_ENDPOINT" in backend
     assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS" in backend
     assert "publish-allowed-file-extensions:" in backend_config
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in backend
+    assert "local-registration-enabled: \"false\"" in backend_config
+    assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in frontend
     assert "SKILLHUB_SCANNER_USE_LLM" in backend
     assert "scanner-ai-defense-api-key" in backend_secret
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in backend

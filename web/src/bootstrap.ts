@@ -23,6 +23,7 @@ function ensureRuntimeConfigFallback() {
       appBaseUrl: '',
       authDirectEnabled: 'false',
       authDirectProvider: '',
+      localRegistrationEnabled: 'true',
       authSessionBootstrapEnabled: 'false',
       authSessionBootstrapProvider: '',
       authSessionBootstrapAuto: 'false',

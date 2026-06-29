@@ -243,6 +243,8 @@
     "submit": "注册并登录",
     "hasAccount": "已有账号？",
     "login": "返回登录",
+    "disabledTitle": "账号注册已关闭",
+    "disabledDescription": "请使用组织提供的登录方式访问 SkillHub。",
     "oauthHint": "直接使用现有 OAuth 账户进入平台，无需再创建本地密码。",
     "usernameRequired": "请输入用户名",
     "usernameInvalid": "仅支持字母、数字或下划线（3-64 位）",

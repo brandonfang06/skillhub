@@ -3,6 +3,7 @@ window.__SKILLHUB_RUNTIME_CONFIG__ = {
   appBaseUrl: "${SKILLHUB_PUBLIC_BASE_URL}",
   authDirectEnabled: "${SKILLHUB_WEB_AUTH_DIRECT_ENABLED}",
   authDirectProvider: "${SKILLHUB_WEB_AUTH_DIRECT_PROVIDER}",
+  localRegistrationEnabled: "${SKILLHUB_LOCAL_REGISTRATION_ENABLED}",
   authSessionBootstrapEnabled: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED}",
   authSessionBootstrapProvider: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER}",
   authSessionBootstrapAuto: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO}"

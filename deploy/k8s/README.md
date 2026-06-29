@@ -132,6 +132,7 @@ Edit these common ConfigMap values:
 | `storage-s3-public-endpoint` | `SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT` | Optional public endpoint used for generated object URLs. |
 | `storage-s3-bucket` | `SKILLHUB_STORAGE_S3_BUCKET` | Bucket for skill package bundles. |
 | `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | External HTTPS origin used for OAuth callbacks and generated links. |
+| `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
 | `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
 

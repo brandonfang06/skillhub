@@ -1,7 +1,7 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ApiError } from '@/api/client'
+import { ApiError, getLocalRegistrationRuntimeConfig } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
 import { useLocalRegister } from '@/features/auth/use-local-auth'
 import { Button } from '@/shared/ui/button'
@@ -55,6 +55,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const search = useSearch({ from: '/register' })
   const registerMutation = useLocalRegister()
+  const localRegistrationConfig = getLocalRegistrationRuntimeConfig()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -62,6 +63,28 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+
+  if (!localRegistrationConfig.enabled) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
+        <Card className="w-full border-slate-200 bg-white/95 shadow-xl">
+          <CardHeader className="space-y-3 text-center">
+            <CardTitle>{t('register.disabledTitle')}</CardTitle>
+            <CardDescription>{t('register.disabledDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              type="button"
+              onClick={() => navigate({ to: '/login', search: { returnTo } })}
+            >
+              {t('register.login')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   function validateUsername(value: string) {
     const trimmed = value.trim()

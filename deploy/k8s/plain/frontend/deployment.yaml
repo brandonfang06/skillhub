@@ -23,6 +23,11 @@ spec:
           env:
             - name: SKILLHUB_API_UPSTREAM
               value: http://skillhub-server:8080
+            - name: SKILLHUB_LOCAL_REGISTRATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: local-registration-enabled
           ports:
             - containerPort: 80
               name: http

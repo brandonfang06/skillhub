@@ -357,3 +357,38 @@ def test_local_auth_core_routes_use_java_envelopes_and_auth_boundaries() -> None
     assert changed.status_code == 200
     assert changed.json()["code"] == 0
     assert changed.json()["data"] is None
+
+
+@pytest.mark.parametrize("registration_enabled", [False, "false"])
+def test_local_registration_can_be_disabled_without_disabling_login(registration_enabled: bool | str) -> None:
+    app = create_app()
+    app.state.local_registration_enabled = registration_enabled
+    registrar_called = False
+
+    def registrar(payload: dict[str, Any]) -> dict[str, object]:
+        nonlocal registrar_called
+        registrar_called = True
+        return {}
+
+    app.state.local_auth_registrar = registrar
+    app.state.local_auth_login = lambda payload: {
+        "userId": "admin",
+        "displayName": "Admin",
+        "email": "admin@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["SUPER_ADMIN"],
+    }
+    client = TestClient(app)
+
+    register = client.post(
+        "/api/v1/auth/local/register",
+        json={"username": "route", "password": "Abcd123!", "email": "route@example.test"},
+    )
+    assert register.status_code == 403
+    assert register.json()["detail"] == "error.auth.local.registrationDisabled"
+    assert registrar_called is False
+
+    login = client.post("/api/v1/auth/local/login", json={"username": "admin", "password": "Abcd123!"})
+    assert login.status_code == 200
+    assert login.json()["data"]["userId"] == "admin"
