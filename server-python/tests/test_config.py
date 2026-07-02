@@ -1,3 +1,5 @@
+import logging
+
 from app.core.config import DEFAULT_DATABASE_URL, DEFAULT_STORAGE_BASE_PATH, Settings, get_settings
 
 
@@ -327,6 +329,30 @@ def test_explicit_redis_url_wins_over_sentinel_env(monkeypatch):
     assert settings.redis_url == "redis://redis.single:6379/0"
     assert settings.redis_sentinel_master == ""
     assert settings.redis_sentinel_nodes == []
+
+
+def test_explicit_redis_url_with_sentinel_env_logs_override_warning(monkeypatch, caplog):
+    caplog.set_level(logging.WARNING, logger="uvicorn.error")
+    monkeypatch.setenv("SKILLHUB_REDIS_URL", "redis://redis.single:6379/0")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_MASTER", "mymaster")
+    monkeypatch.setenv("SPRING_DATA_REDIS_SENTINEL_NODES", "redis-sentinel-1:26379")
+
+    settings = get_settings()
+
+    assert settings.redis_mode == "single"
+    assert "SKILLHUB_REDIS_URL is set, Redis Sentinel settings will be ignored" in caplog.text
+
+
+def test_scan_consumer_block_longer_than_redis_timeout_logs_warning(monkeypatch, caplog):
+    caplog.set_level(logging.WARNING, logger="uvicorn.error")
+    monkeypatch.setenv("SPRING_DATA_REDIS_TIMEOUT", "PT3S")
+    monkeypatch.setenv("SKILLHUB_SCAN_CONSUMER_BLOCK_MS", "4000")
+
+    settings = get_settings()
+
+    assert settings.redis_timeout_seconds == 3
+    assert settings.scan_consumer_block_ms == 4000
+    assert "SKILLHUB_SCAN_CONSUMER_BLOCK_MS should be lower than Redis socket timeout" in caplog.text
 
 
 def test_scanner_timeout_settings_fallback_to_defaults(monkeypatch):

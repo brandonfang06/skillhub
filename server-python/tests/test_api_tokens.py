@@ -156,10 +156,10 @@ async def test_list_revoke_and_update_expiration_are_user_scoped() -> None:
         FakeEngine(connection),
         user_id="user-1",
         token_id=1,
-        expires_at="2026-07-01T09:30",
+        expires_at="2099-07-01T09:30",
     )
     assert updated["id"] == 1
-    assert updated["expiresAt"] == "2026-07-01T09:30:00Z"
+    assert updated["expiresAt"] == "2099-07-01T09:30:00Z"
 
     with pytest.raises(ApiTokenError, match="error.token.notFound") as missing:
         await update_api_token_expiration(FakeEngine(connection), user_id="user-1", token_id=3, expires_at=None)

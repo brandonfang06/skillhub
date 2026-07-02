@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 import os
 from pathlib import Path
 import re
@@ -26,6 +27,7 @@ DEFAULT_SCAN_CONSUMER_READ_COUNT = 10
 DEFAULT_SCAN_CONSUMER_BLOCK_MS = 2000
 DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 120000
 DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT = 20
+log = logging.getLogger("uvicorn.error")
 
 
 @dataclass(frozen=True)
@@ -262,7 +264,7 @@ def redis_ssl_enabled() -> bool:
 
 
 def get_settings() -> Settings:
-    return Settings(
+    settings = Settings(
         database_url=resolve_database_url(),
         storage_provider=os.getenv("SKILLHUB_STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER).strip().lower(),
         storage_base_path=os.getenv("SKILLHUB_STORAGE_BASE_PATH", DEFAULT_STORAGE_BASE_PATH),
@@ -358,3 +360,20 @@ def get_settings() -> Settings:
             DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT,
         ),
     )
+    warn_redis_configuration(settings)
+    return settings
+
+
+def warn_redis_configuration(settings: Settings) -> None:
+    if (
+        os.getenv("SKILLHUB_REDIS_URL") not in {None, ""}
+        and (redis_sentinel_master() or redis_sentinel_nodes())
+    ):
+        log.warning("SKILLHUB_REDIS_URL is set, Redis Sentinel settings will be ignored")
+    if settings.scan_consumer_block_ms >= settings.redis_timeout_seconds * 1000:
+        log.warning(
+            "SKILLHUB_SCAN_CONSUMER_BLOCK_MS should be lower than Redis socket timeout: "
+            "block_ms=%s redis_timeout_seconds=%s",
+            settings.scan_consumer_block_ms,
+            settings.redis_timeout_seconds,
+        )

@@ -1,17 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
+from redis.asyncio.retry import Retry
 from redis.asyncio import Redis, Sentinel
+from redis.backoff import ExponentialWithJitterBackoff
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from app.core.config import Settings
 
 DEFAULT_SENTINEL_PORT = 26379
+REDIS_HEALTH_CHECK_INTERVAL_SECONDS = 30
+REDIS_RETRY_COUNT = 3
 
 
 class SkillHubRedisClient:
-    def __init__(self, raw_client: Any) -> None:
+    def __init__(self, raw_client: Any, close_clients: Sequence[Any] = ()) -> None:
         self.raw_client = raw_client
+        self.close_clients = tuple(close_clients)
 
     async def execute_command(self, *arguments: object) -> Any:
         return await self.raw_client.execute_command(*arguments)
@@ -73,6 +81,10 @@ class SkillHubRedisClient:
         close = getattr(self.raw_client, "aclose", None)
         if close is not None:
             await close()
+        for client in self.close_clients:
+            close = getattr(client, "aclose", None)
+            if close is not None:
+                await close()
 
 
 def create_redis_client(settings: Settings) -> SkillHubRedisClient:
@@ -87,14 +99,13 @@ def create_redis_client(settings: Settings) -> SkillHubRedisClient:
                 getattr(settings, "redis_sentinel_master", ""),
                 db=getattr(settings, "redis_database", 0),
                 **_shared_client_kwargs(settings),
-            )
+            ),
+            close_clients=getattr(sentinel, "sentinels", ()),
         )
     return SkillHubRedisClient(
         Redis.from_url(
             getattr(settings, "redis_url"),
-            decode_responses=True,
-            socket_connect_timeout=getattr(settings, "redis_connect_timeout_seconds", 5),
-            socket_timeout=getattr(settings, "redis_timeout_seconds", 5),
+            **_single_url_client_kwargs(settings),
         )
     )
 
@@ -104,6 +115,9 @@ def _shared_client_kwargs(settings: Settings) -> dict[str, object]:
         "socket_connect_timeout": getattr(settings, "redis_connect_timeout_seconds", 5),
         "socket_timeout": getattr(settings, "redis_timeout_seconds", 5),
         "decode_responses": True,
+        "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL_SECONDS,
+        "retry": _redis_retry(),
+        "retry_on_error": [RedisConnectionError, RedisTimeoutError],
     }
     if getattr(settings, "redis_username", ""):
         kwargs["username"] = getattr(settings, "redis_username")
@@ -114,11 +128,25 @@ def _shared_client_kwargs(settings: Settings) -> dict[str, object]:
     return kwargs
 
 
+def _single_url_client_kwargs(settings: Settings) -> dict[str, object]:
+    return {
+        "socket_connect_timeout": getattr(settings, "redis_connect_timeout_seconds", 5),
+        "socket_timeout": getattr(settings, "redis_timeout_seconds", 5),
+        "decode_responses": True,
+        "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL_SECONDS,
+        "retry": _redis_retry(),
+        "retry_on_error": [RedisConnectionError, RedisTimeoutError],
+    }
+
+
 def _sentinel_client_kwargs(settings: Settings) -> dict[str, object]:
     kwargs: dict[str, object] = {
         "socket_connect_timeout": getattr(settings, "redis_connect_timeout_seconds", 5),
         "socket_timeout": getattr(settings, "redis_timeout_seconds", 5),
         "decode_responses": True,
+        "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL_SECONDS,
+        "retry": _redis_retry(),
+        "retry_on_error": [RedisConnectionError, RedisTimeoutError],
     }
     if getattr(settings, "redis_sentinel_username", ""):
         kwargs["username"] = getattr(settings, "redis_sentinel_username")
@@ -127,6 +155,14 @@ def _sentinel_client_kwargs(settings: Settings) -> dict[str, object]:
     if getattr(settings, "redis_ssl_enabled", False):
         kwargs["ssl"] = True
     return kwargs
+
+
+def _redis_retry() -> Retry:
+    return Retry(
+        ExponentialWithJitterBackoff(),
+        REDIS_RETRY_COUNT,
+        supported_errors=(RedisConnectionError, RedisTimeoutError),
+    )
 
 
 def _parse_sentinel_nodes(nodes: list[str]) -> list[tuple[str, int]]:
