@@ -489,6 +489,7 @@ Session 中存储以下字段：
     "email": "zhangsan@company.com",
     "avatarUrl": "https://...",
     "oauthProvider": "github",
+    "canChangePassword": false,
     "platformRoles": ["SKILL_ADMIN", "AUDITOR"],
     "namespaces": [
       { "slug": "ai-team", "role": "ADMIN" },
@@ -500,7 +501,7 @@ Session 中存储以下字段：
 }
 ```
 
-前端权限判定基于 `platformRoles` + `namespaces[].role`，后端通过 `role_permission` 表查询权限码。
+前端权限判定基于 `platformRoles` + `namespaces[].role`，是否展示修改密码入口和表单基于后端返回的 `canChangePassword`。Python 后端通过本地密码凭证是否存在来决定该字段，默认不可改密码；权限码仍通过 `role_permission` 表查询。
 
 统一约束：
 - `/api/v1/auth/me`、`/api/v1/auth/providers` 等 JSON 响应必须统一使用 `code/msg/data/timestamp/requestId` 外层结构。

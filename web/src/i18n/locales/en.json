@@ -565,7 +565,23 @@
     "commentPlaceholder": "Review comment (optional)",
     "approve": "Approve",
     "reject": "Reject",
-    "empty": "No promotion requests"
+    "empty": "No promotion requests",
+    "historyTableLabel": "Promotion history",
+    "colSkill": "Skill",
+    "colVersion": "Version",
+    "colSubmitter": "Submitter",
+    "colReviewer": "Reviewer",
+    "colReviewedAt": "Reviewed At",
+    "colReviewComment": "Review Comment",
+    "sortReviewedTimeAsc": "Sort by reviewed time ascending",
+    "sortReviewedTimeDesc": "Sort by reviewed time descending",
+    "emptyValue": "-",
+    "versionTag": "v{{version}}",
+    "submitterTag": "Submitter {{user}}",
+    "fileCountTag": "{{count}} files",
+    "packageSizeTag": "{{size}}",
+    "downloadCountTag": "{{value}} downloads",
+    "starCountTag": "{{value}} stars"
   },
   "adminUsers": {
     "title": "User Management",
@@ -754,6 +770,8 @@
     "successTitle": "Password changed successfully",
     "successDescription": "Please sign in again with your new password.",
     "defaultError": "Failed to change password",
+    "unavailableTitle": "Password changes are unavailable for this account.",
+    "unavailableDescription": "This account signs in through an external identity provider or has no local password credential.",
     "submitting": "Submitting...",
     "submit": "Update Password"
   },

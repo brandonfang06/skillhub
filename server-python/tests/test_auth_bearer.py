@@ -94,6 +94,7 @@ def test_read_current_bearer_user_hashes_token_reads_roles_and_touches_last_used
         "email": "token-user@example.test",
         "avatarUrl": "",
         "oauthProvider": "api_token",
+        "canChangePassword": False,
         "platformRoles": ["SKILL_ADMIN"],
         "tokenScopes": ["skill:read", "skill:publish"],
     }

@@ -553,7 +553,23 @@
     "commentPlaceholder": "审核意见（可选）",
     "approve": "通过",
     "reject": "拒绝",
-    "empty": "暂无提升申请"
+    "empty": "暂无提升申请",
+    "historyTableLabel": "提升审核历史",
+    "colSkill": "技能",
+    "colVersion": "版本",
+    "colSubmitter": "提交人",
+    "colReviewer": "审核人",
+    "colReviewedAt": "处理时间",
+    "colReviewComment": "审核意见",
+    "sortReviewedTimeAsc": "按处理时间正序排序",
+    "sortReviewedTimeDesc": "按处理时间倒序排序",
+    "emptyValue": "-",
+    "versionTag": "v{{version}}",
+    "submitterTag": "提交人 {{user}}",
+    "fileCountTag": "{{count}} 个文件",
+    "packageSizeTag": "{{size}}",
+    "downloadCountTag": "{{value}} 次下载",
+    "starCountTag": "{{value}} 个星标"
   },
   "adminUsers": {
     "title": "用户管理",
@@ -742,6 +758,8 @@
     "successTitle": "密码修改成功",
     "successDescription": "请使用新密码重新登录。",
     "defaultError": "修改密码失败",
+    "unavailableTitle": "此账号暂不可修改密码。",
+    "unavailableDescription": "此账号通过外部身份提供方登录，或尚未配置本地密码凭据。",
     "submitting": "提交中...",
     "submit": "更新密码"
   },

@@ -6,6 +6,7 @@ export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'dis
   email?: string
   avatarUrl?: string
   oauthProvider?: string
+  canChangePassword?: boolean
   platformRoles: string[]
 }
 
@@ -244,6 +245,10 @@ export interface SubmitPromotionRequest {
   targetNamespaceId: number
 }
 
+export type PromotionStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+export type PromotionSortDirection = 'ASC' | 'DESC'
+export type PromotionSortBy = 'reviewedAt'
+
 export interface SkillVersion {
   id: number
   version: string
@@ -388,19 +393,25 @@ export interface ReviewSkillDetail {
 export interface PromotionTask {
   id: number
   sourceSkillId: number
+  sourceSkillDisplayName: string
+  sourceSkillSummary?: string | null
   sourceNamespace: string
   sourceSkillSlug: string
   sourceVersion: string
+  sourceVersionFileCount: number
+  sourceVersionTotalSize: number
+  sourceSkillDownloadCount: number
+  sourceSkillStarCount: number
   targetNamespace: string
-  targetSkillId?: number
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  targetSkillId?: number | null
+  status: PromotionStatus
   submittedBy: string
-  submittedByName?: string
-  reviewedBy?: string
-  reviewedByName?: string
-  reviewComment?: string
+  submittedByName?: string | null
+  reviewedBy?: string | null
+  reviewedByName?: string | null
+  reviewComment?: string | null
   submittedAt: string
-  reviewedAt?: string
+  reviewedAt?: string | null
 }
 
 export interface SkillReport {

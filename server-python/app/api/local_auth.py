@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
-from app.auth.context import resolve_current_user_or_401
+from app.auth.context import resolve_current_user_or_401, with_password_capability
 from app.auth.local import LocalAuthError, change_local_password, login_local_user, register_local_user
 from app.auth.password_reset import (
     PasswordResetError,
@@ -66,6 +66,7 @@ async def register_local_account_route(request: Request, response: Response, pay
         )
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    data = with_password_capability(data, True)
     await establish_session(request, response, data)
     return ok("response.success.created", data, request)
 
@@ -85,6 +86,7 @@ async def login_local_account_route(request: Request, response: Response, payloa
         )
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    data = with_password_capability(data, True)
     await establish_session(request, response, data)
     return ok("response.success.read", data, request)
 

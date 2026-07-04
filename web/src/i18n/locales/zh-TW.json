@@ -553,7 +553,23 @@
     "commentPlaceholder": "審核意見（可選）",
     "approve": "通過",
     "reject": "拒絕",
-    "empty": "暫無提升申請"
+    "empty": "暫無提升申請",
+    "historyTableLabel": "提升審核歷史",
+    "colSkill": "技能",
+    "colVersion": "版本",
+    "colSubmitter": "提交人",
+    "colReviewer": "審核人",
+    "colReviewedAt": "處理時間",
+    "colReviewComment": "審核意見",
+    "sortReviewedTimeAsc": "依處理時間正序排序",
+    "sortReviewedTimeDesc": "依處理時間倒序排序",
+    "emptyValue": "-",
+    "versionTag": "v{{version}}",
+    "submitterTag": "提交人 {{user}}",
+    "fileCountTag": "{{count}} 個檔案",
+    "packageSizeTag": "{{size}}",
+    "downloadCountTag": "{{value}} 次下載",
+    "starCountTag": "{{value}} 個星標"
   },
   "adminUsers": {
     "title": "用戶管理",
@@ -742,6 +758,8 @@
     "successTitle": "密碼修改成功",
     "successDescription": "請使用新密碼重新登入。",
     "defaultError": "修改密碼失敗",
+    "unavailableTitle": "此帳號暫不可修改密碼。",
+    "unavailableDescription": "此帳號透過外部身分提供者登入，或尚未設定本地密碼憑證。",
     "submitting": "提交中...",
     "submit": "更新密碼"
   },

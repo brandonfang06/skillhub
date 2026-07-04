@@ -38,13 +38,57 @@ def build_auth_me_response(user_row: dict[str, Any], role_codes: list[str]) -> d
         "email": user_row["email"] or "",
         "avatarUrl": user_row["avatar_url"] or "",
         "oauthProvider": str(user_row.get("oauth_provider") or "mock"),
+        "canChangePassword": bool(user_row.get("can_change_password")),
         "platformRoles": normalize_platform_roles(role_codes),
     }
 
 
+def with_password_capability(user: dict[str, object], can_change_password: bool) -> dict[str, object]:
+    data = dict(user)
+    data["canChangePassword"] = bool(can_change_password)
+    return data
+
+
+async def user_has_local_credential(engine: Any, user_id: str) -> bool:
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT user_id
+                    FROM local_credential
+                    WHERE user_id = :user_id
+                    LIMIT 1
+                    """
+                ),
+                {"user_id": user_id},
+            )
+        ).mappings().one_or_none()
+    return row is not None
+
+
+async def attach_password_capability(request: Request, user: dict[str, object]) -> dict[str, object]:
+    if "canChangePassword" in user:
+        return with_password_capability(user, bool(user.get("canChangePassword")))
+
+    user_id = str(user.get("userId") or "").strip()
+    if not user_id:
+        return with_password_capability(user, False)
+
+    reader = getattr(request.app.state, "auth_password_capability_reader", None)
+    if reader is not None:
+        return with_password_capability(user, bool(await resolve_reader_result(reader(user_id))))
+
+    engine = getattr(request.app.state, "db_engine", None)
+    if engine is not None and hasattr(engine, "connect"):
+        return with_password_capability(user, await user_has_local_credential(engine, user_id))
+
+    return with_password_capability(user, False)
+
+
 async def resolve_reader_result(
-    result: dict[str, object] | None | Awaitable[dict[str, object] | None],
-) -> dict[str, object] | None:
+    result: Any | Awaitable[Any],
+) -> Any:
     if isawaitable(result):
         return await result
     return result

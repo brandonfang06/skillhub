@@ -61,6 +61,7 @@ Important environment variables:
 Scanner-side optional environment variables:
 
 - `SKILL_SCANNER_LLM_API_KEY`
+- `SKILL_SCANNER_LLM_BASE_URL`
 - `SKILL_SCANNER_LLM_MODEL`
 
 If the LLM variables are absent, the scanner should still run with non-LLM analyzers.

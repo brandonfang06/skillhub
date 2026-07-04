@@ -318,6 +318,24 @@ export function SkillDetailPage() {
     toast.error(t('skillDetail.packageLinkMissingTitle'), t('skillDetail.packageLinkMissingDescription'))
   }
 
+  const handlePreviewLinkClick = (href: string, event: MouseEvent<HTMLAnchorElement>) => {
+    const resolution = resolvePackageRelativeLink(href, previewNode?.path, files)
+
+    if (resolution.status === 'ignored') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (resolution.status === 'matched') {
+      setPreviewNode(createPackageFilePreviewNode(resolution.file))
+      setPreviewDialogOpen(true)
+      return
+    }
+
+    toast.error(t('skillDetail.packageLinkMissingTitle'), t('skillDetail.packageLinkMissingDescription'))
+  }
+
   // Download a single file from the skill version
   const handleDownloadFile = () => {
     const isAnonymousAllowed = namespace === 'global' && skill?.visibility === 'PUBLIC'
@@ -1652,6 +1670,7 @@ export function SkillDetailPage() {
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
+        onLinkClick={handlePreviewLinkClick}
       />
     </div>
   )

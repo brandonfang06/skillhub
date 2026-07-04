@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { Copy, Check, Download, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
@@ -18,6 +18,7 @@ interface FilePreviewDialogProps {
   isLoading: boolean
   error: Error | null
   onDownload: () => void
+  onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 /**
@@ -33,6 +34,7 @@ export function FilePreviewDialog({
   isLoading,
   error,
   onDownload,
+  onLinkClick,
 }: FilePreviewDialogProps) {
   const { t } = useTranslation()
   // Tracks the copy animation state: idle → spinning → done
@@ -143,7 +145,7 @@ export function FilePreviewDialog({
               <Button onClick={onDownload}>{t('filePreview.downloadHint', { name: node.name })}</Button>
             </div>
           ) : content && isMarkdown ? (
-            <MarkdownRenderer content={content} />
+            <MarkdownRenderer content={content} onLinkClick={onLinkClick} />
           ) : content && shouldHighlight ? (
             <CodeRenderer code={content} language={language} />
           ) : content ? (

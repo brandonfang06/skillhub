@@ -25,6 +25,7 @@ def principal() -> dict[str, object]:
         "email": "oauth-user@example.test",
         "avatarUrl": "",
         "oauthProvider": "github",
+        "canChangePassword": False,
         "platformRoles": ["USER"],
     }
 
@@ -369,6 +370,7 @@ def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_
         "email": "oauth-user@example.test",
         "avatarUrl": "https://avatar.example/user.png",
         "oauthProvider": "github",
+        "canChangePassword": False,
         "platformRoles": ["USER"],
     }
     assert connection.identity_bindings[0]["provider_code"] == "github"

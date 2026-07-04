@@ -1,10 +1,14 @@
+/** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
+import { fireEvent, render, screen } from '@testing-library/react'
+import type { MouseEvent } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
 const hasRoleMock = vi.fn<(role: string) => boolean>((role: string) => role === 'USER')
 const useSkillDetailMock = vi.fn()
 const useSkillLabelsMock = vi.fn()
+const useSkillFilesMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
@@ -76,7 +80,41 @@ vi.mock('@/shared/lib/number-format', () => ({
 }))
 
 vi.mock('@/features/skill/markdown-renderer', () => ({
-  MarkdownRenderer: () => <div>markdown</div>,
+  MarkdownRenderer: ({ onLinkClick }: { onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void }) => (
+    <div>
+      markdown
+      {onLinkClick ? (
+        <a href="docs/usage.md" onClick={(event) => onLinkClick('docs/usage.md', event)}>
+          Usage
+        </a>
+      ) : null}
+    </div>
+  ),
+}))
+
+vi.mock('@/features/skill/file-preview-dialog', () => ({
+  FilePreviewDialog: ({
+    open,
+    node,
+    onLinkClick,
+  }: {
+    open: boolean
+    node: { path: string } | null
+    onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
+  }) => (
+    open && node
+      ? (
+          <div role="dialog">
+            preview:{node.path}
+            {onLinkClick ? (
+              <a href="nested.md" onClick={(event) => onLinkClick('nested.md', event)}>
+                Nested
+              </a>
+            ) : null}
+          </div>
+        )
+      : null
+  ),
 }))
 
 vi.mock('@/features/skill/file-tree', () => ({
@@ -107,7 +145,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
   useSkillVersionDetail: () => ({ data: undefined }),
-  useSkillFiles: () => ({ data: [] }),
+  useSkillFiles: () => useSkillFilesMock(),
   useSkillReadme: () => ({ data: '# Demo', error: null }),
   useSkillFile: () => ({ data: null, isLoading: false, error: null }),
   useArchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -196,6 +234,7 @@ describe('SkillDetailPage', () => {
     useSkillLabelsMock.mockReturnValue({
       data: undefined,
     })
+    useSkillFilesMock.mockReturnValue({ data: [] })
   })
 
   it('shows hard delete action for the skill owner', () => {
@@ -400,5 +439,41 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('break-all')
     expect(html).toContain('leading-snug')
+  })
+
+  it('resolves links inside previewed markdown files against the previewed file path', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          filePath: 'README.md',
+          fileSize: 128,
+          contentType: 'text/markdown',
+          sha256: 'readme',
+        },
+        {
+          id: 2,
+          filePath: 'docs/usage.md',
+          fileSize: 128,
+          contentType: 'text/markdown',
+          sha256: 'usage',
+        },
+        {
+          id: 3,
+          filePath: 'docs/nested.md',
+          fileSize: 128,
+          contentType: 'text/markdown',
+          sha256: 'nested',
+        },
+      ],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('link', { name: 'Usage' }))
+    expect(screen.getByRole('dialog').textContent).toContain('preview:docs/usage.md')
+
+    fireEvent.click(screen.getByRole('link', { name: 'Nested' }))
+
+    expect(screen.getByRole('dialog').textContent).toContain('preview:docs/nested.md')
   })
 })

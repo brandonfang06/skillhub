@@ -210,11 +210,15 @@ async def update_admin_user_role(
 ) -> dict[str, Any]:
     require_user_admin(actor_platform_roles)
     normalized_role = _normalize_role(role)
-    if normalized_role == "SUPER_ADMIN" and "SUPER_ADMIN" not in {str(role) for role in actor_platform_roles}:
+    actor_roles = {str(role) for role in actor_platform_roles}
+    if normalized_role == "SUPER_ADMIN" and "SUPER_ADMIN" not in actor_roles:
         raise AdminUserError("error.admin.user.role.superAdmin.assignDenied", status_code=403)
     async with engine.begin() as connection:
         user = await _read_user(connection, user_id)
         _reject_system_account_mutation(user)
+        current_roles = set((await _roles_by_user_id(connection, [user_id])).get(user_id, []))
+        if "SUPER_ADMIN" in current_roles and "SUPER_ADMIN" not in actor_roles:
+            raise AdminUserError("error.admin.user.role.superAdmin.assignDenied", status_code=403)
         await connection.execute(text("DELETE FROM user_role_binding WHERE user_id = :user_id"), {"user_id": user_id})
         if normalized_role != "USER":
             role_row = (

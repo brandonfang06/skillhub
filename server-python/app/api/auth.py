@@ -17,11 +17,13 @@ from app.auth.oauth import (
     oauth_registrations_from_env,
 )
 from app.auth.context import (
+    attach_password_capability,
     build_auth_me_response,
     normalize_platform_roles,
     read_current_bearer_user,
     read_current_mock_user,
     resolve_current_user_or_401,
+    with_password_capability,
 )
 from app.auth.session import clear_session, establish_session
 from app.core.response import ok
@@ -230,6 +232,7 @@ async def get_current_user(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     data = await _read_current_user_or_401(request, mock_user_id, authorization)
+    data = await attach_password_capability(request, data)
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
@@ -332,6 +335,7 @@ async def oauth_callback(
             if binder is not None
             else bind_oauth_principal(request.app.state.db_engine, registration, claims)
         )
+        principal = await attach_password_capability(request, principal)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except (ValueError, KeyError) as exc:
@@ -363,6 +367,7 @@ async def direct_login(request: Request, response: Response, payload: dict[str, 
                 password=payload.get("password"),
             )
         )
+        data = with_password_capability(data, True)
     except LocalAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     await establish_session(request, response, data)

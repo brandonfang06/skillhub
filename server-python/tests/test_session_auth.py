@@ -17,6 +17,12 @@ def principal(user_id: str = "session-user", *, provider: str = "local") -> dict
     }
 
 
+def auth_me_principal(user_id: str = "session-user", *, provider: str = "local", can_change_password: bool) -> dict[str, object]:
+    data = principal(user_id, provider=provider)
+    data["canChangePassword"] = can_change_password
+    return data
+
+
 def test_cookie_secure_accepts_java_session_env(monkeypatch) -> None:
     monkeypatch.delenv("SKILLHUB_SESSION_COOKIE_SECURE", raising=False)
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "true")
@@ -38,7 +44,7 @@ def test_local_login_creates_session_cookie_used_by_auth_me() -> None:
     assert login.status_code == 200
     assert "SESSION" in client.cookies
     assert auth_me.status_code == 200
-    assert auth_me.json()["data"] == principal()
+    assert auth_me.json()["data"] == auth_me_principal(can_change_password=True)
 
 
 def test_local_register_creates_session_cookie_used_by_auth_me() -> None:
@@ -55,7 +61,7 @@ def test_local_register_creates_session_cookie_used_by_auth_me() -> None:
     assert register.status_code == 200
     assert "SESSION" in client.cookies
     assert auth_me.status_code == 200
-    assert auth_me.json()["data"] == principal()
+    assert auth_me.json()["data"] == auth_me_principal(can_change_password=True)
 
 
 def test_change_password_accepts_session_principal() -> None:
@@ -91,7 +97,7 @@ def test_mock_user_header_takes_precedence_over_session_cookie() -> None:
     auth_me = client.get("/api/v1/auth/me", headers={"X-Mock-User-Id": "mock-user"})
 
     assert auth_me.status_code == 200
-    assert auth_me.json()["data"] == principal("mock-user", provider="mock")
+    assert auth_me.json()["data"] == auth_me_principal("mock-user", provider="mock", can_change_password=False)
 
 
 def test_bearer_token_takes_precedence_over_session_cookie() -> None:
@@ -107,7 +113,7 @@ def test_bearer_token_takes_precedence_over_session_cookie() -> None:
     auth_me = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer sk_valid"})
 
     assert auth_me.status_code == 200
-    assert auth_me.json()["data"] == principal("bearer-user", provider="api_token")
+    assert auth_me.json()["data"] == auth_me_principal("bearer-user", provider="api_token", can_change_password=False)
 
 
 def test_logout_invalidates_session_cookie() -> None:
@@ -142,7 +148,7 @@ def test_direct_login_creates_session_cookie_used_by_auth_me() -> None:
     assert login.status_code == 200
     assert "SESSION" in client.cookies
     assert auth_me.status_code == 200
-    assert auth_me.json()["data"] == principal()
+    assert auth_me.json()["data"] == auth_me_principal(can_change_password=True)
 
 
 def test_redis_session_store_serializes_principals_with_ttl() -> None:

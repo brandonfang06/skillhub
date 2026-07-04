@@ -79,6 +79,8 @@ Enabling the LLM analysis engine can improve the accuracy of security detection:
 | `SKILLHUB_SCANNER_USE_LLM` | Enable LLM analysis | `false` |
 | `SKILLHUB_SCANNER_LLM_PROVIDER` | LLM provider (anthropic / openai / azure) | `anthropic` |
 | `SKILL_SCANNER_LLM_API_KEY` | LLM API key | - |
+| `SKILL_SCANNER_LLM_BASE_URL` | LLM API base URL, for internal proxies or self-hosted model services | - |
+| `SKILL_SCANNER_LLM_MODEL` | LLM model name | - |
 
 ### Deployment Notes
 

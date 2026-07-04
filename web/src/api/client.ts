@@ -15,6 +15,9 @@ import type {
   MergeVerifyRequest,
   ReviewSkillDetail,
   ReviewTask,
+  PromotionSortBy,
+  PromotionSortDirection,
+  PromotionStatus,
   PromotionTask,
   AuditLogItem,
   SkillSummary,
@@ -300,17 +303,22 @@ function trimTrailingSlash(value: string): string {
 export async function getCurrentUser(): Promise<User | null> {
   try {
     const user = await fetchJson<User>('/api/v1/auth/me')
-    return {
-      ...user,
-      userId: user.userId ?? '',
-      displayName: user.displayName ?? '',
-      platformRoles: user.platformRoles ?? [],
-    }
+    return normalizeUser(user)
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       return null
     }
     throw error
+  }
+}
+
+function normalizeUser(user: User): User {
+  return {
+    ...user,
+    userId: user.userId ?? '',
+    displayName: user.displayName ?? '',
+    platformRoles: user.platformRoles ?? [],
+    canChangePassword: user.canChangePassword === true,
   }
 }
 
@@ -346,23 +354,23 @@ export const authApi = {
   },
 
   async localLogin(request: LocalLoginRequest): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/local/login', {
+    return normalizeUser(await fetchJson<User>('/api/v1/auth/local/login', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify(request),
-    })
+    }))
   },
 
   async localRegister(request: LocalRegisterRequest): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/local/register', {
+    return normalizeUser(await fetchJson<User>('/api/v1/auth/local/register', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify(request),
-    })
+    }))
   },
 
   async changePassword(request: ChangePasswordRequest): Promise<void> {
@@ -406,17 +414,17 @@ export const authApi = {
   },
 
   async bootstrapSession(provider: string): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/session/bootstrap', {
+    return normalizeUser(await fetchJson<User>('/api/v1/auth/session/bootstrap', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ provider }),
-    })
+    }))
   },
 
   async directLogin(provider: string, request: LocalLoginRequest): Promise<User> {
-    return fetchJson<User>('/api/v1/auth/direct/login', {
+    return normalizeUser(await fetchJson<User>('/api/v1/auth/direct/login', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
@@ -426,7 +434,7 @@ export const authApi = {
         username: request.username,
         password: request.password,
       }),
-    })
+    }))
   },
 }
 
@@ -917,11 +925,17 @@ export const promotionApi = {
     })
   },
 
-  async list(params: { status?: string; page?: number; size?: number }) {
+  async list(params: { status?: PromotionStatus; page?: number; size?: number; sortBy?: PromotionSortBy; sortDirection?: PromotionSortDirection }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status ?? 'PENDING')
     searchParams.set('page', String(params.page ?? 0))
     searchParams.set('size', String(params.size ?? 20))
+    if (params.sortBy) {
+      searchParams.set('sortBy', params.sortBy)
+    }
+    if (params.sortDirection) {
+      searchParams.set('sortDirection', params.sortDirection)
+    }
     return fetchJson<{ items: PromotionTask[]; total: number; page: number; size: number }>(
       `${WEB_API_PREFIX}/promotions?${searchParams.toString()}`,
     )

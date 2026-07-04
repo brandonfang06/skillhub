@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.promotion.query import PromotionListQuery, list_pending_promotions, list_promotions, read_promotion_detail
+from app.promotion.query import PromotionListQuery, PromotionQueryError, list_pending_promotions, list_promotions, read_promotion_detail
 
 
 @dataclass
@@ -59,9 +59,15 @@ class FakePromotionConnection:
             row = {
                 "id": 301,
                 "source_skill_id": 101,
+                "source_skill_display_name": "Agent Helper",
+                "source_skill_summary": "Helps agents complete routine work.",
                 "source_namespace": "team-a",
                 "skill_slug": "agent-helper",
                 "version_name": "1.0.0",
+                "source_version_file_count": 3,
+                "source_version_total_size": 2048,
+                "source_skill_download_count": 7,
+                "source_skill_star_count": 2,
                 "target_namespace": "global",
                 "target_skill_id": None,
                 "status": "PENDING",
@@ -114,9 +120,15 @@ async def test_list_promotions_requires_platform_review_role_and_preserves_page_
     assert response["items"][0] == {
         "id": 301,
         "sourceSkillId": 101,
+        "sourceSkillDisplayName": "Agent Helper",
+        "sourceSkillSummary": "Helps agents complete routine work.",
         "sourceNamespace": "team-a",
         "sourceSkillSlug": "agent-helper",
         "sourceVersion": "1.0.0",
+        "sourceVersionFileCount": 3,
+        "sourceVersionTotalSize": 2048,
+        "sourceSkillDownloadCount": 7,
+        "sourceSkillStarCount": 2,
         "targetNamespace": "global",
         "targetSkillId": None,
         "status": "PENDING",
@@ -132,6 +144,78 @@ async def test_list_promotions_requires_platform_review_role_and_preserves_page_
     assert connection.params[page_index]["status"] == "PENDING"
     assert connection.params[page_index]["limit"] == 3
     assert connection.params[page_index]["offset"] == 3
+
+
+@pytest.mark.anyio
+async def test_list_promotions_history_supports_reviewed_at_sorting() -> None:
+    desc = FakePromotionConnection(platform_roles=["SKILL_ADMIN"])
+    asc = FakePromotionConnection(platform_roles=["SKILL_ADMIN"])
+
+    await list_promotions(
+        FakeEngine(desc),
+        PromotionListQuery(
+            status="APPROVED",
+            page=0,
+            size=10,
+            user_id="admin",
+            sort_by="reviewedAt",
+            sort_direction="DESC",
+        ),
+    )
+    await list_promotions(
+        FakeEngine(asc),
+        PromotionListQuery(
+            status="REJECTED",
+            page=0,
+            size=10,
+            user_id="admin",
+            sort_by="reviewedAt",
+            sort_direction="ASC",
+        ),
+    )
+
+    desc_sql = next(sql for sql in desc.statements if "FROM promotion_request pr" in sql and "ORDER BY" in sql)
+    asc_sql = next(sql for sql in asc.statements if "FROM promotion_request pr" in sql and "ORDER BY" in sql)
+    assert "pr.reviewed_at DESC" in desc_sql
+    assert "pr.id DESC" in desc_sql
+    assert "pr.reviewed_at ASC" in asc_sql
+    assert "pr.id ASC" in asc_sql
+
+
+@pytest.mark.anyio
+async def test_list_promotions_rejects_invalid_status_and_sort_parameters() -> None:
+    connection = FakePromotionConnection(platform_roles=["SKILL_ADMIN"])
+
+    with pytest.raises(PromotionQueryError, match="promotion.status.invalid"):
+        await list_promotions(
+            FakeEngine(connection),
+            PromotionListQuery(status="", page=0, size=20, user_id="admin"),
+        )
+
+    with pytest.raises(PromotionQueryError, match="promotion.sort.pending_unsupported"):
+        await list_promotions(
+            FakeEngine(connection),
+            PromotionListQuery(status="PENDING", page=0, size=20, user_id="admin", sort_by="reviewedAt"),
+        )
+
+    with pytest.raises(PromotionQueryError, match="promotion.sort.field.invalid"):
+        await list_promotions(
+            FakeEngine(connection),
+            PromotionListQuery(status="APPROVED", page=0, size=20, user_id="admin", sort_by="submittedAt"),
+        )
+
+    with pytest.raises(PromotionQueryError, match="promotion.sort.direction.invalid"):
+        await list_promotions(
+            FakeEngine(connection),
+            PromotionListQuery(
+                status="APPROVED",
+                page=0,
+                size=20,
+                user_id="admin",
+                sort_by="reviewedAt",
+                sort_direction="SIDEWAYS",
+            ),
+        )
 
 
 @pytest.mark.anyio
@@ -212,7 +296,7 @@ def test_promotion_read_routes_return_java_envelopes_and_forward_inputs() -> Non
     client = TestClient(app)
 
     listed = client.get(
-        "/api/v1/promotions?status=APPROVED&page=2&size=4",
+        "/api/v1/promotions?status=APPROVED&page=2&size=4&sortBy=reviewedAt&sortDirection=ASC",
         headers={"X-Mock-User-Id": "admin", "X-Request-Id": "promotion-list-test"},
     )
     pending = client.get("/api/web/promotions/pending?page=1", headers={"X-Mock-User-Id": "admin"})
@@ -224,7 +308,7 @@ def test_promotion_read_routes_return_java_envelopes_and_forward_inputs() -> Non
     assert pending.status_code == 200
     assert detail.status_code == 200
     assert seen == [
-        ("list", {"status": "APPROVED", "page": 2, "size": 4, "user_id": "admin"}),
+        ("list", {"status": "APPROVED", "page": 2, "size": 4, "sort_by": "reviewedAt", "sort_direction": "ASC", "user_id": "admin"}),
         ("pending", {"page": 1, "size": 20, "user_id": "admin"}),
         ("detail", {"promotion_id": 301, "user_id": "submitter"}),
     ]

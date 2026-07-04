@@ -255,6 +255,23 @@ async def test_update_role_replaces_bindings_and_protects_super_admin_assignment
 
 
 @pytest.mark.anyio
+async def test_update_role_protects_existing_super_admin_from_non_super_admin_actor() -> None:
+    connection = FakeAdminUserConnection()
+    connection.user_roles["user-2"] = ["SUPER_ADMIN"]
+
+    with pytest.raises(AdminUserError, match="error.admin.user.role.superAdmin.assignDenied") as forbidden:
+        await update_admin_user_role(
+            FakeEngine(connection),
+            user_id="user-2",
+            role="USER",
+            actor_platform_roles=["USER_ADMIN"],
+        )
+
+    assert forbidden.value.status_code == 403
+    assert connection.user_roles["user-2"] == ["SUPER_ADMIN"]
+
+
+@pytest.mark.anyio
 async def test_update_role_and_status_reject_system_accounts() -> None:
     connection = FakeAdminUserConnection()
 
@@ -406,3 +423,22 @@ def test_admin_user_routes_use_java_envelopes_and_admin_roles() -> None:
     assert reset.status_code == 200
     assert reset.json()["msg"] == "\u5982\u679c\u8d26\u53f7\u7b26\u5408\u6761\u4ef6\uff0c\u5bc6\u7801\u91cd\u7f6e\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u3002"
     assert reset.json()["data"] is None
+
+
+def test_admin_user_role_route_rejects_non_super_admin_replacing_super_admin() -> None:
+    connection = FakeAdminUserConnection()
+    connection.user_roles["user-2"] = ["SUPER_ADMIN"]
+    app = create_app()
+    app.state.db_engine = FakeEngine(connection)
+    app.state.auth_me_reader = lambda user_id: auth_user(user_id, ["USER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/v1/admin/users/user-2/role",
+        json={"role": "USER"},
+        headers={"X-Mock-User-Id": "admin"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "error.admin.user.role.superAdmin.assignDenied"
+    assert connection.user_roles["user-2"] == ["SUPER_ADMIN"]

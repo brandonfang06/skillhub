@@ -62,8 +62,24 @@ def test_build_auth_me_response_matches_java_dto_defaults_and_sorted_roles() -> 
         "email": "",
         "avatarUrl": "",
         "oauthProvider": "mock",
+        "canChangePassword": False,
         "platformRoles": ["SKILL_ADMIN", "SUPER_ADMIN"],
     }
+
+
+def test_build_auth_me_response_sets_password_capability_from_authoritative_state() -> None:
+    data = build_auth_me_response(
+        {
+            "id": "local-user",
+            "display_name": "Local User",
+            "email": "local-user@example.com",
+            "avatar_url": "",
+            "can_change_password": True,
+        },
+        [],
+    )
+
+    assert data["canChangePassword"] is True
 
 
 def test_build_auth_me_response_uses_default_user_role_when_bindings_empty() -> None:
@@ -101,6 +117,7 @@ def test_read_current_mock_user_reads_active_user_and_roles() -> None:
         "email": "admin@example.com",
         "avatarUrl": "https://example.com/admin.png",
         "oauthProvider": "mock",
+        "canChangePassword": False,
         "platformRoles": ["AUDITOR", "SUPER_ADMIN"],
     }
     assert engine.connection.executed_params == [{"user_id": "local-admin"}, {"user_id": "local-admin"}]

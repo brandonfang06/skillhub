@@ -10,6 +10,7 @@ def auth_me_response() -> dict[str, object]:
         "email": "local-user@example.com",
         "avatarUrl": "",
         "oauthProvider": "mock",
+        "canChangePassword": False,
         "platformRoles": ["USER"],
     }
 

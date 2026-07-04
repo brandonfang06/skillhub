@@ -1,18 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { promotionApi } from '@/api/client'
-import type { PromotionTask } from '@/api/types'
+import type { PromotionSortBy, PromotionSortDirection, PromotionStatus, PromotionTask } from '@/api/types'
+
+export interface PromotionListParams {
+  status?: PromotionStatus
+  page?: number
+  size?: number
+  sortBy?: PromotionSortBy
+  sortDirection?: PromotionSortDirection
+}
 
 /**
  * Returns the promotion queue for a given status. The hook unwraps the backend
  * page object because promotion screens currently consume the item list only.
  */
-export function usePromotionList(status = 'PENDING') {
+export function usePromotionList(params: PromotionListParams = { status: 'PENDING' }) {
+  const normalizedParams = {
+    status: params.status ?? 'PENDING',
+    page: params.page ?? 0,
+    size: params.size ?? 20,
+    sortBy: params.sortBy,
+    sortDirection: params.sortDirection,
+  }
+
   return useQuery({
-    queryKey: ['promotions', status],
+    queryKey: ['promotions', normalizedParams],
     queryFn: async () => {
-      const page = await promotionApi.list({ status })
+      const page = await promotionApi.list(normalizedParams)
       return page.items
     },
+    staleTime: 30_000,
   })
 }
 
@@ -56,4 +73,4 @@ export function useRejectPromotion() {
   })
 }
 
-export type { PromotionTask }
+export type { PromotionSortDirection, PromotionStatus, PromotionTask }

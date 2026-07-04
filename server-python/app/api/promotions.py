@@ -59,20 +59,38 @@ async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
 
 async def list_promotions_route_data(
     request: Request,
-    status: str,
+    status: str | None,
     page: int,
     size: int,
+    sort_by: str | None,
+    sort_direction: str | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "promotion_list_reader", None)
     try:
         if reader is not None:
-            data = await _resolve_reader_result(reader(status=status, page=page, size=size, user_id=user_id))
+            data = await _resolve_reader_result(
+                reader(
+                    status=status,
+                    page=page,
+                    size=size,
+                    sort_by=sort_by,
+                    sort_direction=sort_direction,
+                    user_id=user_id,
+                )
+            )
         else:
             data = await list_promotions(
                 request.app.state.db_engine,
-                PromotionListQuery(status=status, page=page, size=size, user_id=user_id),
+                PromotionListQuery(
+                    status=status,
+                    page=page,
+                    size=size,
+                    user_id=user_id,
+                    sort_by=sort_by,
+                    sort_direction=sort_direction,
+                ),
             )
     except PromotionQueryError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -212,12 +230,14 @@ async def submit_promotion_route(
 @router.get("/api/web/promotions")
 async def list_promotions_route(
     request: Request,
-    status: str = "PENDING",
+    status: str | None = None,
     page: int = 0,
     size: int = 20,
+    sortBy: str | None = None,
+    sortDirection: str | None = None,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
-    return await list_promotions_route_data(request, status, page, size, mock_user_id)
+    return await list_promotions_route_data(request, status, page, size, sortBy, sortDirection, mock_user_id)
 
 
 @router.get("/api/v1/promotions/pending")
