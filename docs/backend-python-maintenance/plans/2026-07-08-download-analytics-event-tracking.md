@@ -4,9 +4,9 @@
 
 **Goal:** Record each successful published skill download in a dedicated table and expose operator-readable download history without changing the existing upstream-compatible download counter behavior.
 
-**Architecture:** Keep the existing `skill.download_count` and `skill_version_stats.download_count` counters as the source for public counts. Add a separate `skill_download_event` write path and query API so the organization-specific analytics feature stays isolated from upstream parity code. The first milestone is backend/API only; frontend reporting UI can be added after the API contract is proven.
+**Architecture:** Keep the existing `skill.download_count` and `skill_version_stats.download_count` counters as the source for public counts. Add a separate `local_skill_download_event` write path and query API so the organization-specific analytics feature stays isolated from upstream parity code. The first milestone is backend/API only; frontend reporting UI can be added after the API contract is proven.
 
-**Tech Stack:** FastAPI, SQLAlchemy async text queries, PostgreSQL, bundled Flyway-style SQL migrations through `server-python/app/migrations.py`, pytest, generated OpenAPI TypeScript types.
+**Tech Stack:** FastAPI, SQLAlchemy async text queries, PostgreSQL, bundled upstream Flyway SQL baseline plus local Python-owned SQL migrations through `server-python/app/migrations.py`, pytest, generated OpenAPI TypeScript types.
 
 ---
 
@@ -39,11 +39,12 @@ This is an organization extension, not an upstream parity patch. Keep it isolate
 
 When following upstream, the only recurring check should be whether published download success still passes through the same counter/update boundary. If upstream changes the download route, reattach the event hook after successful published downloads and keep the event schema/query API unchanged unless a product requirement changes.
 
+Do not add this organization extension as `server-python/app/db/migration/V44__...`. The `V*__*.sql` namespace mirrors upstream Flyway numbering, so a local V44 would collide with a future upstream V44. Use `server-python/app/db/local_migration/` and a local tracking table instead. The upstream-covered baseline remains at the latest followed upstream Flyway version until an upstream release changes it.
+
 ## Files
 
-- Create: `server-python/app/db/migration/V44__skill_download_event.sql`
+- Create: `server-python/app/db/local_migration/20260708_01__local_skill_download_event.sql`
 - Modify: `server-python/app/migrations.py`
-- Modify: `server-python/alembic/versions/20260612_baseline_existing_flyway_schema.py`
 - Modify: `server-python/tests/test_schema_migration_baseline.py`
 - Create: `server-python/app/download_analytics/__init__.py`
 - Create: `server-python/app/download_analytics/repository.py`
@@ -97,17 +98,16 @@ Response shape:
 }
 ```
 
-## Task 1: Schema And Migration Baseline
+## Task 1: Local Schema Extension Migration
 
 **Files:**
-- Create: `server-python/app/db/migration/V44__skill_download_event.sql`
+- Create: `server-python/app/db/local_migration/20260708_01__local_skill_download_event.sql`
 - Modify: `server-python/app/migrations.py`
-- Modify: `server-python/alembic/versions/20260612_baseline_existing_flyway_schema.py`
 - Modify: `server-python/tests/test_schema_migration_baseline.py`
 
 - [ ] **Step 1: Write the migration test first**
 
-Add assertions that the latest bundled SQL file is `V44__skill_download_event.sql`, the baseline version is `44`, and existing databases without `skill_download_event` apply V44 before stamping.
+Add assertions that the upstream Flyway baseline remains at the currently followed upstream version, local migration discovery finds the download event extension, and existing databases without `local_skill_download_event` apply the local migration after the upstream baseline path.
 
 Target test names:
 
@@ -116,11 +116,18 @@ def test_baseline_revision_tracks_bundled_python_migration_snapshot() -> None:
     latest_flyway = max(migrations.flyway_migration_files(FLYWAY_DIR), key=lambda item: item.version)
 
     assert migrations.BASELINE_FLYWAY_VERSION == latest_flyway.version
-    assert migrations.BASELINE_REVISION == "skillhub_flyway_v44_baseline"
-    assert latest_flyway.path.name == "V44__skill_download_event.sql"
+    assert migrations.BASELINE_REVISION == "skillhub_flyway_v43_baseline"
+    assert latest_flyway.path.name == "V43__user_account_system_account.sql"
 
 
-def test_existing_v43_python_database_applies_v44_before_stamping_baseline() -> None:
+def test_local_migration_files_include_download_event_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    assert [item.identifier for item in local_migrations] == ["20260708_01"]
+    assert local_migrations[0].path.name == "20260708_01__local_skill_download_event.sql"
+
+
+def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
     connection = FakeConnection(
         existing_tables={"user_account"},
         existing_columns={("user_account", "system_account")},
@@ -128,7 +135,9 @@ def test_existing_v43_python_database_applies_v44_before_stamping_baseline() -> 
 
     asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
 
-    assert any("CREATE TABLE skill_download_event" in statement for statement in connection.executed)
+    assert any("CREATE TABLE IF NOT EXISTS local_schema_migration" in statement for statement in connection.executed)
+    assert any("CREATE TABLE local_skill_download_event" in statement for statement in connection.executed)
+    assert any("INSERT INTO local_schema_migration" in statement for statement in connection.executed)
     assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
 ```
 
@@ -141,14 +150,14 @@ cd server-python
 uv run pytest tests/test_schema_migration_baseline.py -q
 ```
 
-Expected: failure showing the latest migration is still V43 or V44 is missing.
+Expected: failure showing `local_migration_files`, the local migration SQL, or the local migration tracking table does not exist yet.
 
-- [ ] **Step 3: Add V44 SQL**
+- [ ] **Step 3: Add local migration SQL**
 
-Create `server-python/app/db/migration/V44__skill_download_event.sql`:
+Create `server-python/app/db/local_migration/20260708_01__local_skill_download_event.sql`:
 
 ```sql
-CREATE TABLE skill_download_event (
+CREATE TABLE local_skill_download_event (
     id BIGSERIAL PRIMARY KEY,
     skill_id BIGINT NOT NULL REFERENCES skill(id) ON DELETE CASCADE,
     skill_version_id BIGINT NOT NULL REFERENCES skill_version(id) ON DELETE CASCADE,
@@ -163,53 +172,87 @@ CREATE TABLE skill_download_event (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_skill_download_event_skill_created_at
-    ON skill_download_event(skill_id, created_at DESC);
+CREATE INDEX idx_local_skill_download_event_skill_created_at
+    ON local_skill_download_event(skill_id, created_at DESC);
 
-CREATE INDEX idx_skill_download_event_version_created_at
-    ON skill_download_event(skill_version_id, created_at DESC);
+CREATE INDEX idx_local_skill_download_event_version_created_at
+    ON local_skill_download_event(skill_version_id, created_at DESC);
 
-CREATE INDEX idx_skill_download_event_user_created_at
-    ON skill_download_event(user_id, created_at DESC);
+CREATE INDEX idx_local_skill_download_event_user_created_at
+    ON local_skill_download_event(user_id, created_at DESC);
 
-CREATE INDEX idx_skill_download_event_namespace_slug_created_at
-    ON skill_download_event(namespace_slug, skill_slug, created_at DESC);
+CREATE INDEX idx_local_skill_download_event_namespace_slug_created_at
+    ON local_skill_download_event(namespace_slug, skill_slug, created_at DESC);
 ```
 
-- [ ] **Step 4: Update Python schema baseline handling**
+- [ ] **Step 4: Add Python-owned local migration handling**
 
-Change `server-python/app/migrations.py`:
+Keep the upstream baseline constants unchanged:
 
 ```python
-BASELINE_FLYWAY_VERSION = 44
-BASELINE_REVISION = "skillhub_flyway_v44_baseline"
+BASELINE_FLYWAY_VERSION = 43
+BASELINE_REVISION = "skillhub_flyway_v43_baseline"
 ```
 
-Extend `apply_existing_database_compatibility_migrations` so existing V43 databases apply V44 exactly once:
+Add local migration discovery and application helpers:
 
 ```python
-async def apply_existing_database_compatibility_migrations(
+LOCAL_MIGRATION_DIR = ROOT / "server-python" / "app" / "db" / "local_migration"
+
+
+@dataclass(frozen=True)
+class LocalMigration:
+    identifier: str
+    description: str
+    path: Path
+
+
+def local_migration_files(local_dir: Path = LOCAL_MIGRATION_DIR) -> list[LocalMigration]:
+    migrations: list[LocalMigration] = []
+    for path in local_dir.glob("*__*.sql"):
+        identifier, description = path.name.split("__", 1)
+        migrations.append(
+            LocalMigration(
+                identifier=identifier,
+                description=description.removesuffix(".sql"),
+                path=path,
+            )
+        )
+    return sorted(migrations, key=lambda item: item.identifier)
+```
+
+Apply local migrations after baseline handling:
+
+```python
+async def apply_local_schema_migrations(
     connection: DatabaseConnection,
-    flyway_dir: Path = DEFAULT_FLYWAY_DIR,
+    local_dir: Path = LOCAL_MIGRATION_DIR,
 ) -> None:
-    if not await column_exists(connection, "user_account", "system_account"):
-        migration = next((item for item in flyway_migration_files(flyway_dir) if item.version == 43), None)
-        if migration is None:
-            raise RuntimeError("Cannot upgrade existing database: missing Flyway V43")
+    await connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS local_schema_migration (
+            identifier VARCHAR(64) PRIMARY KEY,
+            description VARCHAR(256) NOT NULL,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    for migration in local_migration_files(local_dir):
+        already_applied = await connection.fetchval(
+            "SELECT 1 FROM local_schema_migration WHERE identifier = $1",
+            migration.identifier,
+        )
+        if already_applied is not None:
+            continue
         await connection.execute(migration.path.read_text(encoding="utf-8"))
-
-    if not await table_exists(connection, "skill_download_event"):
-        migration = next((item for item in flyway_migration_files(flyway_dir) if item.version == 44), None)
-        if migration is None:
-            raise RuntimeError("Cannot upgrade existing database: missing Flyway V44")
-        await connection.execute(migration.path.read_text(encoding="utf-8"))
+        await connection.execute(
+            "INSERT INTO local_schema_migration (identifier, description) VALUES ($1, $2)",
+            migration.identifier,
+            migration.description,
+        )
 ```
 
-Update `server-python/alembic/versions/20260612_baseline_existing_flyway_schema.py`:
-
-```python
-revision = "skillhub_flyway_v44_baseline"
-```
+Call `await apply_local_schema_migrations(connection)` at the end of `upgrade_database` for both fresh and existing databases. Do not call it from `stamp_existing_database`; `stamp` remains a baseline-stamp operation, while `upgrade` applies local extension schema.
 
 - [ ] **Step 5: Run migration tests**
 
@@ -236,14 +279,14 @@ Expected: all tests pass.
 Add tests that verify:
 
 - published downloads still increment `skill.download_count`;
-- published downloads insert one `skill_download_event`;
+- published downloads insert one `local_skill_download_event`;
 - `UPLOADED` and `PENDING_REVIEW` preview downloads do not insert events;
 - route handlers pass `web`, `api`, and `cli` source metadata correctly.
 
 Example repository assertion:
 
 ```python
-assert any("INSERT INTO skill_download_event" in statement for statement in connection.statements)
+assert any("INSERT INTO local_skill_download_event" in statement for statement in connection.statements)
 assert connection.params[-1]["user_id"] == "local-user"
 assert connection.params[-1]["source"] == "web"
 ```
@@ -297,7 +340,7 @@ async def record_skill_download_event(
     await connection.execute(
         text(
             """
-            INSERT INTO skill_download_event (
+            INSERT INTO local_skill_download_event (
                 skill_id, skill_version_id, user_id, namespace_slug, skill_slug,
                 version, source, request_id, client_ip, user_agent, created_at
             )
@@ -427,7 +470,7 @@ def require_platform_download_event_reader(platform_roles: list[str]) -> None:
         raise DownloadAnalyticsError("error.downloadAnalytics.readDenied", status_code=403)
 ```
 
-Implement `list_admin_download_events` and `list_skill_download_events` using SQL text queries against `skill_download_event`, joining `user_account` for `username`.
+Implement `list_admin_download_events` and `list_skill_download_events` using SQL text queries against `local_skill_download_event`, joining `user_account` for `username`.
 
 - [ ] **Step 4: Add FastAPI routes**
 
@@ -561,7 +604,7 @@ Create `docs/backend-python-maintenance/results/2026-07-08-download-analytics-ev
 
 ## Scope
 
-- Added `skill_download_event` as a dedicated organization analytics table.
+- Added `local_skill_download_event` as a dedicated organization analytics table.
 - Kept existing public download counters unchanged.
 - Added backend query APIs for platform operators and skill-scoped managers.
 
@@ -611,7 +654,7 @@ Expected: no whitespace errors; changed files match this plan.
 - Anonymous downloads are recorded with `user_id = NULL`.
 - Admin-wide reads require platform roles.
 - Skill-scoped reads require owner, namespace manager, or platform role.
-- Fresh DB and existing V43 DB schema upgrade paths both create `skill_download_event`.
+- Fresh DB and existing V43 DB schema upgrade paths both create `local_skill_download_event`.
 - OpenAPI generated types are updated after route changes.
 
 ## Commit Plan
