@@ -41,6 +41,17 @@ When following upstream, the only recurring check should be whether published do
 
 Do not add this organization extension as `server-python/app/db/migration/V44__...`. The `V*__*.sql` namespace mirrors upstream Flyway numbering, so a local V44 would collide with a future upstream V44. Use `server-python/app/db/local_migration/` and a local tracking table instead. The upstream-covered baseline remains at the latest followed upstream Flyway version until an upstream release changes it.
 
+## Local Migration Tracking Contract
+
+This milestone introduces a Python-owned local migration layer for organization-specific schema that is not part of upstream SkillHub:
+
+- Local migration files live under `server-python/app/db/local_migration/`.
+- Applied local migrations are recorded in `local_schema_migration`.
+- `local_schema_migration` is a local extension tracking table; do not map it to an upstream Flyway version.
+- `server-python/app/db/migration/V*__*.sql` remains reserved for the upstream-followed Flyway schema baseline.
+- When following upstream schema changes, update the upstream baseline separately and keep the local migration chain intact.
+- Before accepting an upstream database migration, check whether upstream added an equivalent download analytics feature. If it did, write an explicit migration/retirement plan for `local_skill_download_event` instead of silently dropping or renaming it.
+
 ## Files
 
 - Create: `server-python/app/db/local_migration/20260708_01__local_skill_download_event.sql`

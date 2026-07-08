@@ -59,6 +59,9 @@ Every upstream batch must record one decision per relevant change group:
 
 - Java behavior changes must be ported by writing or updating Python tests first.
 - Upstream Java Flyway migrations must become Python-owned schema migration work before launch.
+- The upstream-followed Flyway namespace is `server-python/app/db/migration/V*__*.sql`. Do not place organization-specific schema in that namespace because future upstream releases can reuse the next `V*` number.
+- Organization-specific schema extensions live under `server-python/app/db/local_migration/` and are tracked by the local table `local_schema_migration`.
+- When applying an upstream database migration, preserve the local migration chain and explicitly check whether upstream added a feature equivalent to any local extension table before renaming, dropping, or merging local tables.
 - API contract or frontend client expectation changes must be reflected in Python route tests and, when relevant, web tests.
 - Security, auth, token scope, session, lifecycle, publish, review, promotion, and data-integrity changes cannot be accepted as docs-only changes.
 - Each accepted port must have a result note under `docs/backend-python-maintenance/results/` or the relevant migration result folder if it reopens a migration contract issue.
