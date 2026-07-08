@@ -1,5 +1,6 @@
 import inspect
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any
 from zipfile import ZipFile
 
@@ -489,6 +490,146 @@ async def test_download_version_allows_private_skill_for_namespace_manager(tmp_p
         assert archive.namelist() == ["SKILL.md"]
         assert archive.read("SKILL.md") == b"# private\n"
     assert "s.visibility = 'PUBLIC'" not in connection.statements[0]
+
+
+@pytest.mark.anyio
+async def test_published_download_records_local_download_event(tmp_path) -> None:
+    bundle = tmp_path / "packages" / "7" / "42" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"published-bundle")
+    connection = FakeDownloadConnection(
+        [
+            FakeDbResult(
+                row={
+                    "id": 7,
+                    "owner_id": "owner-user",
+                    "namespace_id": 10,
+                    "slug": "published-demo",
+                    "display_name": "Published Demo",
+                }
+            ),
+            FakeDbResult(scalar=None),
+            FakeDbResult(row={"id": 42, "version": "1.0.0", "status": "PUBLISHED", "download_ready": True, "yanked_at": None}),
+            FakeDbResult(rows=[]),
+            FakeDbResult(),
+            FakeDbResult(),
+            FakeDbResult(),
+        ]
+    )
+
+    result = await read_skill_download_version(
+        FakeDownloadEngine(connection),
+        str(tmp_path),
+        "team-ai",
+        "published-demo",
+        "1.0.0",
+        "local-user",
+        download_event_context=SimpleNamespace(
+            user_id="local-user",
+            source="web",
+            request_id="request-1",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+        ),
+    )
+
+    assert result.content == b"published-bundle"
+    assert any("UPDATE skill SET download_count" in statement for statement in connection.statements)
+    assert any("INSERT INTO skill_version_stats" in statement for statement in connection.statements)
+    assert any("INSERT INTO local_skill_download_event" in statement for statement in connection.statements)
+    assert connection.params[-1] == {
+        "skill_id": 7,
+        "skill_version_id": 42,
+        "user_id": "local-user",
+        "namespace": "team-ai",
+        "slug": "published-demo",
+        "version": "1.0.0",
+        "source": "web",
+        "request_id": "request-1",
+        "client_ip": "127.0.0.1",
+        "user_agent": "pytest",
+    }
+
+
+@pytest.mark.anyio
+async def test_preview_download_does_not_record_local_download_event(tmp_path) -> None:
+    file_path = tmp_path / "skills" / "7" / "42" / "SKILL.md"
+    file_path.parent.mkdir(parents=True)
+    file_path.write_bytes(b"# preview\n")
+    connection = FakeDownloadConnection(
+        [
+            FakeDbResult(
+                row={
+                    "id": 7,
+                    "owner_id": "owner-user",
+                    "namespace_id": 10,
+                    "slug": "preview-demo",
+                    "display_name": "Preview Demo",
+                }
+            ),
+            FakeDbResult(scalar="ADMIN"),
+            FakeDbResult(row={"id": 42, "version": "1.0.0", "status": "UPLOADED", "download_ready": False, "yanked_at": None}),
+            FakeDbResult(rows=[{"file_path": "SKILL.md", "storage_key": "skills/7/42/SKILL.md"}]),
+        ]
+    )
+
+    result = await read_skill_download_version(
+        FakeDownloadEngine(connection),
+        str(tmp_path),
+        "team-ai",
+        "preview-demo",
+        "1.0.0",
+        "local-admin",
+        download_event_context=SimpleNamespace(
+            user_id="local-admin",
+            source="web",
+            request_id="request-1",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+        ),
+    )
+
+    assert result.filename == "Preview Demo-1.0.0.zip"
+    assert not any("INSERT INTO local_skill_download_event" in statement for statement in connection.statements)
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_source"),
+    [
+        ("/api/v1/skills/team-ai/demo/download", "api"),
+        ("/api/web/skills/team-ai/demo/download", "web"),
+        ("/api/cli/v1/skills/team-ai/demo/download", "cli"),
+    ],
+)
+def test_download_routes_pass_local_download_event_source(monkeypatch, path: str, expected_source: str) -> None:
+    import app.api.skills as skills_api
+
+    app = create_app()
+    app.state.db_engine = object()
+    app.state.settings = SimpleNamespace(storage_base_path="C:/tmp/unused")
+    seen: list[Any] = []
+
+    async def fake_read_skill_download_latest(
+        engine: object,
+        storage_base_path: str,
+        namespace: str,
+        slug: str,
+        current_user_id: str | None = None,
+        installable_only: bool = False,
+        download_event_context: object | None = None,
+    ) -> DownloadResult:
+        seen.append(download_event_context)
+        return DownloadResult(content=b"bundle", content_type="application/zip", filename="Demo-1.0.0.zip")
+
+    monkeypatch.setattr(skills_api, "read_skill_download_latest", fake_read_skill_download_latest)
+
+    client = TestClient(app)
+    response = client.get(path, headers={"X-Mock-User-Id": " local-user "})
+
+    assert response.status_code == 200
+    assert len(seen) == 1
+    assert seen[0].source == expected_source
+    assert seen[0].user_id == "local-user"
 
 
 def test_download_resolution_queries_do_not_hardcode_public_visibility() -> None:

@@ -15,6 +15,7 @@ BASELINE_FLYWAY_VERSION = 43
 BASELINE_REVISION = "skillhub_flyway_v43_baseline"
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
+LOCAL_MIGRATION_DIR = ROOT / "server-python" / "app" / "db" / "local_migration"
 
 
 class DatabaseConnection(Protocol):
@@ -26,6 +27,13 @@ class DatabaseConnection(Protocol):
 @dataclass(frozen=True)
 class FlywayMigration:
     version: int
+    description: str
+    path: Path
+
+
+@dataclass(frozen=True)
+class LocalMigration:
+    identifier: str
     description: str
     path: Path
 
@@ -44,6 +52,20 @@ def flyway_migration_files(flyway_dir: Path = DEFAULT_FLYWAY_DIR) -> list[Flyway
             )
         )
     return sorted(migrations, key=lambda item: item.version)
+
+
+def local_migration_files(local_dir: Path = LOCAL_MIGRATION_DIR) -> list[LocalMigration]:
+    migrations: list[LocalMigration] = []
+    for path in local_dir.glob("*__*.sql"):
+        identifier, description = path.name.split("__", 1)
+        migrations.append(
+            LocalMigration(
+                identifier=identifier,
+                description=description.removesuffix(".sql"),
+                path=path,
+            )
+        )
+    return sorted(migrations, key=lambda item: item.identifier)
 
 
 async def table_exists(connection: DatabaseConnection, table_name: str) -> bool:
@@ -78,6 +100,34 @@ async def apply_existing_database_compatibility_migrations(
     await connection.execute(migration.path.read_text(encoding="utf-8"))
 
 
+async def apply_local_schema_migrations(
+    connection: DatabaseConnection,
+    local_dir: Path = LOCAL_MIGRATION_DIR,
+) -> None:
+    await connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS local_schema_migration (
+            identifier VARCHAR(64) PRIMARY KEY,
+            description VARCHAR(256) NOT NULL,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    for migration in local_migration_files(local_dir):
+        already_applied = await connection.fetchval(
+            "SELECT 1 FROM local_schema_migration WHERE identifier = $1",
+            migration.identifier,
+        )
+        if already_applied is not None:
+            continue
+        await connection.execute(migration.path.read_text(encoding="utf-8"))
+        await connection.execute(
+            "INSERT INTO local_schema_migration (identifier, description) VALUES ($1, $2)",
+            migration.identifier,
+            migration.description,
+        )
+
+
 async def stamp_existing_database(connection: DatabaseConnection) -> None:
     if not await table_exists(connection, "user_account"):
         raise RuntimeError("Cannot stamp baseline: expected existing Flyway table user_account")
@@ -92,6 +142,7 @@ async def upgrade_database(
     if await table_exists(connection, "user_account"):
         await apply_existing_database_compatibility_migrations(connection, flyway_dir)
         await _stamp_baseline(connection)
+        await apply_local_schema_migrations(connection)
         return
 
     migrations = flyway_migration_files(flyway_dir)
@@ -104,6 +155,7 @@ async def upgrade_database(
     for migration in migrations:
         await connection.execute(migration.path.read_text(encoding="utf-8"))
     await _stamp_baseline(connection)
+    await apply_local_schema_migrations(connection)
 
 
 async def migration_status(connection: DatabaseConnection) -> str:

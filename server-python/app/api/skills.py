@@ -7,6 +7,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from app.core.response import ok
+from app.download_analytics.repository import DownloadEventContext, DownloadSource
 from app.skills.read_repository import *  # noqa: F403
 
 router = APIRouter()
@@ -15,6 +16,25 @@ async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
     return result
+
+
+def _download_source(request: Request) -> DownloadSource:
+    path = request.url.path
+    if path.startswith("/api/cli/"):
+        return "cli"
+    if path.startswith("/api/web/"):
+        return "web"
+    return "api"
+
+
+def _download_event_context(request: Request, user_id: str | None) -> DownloadEventContext:
+    return DownloadEventContext(
+        user_id=user_id,
+        source=_download_source(request),
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
 
 
 async def resolve_clawhub_download_coordinate(
@@ -743,6 +763,7 @@ async def download_skill_latest(
                 namespace,
                 slug,
                 current_user_id,
+                download_event_context=_download_event_context(request, current_user_id),
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -771,6 +792,7 @@ async def download_skill_version(
                 slug,
                 version,
                 current_user_id,
+                download_event_context=_download_event_context(request, current_user_id),
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -798,6 +820,7 @@ async def download_cli_skill_latest(
                 slug,
                 current_user_id,
                 installable_only=True,
+                download_event_context=_download_event_context(request, current_user_id),
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -827,6 +850,7 @@ async def download_cli_skill_version(
                 version,
                 current_user_id,
                 installable_only=True,
+                download_event_context=_download_event_context(request, current_user_id),
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -855,6 +879,7 @@ async def download_skill_tag(
                 slug,
                 tagName,
                 current_user_id,
+                download_event_context=_download_event_context(request, current_user_id),
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

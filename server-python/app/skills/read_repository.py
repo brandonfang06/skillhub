@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import bearer_token, has_bearer_authorization, resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, is_namespace_member
+from app.download_analytics.repository import DownloadEventContext, record_skill_download_event
 from app.skills.read_compare import (
     BINARY_FILE_EXTENSIONS,
     COMPARE_MAX_FILE_BYTES,
@@ -1711,6 +1712,7 @@ async def read_skill_download_version(
     version: str,
     current_user_id: str | None = None,
     installable_only: bool = False,
+    download_event_context: DownloadEventContext | None = None,
 ) -> DownloadResult:
     async with engine.begin() as connection:
         skill_row = (
@@ -1789,6 +1791,16 @@ async def read_skill_download_version(
 
         if str(version_row["status"]) == "PUBLISHED":
             await increment_published_download_counters(connection, int(skill_row["id"]), int(version_row["id"]))
+            if download_event_context is not None:
+                await record_skill_download_event(
+                    connection,
+                    skill_id=int(skill_row["id"]),
+                    skill_version_id=int(version_row["id"]),
+                    namespace=namespace,
+                    slug=str(skill_row["slug"]),
+                    version=str(version_row["version"]),
+                    context=download_event_context,
+                )
 
     return result
 
@@ -1800,6 +1812,7 @@ async def read_skill_download_latest(
     slug: str,
     current_user_id: str | None = None,
     installable_only: bool = False,
+    download_event_context: DownloadEventContext | None = None,
 ) -> DownloadResult:
     async with engine.connect() as connection:
         version = (
@@ -1834,6 +1847,7 @@ async def read_skill_download_latest(
         str(version),
         current_user_id,
         installable_only=installable_only,
+        download_event_context=download_event_context,
     )
 
 
@@ -1845,6 +1859,7 @@ async def read_skill_download_tag(
     tag_name: str,
     current_user_id: str | None = None,
     installable_only: bool = False,
+    download_event_context: DownloadEventContext | None = None,
 ) -> DownloadResult:
     async with engine.connect() as connection:
         version = (
@@ -1881,4 +1896,5 @@ async def read_skill_download_tag(
         str(version),
         current_user_id,
         installable_only=installable_only,
+        download_event_context=download_event_context,
     )

@@ -82,6 +82,30 @@ def test_existing_v42_python_database_applies_v43_before_stamping_baseline() -> 
     assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
 
 
+def test_local_migration_files_include_download_event_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    assert any(
+        item.identifier == "20260708_01"
+        and item.path.name == "20260708_01__local_skill_download_event.sql"
+        for item in local_migrations
+    )
+
+
+def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
+    connection = FakeConnection(
+        existing_tables={"user_account"},
+        existing_columns={("user_account", "system_account")},
+    )
+
+    asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
+
+    assert any("CREATE TABLE IF NOT EXISTS local_schema_migration" in statement for statement in connection.executed)
+    assert any("local_skill_download_event" in statement for statement in connection.executed)
+    assert any("INSERT INTO local_schema_migration" in statement for statement in connection.executed)
+    assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
+
+
 def test_makefile_db_reset_uses_python_schema_migration_command() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
 

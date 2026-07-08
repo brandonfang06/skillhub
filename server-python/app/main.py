@@ -13,6 +13,7 @@ from app.api.admin_search import router as admin_search_router
 from app.api.admin_users import router as admin_users_router
 from app.api.auth import router as auth_router
 from app.api.device_auth import router as device_auth_router
+from app.api.download_analytics import router as download_analytics_router
 from app.api.governance import router as governance_router
 from app.api.health import router as health_router
 from app.api.labels import router as labels_router
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_users_router)
     app.include_router(auth_router)
     app.include_router(device_auth_router)
+    app.include_router(download_analytics_router)
     app.include_router(governance_router)
     app.include_router(health_router)
     app.include_router(labels_router)
