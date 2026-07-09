@@ -825,7 +825,7 @@ async def read_skill_search(
             "(d.visibility = 'PUBLIC' "
             f"OR (d.visibility = 'NAMESPACE_ONLY' AND {member_namespace_exists_sql}))"
         )
-        namespace_status_filter = f"(n.status <> 'ARCHIVED' OR {member_namespace_exists_sql})"
+        namespace_status_filter = "n.status <> 'ARCHIVED'"
 
     filters = [
         visibility_filter,

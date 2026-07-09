@@ -178,3 +178,23 @@ async def test_read_skill_search_includes_namespace_only_for_authenticated_membe
         assert "nm.user_id = :current_user_id" in statement
         assert "s.visibility = 'PRIVATE'" not in statement
     assert connection.params[0]["current_user_id"] == "user-a"
+
+
+@pytest.mark.anyio
+async def test_read_skill_search_excludes_archived_namespaces_for_authenticated_members() -> None:
+    connection = FakeSkillSearchConnection()
+
+    await read_skill_search(
+        FakeEngine(connection),
+        keyword=None,
+        namespace=None,
+        labels=[],
+        sort="newest",
+        page=0,
+        size=20,
+        current_user_id="user-a",
+    )
+
+    for statement in connection.statements:
+        assert "n.status <> 'ARCHIVED'" in statement
+        assert "n.status <> 'ARCHIVED' OR EXISTS" not in statement
