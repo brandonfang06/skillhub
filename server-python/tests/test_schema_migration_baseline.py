@@ -102,6 +102,7 @@ def test_existing_v43_python_database_applies_local_migrations_after_baseline() 
 
     assert any("CREATE TABLE IF NOT EXISTS local_schema_migration" in statement for statement in connection.executed)
     assert any("local_skill_download_event" in statement for statement in connection.executed)
+    assert any("idx_local_skill_download_event_created_at" in statement for statement in connection.executed)
     assert any("INSERT INTO local_schema_migration" in statement for statement in connection.executed)
     assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
 

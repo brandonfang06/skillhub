@@ -169,6 +169,12 @@ spec:
                   name: skillhub-config
                   key: publish-allowed-file-extensions
                   optional: true
+            - name: SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: download-analytics-retention-months
+                  optional: true
             - name: SKILLHUB_SECURITY_SCANNER_ENABLED
               valueFrom:
                 configMapKeyRef:

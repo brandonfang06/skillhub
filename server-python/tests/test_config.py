@@ -116,6 +116,28 @@ def test_local_registration_can_be_disabled_for_organization_deployments(monkeyp
     assert settings.local_registration_enabled is False
 
 
+def test_download_analytics_retention_defaults_to_twelve_months(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS", raising=False)
+
+    settings = get_settings()
+
+    assert settings.download_analytics_retention_months == 12
+
+
+def test_download_analytics_retention_can_be_overridden_or_disabled(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS", "18")
+
+    settings = get_settings()
+
+    assert settings.download_analytics_retention_months == 18
+
+    monkeypatch.setenv("SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS", "0")
+
+    disabled = get_settings()
+
+    assert disabled.download_analytics_retention_months == 0
+
+
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")

@@ -33,6 +33,7 @@ data:
 
   # Scanner integration
   publish-allowed-file-extensions: ""
+  download-analytics-retention-months: "12"
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000
   security-scanner-mode: upload

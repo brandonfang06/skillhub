@@ -9,6 +9,9 @@ from sqlalchemy import text
 DownloadSource = Literal["api", "web", "cli"]
 DOWNLOAD_EVENT_READ_ROLES = {"AUDITOR", "SKILL_ADMIN", "SUPER_ADMIN"}
 NAMESPACE_ANALYTICS_ROLES = {"OWNER", "ADMIN"}
+REQUEST_ID_MAX_LENGTH = 64
+CLIENT_IP_MAX_LENGTH = 64
+USER_AGENT_MAX_LENGTH = 512
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,13 @@ def _trim(value: str | None) -> str | None:
     return value.strip()
 
 
+def _bounded_text(value: str | None, max_length: int) -> str | None:
+    normalized = _trim(value)
+    if normalized is None:
+        return None
+    return normalized[:max_length]
+
+
 def _normalize_source(value: str | None) -> str | None:
     normalized = _trim(value)
     if normalized is None:
@@ -70,6 +80,22 @@ def _java_instant(value: Any) -> str | None:
         instant = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
         return instant.astimezone(UTC).isoformat().replace("+00:00", "Z")
     return str(value).replace("+00:00", "Z")
+
+
+async def prune_expired_download_events(connection: Any, *, retention_months: int) -> int:
+    if retention_months <= 0:
+        return 0
+    result = await connection.execute(
+        text(
+            """
+            DELETE FROM local_skill_download_event
+            WHERE created_at < CURRENT_TIMESTAMP - (CAST(:retention_months AS integer) * INTERVAL '1 month')
+            """
+        ),
+        {"retention_months": retention_months},
+    )
+    rowcount = getattr(result, "rowcount", 0)
+    return max(int(rowcount or 0), 0)
 
 
 def _download_event_item(row: dict[str, Any]) -> dict[str, Any]:
@@ -340,8 +366,8 @@ async def record_skill_download_event(
             "slug": slug,
             "version": version,
             "source": context.source,
-            "request_id": context.request_id,
-            "client_ip": context.client_ip,
-            "user_agent": context.user_agent,
+            "request_id": _bounded_text(context.request_id, REQUEST_ID_MAX_LENGTH),
+            "client_ip": _bounded_text(context.client_ip, CLIENT_IP_MAX_LENGTH),
+            "user_agent": _bounded_text(context.user_agent, USER_AGENT_MAX_LENGTH),
         },
     )

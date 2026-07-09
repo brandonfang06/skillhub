@@ -37,11 +37,13 @@ from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.core.redis import create_redis_client
 from app.core.request_id import RequestIdMiddleware
+from app.download_analytics import prune_expired_download_events
 from app.notifications.fanout import NotificationFanoutManager
 from app.publish.scan_daemon import create_scan_consumer_daemon
 
 
 log = logging.getLogger(__name__)
+DOWNLOAD_ANALYTICS_RETENTION_INTERVAL_SECONDS = 24 * 60 * 60
 
 
 async def run_builtin_skill_sync(engine: object, settings: object) -> None:
@@ -51,6 +53,28 @@ async def run_builtin_skill_sync(engine: object, settings: object) -> None:
         raise
     except Exception as exc:
         log.warning("Built-in skill synchronization failed: %s", exc)
+
+
+async def run_download_analytics_retention(engine: object, retention_months: int) -> None:
+    if retention_months <= 0:
+        return
+    try:
+        async with engine.begin() as connection:
+            deleted = await prune_expired_download_events(connection, retention_months=retention_months)
+        if deleted > 0:
+            log.info("Pruned %s expired download analytics events", deleted)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        log.warning("Download analytics retention cleanup failed: %s", exc)
+
+
+async def run_download_analytics_retention_loop(engine: object, retention_months: int) -> None:
+    if retention_months <= 0:
+        return
+    while True:
+        await run_download_analytics_retention(engine, retention_months)
+        await asyncio.sleep(DOWNLOAD_ANALYTICS_RETENTION_INTERVAL_SECONDS)
 
 
 @asynccontextmanager
@@ -64,6 +88,11 @@ async def lifespan(app: FastAPI):
         run_builtin_skill_sync(app.state.db_engine, settings)
     )
     app.state.notification_fanout = NotificationFanoutManager()
+    app.state.download_analytics_retention_task = None
+    if settings.download_analytics_retention_months > 0:
+        app.state.download_analytics_retention_task = asyncio.create_task(
+            run_download_analytics_retention_loop(app.state.db_engine, settings.download_analytics_retention_months)
+        )
     app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine, app.state.redis_client)
     if app.state.scan_consumer_daemon is not None:
         app.state.scan_consumer_daemon.start()
@@ -75,6 +104,10 @@ async def lifespan(app: FastAPI):
             await app.state.builtin_skill_sync_task
         if app.state.scan_consumer_daemon is not None:
             await app.state.scan_consumer_daemon.shutdown()
+        if app.state.download_analytics_retention_task is not None:
+            app.state.download_analytics_retention_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await app.state.download_analytics_retention_task
         await app.state.redis_client.aclose()
         await dispose_database_engine(app.state.db_engine)
 

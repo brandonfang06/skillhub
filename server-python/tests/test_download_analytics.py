@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
 import pytest
 
 import app.download_analytics.repository as download_repository
+import app.main as main_module
 from app.main import create_app
 
 
@@ -128,6 +131,127 @@ class FakeDownloadAnalyticsConnection:
         if bound.get("source"):
             rows = [row for row in rows if row["source"] == bound["source"]]
         return sorted([row.copy() for row in rows], key=lambda row: row["created_at"], reverse=True)
+
+
+class FakeDownloadAnalyticsWriteConnection:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+        self.params: list[dict[str, Any]] = []
+
+    async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
+        self.statements.append(str(statement))
+        self.params.append(params or {})
+        return FakeResult()
+
+
+class FakeRedisClient:
+    def __init__(self) -> None:
+        self.closed = False
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.anyio
+async def test_record_skill_download_event_truncates_untrusted_metadata() -> None:
+    connection = FakeDownloadAnalyticsWriteConnection()
+
+    await download_repository.record_skill_download_event(
+        connection,
+        skill_id=7,
+        skill_version_id=42,
+        namespace="team-a",
+        slug="demo",
+        version="1.0.0",
+        context=download_repository.DownloadEventContext(
+            user_id="user-a",
+            source="web",
+            request_id="r" * 80,
+            client_ip="1" * 80,
+            user_agent="agent/" + ("x" * 700),
+        ),
+    )
+
+    params = connection.params[0]
+    assert len(params["request_id"]) == 64
+    assert len(params["client_ip"]) == 64
+    assert len(params["user_agent"]) == 512
+
+
+@pytest.mark.anyio
+async def test_prune_expired_download_events_uses_month_retention() -> None:
+    connection = FakeDownloadAnalyticsWriteConnection()
+
+    deleted = await download_repository.prune_expired_download_events(connection, retention_months=12)
+
+    assert deleted == 0
+    assert "DELETE FROM local_skill_download_event" in connection.statements[0]
+    assert "INTERVAL '1 month'" in connection.statements[0]
+    assert connection.params[0] == {"retention_months": 12}
+
+
+@pytest.mark.anyio
+async def test_prune_expired_download_events_skips_when_disabled() -> None:
+    connection = FakeDownloadAnalyticsWriteConnection()
+
+    deleted = await download_repository.prune_expired_download_events(connection, retention_months=0)
+
+    assert deleted == 0
+    assert connection.statements == []
+
+
+@pytest.mark.anyio
+async def test_lifespan_starts_and_stops_download_analytics_retention_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = SimpleNamespace(download_analytics_retention_months=12)
+    engine = object()
+    redis_client = FakeRedisClient()
+    retention_started = asyncio.Event()
+    retention_cancelled = asyncio.Event()
+    disposed: list[object] = []
+
+    async def fake_initialize_bootstrap_admin(current_engine: object) -> None:
+        assert current_engine is engine
+
+    async def fake_run_builtin_skill_sync(current_engine: object, current_settings: object) -> None:
+        assert current_engine is engine
+        assert current_settings is settings
+        await asyncio.Event().wait()
+
+    async def fake_run_download_analytics_retention_loop(current_engine: object, retention_months: int) -> None:
+        assert current_engine is engine
+        assert retention_months == 12
+        retention_started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            retention_cancelled.set()
+            raise
+
+    async def fake_dispose_database_engine(current_engine: object) -> None:
+        disposed.append(current_engine)
+
+    monkeypatch.setattr(main_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(main_module, "create_database_engine", lambda current_settings: engine)
+    monkeypatch.setattr(main_module, "create_redis_client", lambda current_settings: redis_client)
+    monkeypatch.setattr(main_module, "initialize_bootstrap_admin", fake_initialize_bootstrap_admin)
+    monkeypatch.setattr(main_module, "run_builtin_skill_sync", fake_run_builtin_skill_sync)
+    monkeypatch.setattr(
+        main_module,
+        "run_download_analytics_retention_loop",
+        fake_run_download_analytics_retention_loop,
+    )
+    monkeypatch.setattr(main_module, "create_scan_consumer_daemon", lambda *_args: None)
+    monkeypatch.setattr(main_module, "dispose_database_engine", fake_dispose_database_engine)
+
+    app = create_app()
+
+    async with main_module.lifespan(app):
+        await asyncio.wait_for(retention_started.wait(), timeout=1)
+        assert app.state.download_analytics_retention_task is not None
+
+    await asyncio.wait_for(retention_cancelled.wait(), timeout=1)
+    assert redis_client.closed is True
+    assert disposed == [engine]
 
 
 @pytest.mark.anyio

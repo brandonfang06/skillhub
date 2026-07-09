@@ -28,6 +28,12 @@ For full Kubernetes examples, see `deploy/k8s/environment-variables.zh.md`.
 | --- | --- | --- | --- |
 | `SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS` | ConfigMap | unset | Optional Java-compatible override for skill package upload extensions. When set, it replaces the default allowlist instead of appending to it. Include every extension you want to allow, for example all defaults plus `.dot`. This does not automatically expand pre-publish credential scanning. |
 
+## Download Analytics
+
+| Env var | Source | Default | Notes |
+| --- | --- | --- | --- |
+| `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` | ConfigMap | `12` | Rolling retention for `local_skill_download_event`. The backend prunes expired rows on startup and then once per day. Set `0` or a negative value to disable automatic pruning. |
+
 ## PostgreSQL
 
 Prefer `SKILLHUB_DATABASE_URL`.

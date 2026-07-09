@@ -22,5 +22,8 @@ CREATE INDEX IF NOT EXISTS idx_local_skill_download_event_version_created_at
 CREATE INDEX IF NOT EXISTS idx_local_skill_download_event_user_created_at
     ON local_skill_download_event(user_id, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_local_skill_download_event_created_at
+    ON local_skill_download_event(created_at DESC, id DESC);
+
 CREATE INDEX IF NOT EXISTS idx_local_skill_download_event_namespace_slug_created_at
     ON local_skill_download_event(namespace_slug, skill_slug, created_at DESC);

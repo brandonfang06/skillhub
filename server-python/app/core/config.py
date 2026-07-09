@@ -27,6 +27,7 @@ DEFAULT_SCAN_CONSUMER_READ_COUNT = 10
 DEFAULT_SCAN_CONSUMER_BLOCK_MS = 2000
 DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 120000
 DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT = 20
+DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS = 12
 log = logging.getLogger("uvicorn.error")
 
 
@@ -50,6 +51,7 @@ class Settings:
     storage_s3_api_call_attempt_timeout_seconds: int
     storage_s3_api_call_timeout_seconds: int
     publish_allowed_file_extensions: set[str] | None
+    download_analytics_retention_months: int
     local_registration_enabled: bool
     security_scanner_enabled: bool
     security_scanner_mode: str
@@ -295,6 +297,10 @@ def get_settings() -> Settings:
             DEFAULT_STORAGE_S3_API_CALL_TIMEOUT_SECONDS,
         ),
         publish_allowed_file_extensions=parse_extension_set(os.getenv("SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS")),
+        download_analytics_retention_months=parse_int(
+            os.getenv("SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS"),
+            DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS,
+        ),
         local_registration_enabled=parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),

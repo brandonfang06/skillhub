@@ -33,6 +33,10 @@ Date: 2026-07-08
 - The feature does not force login for public downloads.
 - The event table is separate from `audit_log` to avoid turning audit logs into high-volume analytics.
 - Preview downloads for `UPLOADED` or `PENDING_REVIEW` versions do not create analytics events.
+- `request_id`, client IP, and user agent metadata are bounded before insert so untrusted headers cannot break successful downloads.
+- `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` controls rolling retention for `local_skill_download_event`; default is `12`, and `0` or a negative value disables automatic pruning.
+- Retention pruning runs once when the backend starts and then once per day.
+- `local_skill_download_event` has a global `(created_at DESC, id DESC)` index for operator event-list queries.
 
 ## Verification
 
@@ -64,6 +68,30 @@ uv run pytest tests -q
 cd ..
 git diff --check
 # passed; Windows CRLF conversion warnings only
+```
+
+Retention hardening follow-up:
+
+```powershell
+cd server-python
+uv run pytest tests/test_schema_migration_baseline.py tests/test_config.py tests/test_download_analytics.py tests/test_deployment_cutover.py -q
+# 55 passed, 1 warning
+
+uv run pytest tests -q
+# 886 passed, 1 warning
+
+cd ..
+kubectl kustomize deploy\k8s\base
+# rendered successfully
+
+docker compose --env-file .env.release.example -f compose.release.yml config
+# rendered successfully
+
+git diff --check
+# passed; Windows CRLF conversion warnings only
+
+docker build -t skillhub-server-python:verify -f server-python/Dockerfile .
+# not completed: Docker Desktop Linux engine was not running on this workstation
 ```
 
 OpenAPI generation note:

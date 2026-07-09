@@ -177,6 +177,12 @@ https://skills.example.com/login/oauth2/code/keycloak
 | --- | --- | --- | --- | --- |
 | `skillhub-config/publish-allowed-file-extensions` | `SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS` | No | `.md,.txt,.json,.yaml,.yml,.py,.sh,.dot` | Optional Java-compatible override for skill package upload extensions. When set, it replaces the default allowlist instead of appending to it, so include every extension you want to allow. It does not automatically expand pre-publish credential scanning. |
 
+## Download Analytics
+
+| K8s key | Pod env | Required | Example | Notes |
+| --- | --- | --- | --- | --- |
+| `skillhub-config/download-analytics-retention-months` | `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` | No | `12` | Rolling retention for `local_skill_download_event`. Default is 12 months. Set `0` or a negative value to disable automatic pruning. The backend runs pruning at startup and then once per day. |
+
 ## Scanner Container LLM
 
 這些 env 只應該放在 **scanner** deployment。backend 不需要也不應該拿這些值。
@@ -241,6 +247,7 @@ SKILLHUB_STORAGE_S3_SECRET_KEY=change-me
 SKILLHUB_STORAGE_S3_REGION=us-east-1
 SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE=true
 SKILLHUB_PUBLIC_BASE_URL=https://skills.example.com
+SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS=12
 SKILLHUB_BUILTIN_SKILLS_ENABLED=true
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=skillhub-web
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=change-me
