@@ -20,6 +20,7 @@ import type {
   PromotionStatus,
   PromotionTask,
   AuditLogItem,
+  DownloadEventItem,
   SkillSummary,
   SkillReport,
   GovernanceSummary,
@@ -1257,6 +1258,32 @@ export const adminApi = {
     searchParams.set('size', String(params.size ?? 20))
     return fetchJson<{ items: AuditLogItem[]; total: number; page: number; size: number }>(
       `/api/v1/admin/audit-logs?${searchParams.toString()}`,
+    )
+  },
+
+  async getDownloadEvents(params: {
+    namespace?: string
+    slug?: string
+    version?: string
+    userId?: string
+    source?: string
+    startTime?: string
+    endTime?: string
+    page?: number
+    size?: number
+  }): Promise<PagedResponse<DownloadEventItem>> {
+    const searchParams = new URLSearchParams()
+    if (params.namespace) searchParams.set('namespace', params.namespace)
+    if (params.slug) searchParams.set('slug', params.slug)
+    if (params.version) searchParams.set('version', params.version)
+    if (params.userId) searchParams.set('userId', params.userId)
+    if (params.source) searchParams.set('source', params.source)
+    if (params.startTime) searchParams.set('startTime', params.startTime)
+    if (params.endTime) searchParams.set('endTime', params.endTime)
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+    return fetchJson<PagedResponse<DownloadEventItem>>(
+      `/api/v1/admin/download-events?${searchParams.toString()}`,
     )
   },
 

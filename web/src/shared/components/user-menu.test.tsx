@@ -101,4 +101,30 @@ describe('UserMenu security settings visibility', () => {
 
     expect(html).not.toContain('user.menu.security')
   })
+
+  it('shows download event analytics only to super admins', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Platform Admin',
+          platformRoles: ['SUPER_ADMIN'],
+        }}
+      />,
+    )
+
+    expect(html).toContain('user.menu.downloadEvents')
+  })
+
+  it('hides download event analytics from auditor-only users', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu
+        user={{
+          displayName: 'Auditor',
+          platformRoles: ['AUDITOR'],
+        }}
+      />,
+    )
+
+    expect(html).not.toContain('user.menu.downloadEvents')
+  })
 })

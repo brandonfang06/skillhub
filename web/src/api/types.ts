@@ -206,6 +206,22 @@ export interface AdminLabelInput {
   translations: LabelTranslation[]
 }
 
+export interface DownloadEventItem {
+  id: number
+  skillId: number
+  skillVersionId: number
+  namespace: string
+  slug: string
+  version: string
+  source: 'api' | 'web' | 'cli' | string
+  userId?: string | null
+  username?: string | null
+  requestId?: string | null
+  ipAddress?: string | null
+  userAgent?: string | null
+  createdAt: string
+}
+
 export interface SkillLifecycleVersion {
   id: number
   version: string

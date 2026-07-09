@@ -45,4 +45,10 @@ describe('router', () => {
     const childPaths = children.map((route) => route.fullPath ?? route.path)
     expect(childPaths).toContain('/space/$namespace/$slug/compare')
   })
+
+  it('registers the super-admin download events route', () => {
+    const children = (router.routeTree.children ?? []) as Array<{ fullPath?: string; path?: string }>
+    const childPaths = children.map((route) => route.fullPath ?? route.path)
+    expect(childPaths).toContain('/admin/download-events')
+  })
 })

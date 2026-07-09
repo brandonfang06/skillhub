@@ -37,6 +37,7 @@ Date: 2026-07-08
 - `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` controls rolling retention for `local_skill_download_event`; default is `12`, and `0` or a negative value disables automatic pruning.
 - Retention pruning runs once when the backend starts and then once per day.
 - `local_skill_download_event` has a global `(created_at DESC, id DESC)` index for operator event-list queries.
+- A minimal frontend view is available at `/admin/download-events`; it is intentionally isolated as a `SUPER_ADMIN` route to keep upstream-sync conflict risk low.
 
 ## Verification
 
@@ -92,6 +93,22 @@ git diff --check
 
 docker build -t skillhub-server-python:verify -f server-python/Dockerfile .
 # not completed: Docker Desktop Linux engine was not running on this workstation
+
+cd web
+corepack pnpm exec vitest run src/api/client.test.ts src/app/router.test.ts src/shared/components/user-menu.test.tsx src/features/admin/use-download-events.test.ts src/pages/admin/download-events.test.tsx
+# 5 passed, 32 tests
+
+corepack pnpm run typecheck
+# passed
+
+corepack pnpm run lint
+# passed
+
+corepack pnpm test
+# 185 passed, 625 tests
+
+corepack pnpm run build
+# built successfully; Vite emitted existing runtime-config and chunk-size warnings
 ```
 
 OpenAPI generation note:

@@ -136,6 +136,11 @@ const AdminLabelsPage = createRoleProtectedRouteComponent(
   'AdminLabelsPage',
   ['SUPER_ADMIN'],
 )
+const DownloadEventsPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/download-events'),
+  'DownloadEventsPage',
+  ['SUPER_ADMIN'],
+)
 
 function DefaultNotFound() {
   return (
@@ -434,6 +439,13 @@ const adminLabelsRoute = createRoute({
   component: AdminLabelsPage,
 })
 
+const adminDownloadEventsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/download-events',
+  beforeLoad: requireAuth,
+  component: DownloadEventsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   skillsRoute,
@@ -470,6 +482,7 @@ const routeTree = rootRoute.addChildren([
   adminUsersRoute,
   adminAuditLogRoute,
   adminLabelsRoute,
+  adminDownloadEventsRoute,
 ])
 
 export const router = createRouter({

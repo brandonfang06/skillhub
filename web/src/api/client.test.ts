@@ -36,6 +36,7 @@ vi.mock('@/shared/lib/api-error', () => ({
 
 import {
   WEB_API_PREFIX,
+  adminApi,
   buildApiUrl,
   fetchText,
   getDirectAuthRuntimeConfig,
@@ -158,6 +159,45 @@ describe('namespaceApi.delete', () => {
       'https://api.example.com/api/web/namespaces/team-delete',
       expect.objectContaining({
         method: 'DELETE',
+        headers: expect.any(Headers),
+      }),
+    )
+  })
+})
+
+describe('adminApi.getDownloadEvents', () => {
+  it('passes filters through to the admin download event endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: {
+          items: [],
+          total: 0,
+          page: 1,
+          size: 10,
+        },
+        timestamp: '2026-07-09T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await adminApi.getDownloadEvents({
+      namespace: 'team-a',
+      slug: 'demo',
+      userId: 'user-a',
+      source: 'web',
+      startTime: '2026-07-01T00:00:00.000Z',
+      endTime: '2026-07-09T23:59:59.000Z',
+      page: 1,
+      size: 10,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/download-events?namespace=team-a&slug=demo&userId=user-a&source=web&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z&page=1&size=10',
+      expect.objectContaining({
         headers: expect.any(Headers),
       }),
     )
