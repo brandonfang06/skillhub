@@ -857,6 +857,9 @@ const skillPlaygroundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug/playground',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { version?: string } => ({
+    version: typeof search.version === 'string' && search.version ? search.version : undefined,
+  }),
   component: SkillPlaygroundPage,
 })
 ```
@@ -915,7 +918,7 @@ Expected: the enabled test fails.
 
 - [ ] **Step 3: Add the icon action without changing detail data flow**
 
-Read `getPlaygroundRuntimeConfig()` once during render. When enabled and `selectedVersionEntry` exists, render a `Play` icon button next to the existing download/share actions. Navigate to `/space/$namespace/$slug/playground`; anonymous users go through the existing `requireLogin` flow. Do not fetch sidecar health from the detail page.
+Read `getPlaygroundRuntimeConfig()` once during render. When enabled and `selectedVersionEntry` exists, render a `Play` icon button next to the existing download/share actions. Navigate to `/space/$namespace/$slug/playground?version=<selected-version>` so the playground evaluates the version the user was viewing; anonymous users go through the existing `requireLogin` flow. Do not fetch sidecar health from the detail page.
 
 - [ ] **Step 4: Verify and commit**
 
