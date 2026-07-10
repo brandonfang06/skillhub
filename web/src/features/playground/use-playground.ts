@@ -142,6 +142,10 @@ export function usePlayground({
           )
         })
       }
+      source.addEventListener('session.expired', () => {
+        setState('expired')
+        source.close()
+      })
       source.addEventListener('error', () => setState('unavailable'))
     },
     [],
