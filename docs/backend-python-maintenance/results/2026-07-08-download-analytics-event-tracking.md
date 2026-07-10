@@ -22,6 +22,10 @@ Date: 2026-07-08
 - `GET /api/v1/admin/download-events`
   - Requires `SUPER_ADMIN`, `SKILL_ADMIN`, or `AUDITOR`.
   - Supports filters for namespace, slug, version, user, source, and time range.
+- `GET /api/v1/admin/download-events.csv`
+  - Requires the same platform download-event reader roles.
+  - Exports the same filtered event rows as UTF-8 CSV.
+  - Caps each export at 10,000 rows to keep the response bounded.
 - `GET /api/web/skills/{namespace}/{slug}/download-events`
   - Allows platform readers, skill owners, and namespace `OWNER`/`ADMIN`.
   - Supports filters for version, user, source, and time range.
@@ -38,6 +42,17 @@ Date: 2026-07-08
 - Retention pruning runs once when the backend starts and then once per day.
 - `local_skill_download_event` has a global `(created_at DESC, id DESC)` index for operator event-list queries.
 - A minimal frontend view is available at `/admin/download-events`; it is intentionally isolated as a `SUPER_ADMIN` route to keep upstream-sync conflict risk low.
+- The frontend view includes an Export CSV link that downloads the current filter set through the backend CSV endpoint rather than exporting only the visible page.
+
+## CSV Export
+
+- CSV export is backend-owned so operators export the current filtered result set, not only the current table page.
+- The endpoint reuses the existing download-event filters and authorization boundary instead of introducing a separate query path.
+- The 10,000-row cap keeps `local_skill_download_event` exports bounded.
+- The backend queries one extra row and returns `X-SkillHub-Export-Truncated` plus `X-SkillHub-Export-Row-Limit` headers so capped exports are detectable.
+- The frontend export action exposes the 10,000-row limit in its localized hover text.
+- Formula-like CSV cells are prefixed with an apostrophe so exported user-controlled fields do not execute as spreadsheet formulas.
+- This remains a local download analytics extension; it is not mixed into upstream-followed schema or unrelated audit-log flows.
 
 ## Verification
 
@@ -106,6 +121,27 @@ corepack pnpm run lint
 
 corepack pnpm test
 # 185 passed, 625 tests
+
+corepack pnpm run build
+# built successfully; Vite emitted existing runtime-config and chunk-size warnings
+```
+
+CSV export follow-up verification:
+
+```powershell
+cd server-python
+uv run pytest tests/test_download_analytics.py -q
+# 14 passed, 1 warning
+
+uv run pytest tests -q
+# 891 passed, 1 warning
+
+cd ..\web
+corepack pnpm exec vitest run src/api/client.test.ts src/pages/admin/download-events.test.tsx src/features/admin/use-download-events.test.ts
+# 3 passed, 23 tests
+
+corepack pnpm test
+# 185 test files, 626 tests passed
 
 corepack pnpm run build
 # built successfully; Vite emitted existing runtime-config and chunk-size warnings

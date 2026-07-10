@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { adminApi } from '@/api/client'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
-import { Button } from '@/shared/ui/button'
+import { Button, buttonVariants } from '@/shared/ui/button'
 import {
   Select,
   SelectContent,
@@ -41,7 +43,7 @@ export function DownloadEventsPage() {
   const [endTimeFilter, setEndTimeFilter] = useState('')
   const [page, setPage] = useState(0)
 
-  const { data, isLoading } = useDownloadEvents({
+  const downloadEventParams = {
     namespace: namespaceFilter.trim() || undefined,
     slug: slugFilter.trim() || undefined,
     version: versionFilter.trim() || undefined,
@@ -51,7 +53,9 @@ export function DownloadEventsPage() {
     endTime: endTimeFilter ? new Date(endTimeFilter).toISOString() : undefined,
     page,
     size: 20,
-  })
+  }
+  const csvExportUrl = adminApi.buildDownloadEventsCsvUrl(downloadEventParams)
+  const { data, isLoading } = useDownloadEvents(downloadEventParams)
 
   const clearFilters = () => {
     setNamespaceFilter('')
@@ -80,6 +84,15 @@ export function DownloadEventsPage() {
           <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
             {t('downloadEvents.clearFilters')}
           </Button>
+          <a
+            href={csvExportUrl}
+            download
+            title={t('downloadEvents.exportCsvLimit', { limit: 10_000 })}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+            {t('downloadEvents.exportCsv')}
+          </a>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

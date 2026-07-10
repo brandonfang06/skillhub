@@ -738,6 +738,8 @@
     "sourceCli": "CLI",
     "sourceApi": "API",
     "clearFilters": "Clear filters",
+    "exportCsv": "Export CSV",
+    "exportCsvLimit": "Exports up to {{limit}} matching records",
     "namespacePlaceholder": "Namespace...",
     "slugPlaceholder": "Skill slug...",
     "versionPlaceholder": "Version...",

@@ -202,6 +202,24 @@ describe('adminApi.getDownloadEvents', () => {
       }),
     )
   })
+
+  it('builds a filtered CSV export URL without pagination', () => {
+    const url = adminApi.buildDownloadEventsCsvUrl({
+      namespace: 'team-a',
+      slug: 'demo',
+      version: '1.0.0',
+      userId: 'user-a',
+      source: 'cli',
+      startTime: '2026-07-01T00:00:00.000Z',
+      endTime: '2026-07-09T23:59:59.000Z',
+    })
+
+    expect(url).toBe(
+      '/api/v1/admin/download-events.csv?namespace=team-a&slug=demo&version=1.0.0&userId=user-a&source=cli&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z',
+    )
+    expect(url).not.toContain('page=')
+    expect(url).not.toContain('size=')
+  })
 })
 
 describe('getDirectAuthRuntimeConfig', () => {

@@ -26,6 +26,7 @@ vi.mock('@/shared/ui/input', () => ({
 
 vi.mock('@/shared/ui/button', () => ({
   Button: ({ children }: { children: unknown }) => children,
+  buttonVariants: () => 'button',
 }))
 
 vi.mock('@/shared/ui/select', () => ({
@@ -63,6 +64,8 @@ describe('DownloadEventsPage', () => {
     const html = renderToStaticMarkup(<DownloadEventsPage />)
 
     expect(html).toContain('downloadEvents.title')
+    expect(html).toContain('downloadEvents.exportCsv')
+    expect(html).toContain('title="downloadEvents.exportCsvLimit"')
     expect(html).toContain('downloadEvents.empty')
   })
 

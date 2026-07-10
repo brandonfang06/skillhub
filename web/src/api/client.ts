@@ -1261,6 +1261,27 @@ export const adminApi = {
     )
   },
 
+  buildDownloadEventsCsvUrl(params: {
+    namespace?: string
+    slug?: string
+    version?: string
+    userId?: string
+    source?: string
+    startTime?: string
+    endTime?: string
+  }): string {
+    const searchParams = new URLSearchParams()
+    if (params.namespace) searchParams.set('namespace', params.namespace)
+    if (params.slug) searchParams.set('slug', params.slug)
+    if (params.version) searchParams.set('version', params.version)
+    if (params.userId) searchParams.set('userId', params.userId)
+    if (params.source) searchParams.set('source', params.source)
+    if (params.startTime) searchParams.set('startTime', params.startTime)
+    if (params.endTime) searchParams.set('endTime', params.endTime)
+    const query = searchParams.toString()
+    return buildApiUrl(`/api/v1/admin/download-events.csv${query ? `?${query}` : ''}`)
+  },
+
   async getDownloadEvents(params: {
     namespace?: string
     slug?: string

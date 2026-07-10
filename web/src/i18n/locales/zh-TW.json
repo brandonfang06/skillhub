@@ -726,6 +726,8 @@
     "sourceCli": "CLI",
     "sourceApi": "API",
     "clearFilters": "清除篩選",
+    "exportCsv": "匯出 CSV",
+    "exportCsvLimit": "最多匯出 {{limit}} 筆符合條件的記錄",
     "namespacePlaceholder": "命名空間...",
     "slugPlaceholder": "技能 slug...",
     "versionPlaceholder": "版本...",

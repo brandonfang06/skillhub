@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import io
 from typing import Any, Literal
 
 from sqlalchemy import text
@@ -9,9 +11,25 @@ from sqlalchemy import text
 DownloadSource = Literal["api", "web", "cli"]
 DOWNLOAD_EVENT_READ_ROLES = {"AUDITOR", "SKILL_ADMIN", "SUPER_ADMIN"}
 NAMESPACE_ANALYTICS_ROLES = {"OWNER", "ADMIN"}
+DOWNLOAD_EVENT_CSV_EXPORT_LIMIT = 10_000
 REQUEST_ID_MAX_LENGTH = 64
 CLIENT_IP_MAX_LENGTH = 64
 USER_AGENT_MAX_LENGTH = 512
+DOWNLOAD_EVENT_CSV_FIELDS = (
+    "createdAt",
+    "namespace",
+    "slug",
+    "version",
+    "source",
+    "userId",
+    "username",
+    "ipAddress",
+    "userAgent",
+    "requestId",
+    "skillId",
+    "skillVersionId",
+)
+CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 
 
 @dataclass(frozen=True)
@@ -224,6 +242,76 @@ async def _list_download_events(
     }
 
 
+async def _read_download_event_rows(
+    connection: Any,
+    *,
+    namespace: str | None,
+    slug: str | None,
+    version: str | None,
+    user_id: str | None,
+    source: str | None,
+    start_time: datetime | str | None,
+    end_time: datetime | str | None,
+    limit: int,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    where_clause, filter_params = _where_clause(
+        namespace=namespace,
+        slug=slug,
+        version=version,
+        user_id=user_id,
+        source=source,
+        start_time=start_time,
+        end_time=end_time,
+    )
+    rows = (
+        await connection.execute(
+            text(
+                f"""
+                SELECT de.id,
+                       de.skill_id,
+                       de.skill_version_id,
+                       de.namespace_slug,
+                       de.skill_slug,
+                       de.version,
+                       de.source,
+                       de.user_id,
+                       ua.display_name,
+                       de.request_id,
+                       de.client_ip,
+                       de.user_agent,
+                       de.created_at
+                FROM local_skill_download_event de
+                LEFT JOIN user_account ua ON ua.id = de.user_id
+                {where_clause}
+                ORDER BY de.created_at DESC, de.id DESC
+                LIMIT :limit OFFSET :offset
+                """
+            ),
+            {**filter_params, "limit": max(1, int(limit)), "offset": max(0, int(offset))},
+        )
+    ).mappings().all()
+    return [_download_event_item(dict(row)) for row in rows]
+
+
+def render_download_events_csv(items: list[dict[str, Any]]) -> str:
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=DOWNLOAD_EVENT_CSV_FIELDS, extrasaction="ignore", lineterminator="\n")
+    writer.writeheader()
+    for item in items:
+        writer.writerow({field: _csv_cell(item.get(field)) for field in DOWNLOAD_EVENT_CSV_FIELDS})
+    return buffer.getvalue()
+
+
+def _csv_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    text_value = str(value)
+    if text_value.startswith(CSV_FORMULA_PREFIXES):
+        return f"'{text_value}"
+    return text_value
+
+
 async def list_admin_download_events(
     engine: Any,
     *,
@@ -252,6 +340,37 @@ async def list_admin_download_events(
             start_time=start_time,
             end_time=end_time,
         )
+
+
+async def export_admin_download_events_csv(
+    engine: Any,
+    *,
+    namespace: str | None,
+    slug: str | None,
+    version: str | None,
+    user_id: str | None,
+    source: str | None,
+    start_time: datetime | str | None,
+    end_time: datetime | str | None,
+    platform_roles: list[str],
+    limit: int = DOWNLOAD_EVENT_CSV_EXPORT_LIMIT,
+) -> tuple[str, bool]:
+    require_platform_download_event_reader(platform_roles)
+    normalized_limit = max(1, min(int(limit), DOWNLOAD_EVENT_CSV_EXPORT_LIMIT))
+    async with engine.connect() as connection:
+        items = await _read_download_event_rows(
+            connection,
+            namespace=namespace,
+            slug=slug,
+            version=version,
+            user_id=user_id,
+            source=source,
+            start_time=start_time,
+            end_time=end_time,
+            limit=normalized_limit + 1,
+        )
+    truncated = len(items) > normalized_limit
+    return render_download_events_csv(items[:normalized_limit]), truncated
 
 
 async def _read_skill_for_analytics(connection: Any, namespace: str, slug: str) -> dict[str, Any]:

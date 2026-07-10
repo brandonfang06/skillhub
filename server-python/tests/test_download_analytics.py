@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 from datetime import UTC, datetime
+import io
 from types import SimpleNamespace
 from typing import Any
 
@@ -400,6 +402,78 @@ def test_admin_download_events_route_uses_envelope_and_roles() -> None:
     assert body["data"]["items"][0]["source"] == "cli"
 
 
+def test_admin_download_events_csv_route_exports_filtered_rows() -> None:
+    app = create_app()
+    connection = FakeDownloadAnalyticsConnection()
+    app.state.db_engine = FakeDownloadAnalyticsEngine(connection)
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": "",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["AUDITOR"],
+    }
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/v1/admin/download-events.csv",
+        headers={"X-Mock-User-Id": "admin-user"},
+        params={"namespace": "team-a", "source": "web"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.headers["content-disposition"] == 'attachment; filename="skillhub-download-events.csv"'
+    assert response.headers["x-skillhub-export-truncated"] == "false"
+    assert response.headers["x-skillhub-export-row-limit"] == "10000"
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert rows == [
+        {
+            "createdAt": "2026-07-08T10:01:00Z",
+            "namespace": "team-a",
+            "slug": "demo",
+            "version": "1.0.0",
+            "source": "web",
+            "userId": "user-a",
+            "username": "User A",
+            "ipAddress": "127.0.0.1",
+            "userAgent": "pytest",
+            "requestId": "request-1",
+            "skillId": "7",
+            "skillVersionId": "42",
+        }
+    ]
+    assert any(params.get("limit") == 10_001 for params in connection.params)
+
+
+def test_admin_download_events_csv_route_marks_truncated_exports() -> None:
+    app = create_app()
+    connection = FakeDownloadAnalyticsConnection()
+    template = connection.rows[0]
+    connection.rows = [dict(template, id=index) for index in range(10_001)]
+    app.state.db_engine = FakeDownloadAnalyticsEngine(connection)
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": "",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["AUDITOR"],
+    }
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/v1/admin/download-events.csv",
+        headers={"X-Mock-User-Id": "admin-user"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-skillhub-export-truncated"] == "true"
+    assert response.headers["x-skillhub-export-row-limit"] == "10000"
+    assert len(list(csv.DictReader(io.StringIO(response.text)))) == 10_000
+
+
 def test_admin_download_events_route_rejects_normal_user() -> None:
     app = create_app()
     app.state.db_engine = FakeDownloadAnalyticsEngine(FakeDownloadAnalyticsConnection())
@@ -416,3 +490,46 @@ def test_admin_download_events_route_rejects_normal_user() -> None:
     response = client.get("/api/v1/admin/download-events", headers={"X-Mock-User-Id": "normal-user"})
 
     assert response.status_code == 403
+
+
+def test_admin_download_events_csv_route_rejects_normal_user() -> None:
+    app = create_app()
+    app.state.db_engine = FakeDownloadAnalyticsEngine(FakeDownloadAnalyticsConnection())
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": "",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["USER"],
+    }
+
+    client = TestClient(app)
+    response = client.get("/api/v1/admin/download-events.csv", headers={"X-Mock-User-Id": "normal-user"})
+
+    assert response.status_code == 403
+
+
+def test_render_download_events_csv_neutralizes_formula_cells() -> None:
+    csv_body = download_repository.render_download_events_csv(
+        [
+            {
+                "createdAt": "2026-07-08T10:01:00Z",
+                "namespace": "team-a",
+                "slug": "demo",
+                "version": "1.0.0",
+                "source": "web",
+                "userId": "user-a",
+                "username": "=cmd|' /C calc'!A0",
+                "ipAddress": "127.0.0.1",
+                "userAgent": "+SUM(1,1)",
+                "requestId": "request-1",
+                "skillId": 7,
+                "skillVersionId": 42,
+            }
+        ]
+    )
+
+    row = next(csv.DictReader(io.StringIO(csv_body)))
+    assert row["username"].startswith("'=")
+    assert row["userAgent"].startswith("'+")
