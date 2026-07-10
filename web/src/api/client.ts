@@ -68,6 +68,8 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  playgroundEnabled?: string
+  playgroundBaseUrl?: string
 }
 
 declare global {
@@ -153,6 +155,10 @@ export type LocalRegistrationRuntimeConfig = {
   enabled: boolean
 }
 
+export type PlaygroundRuntimeConfig =
+  | { enabled: false }
+  | { enabled: true; baseUrl: string }
+
 export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
   const config = getRuntimeConfig()
   const provider = config.authDirectProvider?.trim()
@@ -167,6 +173,15 @@ export function getLocalRegistrationRuntimeConfig(): LocalRegistrationRuntimeCon
   return {
     enabled: value === undefined || value.trim() === '' ? true : parseBooleanFlag(value),
   }
+}
+
+export function getPlaygroundRuntimeConfig(): PlaygroundRuntimeConfig {
+  const config = getRuntimeConfig()
+  const baseUrl = config.playgroundBaseUrl?.trim().replace(/\/+$/, '')
+  if (!parseBooleanFlag(config.playgroundEnabled) || !baseUrl) {
+    return { enabled: false }
+  }
+  return { enabled: true, baseUrl }
 }
 
 export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfig {

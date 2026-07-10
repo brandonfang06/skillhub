@@ -27,6 +27,8 @@ function ensureRuntimeConfigFallback() {
       authSessionBootstrapEnabled: 'false',
       authSessionBootstrapProvider: '',
       authSessionBootstrapAuto: 'false',
+      playgroundEnabled: 'false',
+      playgroundBaseUrl: '',
     }
   }
 }
