@@ -316,6 +316,12 @@ session:
 
 context:
   max_chars: 120000
+  providers:
+    skillhub:
+      kind: skillhub
+      base_url: http://host.docker.internal:8080
+      connect_timeout_seconds: 5
+      read_timeout_seconds: 30
 
 llm:
   kind: openai-compatible
@@ -341,6 +347,11 @@ duplicated, or `default_model` does not identify a configured catalog entry.
 contain the key value. The provider configuration is sidecar-owned and uses no
 `SKILLHUB_` prefix so the same runtime can be reused by other products.
 
+Session requests identify a configured context provider by key, such as
+`skillhub`. The browser cannot supply an arbitrary context URL. The sidecar
+builds outbound context requests from the allowlisted provider configuration and
+rejects unknown provider keys.
+
 ## Security And Safety
 
 The playground treats skill package content as untrusted.
@@ -352,6 +363,7 @@ V1 safety rules:
 - No network access delegated to skill content.
 - No deployment secrets in session context.
 - No user API tokens exposed to the sidecar.
+- No browser-controlled outbound context URLs.
 - No persistence of package modifications.
 - Session TTL is required.
 - Model/provider errors must not expose secrets.
@@ -417,6 +429,7 @@ removing the separately deployed sidecar.
 - sidecar fetches context only through configured adapter
 - skill context is loaded read-only
 - valid YAML loads the configured OpenAI-compatible provider
+- unknown context provider keys are rejected without making a network request
 - missing model catalog, base URL, or referenced API key fails startup validation
 - duplicate model keys and an unknown default model fail startup validation
 - V1 sessions always record and use the configured default model key
