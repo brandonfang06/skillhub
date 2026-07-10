@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
+import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, Play, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { resolvePackageRelativeLink } from '@/features/skill/package-relative-link'
 import { FileTree } from '@/features/skill/file-tree'
@@ -25,7 +25,7 @@ import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { SubscribeButton } from '@/features/social/subscribe-button'
 import { useAuth } from '@/features/auth/use-auth'
-import { adminApi, ApiError, buildApiUrl, WEB_API_PREFIX } from '@/api/client'
+import { adminApi, ApiError, buildApiUrl, getPlaygroundRuntimeConfig, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
@@ -150,6 +150,7 @@ export function SkillDetailPage() {
   const overviewContentRef = useRef<HTMLDivElement | null>(null)
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
+  const playgroundRuntime = getPlaygroundRuntimeConfig()
   const { user, hasRole } = useAuth()
   const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
   const qns = detailQueriesEnabled ? namespace : ''
@@ -388,6 +389,21 @@ export function SkillDetailPage() {
       search: {
         returnTo: `${location.pathname}${location.searchStr}${location.hash}`,
       },
+    })
+  }
+
+  const handleOpenPlayground = () => {
+    if (!user) {
+      requireLogin()
+      return
+    }
+    if (!selectedVersionEntry) {
+      return
+    }
+    navigate({
+      to: '/space/$namespace/$slug/playground',
+      params: { namespace, slug },
+      search: { version: selectedVersionEntry.version },
     })
   }
 
@@ -1225,6 +1241,18 @@ export function SkillDetailPage() {
           </svg>
           {t('skillDetail.download')}
         </Button>
+
+        {playgroundRuntime.enabled && selectedVersionEntry && (
+          <Button
+            className="w-full"
+            variant="outline"
+            size="lg"
+            onClick={handleOpenPlayground}
+          >
+            <Play className="mr-2 h-4 w-4" />
+            {t('skillDetail.tryInPlayground')}
+          </Button>
+        )}
 
         <ShareButton
           namespace={namespace}

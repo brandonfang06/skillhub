@@ -10,6 +10,7 @@ const useSkillDetailMock = vi.fn()
 const useSkillLabelsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
+let playgroundEnabled = false
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
   hasRole: (role: string) => boolean
@@ -65,6 +66,9 @@ vi.mock('@/api/client', () => ({
   },
   buildApiUrl: (value: string) => value,
   WEB_API_PREFIX: '/api/web',
+  getPlaygroundRuntimeConfig: () => playgroundEnabled
+    ? { enabled: true, baseUrl: 'http://localhost:8091' }
+    : { enabled: false },
 }))
 
 vi.mock('@/shared/lib/date-time', () => ({
@@ -206,6 +210,7 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 describe('SkillDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    playgroundEnabled = false
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
     authState = {
       user: { userId: 'owner-1', platformRoles: ['USER'] },
@@ -278,6 +283,20 @@ describe('SkillDetailPage', () => {
     expect(html).toContain('install')
     expect(html).not.toContain('skillDetail.loginRequired')
     expect(html).not.toContain('skillDetail.deleteSkill')
+  })
+
+  it('hides Try in Playground when runtime config is disabled', () => {
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).not.toContain('skillDetail.tryInPlayground')
+  })
+
+  it('shows Try in Playground for a visible selected skill when enabled', () => {
+    playgroundEnabled = true
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.tryInPlayground')
   })
 
   it('shows the label management panel for a user who can manage the skill lifecycle', () => {
