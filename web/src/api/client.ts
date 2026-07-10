@@ -45,6 +45,7 @@ import type {
   LabelDefinition,
   LabelItem,
   BatchMemberResponse,
+  PlaygroundCapability,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -276,6 +277,26 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   return json.data as T
 }
 
+async function fetchRawJson<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(withBaseUrl(input), {
+    ...init,
+    headers: withRequestHeaders(init?.headers),
+  })
+  const data = (await response.json()) as T & { detail?: string }
+  if (!response.ok) {
+    throw new ApiError(
+      data.detail || `HTTP ${response.status}`,
+      response.status,
+      data.detail,
+      data.detail,
+    )
+  }
+  return data
+}
+
 export async function fetchText(input: RequestInfo | URL, init?: RequestInit): Promise<string> {
   const response = await fetch(withBaseUrl(input), {
     ...init,
@@ -301,6 +322,25 @@ export function buildApiUrl(path: string): string {
     return path
   }
   return prependApiBaseUrl(baseUrl, path)
+}
+
+export const playgroundCapabilityApi = {
+  async create(
+    namespace: string,
+    slug: string,
+    version: string,
+  ): Promise<PlaygroundCapability> {
+    return fetchRawJson<PlaygroundCapability>(
+      `${WEB_API_PREFIX}/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/playground-capability`,
+      {
+        method: 'POST',
+        headers: await ensureCsrfHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ version }),
+      },
+    )
+  },
 }
 
 function prependApiBaseUrl(baseUrl: string, path: string): string {

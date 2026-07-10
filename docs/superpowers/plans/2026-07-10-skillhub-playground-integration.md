@@ -669,18 +669,16 @@ git commit -m "feat(playground): add web runtime flags"
 - Modify: `web/src/api/types.ts`
 - Create: `web/src/features/playground/api.ts`
 - Create: `web/src/features/playground/api.test.ts`
-- Modify: `web/src/api/generated/schema.d.ts`
+- Preserve: `web/src/api/generated/schema.d.ts`
 
-- [ ] **Step 1: Generate the updated backend contract**
+- [ ] **Step 1: Verify the backend OpenAPI contract without replacing the checked-in baseline**
 
-Start the backend in a separate PowerShell process with `SKILLHUB_PLAYGROUND_TOKEN_SECRET=local-playground-secret` and wait for `http://localhost:8080/actuator/health`, then run:
-
-```powershell
-cd web
-corepack pnpm run generate-api
-```
-
-Expected: `src/api/generated/schema.d.ts` contains the two `/api/web/...playground...` paths and their response schemas.
+Inspect `create_app().openapi()` and assert it contains the two
+`/api/web/...playground...` paths and response schemas. Do not commit a regenerated
+`schema.d.ts` in this milestone: the current Python OpenAPI still omits existing
+Java-era components such as `AuthMeResponse`, so full regeneration breaks current
+frontend types. Track that existing contract-sync gap separately and use the
+repo's transitional hand-written frontend type pattern for the capability shape.
 
 - [ ] **Step 2: Add generated-derived frontend types and failing sidecar-client tests**
 
