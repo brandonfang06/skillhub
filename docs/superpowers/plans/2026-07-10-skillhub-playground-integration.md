@@ -938,15 +938,14 @@ git commit -m "feat(playground): add skill detail entry point"
 - Create: `docs/backend-python-maintenance/results/2026-07-10-skill-playground-integration.md`
 - Modify: `deploy/k8s/environment-variables.zh.md`
 
-- [ ] **Step 1: Add a PowerShell smoke script that starts only SkillHub**
+- [ ] **Step 1: Add an infrastructure-independent PowerShell isolation gate**
 
-The script must:
-
-1. set `SKILLHUB_WEB_PLAYGROUND_ENABLED=false` and an empty base URL;
-2. start backend/web using existing repo commands;
-3. assert backend health, search, skill detail, and generated web runtime config respond without a sidecar process;
-4. set the web base URL to an unreachable `http://127.0.0.1:65534`, rebuild runtime config, and assert only the playground client reports unavailable;
-5. stop only processes started by the script in `finally`.
+The script sets all playground settings to disabled/empty, runs backend health,
+capability, context, detail, file, and download tests, then runs frontend runtime
+config, sidecar client, route, detail-entry, and unavailable-state tests plus
+typecheck. It restores the caller's environment in `finally`. This gate requires
+no sidecar, PostgreSQL, Redis, or object storage, so it proves the optional
+dependency boundary without relying on a locally running deployment.
 
 - [ ] **Step 2: Document operator settings and removal procedure**
 
