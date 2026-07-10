@@ -88,6 +88,11 @@ class Settings:
     scan_consumer_block_ms: int
     scan_consumer_reclaim_min_idle_ms: int
     scan_consumer_reclaim_count: int
+    playground_token_secret: str
+    playground_token_ttl_seconds: int
+    playground_token_issuer: str
+    playground_token_audience: str
+    playground_context_max_bytes: int
 
     @property
     def storage_s3_effective_endpoint(self) -> str:
@@ -364,6 +369,23 @@ def get_settings() -> Settings:
         scan_consumer_reclaim_count=parse_int(
             os.getenv("SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT"),
             DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT,
+        ),
+        playground_token_secret=os.getenv("SKILLHUB_PLAYGROUND_TOKEN_SECRET", ""),
+        playground_token_ttl_seconds=parse_int(
+            os.getenv("SKILLHUB_PLAYGROUND_TOKEN_TTL_SECONDS"),
+            300,
+        ),
+        playground_token_issuer=os.getenv(
+            "SKILLHUB_PLAYGROUND_TOKEN_ISSUER",
+            "skillhub",
+        ),
+        playground_token_audience=os.getenv(
+            "SKILLHUB_PLAYGROUND_TOKEN_AUDIENCE",
+            "skill-playground-sidecar",
+        ),
+        playground_context_max_bytes=parse_int(
+            os.getenv("SKILLHUB_PLAYGROUND_CONTEXT_MAX_BYTES"),
+            120000,
         ),
     )
     warn_redis_configuration(settings)

@@ -14,6 +14,34 @@ def test_default_database_url_matches_local_docker_compose(monkeypatch):
     assert settings.storage_base_path == DEFAULT_STORAGE_BASE_PATH
 
 
+def test_playground_defaults_to_disabled_without_affecting_startup(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_PLAYGROUND_TOKEN_SECRET", raising=False)
+    monkeypatch.delenv("SKILLHUB_PLAYGROUND_TOKEN_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("SKILLHUB_PLAYGROUND_CONTEXT_MAX_BYTES", raising=False)
+
+    settings = get_settings()
+
+    assert settings.playground_token_secret == ""
+    assert settings.playground_token_ttl_seconds == 300
+    assert settings.playground_context_max_bytes == 120000
+
+
+def test_playground_settings_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_SECRET", "test-secret")
+    monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_TTL_SECONDS", "120")
+    monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_ISSUER", "custom-skillhub")
+    monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_AUDIENCE", "custom-sidecar")
+    monkeypatch.setenv("SKILLHUB_PLAYGROUND_CONTEXT_MAX_BYTES", "64000")
+
+    settings = get_settings()
+
+    assert settings.playground_token_secret == "test-secret"
+    assert settings.playground_token_ttl_seconds == 120
+    assert settings.playground_token_issuer == "custom-skillhub"
+    assert settings.playground_token_audience == "custom-sidecar"
+    assert settings.playground_context_max_bytes == 64000
+
+
 def test_database_url_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_DATABASE_URL", "postgresql+asyncpg://user:pass@example.test:5432/db")
 
