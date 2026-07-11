@@ -1,4 +1,11 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import {
   AlertCircle,
   Check,
@@ -46,6 +53,7 @@ export function PlaygroundChat({
   const { t } = useTranslation()
   const [prompt, setPrompt] = useState('')
   const [copied, copy] = useCopyToClipboard()
+  const transcriptEndRef = useRef<HTMLDivElement>(null)
   const installCommand = useMemo(
     () => buildSkillhubInstallCommand(namespace, slug, getBaseUrl()),
     [namespace, slug],
@@ -53,6 +61,10 @@ export function PlaygroundChat({
   const hasCompletedResponse = messages.some(
     (message) => message.role === 'assistant' && message.completed === true,
   )
+
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [errorCode, messages])
 
   const submit = () => {
     const content = prompt.trim()
@@ -137,7 +149,7 @@ export function PlaygroundChat({
                 ? t('playground.expiredDescription')
                 : t('playground.unavailableDescription')}
             </p>
-            {state === 'expired' && (
+            {(state === 'expired' || state === 'unavailable') && (
               <Button
                 type="button"
                 variant="outline"
@@ -178,6 +190,7 @@ export function PlaygroundChat({
             </div>
           </div>
         ))}
+        <div ref={transcriptEndRef} aria-hidden="true" />
       </div>
 
       {state === 'ready' && hasCompletedResponse && (

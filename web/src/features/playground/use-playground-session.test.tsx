@@ -156,6 +156,7 @@ describe('usePlayground generation state', () => {
     expect((result.current as { errorCode?: string }).errorCode).toBe(
       'message_limit_reached',
     )
+    expect(result.current.messages).toEqual([])
   })
 
   it('keeps provider failures local and finalizes the streaming message', async () => {
@@ -180,7 +181,7 @@ describe('usePlayground generation state', () => {
       'provider_unavailable',
     )
     expect(
-      result.current.messages[result.current.messages.length - 1]?.streaming,
+      result.current.messages.some((message) => message.role === 'assistant'),
     ).toBe(false)
   })
 })

@@ -46,7 +46,7 @@ try {
     Push-Location (Join-Path $repoRoot "web")
     try {
         Invoke-Checked -Description "Frontend isolation tests" -Command {
-            corepack pnpm exec vitest run `
+            corepack pnpm run test `
                 src/api/client.test.ts `
                 src/app/content-security-policy.test.ts `
                 src/features/playground/api.test.ts `

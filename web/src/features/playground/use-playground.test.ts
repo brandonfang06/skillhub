@@ -27,15 +27,30 @@ describe('applyPlaygroundEvent', () => {
     })
   })
 
-  it('does not mark a provider error as a completed response', () => {
+  it('removes an empty assistant placeholder after a provider error', () => {
     const started = applyPlaygroundEvent([], { type: 'message.started' })
     const failed = applyPlaygroundEvent(started, {
       type: 'error',
       code: 'provider_unavailable',
     })
 
+    expect(failed).toEqual([])
+  })
+
+  it('preserves partial provider output without marking it completed', () => {
+    const started = applyPlaygroundEvent([], { type: 'message.started' })
+    const partial = applyPlaygroundEvent(started, {
+      type: 'message.delta',
+      delta: 'Partial answer',
+    })
+    const failed = applyPlaygroundEvent(partial, {
+      type: 'error',
+      code: 'provider_unavailable',
+    })
+
     expect(failed[0]).toMatchObject({
       role: 'assistant',
+      content: 'Partial answer',
       streaming: false,
       completed: false,
     })

@@ -37,6 +37,10 @@ worker, startup, readiness, or lifecycle dependency.
 - The web client keeps generation busy until the SSE completion event and
   treats provider/input/message-limit errors as local, resettable session
   errors instead of a SkillHub outage.
+- Rejected prompts are removed from the optimistic transcript, and provider
+  failures do not leave an empty assistant message behind.
+- Temporary sidecar unavailability exposes a retry action, while long
+  transcripts keep the latest response in view.
 
 The repeatable isolation gate is:
 
@@ -44,7 +48,7 @@ The repeatable isolation gate is:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-playground-isolation.ps1
 ```
 
-Result: backend `84 passed`, frontend `52 passed`, and frontend typecheck passed
+Result: backend `84 passed`, frontend `62 passed`, and frontend typecheck passed
 with all playground settings disabled and no sidecar process required.
 
 ## Verification
@@ -57,7 +61,7 @@ SkillHub backend: uv run pytest tests -q
 906 passed, 1 pre-existing Starlette TestClient deprecation warning
 
 SkillHub web: corepack pnpm test
-191 test files passed, 643 tests passed
+192 test files passed, 657 tests passed
 
 SkillHub web: corepack pnpm run typecheck
 passed
@@ -81,8 +85,10 @@ passed in both repositories
 A live browser test used the actual SkillHub React route, actual sidecar, an
 allowlisted SkillHub-compatible context endpoint, and an OpenAI-compatible SSE
 provider. It verified session creation, two read-only context files, prompt
-submission, and a streamed assistant response. At 390px width, the context and
-chat regions stacked vertically and document width matched viewport width.
+submission, streamed completion, install CTA gating, reset, and transcript
+auto-scroll. At 390 x 500, the chat remained usable without horizontal
+overflow; all primary actions were 44 pixels tall, and the context drawer
+returned focus to its trigger after Escape.
 
 Docker image build was not run because the local Docker Desktop daemon was not
 available. The Dockerfile is present and sidecar application startup was

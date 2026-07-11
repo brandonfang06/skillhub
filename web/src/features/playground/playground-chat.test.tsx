@@ -1,4 +1,7 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from 'react-dom/server'
+import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { PlaygroundChat } from './playground-chat'
@@ -129,6 +132,51 @@ describe('PlaygroundChat', () => {
     expect(html).toContain('playground.reload')
     expect(html).not.toContain('Previous prompt must be hidden')
     expect(html).toMatch(/<textarea[^>]*disabled=""/)
+  })
+
+  it('renders a retry action when the playground is temporarily unavailable', () => {
+    const html = renderToStaticMarkup(
+      <PlaygroundChat
+        state="unavailable"
+        messages={[]}
+        isSending={false}
+        namespace="global"
+        slug="notes"
+        onSend={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain('playground.reload')
+  })
+
+  it('keeps the latest message visible as the transcript grows', () => {
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+    const props = {
+      state: 'ready' as const,
+      isSending: false,
+      namespace: 'global',
+      slug: 'notes',
+      onSend: vi.fn(),
+      onReset: vi.fn(),
+    }
+    const { rerender } = render(
+      <PlaygroundChat {...props} messages={[]} />,
+    )
+
+    scrollIntoView.mockClear()
+    rerender(
+      <PlaygroundChat
+        {...props}
+        messages={[{ id: 'user-1', role: 'user', content: 'Latest prompt' }]}
+      />,
+    )
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'end' })
   })
 
   it('keeps mobile chat actions at least 44 pixels tall', () => {

@@ -88,6 +88,8 @@ export function applyPlaygroundEvent(
     next[index] = { ...current, content: `${current.content}${event.delta}` }
   } else if (event.type === 'message.completed') {
     next[index] = { ...current, streaming: false, completed: true }
+  } else if (!current.content) {
+    next.splice(index, 1)
   } else {
     next[index] = { ...current, streaming: false, completed: false }
   }
@@ -246,15 +248,18 @@ export function usePlayground({
   }, [baseUrl, closeCurrentSession, connect, enabled, version])
 
   const { mutate: sendMutation, isPending: isSendPending } = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content }: { content: string; messageId: string }) => {
       const current = sessionRef.current
       if (!baseUrl || !current) {
         throw new SidecarError(404, 'session_not_found')
       }
       await sendSidecarMessage(baseUrl, current.sessionId, content)
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       setIsGenerating(false)
+      setMessages((current) =>
+        current.filter((message) => message.id !== variables.messageId),
+      )
       if (error instanceof SidecarError && error.status === 404) {
         setState('expired')
       } else if (
@@ -301,15 +306,16 @@ export function usePlayground({
       }
       setErrorCode(null)
       setIsGenerating(true)
+      const messageId = nextMessageId('user')
       setMessages((current) => [
         ...current,
         {
-          id: nextMessageId('user'),
+          id: messageId,
           role: 'user',
           content: normalized,
         },
       ])
-      sendMutation(normalized)
+      sendMutation({ content: normalized, messageId })
     },
     [isSending, sendMutation, state],
   )
