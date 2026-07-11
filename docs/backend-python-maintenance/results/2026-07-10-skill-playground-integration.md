@@ -1,6 +1,7 @@
 # Skill Playground Sidecar Integration Result
 
 Date: 2026-07-10
+Final verification: 2026-07-11
 
 ## Outcome
 
@@ -30,7 +31,12 @@ worker, startup, readiness, or lifecycle dependency.
   detail, download, install, publish, or review.
 - Context reads reuse version/detail/file readers and never call download
   readers or mutate download metrics.
+- Context fallback tests verify access is re-evaluated after capability
+  issuance, so later permission revocation is enforced.
 - SkillHub base K8s manifests contain no playground workload or probe.
+- The web client keeps generation busy until the SSE completion event and
+  treats provider/input/message-limit errors as local, resettable session
+  errors instead of a SkillHub outage.
 
 The repeatable isolation gate is:
 
@@ -38,20 +44,20 @@ The repeatable isolation gate is:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-playground-isolation.ps1
 ```
 
-Result: backend `82 passed`, frontend `47 passed`, and frontend typecheck passed
+Result: backend `84 passed`, frontend `52 passed`, and frontend typecheck passed
 with all playground settings disabled and no sidecar process required.
 
 ## Verification
 
 ```text
 sidecar: uv run pytest tests -q
-18 passed
+19 passed
 
 SkillHub backend: uv run pytest tests -q
-904 passed, 1 pre-existing Starlette TestClient deprecation warning
+906 passed, 1 pre-existing Starlette TestClient deprecation warning
 
 SkillHub web: corepack pnpm test
-188 test files passed, 638 tests passed
+191 test files passed, 643 tests passed
 
 SkillHub web: corepack pnpm run typecheck
 passed

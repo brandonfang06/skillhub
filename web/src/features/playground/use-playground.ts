@@ -34,6 +34,7 @@ export type PlaygroundEvent =
   | { type: 'message.delta'; delta: string }
   | { type: 'message.completed' }
   | { type: 'session.reset' }
+  | { type: 'error'; code: string }
 
 type UsePlaygroundInput = {
   namespace: string
@@ -88,11 +89,11 @@ export function applyPlaygroundEvent(
   return next
 }
 
-function stateForError(error: unknown): PlaygroundState {
-  return error instanceof SidecarError && error.status === 404
-    ? 'expired'
-    : 'unavailable'
-}
+const RECOVERABLE_SEND_ERRORS = new Set([
+  'generation_in_progress',
+  'message_limit_reached',
+  'message_too_large',
+])
 
 export function usePlayground({
   namespace,
@@ -107,6 +108,8 @@ export function usePlayground({
   )
   const [session, setSession] = useState<SidecarSession | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const attemptRef = useRef(0)
   const sessionRef = useRef<SidecarSession | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -140,13 +143,36 @@ export function usePlayground({
           setMessages((currentMessages) =>
             applyPlaygroundEvent(currentMessages, data),
           )
+          if (data.type === 'message.completed') {
+            setIsGenerating(false)
+          } else if (data.type === 'session.reset') {
+            setIsGenerating(false)
+            setErrorCode(null)
+          }
         })
       }
       source.addEventListener('session.expired', () => {
+        setIsGenerating(false)
         setState('expired')
         source.close()
       })
-      source.addEventListener('error', () => setState('unavailable'))
+      source.addEventListener('error', (rawEvent) => {
+        const rawData = (rawEvent as MessageEvent<string>).data
+        if (typeof rawData === 'string' && rawData) {
+          const data = JSON.parse(rawData) as PlaygroundEvent
+          if (data.type === 'error') {
+            setMessages((currentMessages) =>
+              applyPlaygroundEvent(currentMessages, data),
+            )
+            setIsGenerating(false)
+            setErrorCode(data.code)
+            setState('ready')
+            return
+          }
+        }
+        setIsGenerating(false)
+        setState('unavailable')
+      })
     },
     [],
   )
@@ -197,6 +223,8 @@ export function usePlayground({
     closeCurrentSession()
     setSession(null)
     setMessages([])
+    setIsGenerating(false)
+    setErrorCode(null)
     if (!enabled || !version || !baseUrl) {
       setState('unavailable')
       return () => {
@@ -212,7 +240,7 @@ export function usePlayground({
     }
   }, [baseUrl, closeCurrentSession, connect, enabled, version])
 
-  const { mutate: sendMutation, isPending: isSending } = useMutation({
+  const { mutate: sendMutation, isPending: isSendPending } = useMutation({
     mutationFn: async (content: string) => {
       const current = sessionRef.current
       if (!baseUrl || !current) {
@@ -220,7 +248,20 @@ export function usePlayground({
       }
       await sendSidecarMessage(baseUrl, current.sessionId, content)
     },
-    onError: (error) => setState(stateForError(error)),
+    onError: (error) => {
+      setIsGenerating(false)
+      if (error instanceof SidecarError && error.status === 404) {
+        setState('expired')
+      } else if (
+        error instanceof SidecarError &&
+        RECOVERABLE_SEND_ERRORS.has(error.code)
+      ) {
+        setErrorCode(error.code)
+        setState('ready')
+      } else {
+        setState('unavailable')
+      }
+    },
   })
 
   const { mutate: resetMutation } = useMutation({
@@ -231,9 +272,21 @@ export function usePlayground({
       }
       await resetSidecarSession(baseUrl, current.sessionId)
     },
-    onSuccess: () => setMessages([]),
-    onError: (error) => setState(stateForError(error)),
+    onSuccess: () => {
+      setMessages([])
+      setIsGenerating(false)
+      setErrorCode(null)
+    },
+    onError: (error) => {
+      setState(
+        error instanceof SidecarError && error.status === 404
+          ? 'expired'
+          : 'unavailable',
+      )
+    },
   })
+
+  const isSending = isGenerating || isSendPending
 
   const send = useCallback(
     (content: string) => {
@@ -241,6 +294,8 @@ export function usePlayground({
       if (!normalized || state !== 'ready' || isSending) {
         return
       }
+      setErrorCode(null)
+      setIsGenerating(true)
       setMessages((current) => [
         ...current,
         {
@@ -263,5 +318,6 @@ export function usePlayground({
     send,
     reset,
     isSending,
+    errorCode,
   }
 }

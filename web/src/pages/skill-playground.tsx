@@ -117,6 +117,7 @@ export function SkillPlaygroundPage() {
           state={playground.state}
           messages={playground.messages}
           isSending={playground.isSending}
+          errorCode={playground.errorCode}
           onSend={playground.send}
           onReset={playground.reset}
         />

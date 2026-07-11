@@ -48,7 +48,10 @@ try {
         Invoke-Checked -Description "Frontend isolation tests" -Command {
             corepack pnpm exec vitest run `
                 src/api/client.test.ts `
+                src/app/content-security-policy.test.ts `
                 src/features/playground/api.test.ts `
+                src/features/playground/playground-chat.test.tsx `
+                src/features/playground/use-playground-session.test.tsx `
                 src/features/playground/use-playground.test.ts `
                 src/pages/skill-playground.test.tsx `
                 src/pages/skill-detail.test.tsx `

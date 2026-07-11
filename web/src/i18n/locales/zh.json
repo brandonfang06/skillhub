@@ -1509,7 +1509,13 @@
     "emptyState": "输入问题来试用这个 Skill。",
     "noContext": "没有可读取的内容",
     "you": "你",
-    "assistant": "助手"
+    "assistant": "助手",
+    "errors": {
+      "provider_unavailable": "模型服务当前不可用，请重置或稍后重试。",
+      "generation_in_progress": "当前已有回复正在生成。",
+      "message_limit_reached": "此会话已达到消息上限，请重置后继续。",
+      "message_too_large": "Prompt 太长，请缩短后重试。"
+    }
   },
   "apiError": {
     "unauthorized": "登录已过期，请重新登录",

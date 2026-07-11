@@ -11,6 +11,7 @@ type PlaygroundChatProps = {
   state: PlaygroundState
   messages: ChatMessage[]
   isSending: boolean
+  errorCode?: string | null
   onSend: (content: string) => void
   onReset: () => void
 }
@@ -19,6 +20,7 @@ export function PlaygroundChat({
   state,
   messages,
   isSending,
+  errorCode,
   onSend,
   onReset,
 }: PlaygroundChatProps) {
@@ -57,7 +59,7 @@ export function PlaygroundChat({
           variant="ghost"
           size="icon"
           onClick={onReset}
-          disabled={state !== 'ready' || messages.length === 0}
+          disabled={state !== 'ready' || isSending || messages.length === 0}
           aria-label={t('playground.reset')}
           title={t('playground.reset')}
         >
@@ -123,13 +125,22 @@ export function PlaygroundChat({
         onSubmit={handleSubmit}
         className="shrink-0 border-t border-border p-4"
       >
+        {errorCode && (
+          <div
+            role="alert"
+            className="mb-3 flex items-center gap-2 text-sm text-destructive"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{t(`playground.errors.${errorCode}`)}</span>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <Textarea
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('playground.promptPlaceholder')}
-            disabled={state !== 'ready'}
+            disabled={state !== 'ready' || isSending}
             className="min-h-20 max-h-40 resize-none"
           />
           <Button
