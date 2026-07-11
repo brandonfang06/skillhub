@@ -27,6 +27,7 @@ export type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
   streaming?: boolean
+  completed?: boolean
 }
 
 export type PlaygroundEvent =
@@ -65,6 +66,7 @@ export function applyPlaygroundEvent(
         role: 'assistant',
         content: '',
         streaming: true,
+        completed: false,
       },
     ]
   }
@@ -82,10 +84,13 @@ export function applyPlaygroundEvent(
   }
   const next = [...messages]
   const current = next[index]
-  next[index] =
-    event.type === 'message.delta'
-      ? { ...current, content: `${current.content}${event.delta}` }
-      : { ...current, streaming: false }
+  if (event.type === 'message.delta') {
+    next[index] = { ...current, content: `${current.content}${event.delta}` }
+  } else if (event.type === 'message.completed') {
+    next[index] = { ...current, streaming: false, completed: true }
+  } else {
+    next[index] = { ...current, streaming: false, completed: false }
+  }
   return next
 }
 

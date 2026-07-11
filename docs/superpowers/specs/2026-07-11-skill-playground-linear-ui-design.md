@@ -21,9 +21,9 @@ pushes the primary trial interaction below the fold.
 Use a Linear-adapted product workspace inside the existing SkillHub shell.
 
 Adopt Linear's compact controls, ordered surface hierarchy, hairline borders,
-and restrained lavender accent. Do not copy Linear's marketing site wholesale:
-SkillHub keeps its current light product shell, existing fonts, zero letter
-spacing, semantic colors, and brand identity.
+and restrained interaction treatment. Do not copy Linear's marketing site
+wholesale: SkillHub keeps its current light product shell, existing fonts, zero
+letter spacing, semantic colors, indigo accent, and brand identity.
 
 Source reference:
 
@@ -83,7 +83,7 @@ Use a small, ordered dark surface ladder inside the Playground only:
 | Hairline strong | `#343740` | Focused and hovered boundaries |
 | Primary text | `#F7F8F8` | Headings and primary content |
 | Secondary text | `#A4A9B3` | Metadata and explanatory text |
-| Muted text | `#747A85` | Disabled and low-priority labels |
+| Muted text | `#858B96` | Disabled and low-priority labels |
 
 Use existing SkillHub semantic tokens for errors, warnings, and success. Do not
 replace semantic state with lavender.
@@ -131,6 +131,8 @@ At widths above 1024px:
 - Chat should occupy at least 65% of the usable workspace width.
 - Keep the workspace tall enough to fill the first viewport below the SkillHub
   header and page title.
+- Size the workspace from `100dvh` with bounded minimum and maximum heights;
+  do not rely on the current fixed 560px minimum as the mobile viewport model.
 - Keep context and chat as flat sibling panels inside one workspace frame.
 - Keep the composer anchored to the bottom of the chat panel while the
   transcript scrolls independently.
@@ -155,6 +157,8 @@ Below 768px, chat is the first and default surface:
 - Keep file selection and content preview inside that drawer.
 - Keep the composer visible at the bottom of the viewport when the on-screen
   keyboard permits.
+- Include the bottom safe-area inset in composer spacing and avoid fixed
+  viewport units that ignore mobile browser chrome.
 - Truncate long skill coordinates and filenames without horizontal overflow.
 - Keep touch targets at least 44px.
 
@@ -204,7 +208,22 @@ looking like an error or promotional badge.
 After the first completed assistant response, show a compact install call to
 action. It should reuse SkillHub's existing install command behavior and must
 not install automatically. The user still chooses whether to copy or run the
-command.
+command. Completion is derived from the existing local transcript; this action
+must not add an API call, sidecar event, durable state, or lifecycle mutation.
+
+## Implementation Isolation
+
+- Keep workspace colors and layout classes inside Playground page and feature
+  components. Do not change global theme tokens or shared shell appearance.
+- Implement the responsive context drawer directly in the Playground feature
+  with `@radix-ui/react-dialog`; do not expand the current shared dialog API or
+  hand-roll focus trapping.
+- Keep `usePlayground` network/session behavior, generated API types, backend
+  routes, and sidecar code unchanged. A local `completed` message marker may be
+  derived from the existing `message.completed` event so the install action
+  never treats provider errors as successful responses.
+- Reuse the existing install command builders rather than duplicating registry
+  URL or namespace rules.
 
 ## States And Errors
 

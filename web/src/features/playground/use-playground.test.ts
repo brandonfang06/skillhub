@@ -23,6 +23,21 @@ describe('applyPlaygroundEvent', () => {
       role: 'assistant',
       content: 'Hello world',
       streaming: false,
+      completed: true,
+    })
+  })
+
+  it('does not mark a provider error as a completed response', () => {
+    const started = applyPlaygroundEvent([], { type: 'message.started' })
+    const failed = applyPlaygroundEvent(started, {
+      type: 'error',
+      code: 'provider_unavailable',
+    })
+
+    expect(failed[0]).toMatchObject({
+      role: 'assistant',
+      streaming: false,
+      completed: false,
     })
   })
 
