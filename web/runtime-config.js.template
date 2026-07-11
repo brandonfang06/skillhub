@@ -6,5 +6,7 @@ window.__SKILLHUB_RUNTIME_CONFIG__ = {
   localRegistrationEnabled: "${SKILLHUB_LOCAL_REGISTRATION_ENABLED}",
   authSessionBootstrapEnabled: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED}",
   authSessionBootstrapProvider: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER}",
-  authSessionBootstrapAuto: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO}"
+  authSessionBootstrapAuto: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO}",
+  playgroundEnabled: "${SKILLHUB_WEB_PLAYGROUND_ENABLED}",
+  playgroundBaseUrl: "${SKILLHUB_WEB_PLAYGROUND_BASE_URL}"
 };

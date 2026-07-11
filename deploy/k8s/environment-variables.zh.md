@@ -183,6 +183,30 @@ https://skills.example.com/login/oauth2/code/keycloak
 | --- | --- | --- | --- | --- |
 | `skillhub-config/download-analytics-retention-months` | `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` | No | `12` | Rolling retention for `local_skill_download_event`. Default is 12 months. Set `0` or a negative value to disable automatic pruning. The backend runs pruning at startup and then once per day. |
 
+## Optional Skill Playground Sidecar
+
+Skill Playground 是獨立部署的可選 sidecar。SkillHub Kustomize base 不部署、探測或等待 sidecar；sidecar 停止時，SkillHub 的啟動、health、搜尋、詳細頁、安裝、發布與審核必須維持正常。
+
+| Target | Pod env | Required | Default | Notes |
+| --- | --- | --- | --- | --- |
+| backend | `SKILLHUB_PLAYGROUND_TOKEN_SECRET` | 啟用時必填 | empty | 簽發短效唯讀 capability 的 backend-only secret。留空時 capability endpoint 回傳 disabled，但 backend 正常啟動。 |
+| backend | `SKILLHUB_PLAYGROUND_TOKEN_TTL_SECONDS` | No | `300` | Capability 存活秒數。 |
+| backend | `SKILLHUB_PLAYGROUND_TOKEN_ISSUER` | No | `skillhub` | Capability issuer。 |
+| backend | `SKILLHUB_PLAYGROUND_TOKEN_AUDIENCE` | No | `skill-playground-sidecar` | Capability audience。 |
+| backend | `SKILLHUB_PLAYGROUND_CONTEXT_MAX_BYTES` | No | `120000` | 傳給 sidecar 的唯讀文字 context 上限。 |
+| web | `SKILLHUB_WEB_PLAYGROUND_ENABLED` | No | `false` | 是否在 Skill 詳細頁顯示 Playground 入口。 |
+| web | `SKILLHUB_WEB_PLAYGROUND_BASE_URL` | 啟用時必填 | empty | 瀏覽器可連線的 sidecar URL，例如 `https://playground.example.com`。 |
+
+sidecar 的 OpenAI-compatible provider、model catalog、API key 與 SkillHub context adapter URL 都由 sidecar repo 自己管理，不放入 SkillHub base manifest。
+
+完整移除流程：
+
+1. 將 `SKILLHUB_WEB_PLAYGROUND_ENABLED=false` 並清空 `SKILLHUB_WEB_PLAYGROUND_BASE_URL`。
+2. 移除獨立部署的 sidecar workload。
+3. 視需要清空 backend 的 `SKILLHUB_PLAYGROUND_TOKEN_SECRET`。
+
+不需要資料庫 migration、資料清理、Redis 清理或 SkillHub rollout dependency 變更。
+
 ## Scanner Container LLM
 
 這些 env 只應該放在 **scanner** deployment。backend 不需要也不應該拿這些值。

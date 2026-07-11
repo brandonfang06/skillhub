@@ -1,5 +1,10 @@
 import type { components } from './generated/schema'
 
+export interface PlaygroundCapability {
+  token: string
+  expiresAt: number
+}
+
 export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'displayName' | 'platformRoles'> & {
   userId: string
   displayName: string

@@ -71,6 +71,10 @@ const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'Sea
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
+const SkillPlaygroundPage = createLazyRouteComponent(
+  () => import('@/pages/skill-playground'),
+  'SkillPlaygroundPage',
+)
 const SkillVersionComparePage = createLazyRouteComponent(() => import('@/pages/skill-version-compare'), 'SkillVersionComparePage')
 const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
 const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
@@ -246,6 +250,18 @@ const skillVersionCompareRoute = createRoute({
     to: typeof search.to === 'string' ? search.to : '',
   }),
   component: SkillVersionComparePage,
+})
+
+const skillPlaygroundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/space/$namespace/$slug/playground',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { version?: string } => ({
+    version: typeof search.version === 'string' && search.version
+      ? search.version
+      : undefined,
+  }),
+  component: SkillPlaygroundPage,
 })
 
 const dashboardRoute = createRoute({
@@ -457,6 +473,7 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   namespaceRoute,
   skillDetailRoute,
+  skillPlaygroundRoute,
   skillVersionCompareRoute,
   dashboardRoute,
   dashboardSkillsRoute,

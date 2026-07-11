@@ -22,6 +22,7 @@ from app.api.local_auth import router as local_auth_router
 from app.api.notifications import router as notifications_router
 from app.api.namespaces import router as namespaces_router
 from app.api.promotions import router as promotions_router
+from app.api.playground import router as playground_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
 from app.api.skill_reports import router as skill_reports_router
@@ -134,6 +135,7 @@ def create_app() -> FastAPI:
     app.include_router(namespaces_router)
     app.include_router(notifications_router)
     app.include_router(promotions_router)
+    app.include_router(playground_router)
     app.include_router(publish_router)
     app.include_router(security_audit_router)
     app.include_router(skill_reports_router)

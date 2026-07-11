@@ -41,6 +41,7 @@ import {
   fetchText,
   getDirectAuthRuntimeConfig,
   getLocalRegistrationRuntimeConfig,
+  getPlaygroundRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
   namespaceApi,
 } from './client'
@@ -77,6 +78,32 @@ afterEach(() => {
 describe('WEB_API_PREFIX', () => {
   it('uses the /api/web prefix for web-facing endpoints', () => {
     expect(WEB_API_PREFIX).toBe('/api/web')
+  })
+})
+
+describe('getPlaygroundRuntimeConfig', () => {
+  it('keeps playground disabled when runtime config is absent', () => {
+    setMockWindow()
+
+    expect(getPlaygroundRuntimeConfig()).toEqual({ enabled: false })
+  })
+
+  it('returns a normalized sidecar URL only when playground is enabled', () => {
+    setMockWindow({
+      playgroundEnabled: 'true',
+      playgroundBaseUrl: 'http://localhost:8091/',
+    })
+
+    expect(getPlaygroundRuntimeConfig()).toEqual({
+      enabled: true,
+      baseUrl: 'http://localhost:8091',
+    })
+  })
+
+  it('disables playground when enabled has no base URL', () => {
+    setMockWindow({ playgroundEnabled: 'true', playgroundBaseUrl: '' })
+
+    expect(getPlaygroundRuntimeConfig()).toEqual({ enabled: false })
   })
 })
 
