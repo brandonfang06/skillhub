@@ -58,9 +58,15 @@ export function PlaygroundChat({
     () => buildSkillhubInstallCommand(namespace, slug, getBaseUrl()),
     [namespace, slug],
   )
-  const hasCompletedResponse = messages.some(
-    (message) => message.role === 'assistant' && message.completed === true,
-  )
+  let latestAssistantMessage: ChatMessage | undefined
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === 'assistant') {
+      latestAssistantMessage = messages[index]
+      break
+    }
+  }
+  const canOfferInstall =
+    latestAssistantMessage?.completed === true && !isSending && !errorCode
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ block: 'end' })
@@ -193,7 +199,7 @@ export function PlaygroundChat({
         <div ref={transcriptEndRef} aria-hidden="true" />
       </div>
 
-      {state === 'ready' && hasCompletedResponse && (
+      {state === 'ready' && canOfferInstall && (
         <div
           data-playground-install-cta
           className="flex shrink-0 items-center gap-3 border-t border-[#25272D] bg-[#0F1012] px-3 py-2.5 sm:px-4"
