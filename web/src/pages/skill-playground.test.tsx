@@ -35,7 +35,13 @@ vi.mock('@/features/playground/use-playground', () => ({
         displayName: 'Notes',
         version: '1.0.0',
       },
-      contextFiles: [{ path: 'SKILL.md', content: 'Instructions' }],
+      contextFiles: [
+        {
+          path: 'SKILL.md',
+          content: 'Instructions',
+          includedInPrompt: true,
+        },
+      ],
     },
     send: vi.fn(),
     reset: vi.fn(),
@@ -53,12 +59,14 @@ describe('SkillPlaygroundPage', () => {
     expect(html).toContain('playground.backToSkill')
     expect(html).toContain('data-playground-workspace="true"')
     expect(html).toContain('bg-[#09090B]')
-    expect(html).toContain('h-[calc(100dvh-13rem)]')
+    expect(html).toContain('h-[calc(100dvh-16rem)]')
     expect(html).toContain(
-      'min-[900px]:h-[clamp(28rem,calc(100dvh-13rem),48rem)]',
+      'min-[900px]:h-[clamp(28rem,calc(100dvh-16rem),48rem)]',
     )
     expect(html).toContain('data-playground-mobile-limits="true"')
     expect(html).toContain('playground.openContext')
+    expect(html).toContain('data-playground-execution-notice="true"')
+    expect(html).toContain('playground.executionNotice')
   })
 
   it('keeps chat before read-only context in document order', () => {

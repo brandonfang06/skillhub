@@ -21,6 +21,9 @@ function ContextBrowser({
   const { t } = useTranslation()
   const selectedFile =
     files.find((file) => file.path === selectedPath) ?? files[0]
+  const selectedFileIsIncluded = selectedFile
+    ? (selectedFile.includedInPrompt ?? Boolean(selectedFile.content))
+    : false
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -62,10 +65,14 @@ function ContextBrowser({
         )}
       </nav>
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        {selectedFile ? (
+        {selectedFileIsIncluded && selectedFile?.content !== null ? (
           <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[#D8DBE2]">
             {selectedFile.content}
           </pre>
+        ) : selectedFile ? (
+          <p className="text-xs leading-5 text-[#A4A9B3]">
+            {t('playground.fileNotIncluded')}
+          </p>
         ) : (
           <p className="text-xs text-[#858B96]">
             {t('playground.noContext')}

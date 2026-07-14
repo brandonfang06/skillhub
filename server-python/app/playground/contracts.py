@@ -23,7 +23,8 @@ class PlaygroundSkill(PlaygroundContract):
 
 class PlaygroundFile(PlaygroundContract):
     path: str
-    content: str
+    content: str = ""
+    included_in_prompt: bool = Field(alias="includedInPrompt", default=False)
 
 
 class PlaygroundContextResponse(PlaygroundContract):

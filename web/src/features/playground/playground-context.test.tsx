@@ -15,8 +15,25 @@ vi.mock('react-i18next', () => ({
 }))
 
 const files = [
-  { path: 'SKILL.md', content: 'Primary instructions' },
-  { path: 'references/usage.md', content: 'Usage reference' },
+  {
+    path: 'SKILL.md',
+    content: 'Primary instructions',
+    includedInPrompt: true,
+  },
+  {
+    path: 'references/usage.md',
+    content: 'Usage reference',
+    includedInPrompt: true,
+  },
+  {
+    path: 'assets/logo.png',
+    content: null,
+    includedInPrompt: false,
+  },
+  {
+    path: 'legacy.md',
+    content: 'Legacy context',
+  },
 ]
 
 afterEach(() => cleanup())
@@ -63,6 +80,22 @@ describe('Playground context browser', () => {
       screen.getByRole('button', { name: 'references/usage.md' }),
     )
     expect(screen.getByText('Usage reference')).toBeTruthy()
+  })
+
+  it('lists display-only files without pretending they were sent to the model', () => {
+    render(<ContextHarness />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'assets/logo.png' }))
+
+    expect(screen.getByText('playground.fileNotIncluded')).toBeTruthy()
+  })
+
+  it('treats legacy sidecar files with content as included', () => {
+    render(<ContextHarness />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'legacy.md' }))
+
+    expect(screen.getByText('Legacy context')).toBeTruthy()
   })
 
   it('returns focus to the trigger after closing the drawer', async () => {

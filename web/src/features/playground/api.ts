@@ -7,7 +7,8 @@ export type SidecarSkill = {
 
 export type SidecarContextFile = {
   path: string
-  content: string
+  content: string | null
+  includedInPrompt?: boolean
 }
 
 export type SidecarSession = {

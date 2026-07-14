@@ -31,7 +31,13 @@ def configured_app():
             "displayName": "Notes",
             "version": claims["version"],
         },
-        "files": [{"path": "SKILL.md", "content": "Summarize"}],
+        "files": [
+            {
+                "path": "SKILL.md",
+                "content": "Summarize",
+                "includedInPrompt": True,
+            }
+        ],
     }
     return app
 
@@ -186,7 +192,11 @@ def test_production_context_path_revalidates_access_without_download_side_effect
 
     assert response.status_code == 200
     assert response.json()["files"] == [
-        {"path": "SKILL.md", "content": "Summarize"}
+        {
+            "path": "SKILL.md",
+            "content": "Summarize",
+            "includedInPrompt": True,
+        }
     ]
     assert captured == [
         ("detail", "user-1"),

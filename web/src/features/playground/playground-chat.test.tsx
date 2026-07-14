@@ -110,6 +110,63 @@ describe('PlaygroundChat', () => {
     expect(html).toContain('playground.errors.provider_unavailable')
   })
 
+  it('keeps truncated output without offering installation', () => {
+    const html = renderToStaticMarkup(
+      <PlaygroundChat
+        state="ready"
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'Partial answer',
+            streaming: false,
+            completed: false,
+          },
+        ]}
+        isSending={false}
+        namespace="global"
+        slug="notes"
+        errorCode="output_truncated"
+        onSend={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain('Partial answer')
+    expect(html).toContain('playground.errors.output_truncated')
+    expect(html).not.toContain('data-playground-install-cta')
+  })
+
+  it('hides an earlier install CTA when the latest response is truncated', () => {
+    const html = renderToStaticMarkup(
+      <PlaygroundChat
+        state="ready"
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'Complete answer',
+            completed: true,
+          },
+          {
+            id: 'assistant-2',
+            role: 'assistant',
+            content: 'Partial answer',
+            completed: false,
+          },
+        ]}
+        isSending={false}
+        namespace="global"
+        slug="notes"
+        errorCode="output_truncated"
+        onSend={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(html).not.toContain('data-playground-install-cta')
+  })
+
   it('renders a reload action for an expired session', () => {
     const html = renderToStaticMarkup(
       <PlaygroundChat

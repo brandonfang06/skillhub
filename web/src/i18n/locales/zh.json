@@ -1501,6 +1501,7 @@
     "closeContext": "关闭 Skill 内容",
     "readOnly": "只读内容",
     "promptOnly": "仅限 Prompt",
+    "executionNotice": "这是 Prompt-only 预览，不是 sandbox。程序文件只会以文本内容提供给模型；Playground 不会执行 scripts，也没有工具或网络访问。",
     "promptPlaceholder": "输入 Prompt...",
     "send": "发送",
     "reset": "重置会话",
@@ -1512,6 +1513,7 @@
     "backToSkill": "返回 Skill",
     "emptyState": "输入问题来试用这个 Skill。",
     "noContext": "没有可读取的内容",
+    "fileNotIncluded": "此文件仅列出供确认，未发送给模型。",
     "you": "你",
     "assistant": "助手",
     "reload": "重新加载 Playground",
@@ -1520,6 +1522,8 @@
     "installCommandCopied": "已复制安装命令",
     "errors": {
       "provider_unavailable": "模型服务当前不可用，请重置或稍后重试。",
+      "output_truncated": "回复已达到输出上限，已保留当前内容；本次运行不会标记为完成。",
+      "response_incomplete": "模型未以正常完成状态结束，已保留当前内容；本次运行不会标记为完成。",
       "generation_in_progress": "当前已有回复正在生成。",
       "message_limit_reached": "此会话已达到消息上限，请重置后继续。",
       "message_too_large": "Prompt 太长，请缩短后重试。"

@@ -8,7 +8,69 @@ from app.playground.contracts import (
 )
 
 
-TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml"}
+TEXT_SUFFIXES = {
+    ".bash",
+    ".c",
+    ".cfg",
+    ".cpp",
+    ".css",
+    ".go",
+    ".h",
+    ".hpp",
+    ".html",
+    ".ini",
+    ".java",
+    ".js",
+    ".json",
+    ".jsx",
+    ".md",
+    ".php",
+    ".py",
+    ".rb",
+    ".rs",
+    ".sh",
+    ".sql",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
+TEXT_FILENAMES = {"dockerfile", "license", "makefile", "notice"}
+
+
+def _safe_path(value: object) -> str | None:
+    normalized = str(value).replace("\\", "/")
+    path = PurePosixPath(normalized)
+    if (
+        not normalized
+        or path.is_absolute()
+        or ".." in path.parts
+        or (path.parts and path.parts[0].endswith(":"))
+    ):
+        return None
+    return path.as_posix()
+
+
+def _priority(path: str) -> int:
+    lower = path.lower()
+    if lower == "skill.md":
+        return 0
+    if lower == "readme.md":
+        return 1
+    if lower.startswith("references/"):
+        return 2
+    return 3
+
+
+def _is_text_path(path: str) -> bool:
+    pure_path = PurePosixPath(path)
+    return (
+        pure_path.suffix.lower() in TEXT_SUFFIXES
+        or pure_path.name.lower() in TEXT_FILENAMES
+    )
 
 
 def select_context_paths(
@@ -18,24 +80,11 @@ def select_context_paths(
 ) -> list[str]:
     candidates: list[tuple[int, str, int]] = []
     for item in files:
-        path = str(item["filePath"])
-        normalized = path.replace("\\", "/")
-        path_parts = PurePosixPath(normalized).parts
-        if ".." in path_parts:
-            continue
-        lower = normalized.lower()
-        if lower == "skill.md":
-            priority = 0
-        elif lower == "readme.md":
-            priority = 1
-        elif lower.startswith("references/") and any(
-            lower.endswith(suffix) for suffix in TEXT_SUFFIXES
-        ):
-            priority = 2
-        else:
+        path = _safe_path(item["filePath"])
+        if path is None or not _is_text_path(path):
             continue
         size = max(0, int(item.get("fileSize") or 0))
-        candidates.append((priority, path, size))
+        candidates.append((_priority(path), path, size))
 
     selected: list[str] = []
     total = 0
@@ -60,9 +109,24 @@ async def build_context_bundle(
     detail = await read_detail(namespace, slug, current_user_id)
     files = await read_files(namespace, slug, version, current_user_id)
     paths = select_context_paths(files, max_bytes=max_bytes)
+    selected_paths = set(paths)
+    safe_paths = {
+        path
+        for item in files
+        if (path := _safe_path(item["filePath"])) is not None
+    }
     contents: list[PlaygroundFile] = []
     actual_bytes = 0
-    for path in paths:
+    for path in sorted(safe_paths, key=lambda item: (_priority(item), item)):
+        if path not in selected_paths:
+            contents.append(
+                PlaygroundFile(
+                    path=path,
+                    content="",
+                    includedInPrompt=False,
+                )
+            )
+            continue
         raw = await read_content(
             namespace,
             slug,
@@ -77,6 +141,7 @@ async def build_context_bundle(
             PlaygroundFile(
                 path=path,
                 content=raw.decode("utf-8", errors="replace"),
+                includedInPrompt=True,
             )
         )
     return PlaygroundContextResponse(

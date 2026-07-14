@@ -1512,6 +1512,7 @@
     "closeContext": "Close skill context",
     "readOnly": "Read-only context",
     "promptOnly": "Prompt only",
+    "executionNotice": "This is a prompt-only preview, not a sandbox. Source files are provided to the model as text only; scripts are never executed, and no tools or network access are available.",
     "promptPlaceholder": "Enter a prompt...",
     "send": "Send",
     "reset": "Reset session",
@@ -1523,6 +1524,7 @@
     "backToSkill": "Back to skill",
     "emptyState": "Ask something to try this skill.",
     "noContext": "No readable context",
+    "fileNotIncluded": "This file is listed for completeness but was not sent to the model.",
     "you": "You",
     "assistant": "Assistant",
     "reload": "Reload playground",
@@ -1531,6 +1533,8 @@
     "installCommandCopied": "Install command copied",
     "errors": {
       "provider_unavailable": "The model provider is unavailable. Reset or try again.",
+      "output_truncated": "The response reached its output limit. Partial output was preserved, but this run was not marked complete.",
+      "response_incomplete": "The model ended without a normal completion signal. Partial output was preserved, but this run was not marked complete.",
       "generation_in_progress": "A response is already being generated.",
       "message_limit_reached": "This session reached its message limit. Reset it to continue.",
       "message_too_large": "This prompt is too long. Shorten it and try again."

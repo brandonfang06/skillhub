@@ -24,7 +24,13 @@ describe('playground sidecar client', () => {
             displayName: 'Notes',
             version: '1.0.0',
           },
-          contextFiles: [{ path: 'SKILL.md', content: 'Summarize' }],
+          contextFiles: [
+            {
+              path: 'SKILL.md',
+              content: 'Summarize',
+              includedInPrompt: true,
+            },
+          ],
         }),
         {
           status: 201,

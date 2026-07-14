@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useSearch } from '@tanstack/react-router'
-import { ArrowLeft, LockKeyhole } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, LockKeyhole } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { PlaygroundChat } from '@/features/playground/playground-chat'
@@ -88,7 +88,16 @@ export function SkillPlaygroundPage() {
           />
         </header>
 
-        <div className="grid h-[calc(100dvh-13rem)] min-h-0 min-[900px]:h-[clamp(28rem,calc(100dvh-13rem),48rem)] min-[900px]:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+        <div
+          data-playground-execution-notice
+          role="note"
+          className="flex items-start gap-2 border-b border-[#25272D] bg-[#0F1012] px-3 py-2 text-xs leading-5 text-[#A4A9B3] sm:px-4"
+        >
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <p>{t('playground.executionNotice')}</p>
+        </div>
+
+        <div className="grid h-[calc(100dvh-16rem)] min-h-0 min-[900px]:h-[clamp(28rem,calc(100dvh-16rem),48rem)] min-[900px]:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
           <PlaygroundChat
             state={playground.state}
             messages={playground.messages}
