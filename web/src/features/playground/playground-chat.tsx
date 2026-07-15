@@ -67,6 +67,9 @@ export function PlaygroundChat({
   }
   const canOfferInstall =
     latestAssistantMessage?.completed === true && !isSending && !errorCode
+  const hasTranscriptError = Boolean(
+    errorCode && messages.some((message) => message.errorCode === errorCode),
+  )
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ block: 'end' })
@@ -142,7 +145,8 @@ export function PlaygroundChat({
             {t('playground.connectingTitle')}
           </div>
         )}
-        {(state === 'unavailable' || state === 'expired') && (
+        {((state === 'unavailable' && messages.length === 0) ||
+          state === 'expired') && (
           <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
             <AlertCircle className="mb-3 h-6 w-6 text-[#858B96]" />
             <h3 className="text-sm font-semibold text-[#F7F8F8]">
@@ -174,28 +178,56 @@ export function PlaygroundChat({
             {t('playground.emptyState')}
           </div>
         )}
-        {state === 'ready' && messages.map((message) => (
-          <div
-            key={message.id}
-            className={
-              message.role === 'user'
-                ? 'ml-auto max-w-[85%] rounded-md bg-indigo-600 px-4 py-3 text-sm text-white sm:max-w-[75%]'
-                : 'mr-auto max-w-[92%] border-l border-[#343740] px-4 py-2 text-sm text-[#E6E8EC] sm:max-w-[82%]'
-            }
-          >
-            <div className="mb-1 text-xs font-medium text-current opacity-60">
-              {message.role === 'user'
-                ? t('playground.you')
-                : t('playground.assistant')}
-            </div>
-            <div className="whitespace-pre-wrap break-words">
-              {message.content}
-              {message.streaming && (
-                <span className="ml-1 inline-block h-3 w-1 animate-pulse bg-current" />
+        {(state === 'ready' || state === 'unavailable') &&
+          messages.map((message) => (
+            <div
+              key={message.id}
+              className={
+                message.role === 'user'
+                  ? 'ml-auto max-w-[85%] rounded-md bg-indigo-600 px-4 py-3 text-sm text-white sm:max-w-[75%]'
+                  : 'mr-auto max-w-[92%] border-l border-[#343740] px-4 py-2 text-sm text-[#E6E8EC] sm:max-w-[82%]'
+              }
+            >
+              <div className="mb-1 text-xs font-medium text-current opacity-60">
+                {message.role === 'user'
+                  ? t('playground.you')
+                  : t('playground.assistant')}
+              </div>
+              <div className="whitespace-pre-wrap break-words">
+                {message.content}
+                {message.streaming && (
+                  <span className="ml-1 inline-block h-3 w-1 animate-pulse bg-current" />
+                )}
+              </div>
+              {message.errorCode && (
+                <div
+                  data-playground-message-error
+                  role="alert"
+                  className="mt-3 flex gap-2 text-red-400"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{t(`playground.errors.${message.errorCode}`)}</span>
+                </div>
               )}
             </div>
+          ))}
+        {state === 'unavailable' && messages.length > 0 && (
+          <div className="flex flex-col items-start border-t border-[#25272D] pt-4">
+            <p className="text-sm text-[#A4A9B3]">
+              {t('playground.unavailableDescription')}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleReload}
+              className="mt-3 h-11 border-[#343740] text-[#F7F8F8] hover:border-indigo-500/70 hover:bg-[#17181D]"
+            >
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              {t('playground.reload')}
+            </Button>
           </div>
-        ))}
+        )}
         <div ref={transcriptEndRef} aria-hidden="true" />
       </div>
 
@@ -247,7 +279,7 @@ export function PlaygroundChat({
         onSubmit={handleSubmit}
         className="shrink-0 border-t border-[#25272D] bg-[#0F1012] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4"
       >
-        {errorCode && (
+        {errorCode && !hasTranscriptError && (
           <div
             role="alert"
             className="mb-3 flex items-center gap-2 text-sm text-red-400"

@@ -1535,6 +1535,9 @@
       "provider_unavailable": "The model provider is unavailable. Reset or try again.",
       "output_truncated": "The response reached its output limit. Partial output was preserved, but this run was not marked complete.",
       "response_incomplete": "The model ended without a normal completion signal. Partial output was preserved, but this run was not marked complete.",
+      "reasoning_only_response": "The model produced reasoning but no visible answer. Try again. If this continues, ask an administrator to disable thinking mode for this model.",
+      "empty_response": "The model returned no visible content. Try again.",
+      "visible_output_timeout": "The model did not produce a visible answer in time. Try again or ask an administrator to check the model queue and thinking configuration.",
       "generation_in_progress": "A response is already being generated.",
       "message_limit_reached": "This session reached its message limit. Reset it to continue.",
       "message_too_large": "This prompt is too long. Shorten it and try again."

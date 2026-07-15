@@ -110,6 +110,36 @@ describe('PlaygroundChat', () => {
     expect(html).toContain('playground.errors.provider_unavailable')
   })
 
+  it('renders a generation failure in the assistant response position', () => {
+    const html = renderToStaticMarkup(
+      <PlaygroundChat
+        state="ready"
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: '',
+            streaming: false,
+            completed: false,
+            errorCode: 'reasoning_only_response',
+          },
+        ]}
+        isSending={false}
+        namespace="global"
+        slug="notes"
+        errorCode="reasoning_only_response"
+        onSend={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain('data-playground-message-error="true"')
+    expect(html).toContain('playground.errors.reasoning_only_response')
+    expect(
+      html.match(/playground\.errors\.reasoning_only_response/g),
+    ).toHaveLength(1)
+  })
+
   it('keeps truncated output without offering installation', () => {
     const html = renderToStaticMarkup(
       <PlaygroundChat
@@ -204,6 +234,34 @@ describe('PlaygroundChat', () => {
       />,
     )
 
+    expect(html).toContain('playground.reload')
+  })
+
+  it('keeps a failed response visible when the event stream disconnects', () => {
+    const html = renderToStaticMarkup(
+      <PlaygroundChat
+        state="unavailable"
+        messages={[
+          { id: 'user-1', role: 'user', content: 'Try the model' },
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: '',
+            completed: false,
+            errorCode: 'provider_unavailable',
+          },
+        ]}
+        isSending={false}
+        namespace="global"
+        slug="notes"
+        errorCode="provider_unavailable"
+        onSend={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain('Try the model')
+    expect(html).toContain('data-playground-message-error="true"')
     expect(html).toContain('playground.reload')
   })
 

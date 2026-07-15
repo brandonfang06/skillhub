@@ -28,6 +28,7 @@ export type ChatMessage = {
   content: string
   streaming?: boolean
   completed?: boolean
+  errorCode?: string
 }
 
 export type PlaygroundEvent =
@@ -35,7 +36,11 @@ export type PlaygroundEvent =
   | { type: 'message.delta'; delta: string }
   | { type: 'message.completed' }
   | { type: 'session.reset' }
-  | { type: 'error'; code: string }
+  | {
+      type: 'error'
+      code: string
+      reason?: 'reasoning_only' | 'empty' | 'visible_output_timeout'
+    }
 
 type UsePlaygroundInput = {
   namespace: string
@@ -49,6 +54,19 @@ let messageSequence = 0
 function nextMessageId(role: ChatMessage['role']): string {
   messageSequence += 1
   return `${role}-${messageSequence}`
+}
+
+function displayErrorCode(event: Extract<PlaygroundEvent, { type: 'error' }>) {
+  if (event.reason === 'reasoning_only') {
+    return 'reasoning_only_response'
+  }
+  if (event.reason === 'empty') {
+    return 'empty_response'
+  }
+  if (event.reason === 'visible_output_timeout') {
+    return 'visible_output_timeout'
+  }
+  return event.code
 }
 
 export function applyPlaygroundEvent(
@@ -80,6 +98,20 @@ export function applyPlaygroundEvent(
     }
   }
   if (index < 0) {
+    const latest = messages[messages.length - 1]
+    if (event.type === 'error' && latest?.role === 'user') {
+      return [
+        ...messages,
+        {
+          id: nextMessageId('assistant'),
+          role: 'assistant',
+          content: '',
+          streaming: false,
+          completed: false,
+          errorCode: displayErrorCode(event),
+        },
+      ]
+    }
     return messages
   }
   const next = [...messages]
@@ -88,10 +120,13 @@ export function applyPlaygroundEvent(
     next[index] = { ...current, content: `${current.content}${event.delta}` }
   } else if (event.type === 'message.completed') {
     next[index] = { ...current, streaming: false, completed: true }
-  } else if (!current.content) {
-    next.splice(index, 1)
   } else {
-    next[index] = { ...current, streaming: false, completed: false }
+    next[index] = {
+      ...current,
+      streaming: false,
+      completed: false,
+      errorCode: displayErrorCode(event),
+    }
   }
   return next
 }
@@ -168,17 +203,30 @@ export function usePlayground({
         if (typeof rawData === 'string' && rawData) {
           const data = JSON.parse(rawData) as PlaygroundEvent
           if (data.type === 'error') {
+            const errorCode = displayErrorCode(data)
             setMessages((currentMessages) =>
               applyPlaygroundEvent(currentMessages, data),
             )
             setIsGenerating(false)
-            setErrorCode(data.code)
+            setErrorCode(errorCode)
             setState('ready')
             return
           }
         }
+        const streamError: PlaygroundEvent = {
+          type: 'error',
+          code: 'provider_unavailable',
+        }
+        setMessages((currentMessages) =>
+          applyPlaygroundEvent(currentMessages, streamError),
+        )
         setIsGenerating(false)
+        setErrorCode('provider_unavailable')
         setState('unavailable')
+        source.close()
+        if (eventSourceRef.current === source) {
+          eventSourceRef.current = null
+        }
       })
     },
     [],

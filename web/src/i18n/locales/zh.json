@@ -1524,6 +1524,9 @@
       "provider_unavailable": "模型服务当前不可用，请重置或稍后重试。",
       "output_truncated": "回复已达到输出上限，已保留当前内容；本次运行不会标记为完成。",
       "response_incomplete": "模型未以正常完成状态结束，已保留当前内容；本次运行不会标记为完成。",
+      "reasoning_only_response": "模型只生成了推理内容，没有可显示的答案。请重试；如持续发生，请由管理员关闭该模型的 thinking mode。",
+      "empty_response": "模型没有返回可显示的内容，请重试。",
+      "visible_output_timeout": "模型未及时生成可显示的答案。请重试，或请管理员检查模型队列与 thinking 配置。",
       "generation_in_progress": "当前已有回复正在生成。",
       "message_limit_reached": "此会话已达到消息上限，请重置后继续。",
       "message_too_large": "Prompt 太长，请缩短后重试。"

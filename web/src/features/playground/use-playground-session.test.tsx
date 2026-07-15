@@ -43,12 +43,13 @@ vi.mock('./api', () => {
   }
 })
 
-type Listener = (event: MessageEvent<string>) => void
+type Listener = (event: Event) => void
 
 class FakeEventSource {
   static instances: FakeEventSource[] = []
 
   onopen: (() => void) | null = null
+  closed = false
   private readonly listeners = new Map<string, Listener[]>()
 
   constructor(readonly url: string) {
@@ -68,7 +69,15 @@ class FakeEventSource {
     }
   }
 
-  close() {}
+  emitNativeError() {
+    for (const listener of this.listeners.get('error') ?? []) {
+      listener(new Event('error'))
+    }
+  }
+
+  close() {
+    this.closed = true
+  }
 }
 
 import { SidecarError } from './api'
@@ -180,8 +189,42 @@ describe('usePlayground generation state', () => {
     expect((result.current as { errorCode?: string }).errorCode).toBe(
       'provider_unavailable',
     )
+    expect(result.current.messages).toEqual([
+      {
+        id: expect.stringMatching(/^user-/),
+        role: 'user',
+        content: 'Try the model',
+      },
+      {
+        id: expect.stringMatching(/^assistant-/),
+        role: 'assistant',
+        content: '',
+        streaming: false,
+        completed: false,
+        errorCode: 'provider_unavailable',
+      },
+    ])
+  })
+
+  it('closes a broken event stream and preserves the failed response', async () => {
+    const { result } = renderPlayground()
+    await openSession(result)
+    const source = FakeEventSource.instances[0]
+    act(() => result.current.send('Try the model'))
+    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledOnce())
+
+    act(() => source.emitNativeError())
+
+    await waitFor(() => expect(result.current.state).toBe('unavailable'))
+    expect(result.current.isSending).toBe(false)
+    expect(source.closed).toBe(true)
     expect(
-      result.current.messages.some((message) => message.role === 'assistant'),
-    ).toBe(false)
+      result.current.messages[result.current.messages.length - 1],
+    ).toMatchObject({
+      role: 'assistant',
+      streaming: false,
+      completed: false,
+      errorCode: 'provider_unavailable',
+    })
   })
 })

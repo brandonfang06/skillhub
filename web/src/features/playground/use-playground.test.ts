@@ -27,14 +27,21 @@ describe('applyPlaygroundEvent', () => {
     })
   })
 
-  it('removes an empty assistant placeholder after a provider error', () => {
+  it('keeps a provider error in the assistant response position', () => {
     const started = applyPlaygroundEvent([], { type: 'message.started' })
     const failed = applyPlaygroundEvent(started, {
       type: 'error',
       code: 'provider_unavailable',
     })
 
-    expect(failed).toEqual([])
+    expect(failed).toHaveLength(1)
+    expect(failed[0]).toMatchObject({
+      role: 'assistant',
+      content: '',
+      streaming: false,
+      completed: false,
+      errorCode: 'provider_unavailable',
+    })
   })
 
   it('preserves partial provider output without marking it completed', () => {
@@ -53,6 +60,54 @@ describe('applyPlaygroundEvent', () => {
       content: 'Partial answer',
       streaming: false,
       completed: false,
+      errorCode: 'provider_unavailable',
+    })
+  })
+
+  it('creates an assistant error when the stream fails before start', () => {
+    const messages: ChatMessage[] = [
+      { id: 'user-1', role: 'user', content: 'Try the model' },
+    ]
+    const failed = applyPlaygroundEvent(messages, {
+      type: 'error',
+      code: 'provider_unavailable',
+    })
+
+    expect(failed).toHaveLength(2)
+    expect(failed[1]).toMatchObject({
+      role: 'assistant',
+      content: '',
+      streaming: false,
+      completed: false,
+      errorCode: 'provider_unavailable',
+    })
+  })
+
+  it('maps a compatible incomplete event to a reasoning-only message', () => {
+    const started = applyPlaygroundEvent([], { type: 'message.started' })
+    const failed = applyPlaygroundEvent(started, {
+      type: 'error',
+      code: 'response_incomplete',
+      reason: 'reasoning_only',
+    })
+
+    expect(failed[0]).toMatchObject({
+      role: 'assistant',
+      errorCode: 'reasoning_only_response',
+    })
+  })
+
+  it('maps a compatible incomplete event to a visible-output timeout', () => {
+    const started = applyPlaygroundEvent([], { type: 'message.started' })
+    const failed = applyPlaygroundEvent(started, {
+      type: 'error',
+      code: 'response_incomplete',
+      reason: 'visible_output_timeout',
+    })
+
+    expect(failed[0]).toMatchObject({
+      role: 'assistant',
+      errorCode: 'visible_output_timeout',
     })
   })
 
