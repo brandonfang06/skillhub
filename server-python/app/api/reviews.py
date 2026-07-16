@@ -20,6 +20,12 @@ from app.review.approval import (
     submit_review_task,
     withdraw_review_task,
 )
+from app.review.batch import (
+    ReviewBatchDecisionError,
+    ReviewBatchDecisionInput,
+    decide_review_tasks_batch,
+    validate_review_batch_input,
+)
 from app.review.query import (
     ReviewListQuery,
     ReviewQueryError,
@@ -43,6 +49,12 @@ class ReviewActionRequest(BaseModel):
 
 class ReviewSubmitRequest(BaseModel):
     skillVersionId: int
+
+
+class ReviewBatchDecisionRequest(BaseModel):
+    reviewTaskIds: list[int]
+    decision: str
+    comment: str | None = None
 
 
 async def _resolve_approval_result(result: Any | Awaitable[Any]) -> Any:
@@ -128,6 +140,38 @@ async def reject_review(
             )
         )
     except ReviewApprovalError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+async def decide_reviews_batch(
+    request: Request,
+    body: ReviewBatchDecisionRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    batch_input = ReviewBatchDecisionInput(
+        review_task_ids=body.reviewTaskIds,
+        decision=body.decision,
+        reviewer_id=user_id,
+        comment=body.comment,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "review_batch_writer", None)
+    try:
+        validate_review_batch_input(batch_input)
+        data = await _resolve_approval_result(
+            writer(batch_input)
+            if writer is not None
+            else decide_review_tasks_batch(
+                request.app.state.db_engine,
+                batch_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
+        )
+    except ReviewBatchDecisionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
@@ -483,6 +527,15 @@ async def submit_review_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await submit_review(request, body, mock_user_id)
+
+
+@router.post("/api/web/reviews/batch-decision")
+async def decide_reviews_batch_route(
+    request: Request,
+    body: ReviewBatchDecisionRequest,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await decide_reviews_batch(request, body, mock_user_id)
 
 
 @router.post("/api/v1/reviews/{review_task_id}/approve")

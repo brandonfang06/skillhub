@@ -1,6 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+// @vitest-environment jsdom
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+
+const batchMutateAsyncMock = vi.hoisted(() => vi.fn())
+const toastMocks = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: unknown; to: string }) => createElement('a', { href: to }, children as string),
@@ -59,6 +69,22 @@ vi.mock('@/features/review/use-review-list', () => ({
   useReviewList: (...args: unknown[]) => useReviewListMock(...args),
 }))
 
+vi.mock('@/features/review/use-batch-review', () => ({
+  useBatchReviewDecision: () => ({
+    mutateAsync: batchMutateAsyncMock,
+    isPending: false,
+  }),
+}))
+
+vi.mock('@/shared/components/confirm-dialog', () => ({
+  ConfirmDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
+    open ? createElement('button', { 'data-testid': 'approve-confirm', onClick: onConfirm }, 'confirm') : null,
+}))
+
+vi.mock('@/shared/lib/toast', () => ({
+  toast: toastMocks,
+}))
+
 vi.mock('@/shared/components/dashboard-page-header', () => ({
   DashboardPageHeader: () => null,
 }))
@@ -67,7 +93,15 @@ vi.mock('@/features/namespace/namespace-header', () => ({
   NamespaceHeader: () => null,
 }))
 
-import { NamespaceReviewsPage } from './namespace-reviews'
+import {
+  NamespaceReviewsPage,
+  toggleCurrentPageReviewSelection,
+  toggleReviewSelection,
+} from './namespace-reviews'
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('NamespaceReviewsPage', () => {
   function createReviewItem(id: number) {
@@ -88,6 +122,16 @@ describe('NamespaceReviewsPage', () => {
 
   beforeEach(() => {
     paginationProps.length = 0
+    batchMutateAsyncMock.mockReset()
+    batchMutateAsyncMock.mockResolvedValue({
+      totalCount: 1,
+      successCount: 1,
+      failureCount: 0,
+      results: [],
+    })
+    toastMocks.error.mockReset()
+    toastMocks.success.mockReset()
+    toastMocks.warning.mockReset()
     useNamespaceDetailMock.mockReset()
     useReviewListMock.mockReset()
 
@@ -124,12 +168,75 @@ describe('NamespaceReviewsPage', () => {
     expect(typeof NamespaceReviewsPage).toBe('function')
   })
 
+  it('toggles one pending review without changing other selections', () => {
+    expect(toggleReviewSelection([3], 5, true)).toEqual([3, 5])
+    expect(toggleReviewSelection([3, 5], 3, false)).toEqual([5])
+  })
+
+  it('selects and clears only the review tasks on the current page', () => {
+    expect(toggleCurrentPageReviewSelection([99], [1, 2], true)).toEqual([99, 1, 2])
+    expect(toggleCurrentPageReviewSelection([99, 1, 2], [1, 2], false)).toEqual([99])
+  })
+
+  it('submits selected pending reviews once after approval confirmation', async () => {
+    render(createElement(NamespaceReviewsPage))
+
+    fireEvent.click(screen.getByTestId('review-select-1'))
+    fireEvent.click(screen.getByText('nsReviews.approveSelected'))
+    fireEvent.click(screen.getByTestId('approve-confirm'))
+
+    await waitFor(() => {
+      expect(batchMutateAsyncMock).toHaveBeenCalledOnce()
+    })
+    expect(batchMutateAsyncMock).toHaveBeenCalledWith({
+      reviewTaskIds: [1],
+      decision: 'APPROVE',
+      comment: undefined,
+    })
+    expect(toastMocks.success).toHaveBeenCalledOnce()
+  })
+
+  it('requires one shared rejection reason and reports partial success', async () => {
+    batchMutateAsyncMock.mockResolvedValue({
+      totalCount: 1,
+      successCount: 0,
+      failureCount: 1,
+      results: [],
+    })
+    render(createElement(NamespaceReviewsPage))
+
+    fireEvent.click(screen.getByTestId('review-select-1'))
+    fireEvent.click(screen.getByText('nsReviews.rejectSelected'))
+
+    const rejectReason = screen.getByPlaceholderText('nsReviews.rejectReasonPlaceholder')
+    const rejectButtons = screen.getAllByText('nsReviews.rejectSelected')
+    const rejectConfirm = rejectButtons[rejectButtons.length - 1]
+    expect((rejectConfirm as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.change(rejectReason, { target: { value: 'Needs documentation' } })
+    expect((rejectConfirm as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(rejectConfirm)
+
+    await waitFor(() => {
+      expect(batchMutateAsyncMock).toHaveBeenCalledWith({
+        reviewTaskIds: [1],
+        decision: 'REJECT',
+        comment: 'Needs documentation',
+      })
+    })
+    expect(toastMocks.error).toHaveBeenCalledOnce()
+  })
+
   it('renders pagination for namespace review list when totalPages > 1', () => {
     const html = renderToStaticMarkup(createElement(NamespaceReviewsPage))
 
     expect(html).toContain('nsReviews.pageSummary')
     expect(html).toContain('/dashboard/namespaces/test-ns/reviews/1')
     expect(html).toContain('nsReviews.openReview')
+    expect(html).toContain('nsReviews.selectCurrentPage')
+    expect(html).toContain('nsReviews.approveSelected')
+    expect(html).toContain('nsReviews.rejectSelected')
+    expect(html).toContain('data-testid="review-select-1"')
     expect(paginationProps).toHaveLength(1)
     expect(paginationProps[0]?.page).toBe(0)
     expect(paginationProps[0]?.totalPages).toBe(2)

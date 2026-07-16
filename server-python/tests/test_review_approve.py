@@ -178,8 +178,10 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     skill_update = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill\n" in sql)
     audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
     search_upsert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_search_document" in sql)
+    search_source = next(sql for sql in connection.statements if "FROM skill s" in sql and "s.latest_version_id" in sql)
     assert review_update < version_update < skill_update < audit_insert
     assert audit_insert < search_upsert
+    assert "sv.status = 'PUBLISHED'" in search_source
     assert connection.params[review_update]["status"] == "APPROVED"
     assert connection.params[version_update]["status"] == "PUBLISHED"
     assert connection.params[skill_update]["latest_version_id"] == 42

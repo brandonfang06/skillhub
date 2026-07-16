@@ -30,6 +30,7 @@ describe('clearDeletedSkillQueries', () => {
     queryClient.setQueryData(['skills', 1, 'star'], { starred: true })
     queryClient.setQueryData(['skills', 1, 'rating'], { score: 5, rated: true })
     queryClient.setQueryData(['skills', 'my'], { items: [{ slug: 'demo-skill' }], total: 1, page: 0, size: 12 })
+    queryClient.setQueryData(['namespaces', 'my'], [{ slug: 'global', canDelete: false }])
 
     clearDeletedSkillQueries(queryClient, 'global', 'demo-skill', 1)
 
@@ -44,5 +45,6 @@ describe('clearDeletedSkillQueries', () => {
       page: 0,
       size: 12,
     })
+    expect(queryClient.getQueryState(['namespaces', 'my'])?.isInvalidated).toBe(true)
   })
 })

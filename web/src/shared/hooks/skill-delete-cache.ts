@@ -17,4 +17,5 @@ export function clearDeletedSkillQueries(queryClient: QueryClient, namespace: st
 
   void queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
   void queryClient.invalidateQueries({ queryKey: ['skills'] })
+  void queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
 }

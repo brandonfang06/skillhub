@@ -833,13 +833,12 @@ async def read_skill_search(
         "s.status = 'ACTIVE'",
         "s.hidden = FALSE",
         namespace_status_filter,
+        "isv.status = 'PUBLISHED'",
     ]
-    installable_join_sql = ""
+    published_version_join_sql = "JOIN skill_version isv ON isv.id = s.latest_version_id"
     if installable_only:
-        installable_join_sql = "JOIN skill_version isv ON isv.id = s.latest_version_id"
         filters.extend(
             [
-                "isv.status = 'PUBLISHED'",
                 "isv.download_ready = TRUE",
                 "isv.yanked_at IS NULL",
             ]
@@ -909,7 +908,7 @@ async def read_skill_search(
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
-                    {installable_join_sql}
+                    {published_version_join_sql}
                     WHERE {where_sql}
                     """
                 ),
@@ -940,7 +939,7 @@ async def read_skill_search(
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
-                    {installable_join_sql}
+                    {published_version_join_sql}
                     LEFT JOIN LATERAL (
                         SELECT sv.id, sv.version, sv.status
                         FROM skill_version sv

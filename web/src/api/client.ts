@@ -15,6 +15,8 @@ import type {
   MergeVerifyRequest,
   ReviewSkillDetail,
   ReviewTask,
+  ReviewBatchDecisionRequest,
+  ReviewBatchDecisionResponse,
   PromotionSortBy,
   PromotionSortDirection,
   PromotionStatus,
@@ -966,6 +968,16 @@ export const reviewApi = {
         'Content-Type': 'application/json',
       }),
       body: JSON.stringify({ comment }),
+    })
+  },
+
+  async batchDecision(request: ReviewBatchDecisionRequest): Promise<ReviewBatchDecisionResponse> {
+    return fetchJson<ReviewBatchDecisionResponse>(`${WEB_API_PREFIX}/reviews/batch-decision`, {
+      method: 'POST',
+      headers: getCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
     })
   },
 }

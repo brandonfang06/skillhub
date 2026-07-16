@@ -401,6 +401,28 @@ export interface ReviewTask {
   reviewedAt?: string
 }
 
+export type ReviewBatchDecision = 'APPROVE' | 'REJECT'
+
+export interface ReviewBatchDecisionRequest {
+  reviewTaskIds: number[]
+  decision: ReviewBatchDecision
+  comment?: string
+}
+
+export interface ReviewBatchDecisionResultItem {
+  reviewTaskId: number
+  success: boolean
+  status?: 'APPROVED' | 'REJECTED' | null
+  errorCode?: string | null
+}
+
+export interface ReviewBatchDecisionResponse {
+  totalCount: number
+  successCount: number
+  failureCount: number
+  results: ReviewBatchDecisionResultItem[]
+}
+
 export interface ReviewSkillDetail {
   skill: SkillDetail
   versions: SkillVersion[]

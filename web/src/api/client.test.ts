@@ -44,6 +44,7 @@ import {
   getPlaygroundRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
   namespaceApi,
+  reviewApi,
 } from './client'
 
 beforeEach(() => {
@@ -187,6 +188,54 @@ describe('namespaceApi.delete', () => {
       expect.objectContaining({
         method: 'DELETE',
         headers: expect.any(Headers),
+      }),
+    )
+  })
+})
+
+describe('reviewApi.batchDecision', () => {
+  it('sends one POST request with the selected review tasks', async () => {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: {
+        cookie: 'XSRF-TOKEN=test-token',
+      },
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: {
+          totalCount: 2,
+          successCount: 2,
+          failureCount: 0,
+          results: [],
+        },
+        timestamp: '2026-07-16T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await reviewApi.batchDecision({
+      reviewTaskIds: [11, 12],
+      decision: 'REJECT',
+      comment: 'Needs changes',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/web/reviews/batch-decision',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.any(Headers),
+        body: JSON.stringify({
+          reviewTaskIds: [11, 12],
+          decision: 'REJECT',
+          comment: 'Needs changes',
+        }),
       }),
     )
   })

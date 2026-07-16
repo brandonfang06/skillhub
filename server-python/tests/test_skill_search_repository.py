@@ -135,6 +135,27 @@ async def test_read_skill_search_can_filter_installable_latest_versions_before_p
 
 
 @pytest.mark.anyio
+async def test_read_skill_search_always_requires_a_published_latest_version() -> None:
+    connection = FakeSkillSearchConnection()
+
+    await read_skill_search(
+        FakeEngine(connection),
+        keyword=None,
+        namespace=None,
+        labels=[],
+        sort="newest",
+        page=0,
+        size=20,
+    )
+
+    for statement in connection.statements:
+        assert "JOIN skill_version isv ON isv.id = s.latest_version_id" in statement
+        assert "isv.status = 'PUBLISHED'" in statement
+        assert "isv.download_ready = TRUE" not in statement
+        assert "isv.yanked_at IS NULL" not in statement
+
+
+@pytest.mark.anyio
 async def test_read_skill_search_keeps_anonymous_visibility_public_only() -> None:
     connection = FakeSkillSearchConnection()
 

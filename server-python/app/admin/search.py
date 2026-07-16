@@ -145,8 +145,9 @@ async def _read_active_skills(connection: Any) -> list[dict[str, Any]]:
                        CAST(sv.parsed_metadata_json AS text) AS parsed_metadata_json
                 FROM skill s
                 LEFT JOIN namespace n ON n.id = s.namespace_id
-                LEFT JOIN skill_version sv ON sv.id = s.latest_version_id
+                JOIN skill_version sv ON sv.id = s.latest_version_id
                 WHERE s.status = 'ACTIVE'
+                  AND sv.status = 'PUBLISHED'
                 ORDER BY s.id ASC
                 """
             )
@@ -247,6 +248,7 @@ async def upsert_skill_search_document(connection: Any, skill_id: int) -> None:
                 WHERE s.id = :skill_id
                   AND s.status = 'ACTIVE'
                   AND s.latest_version_id IS NOT NULL
+                  AND sv.status = 'PUBLISHED'
                 LIMIT 1
                 """
             ),

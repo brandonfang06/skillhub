@@ -201,6 +201,9 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
     assert rebuilt == {"rebuilt": 1}
     assert set(connection.documents) == {10}
     document = connection.documents[10]
+    active_skill_query = next(statement for statement in connection.statements if "FROM skill s" in statement)
+    assert "JOIN skill_version sv ON sv.id = s.latest_version_id" in active_skill_query
+    assert "sv.status = 'PUBLISHED'" in active_skill_query
     assert any("CAST(sv.parsed_metadata_json AS text)" in statement for statement in connection.statements)
     assert all("parsed_metadata_json::text" not in statement for statement in connection.statements)
     assert document["namespace_slug"] == "global"
