@@ -34,6 +34,25 @@ For full Kubernetes examples, see `deploy/k8s/environment-variables.zh.md`.
 | --- | --- | --- | --- |
 | `SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS` | ConfigMap | `12` | Rolling retention for `local_skill_download_event`. The backend prunes expired rows on startup and then once per day. Set `0` or a negative value to disable automatic pruning. |
 
+## Product Suite Namespace Admin Sync
+
+These variables belong to the optional product-suite synchronization command,
+not the long-running backend process. See
+[PRODUCT_SUITE_ADMIN_SYNC.zh.md](PRODUCT_SUITE_ADMIN_SYNC.zh.md) for the
+internal source-module contract, local `uv` commands, JSON result fields, and
+Kubernetes operation.
+
+| Env var | Source | Default | Notes |
+| --- | --- | --- | --- |
+| `SKILLHUB_PRODUCT_SUITE_SOURCE_MODULE` | ConfigMap | unset | Required Python import path for the organization-owned PIC source module. |
+| `SKILLHUB_PRODUCT_SUITE_API_URL` | ConfigMap | unset | Required non-secret PIC API URL passed to the source module. |
+| `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | ConfigMap | `30` | Source timeout; must be greater than `0` and no greater than `300`. |
+| `SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER` | ConfigMap | `keycloak` | `identity_binding.provider_code`; use the OAuth registration id, not the login button display name. |
+
+PIC credentials are private to the internal source module and should be
+injected from that module's own Kubernetes Secret. The shared command does not
+define or read a PIC token variable.
+
 ## PostgreSQL
 
 Prefer `SKILLHUB_DATABASE_URL`.
