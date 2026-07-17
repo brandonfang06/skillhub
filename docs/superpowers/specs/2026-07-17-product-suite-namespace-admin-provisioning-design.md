@@ -1,7 +1,7 @@
 # Product Suite Namespace Admin Daily Sync Design
 
 **Date:** 2026-07-17
-**Status:** Revised for review
+**Status:** Approved
 **Scope:** Organization-specific synchronization command and Kubernetes CronJob
 
 ## Problem
@@ -151,7 +151,7 @@ The product suite HTTP request occurs only inside the configured internal
 source module invoked by the CronJob command:
 
 ```powershell
-uv run python -m app.integrations.product_suite sync `
+uv run python -m app.integrations.product_suite `
   --source-module company.pic_api `
   --api-url https://pic.example.internal/api
 ```
