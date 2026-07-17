@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { MouseEvent } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
 const hasRoleMock = vi.fn<(role: string) => boolean>((role: string) => role === 'USER')
@@ -10,6 +10,7 @@ const useSkillDetailMock = vi.fn()
 const useSkillLabelsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
+const useResourceDiagnosticsMock = vi.fn()
 let playgroundEnabled = false
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
@@ -129,6 +130,10 @@ vi.mock('@/features/skill/install-command', () => ({
   InstallCommand: () => <div>install</div>,
 }))
 
+vi.mock('@/features/skill/use-resource-diagnostics', () => ({
+  useResourceDiagnostics: (...args: unknown[]) => useResourceDiagnosticsMock(...args),
+}))
+
 vi.mock('@/features/social/rating-input', () => ({
   RatingInput: () => <div>__RATING_WIDGET__</div>,
 }))
@@ -196,6 +201,7 @@ function createSkill(overrides: Record<string, unknown> = {}) {
     hidden: false,
     namespace: 'global',
     canManageLifecycle: true,
+    platformAdminOverride: false,
     canSubmitPromotion: false,
     canInteract: true,
     canReport: true,
@@ -208,6 +214,10 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SkillDetailPage', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   beforeEach(() => {
     navigateMock.mockReset()
     playgroundEnabled = false
@@ -240,6 +250,7 @@ describe('SkillDetailPage', () => {
       data: undefined,
     })
     useSkillFilesMock.mockReturnValue({ data: [] })
+    useResourceDiagnosticsMock.mockReturnValue({ data: undefined, isLoading: false, error: null })
   })
 
   it('shows hard delete action for the skill owner', () => {
@@ -258,6 +269,57 @@ describe('SkillDetailPage', () => {
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
     expect(html).not.toContain('skillDetail.deleteSkill')
+  })
+
+  it('runs resource diagnostics only after a platform admin requests them', () => {
+    authState = {
+      user: { userId: 'platform-admin', platformRoles: ['SUPER_ADMIN'] },
+      hasRole: (role: string) => role === 'SUPER_ADMIN',
+    }
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+        platformAdminOverride: true,
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useResourceDiagnosticsMock.mockReturnValue({
+      data: {
+        skillId: 1,
+        namespace: 'global',
+        slug: 'demo-skill',
+        namespaceStatus: 'ACTIVE',
+        latestVersionId: 10,
+        versionCount: 1,
+        fileCount: 0,
+        blankStorageKeyCount: 0,
+        checkedObjectCount: 1,
+        checkedFileObjectCount: 0,
+        uncheckedFileObjectCount: 0,
+        missingObjects: [{ path: 'bundle:1.0.0', storageKey: 'packages/1/10/bundle.zip' }],
+        storageProbeError: null,
+        diagnosticStatus: 'MISSING_OBJECTS',
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByText('skillDetail.resourceDiagnosticsTitle')).toBeTruthy()
+    expect(screen.getByText('skillDetail.runResourceDiagnostics')).toBeTruthy()
+    expect(screen.queryByText('MISSING_OBJECTS')).toBeNull()
+    expect(useResourceDiagnosticsMock).toHaveBeenLastCalledWith(1, false)
+
+    fireEvent.click(screen.getByText('skillDetail.runResourceDiagnostics'))
+
+    expect(screen.getByText('MISSING_OBJECTS')).toBeTruthy()
+    expect(screen.getByText('skillDetail.deleteSkill')).toBeTruthy()
+    expect(screen.queryByText('skillDetail.archiveSkill')).toBeNull()
+    expect(useResourceDiagnosticsMock).toHaveBeenLastCalledWith(1, true)
   })
 
   it('renders public skill details for an anonymous viewer', () => {

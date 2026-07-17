@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.auth.policy import is_namespace_manager, is_namespace_owner, namespace_role_allows
+from app.namespace.dependencies import has_namespace_dependencies, read_namespace_dependency_counts
 from app.namespace.read import _namespace_response
 
 
@@ -106,25 +107,6 @@ async def _require_admin_or_owner(connection: Any, namespace_id: int, user_id: s
     if not is_namespace_manager(role):
         raise NamespaceMutationError("error.namespace.admin.required", status_code=403)
     return role
-
-
-async def _has_dependencies(connection: Any, namespace_id: int) -> bool:
-    row = (
-        await connection.execute(
-            text(
-                """
-                SELECT
-                    EXISTS (SELECT 1 FROM skill WHERE namespace_id = :namespace_id) AS has_skill,
-                    EXISTS (SELECT 1 FROM review_task WHERE namespace_id = :namespace_id) AS has_review,
-                    EXISTS (SELECT 1 FROM promotion_request WHERE target_namespace_id = :namespace_id) AS has_promotion
-                """
-            ),
-            {"namespace_id": namespace_id},
-        )
-    ).mappings().one_or_none()
-    if row is None:
-        return False
-    return bool(row["has_skill"]) or bool(row["has_review"]) or bool(row["has_promotion"])
 
 
 async def _insert_audit(
@@ -258,15 +240,24 @@ async def update_namespace(
     return _namespace_response(namespace)
 
 
-async def delete_namespace(engine: Any, *, slug: str, actor_user_id: str) -> dict[str, str]:
+async def delete_namespace(
+    engine: Any,
+    *,
+    slug: str,
+    actor_user_id: str,
+    platform_roles: list[str] | None = None,
+) -> dict[str, str]:
     async with engine.begin() as connection:
         namespace = await _read_namespace_by_slug(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_not_immutable(namespace)
-        role = await _read_member_role(connection, namespace_id, actor_user_id)
-        if not is_namespace_owner(role):
-            raise NamespaceMutationError("error.namespace.owner.required", status_code=403)
-        if await _has_dependencies(connection, namespace_id):
+        is_super_admin = "SUPER_ADMIN" in set(platform_roles or [])
+        if not is_super_admin:
+            role = await _read_member_role(connection, namespace_id, actor_user_id)
+            if not is_namespace_owner(role):
+                raise NamespaceMutationError("error.namespace.owner.required", status_code=403)
+        blockers = await read_namespace_dependency_counts(connection, namespace_id)
+        if has_namespace_dependencies(blockers):
             raise NamespaceMutationError("error.namespace.delete.hasDependencies", status_code=400)
         await connection.execute(text("DELETE FROM namespace_member WHERE namespace_id = :namespace_id"), {"namespace_id": namespace_id})
         await connection.execute(text("DELETE FROM namespace WHERE id = :namespace_id"), {"namespace_id": namespace_id})

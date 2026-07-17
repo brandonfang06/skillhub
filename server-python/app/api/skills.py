@@ -18,6 +18,17 @@ async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
+async def _skill_read_identity(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None,
+) -> tuple[str | None, bool]:
+    user = await optional_current_user(request, mock_user_id, authorization)  # noqa: F405
+    if user is None:
+        return None, False
+    return str(user["userId"]), platform_skill_read_override(user)  # noqa: F405
+
+
 def _download_source(request: Request) -> DownloadSource:
     path = request.url.path
     if path.startswith("/api/cli/"):
@@ -424,14 +435,21 @@ async def get_skill_detail(
     slug: str,
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_detail_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, current_user_id))
         else:
-            data = await read_skill_detail(request.app.state.db_engine, namespace, slug, current_user_id)
+            data = await read_skill_detail(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                current_user_id,
+                platform_read_override,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("获取成功", data, request)
@@ -506,9 +524,10 @@ async def get_skill_version_detail(
     version: str,
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_detail_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -519,6 +538,7 @@ async def get_skill_version_detail(
                 slug,
                 version,
                 current_user_id,
+                platform_read_override,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -534,15 +554,24 @@ async def list_skill_versions(
     page: int = 0,
     size: int = 20,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_versions_reader", None)
     page, size = normalize_page_request(page, size)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, page, size, current_user_id))
         else:
-            data = await read_skill_versions(request.app.state.db_engine, namespace, slug, page, size, current_user_id)
+            data = await read_skill_versions(
+                request.app.state.db_engine,
+                namespace,
+                slug,
+                page,
+                size,
+                current_user_id,
+                platform_read_override,
+            )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok("获取成功", data, request)
@@ -556,9 +585,10 @@ async def list_skill_version_files(
     version: str,
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_files_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -569,6 +599,7 @@ async def list_skill_version_files(
                 slug,
                 version,
                 current_user_id,
+                platform_read_override,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -692,9 +723,10 @@ async def get_skill_version_file_content(
     request: Request,
     path: str = Query(...),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_version_file_content_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
     try:
         if reader is not None:
             content = await _resolve_reader_result(reader(namespace, slug, version, path, current_user_id))
@@ -707,6 +739,7 @@ async def get_skill_version_file_content(
                 version,
                 path,
                 current_user_id,
+                platform_read_override,
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

@@ -157,6 +157,7 @@ def build_skill_detail_response(
         "namespace": str(row["namespace"]),
         "labels": labels,
         "canManageLifecycle": can_manage_lifecycle,
+        "platformAdminOverride": bool(row.get("platform_read_override", False)),
         "canSubmitPromotion": can_submit_promotion,
         "canInteract": headline_version is None or headline_version["status"] == "PUBLISHED",
         "canReport": can_report,

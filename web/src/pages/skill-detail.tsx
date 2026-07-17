@@ -12,6 +12,7 @@ import type { SkillFile } from '@/api/types'
 import { InstallCommand } from '@/features/skill/install-command'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
+import { useResourceDiagnostics } from '@/features/skill/use-resource-diagnostics'
 import {
   getOverviewCollapseMaxHeight,
   OVERVIEW_COLLAPSE_DESKTOP_MAX_HEIGHT,
@@ -130,6 +131,7 @@ export function SkillDetailPage() {
   const [deleteSkillInputOpen, setDeleteSkillInputOpen] = useState(false)
   const [deleteSkillInput, setDeleteSkillInput] = useState('')
   const [skillDeleted, setSkillDeleted] = useState(false)
+  const [resourceDiagnosticsSkillId, setResourceDiagnosticsSkillId] = useState<number | null>(null)
   const [deleteVersionTarget, setDeleteVersionTarget] = useState<string | null>(null)
   const [withdrawVersionTarget, setWithdrawVersionTarget] = useState<string | null>(null)
   const [rereleaseTarget, setRereleaseTarget] = useState<string | null>(null)
@@ -156,6 +158,11 @@ export function SkillDetailPage() {
   const qns = detailQueriesEnabled ? namespace : ''
   const qslug = detailQueriesEnabled ? slug : ''
   const { data: skill, isLoading: isLoadingSkill, isFetching: isFetchingSkill, error: skillError } = useSkillDetail(qns, qslug, detailQueriesEnabled)
+  const resourceDiagnosticsRequested = skill?.id === resourceDiagnosticsSkillId
+  const resourceDiagnostics = useResourceDiagnostics(
+    skill?.id ?? 0,
+    Boolean(skill?.platformAdminOverride && resourceDiagnosticsRequested),
+  )
   const skillReady = detailQueriesEnabled && Boolean(skill) && !isLoadingSkill && !isFetchingSkill && !skillError
   const { data: versions } = useSkillVersions(qns, qslug, skillReady)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
@@ -1271,6 +1278,52 @@ export function SkillDetailPage() {
           canManage={canManageLabels}
           isSuperAdmin={hasRole('SUPER_ADMIN')}
         />
+
+        {skill.platformAdminOverride && (
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold font-heading text-foreground">
+                {t('skillDetail.resourceDiagnosticsTitle')}
+              </span>
+            </div>
+            {!resourceDiagnosticsRequested ? (
+              <Button
+                variant="outline"
+                onClick={() => setResourceDiagnosticsSkillId(skill.id)}
+              >
+                {t('skillDetail.runResourceDiagnostics')}
+              </Button>
+            ) : resourceDiagnostics.isLoading ? (
+              <p className="text-sm text-muted-foreground">{t('skillDetail.resourceDiagnosticsLoading')}</p>
+            ) : resourceDiagnostics.error ? (
+              <p className="text-sm text-destructive">{t('skillDetail.resourceDiagnosticsError')}</p>
+            ) : resourceDiagnostics.data ? (
+              <div className="space-y-2 text-sm">
+                <div className="font-mono font-semibold text-foreground">
+                  {resourceDiagnostics.data.diagnosticStatus}
+                </div>
+                <p className="text-muted-foreground">
+                  {t('skillDetail.resourceDiagnosticsSummary', {
+                    versions: resourceDiagnostics.data.versionCount,
+                    files: resourceDiagnostics.data.fileCount,
+                    missing: resourceDiagnostics.data.missingObjects.length,
+                    unchecked: resourceDiagnostics.data.uncheckedFileObjectCount,
+                  })}
+                </p>
+              </div>
+            ) : null}
+            {canHardDeleteSkill && !skill.canManageLifecycle && (
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteSkillConfirmOpen(true)}
+                disabled={deleteSkillMutation.isPending}
+              >
+                {deleteSkillMutation.isPending ? t('skillDetail.processing') : t('skillDetail.deleteSkill')}
+              </Button>
+            )}
+          </Card>
+        )}
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">

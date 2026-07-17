@@ -148,6 +148,7 @@ async def _read_active_skills(connection: Any) -> list[dict[str, Any]]:
                 JOIN skill_version sv ON sv.id = s.latest_version_id
                 WHERE s.status = 'ACTIVE'
                   AND sv.status = 'PUBLISHED'
+                  AND EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)
                 ORDER BY s.id ASC
                 """
             )
@@ -249,6 +250,7 @@ async def upsert_skill_search_document(connection: Any, skill_id: int) -> None:
                   AND s.status = 'ACTIVE'
                   AND s.latest_version_id IS NOT NULL
                   AND sv.status = 'PUBLISHED'
+                  AND EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)
                 LIMIT 1
                 """
             ),

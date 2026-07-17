@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.api import skills as skill_routes
 
 
 def detail_response() -> dict[str, object]:
@@ -22,6 +23,7 @@ def detail_response() -> dict[str, object]:
         "namespace": "global",
         "labels": [],
         "canManageLifecycle": False,
+        "platformAdminOverride": False,
         "canSubmitPromotion": False,
         "canInteract": True,
         "canReport": True,
@@ -99,3 +101,32 @@ def test_skill_detail_route_forwards_none_when_mock_user_header_missing_or_blank
     assert missing_response.status_code == 200
     assert blank_response.status_code == 200
     assert seen == [None, None]
+
+
+def test_skill_detail_route_passes_super_admin_read_override_to_repository(monkeypatch) -> None:
+    seen: list[tuple[object, str, str, str | None, bool]] = []
+    app = create_app()
+    app.state.db_engine = object()
+    app.state.auth_me_reader = lambda user_id: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "mock",
+        "platformRoles": ["SUPER_ADMIN"],
+    }
+
+    async def reader(engine, namespace, slug, current_user_id, platform_read_override):
+        seen.append((engine, namespace, slug, current_user_id, platform_read_override))
+        return detail_response()
+
+    monkeypatch.setattr(skill_routes, "read_skill_detail", reader)
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/skills/team-a/broken-skill",
+        headers={"X-Mock-User-Id": "platform-admin"},
+    )
+
+    assert response.status_code == 200
+    assert seen[0][1:] == ("team-a", "broken-skill", "platform-admin", True)

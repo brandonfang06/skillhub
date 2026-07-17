@@ -127,7 +127,13 @@ export interface ManagedNamespace extends Namespace {
   canUnfreeze: boolean
   canArchive: boolean
   canRestore: boolean
+  deleteAuthorized?: boolean
   canDelete: boolean
+  deleteBlockers?: {
+    skillCount: number
+    reviewTaskCount: number
+    promotionRequestCount: number
+  }
 }
 
 export interface NamespaceMember {
@@ -250,6 +256,7 @@ export interface SkillDetail {
   namespace: string
   labels?: LabelItem[]
   canManageLifecycle: boolean
+  platformAdminOverride?: boolean
   canSubmitPromotion: boolean
   canInteract: boolean
   canReport: boolean
@@ -258,6 +265,32 @@ export interface SkillDetail {
   ownerPreviewVersion?: SkillLifecycleVersion
   ownerPreviewReviewComment?: string
   resolutionMode?: string
+}
+
+export type ResourceDiagnosticStatus =
+  | 'HEALTHY'
+  | 'MISSING_DB_FILES'
+  | 'MISSING_STORAGE_KEYS'
+  | 'MISSING_OBJECTS'
+  | 'PARTIAL'
+  | 'UNVERIFIED'
+
+export interface SkillResourceDiagnostics {
+  skillId: number
+  namespace: string
+  slug: string
+  namespaceStatus: string
+  latestVersionId?: number
+  versionCount: number
+  fileCount: number
+  versionsWithoutFiles: number[]
+  blankStorageKeyCount: number
+  checkedObjectCount: number
+  checkedFileObjectCount: number
+  uncheckedFileObjectCount: number
+  missingObjects: Array<{ path: string; storageKey: string }>
+  storageProbeError?: { code: string } | null
+  diagnosticStatus: ResourceDiagnosticStatus
 }
 
 export interface SubmitPromotionRequest {

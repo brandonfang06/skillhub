@@ -118,10 +118,17 @@ async def list_my_namespaces_route(
     request: Request,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
-    user_id = await _require_user_id(request, x_mock_user_id)
+    user = await _require_current_user(request, x_mock_user_id)
+    user_id = str(user["userId"])
     reader = getattr(request.app.state, "my_namespace_reader", None)
     data = await _resolve_result(
-        reader(user_id) if reader is not None else list_my_namespaces(request.app.state.db_engine, user_id=user_id)
+        reader(user_id)
+        if reader is not None
+        else list_my_namespaces(
+            request.app.state.db_engine,
+            user_id=user_id,
+            platform_roles=platform_roles(user),
+        )
     )
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
@@ -333,7 +340,12 @@ async def delete_namespace_route(
         data = await _resolve_result(
             writer(slug, user)
             if writer is not None
-            else delete_namespace(request.app.state.db_engine, slug=slug, actor_user_id=str(user["userId"]))
+            else delete_namespace(
+                request.app.state.db_engine,
+                slug=slug,
+                actor_user_id=str(user["userId"]),
+                platform_roles=platform_roles(user),
+            )
         )
     except NamespaceMutationError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

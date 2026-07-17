@@ -151,6 +151,7 @@ async def test_read_skill_search_always_requires_a_published_latest_version() ->
     for statement in connection.statements:
         assert "JOIN skill_version isv ON isv.id = s.latest_version_id" in statement
         assert "isv.status = 'PUBLISHED'" in statement
+        assert "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = isv.id)" in statement
         assert "isv.download_ready = TRUE" not in statement
         assert "isv.yanked_at IS NULL" not in statement
 

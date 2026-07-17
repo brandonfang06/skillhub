@@ -14,6 +14,7 @@ from app.admin.skill import (
     unhide_skill_as_admin,
     yank_skill_version_as_admin,
 )
+from app.admin.resource_diagnostics import AdminResourceDiagnosticError, read_skill_resource_diagnostics
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import require_any_platform_role, require_platform_role
@@ -130,6 +131,29 @@ async def yank_skill_version_route_data(
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
 
 
+async def resource_diagnostics_route_data(
+    request: Request,
+    skill_id: int,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> dict[str, Any]:
+    _require_super_admin(await _read_current_user(request, mock_user_id, authorization))
+    reader = getattr(request.app.state, "admin_skill_resource_diagnostics_reader", None)
+    try:
+        data = await _resolve_result(
+            reader(skill_id)
+            if reader is not None
+            else read_skill_resource_diagnostics(
+                request.app.state.db_engine,
+                request.app.state.settings.storage_base_path,
+                skill_id,
+            )
+        )
+    except AdminResourceDiagnosticError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u67e5\u8be2\u6210\u529f", data, request)
+
+
 @router.post("/api/v1/admin/skills/{skill_id}/hide")
 async def hide_skill(
     request: Request,
@@ -163,3 +187,14 @@ async def yank_skill_version(
 ) -> dict[str, Any]:
     await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
     return await yank_skill_version_route_data(request, version_id, body, x_mock_user_id, authorization)
+
+
+@router.get("/api/v1/admin/skills/{skill_id}/resource-diagnostics")
+async def get_skill_resource_diagnostics(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    await reject_bearer_api_token_for_admin_route(request, x_mock_user_id, authorization)
+    return await resource_diagnostics_route_data(request, skill_id, x_mock_user_id, authorization)

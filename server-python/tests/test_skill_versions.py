@@ -36,6 +36,8 @@ class _SkillVersionsOwnerPreviewWithoutLatestConnection:
         sql = str(statement)
         if "FROM skill s" in sql:
             assert "s.latest_version_id IS NOT NULL" not in sql
+            assert "n.status = 'ACTIVE' OR :platform_read_override" in sql
+            assert "s.status = 'ACTIVE' OR :platform_read_override" in sql
             return _FakeResult(
                 {
                     "id": 11,
@@ -256,3 +258,19 @@ def test_read_skill_versions_rejects_public_skill_without_latest_for_anonymous_u
                 None,
             )
         )
+
+
+def test_read_skill_versions_allows_platform_admin_without_owner_access() -> None:
+    result = asyncio.run(
+        skills.read_skill_versions(
+            _FakeEngine(_SkillVersionsOwnerPreviewWithoutLatestConnection()),
+            "global",
+            "demo",
+            0,
+            20,
+            "platform-admin",
+            True,
+        )
+    )
+
+    assert result["items"][0]["status"] == "PENDING_REVIEW"

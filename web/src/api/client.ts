@@ -48,6 +48,7 @@ import type {
   LabelItem,
   BatchMemberResponse,
   PlaygroundCapability,
+  SkillResourceDiagnostics,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -1388,6 +1389,10 @@ export const adminApi = {
       method: 'POST',
       headers: getCsrfHeaders(),
     })
+  },
+
+  async getSkillResourceDiagnostics(skillId: number): Promise<SkillResourceDiagnostics> {
+    return fetchJson<SkillResourceDiagnostics>(`/api/v1/admin/skills/${skillId}/resource-diagnostics`)
   },
 
   async yankVersion(versionId: number, reason?: string): Promise<void> {

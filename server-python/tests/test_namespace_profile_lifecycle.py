@@ -78,6 +78,17 @@ class FakeNamespaceMutationConnection:
         bound = params or {}
         self.statements.append(sql)
         self.params.append(bound)
+        if "SELECT" in sql and "COUNT(*) FROM skill" in sql:
+            namespace_id = int(bound["namespace_ids"][0])
+            has_deps = namespace_id in self.dependencies
+            return FakeResult(
+                row={
+                    "namespace_id": namespace_id,
+                    "skill_count": 1 if has_deps else 0,
+                    "review_task_count": 0,
+                    "promotion_request_count": 0,
+                }
+            )
         if "FROM namespace n" in sql or "FROM namespace" in sql and "WHERE slug" in sql:
             row = self.namespaces.get(str(bound["slug"]))
             return FakeResult(row=row.copy()) if row else FakeResult()
@@ -99,9 +110,6 @@ class FakeNamespaceMutationConnection:
         if "SELECT role" in sql and "FROM namespace_member" in sql:
             role = self.members.get(int(bound["namespace_id"]), {}).get(str(bound["user_id"]))
             return FakeResult(row={"role": role}) if role else FakeResult()
-        if "SELECT" in sql and "has_skill" in sql:
-            has_deps = int(bound["namespace_id"]) in self.dependencies
-            return FakeResult(row={"has_skill": has_deps, "has_review": False, "has_promotion": False})
         if "UPDATE namespace" in sql:
             row = self._namespace_by_id(int(bound["namespace_id"]))
             if "display_name" in bound:
@@ -226,6 +234,24 @@ async def test_update_and_delete_namespace_match_java_boundaries() -> None:
     assert deleted == {"message": "Namespace deleted successfully"}
     assert "team-a" not in connection.namespaces
     assert 10 not in connection.members
+
+
+@pytest.mark.anyio
+async def test_super_admin_can_delete_dependency_free_team_without_membership() -> None:
+    connection = FakeNamespaceMutationConnection(
+        namespaces={"team-a": namespace_row(id=10, slug="team-a")},
+        members={10: {}},
+    )
+
+    deleted = await delete_namespace(
+        FakeEngine(connection),
+        slug="team-a",
+        actor_user_id="platform-admin",
+        platform_roles=["SUPER_ADMIN"],
+    )
+
+    assert deleted == {"message": "Namespace deleted successfully"}
+    assert "team-a" not in connection.namespaces
 
 
 @pytest.mark.anyio

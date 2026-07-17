@@ -101,7 +101,9 @@ function buildNamespace(overrides: Partial<ManagedNamespace> = {}): ManagedNames
     canUnfreeze: false,
     canArchive: false,
     canRestore: false,
+    deleteAuthorized: false,
     canDelete: false,
+    deleteBlockers: { skillCount: 0, reviewTaskCount: 0, promotionRequestCount: 0 },
     ...overrides,
   }
 }
@@ -122,19 +124,43 @@ describe('MyNamespacesPage', () => {
   })
 
   it('renders the delete action when the namespace is deletable', () => {
-    mockNamespaces = [buildNamespace({ canDelete: true })]
+    mockNamespaces = [buildNamespace({ deleteAuthorized: true, canDelete: true })]
 
     const html = renderToStaticMarkup(createElement(MyNamespacesPage))
 
     expect(html).toContain('myNamespaces.delete')
   })
 
-  it('hides the delete action when the namespace is not deletable', () => {
-    mockNamespaces = [buildNamespace({ canDelete: false })]
+  it('shows a disabled delete action and blockers to an authorized operator', () => {
+    mockNamespaces = [buildNamespace({
+      deleteAuthorized: true,
+      canDelete: false,
+      deleteBlockers: { skillCount: 2, reviewTaskCount: 1, promotionRequestCount: 0 },
+    })]
+
+    const html = renderToStaticMarkup(createElement(MyNamespacesPage))
+
+    expect(html).toContain('myNamespaces.delete')
+    expect(html).toContain('myNamespaces.deleteBlockers')
+    expect(html).toContain('disabled')
+  })
+
+  it('hides the delete action from an unauthorized viewer', () => {
+    mockNamespaces = [buildNamespace({ deleteAuthorized: false, canDelete: false })]
 
     const html = renderToStaticMarkup(createElement(MyNamespacesPage))
 
     expect(html).not.toContain('myNamespaces.delete')
+  })
+
+  it('hides member and review actions for a platform-admin cleanup-only namespace', () => {
+    mockNamespaces = [buildNamespace({ deleteAuthorized: true, currentUserRole: undefined })]
+
+    const html = renderToStaticMarkup(createElement(MyNamespacesPage))
+
+    expect(html).not.toContain('myNamespaces.manageMembers')
+    expect(html).not.toContain('myNamespaces.reviewTasks')
+    expect(html).toContain('myNamespaces.delete')
   })
 
   it('routes delete actions to the delete mutation and emits success feedback', async () => {

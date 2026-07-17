@@ -286,7 +286,7 @@ export function MyNamespacesPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {namespace.type === 'TEAM' && (
+                  {namespace.type === 'TEAM' && namespace.currentUserRole && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -295,13 +295,15 @@ export function MyNamespacesPage() {
                       {t('myNamespaces.manageMembers')}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleReviewsClick(namespace.slug, e)}
-                  >
-                    {t('myNamespaces.reviewTasks')}
-                  </Button>
+                  {namespace.currentUserRole && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleReviewsClick(namespace.slug, e)}
+                    >
+                      {t('myNamespaces.reviewTasks')}
+                    </Button>
+                  )}
                   {namespace.canFreeze && (
                     <Button
                       variant="outline"
@@ -350,18 +352,32 @@ export function MyNamespacesPage() {
                       {t('myNamespaces.restore')}
                     </Button>
                   )}
-                  {namespace.canDelete && (
-                    <Button
-                      data-testid={`delete-namespace-${namespace.slug}`}
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingAction({ action: 'delete', slug: namespace.slug, name: namespace.displayName })
-                      }}
-                    >
-                      {t('myNamespaces.delete')}
-                    </Button>
+                  {(namespace.deleteAuthorized ?? namespace.canDelete) && (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        data-testid={`delete-namespace-${namespace.slug}`}
+                        variant="destructive"
+                        size="sm"
+                        disabled={!namespace.canDelete}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (namespace.canDelete) {
+                            setPendingAction({ action: 'delete', slug: namespace.slug, name: namespace.displayName })
+                          }
+                        }}
+                      >
+                        {t('myNamespaces.delete')}
+                      </Button>
+                      {!namespace.canDelete && (
+                        <p className="max-w-sm text-xs text-muted-foreground">
+                          {t('myNamespaces.deleteBlockers', namespace.deleteBlockers ?? {
+                            skillCount: 0,
+                            reviewTaskCount: 0,
+                            promotionRequestCount: 0,
+                          })}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

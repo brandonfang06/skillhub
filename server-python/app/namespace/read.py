@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from app.api.skills import to_java_instant
 from app.auth.policy import is_namespace_manager, is_namespace_owner
+from app.namespace.dependencies import has_namespace_dependencies, read_namespace_dependency_counts_by_ids
 
 
 class NamespaceReadError(Exception):
@@ -59,8 +60,8 @@ def _can_restore(row: dict[str, Any], role: str | None) -> bool:
     return _is_team(row) and str(row["status"]) == "ARCHIVED" and is_namespace_owner(role)
 
 
-def _can_delete_policy(row: dict[str, Any], role: str | None) -> bool:
-    return _is_team(row) and is_namespace_owner(role)
+def _can_delete_policy(row: dict[str, Any], role: str | None, is_super_admin: bool = False) -> bool:
+    return _is_team(row) and (is_namespace_owner(role) or is_super_admin)
 
 
 async def _read_roles(connection: Any, user_id: str) -> dict[int, str]:
@@ -98,6 +99,22 @@ async def _read_namespaces_by_ids(connection: Any, namespace_ids: list[int]) -> 
     return [dict(row) for row in rows]
 
 
+async def _read_all_team_namespaces(connection: Any) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT id, slug, display_name, status, description, type, avatar_url,
+                       created_by, created_at, updated_at
+                FROM namespace
+                WHERE type = 'TEAM'
+                """
+            )
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows if str(row.get("type")) == "TEAM"]
+
+
 async def _read_namespace_by_slug(connection: Any, slug: str) -> dict[str, Any] | None:
     row = (
         await connection.execute(
@@ -116,25 +133,6 @@ async def _read_namespace_by_slug(connection: Any, slug: str) -> dict[str, Any] 
     return dict(row) if row is not None else None
 
 
-async def _has_dependencies(connection: Any, namespace_id: int) -> bool:
-    row = (
-        await connection.execute(
-            text(
-                """
-                SELECT
-                    EXISTS (SELECT 1 FROM skill WHERE namespace_id = :namespace_id) AS has_skill,
-                    EXISTS (SELECT 1 FROM review_task WHERE namespace_id = :namespace_id) AS has_review,
-                    EXISTS (SELECT 1 FROM promotion_request WHERE target_namespace_id = :namespace_id) AS has_promotion
-                """
-            ),
-            {"namespace_id": namespace_id},
-        )
-    ).mappings().one_or_none()
-    if row is None:
-        return False
-    return bool(row["has_skill"]) or bool(row["has_review"]) or bool(row["has_promotion"])
-
-
 async def list_namespaces(engine: Any, *, user_id: str, page: int, size: int) -> dict[str, Any]:
     async with engine.connect() as connection:
         roles = await _read_roles(connection, user_id)
@@ -148,15 +146,34 @@ async def list_namespaces(engine: Any, *, user_id: str, page: int, size: int) ->
     return _page(page, size, items)
 
 
-async def list_my_namespaces(engine: Any, *, user_id: str) -> list[dict[str, Any]]:
+async def list_my_namespaces(
+    engine: Any,
+    *,
+    user_id: str,
+    platform_roles: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    is_super_admin = "SUPER_ADMIN" in set(platform_roles or [])
     async with engine.connect() as connection:
         roles = await _read_roles(connection, user_id)
-        rows = await _read_namespaces_by_ids(connection, list(roles))
+        rows = (
+            await _read_all_team_namespaces(connection)
+            if is_super_admin
+            else await _read_namespaces_by_ids(connection, list(roles))
+        )
+        blockers_by_namespace = await read_namespace_dependency_counts_by_ids(
+            connection,
+            [int(row["id"]) for row in rows],
+        )
         items: list[dict[str, Any]] = []
         for row in sorted(rows, key=lambda item: str(item["slug"])):
             role = roles.get(int(row["id"]))
             response = _namespace_response(row)
-            can_delete = _can_delete_policy(row, role) and not await _has_dependencies(connection, int(row["id"]))
+            delete_authorized = _can_delete_policy(row, role, is_super_admin)
+            blockers = blockers_by_namespace.get(
+                int(row["id"]),
+                {"skillCount": 0, "reviewTaskCount": 0, "promotionRequestCount": 0},
+            )
+            can_delete = delete_authorized and not has_namespace_dependencies(blockers)
             response.update(
                 {
                     "currentUserRole": role,
@@ -165,7 +182,9 @@ async def list_my_namespaces(engine: Any, *, user_id: str) -> list[dict[str, Any
                     "canUnfreeze": _can_unfreeze(row, role),
                     "canArchive": _can_archive(row, role),
                     "canRestore": _can_restore(row, role),
+                    "deleteAuthorized": delete_authorized,
                     "canDelete": can_delete,
+                    "deleteBlockers": blockers,
                 }
             )
             items.append(response)

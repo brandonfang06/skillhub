@@ -47,6 +47,7 @@ def test_build_skill_detail_response_maps_java_fields() -> None:
         "namespace": "global",
         "labels": labels,
         "canManageLifecycle": False,
+        "platformAdminOverride": False,
         "canSubmitPromotion": False,
         "canInteract": True,
         "canReport": True,
@@ -176,6 +177,16 @@ def test_build_skill_detail_response_grants_namespace_admin_lifecycle() -> None:
 
     assert response["canManageLifecycle"] is True
     assert response["canReport"] is True
+
+
+def test_build_skill_detail_response_keeps_platform_override_separate_from_lifecycle() -> None:
+    response = build_skill_detail_response(
+        detail_row(current_user_id="platform-admin", platform_read_override=True),
+        [],
+    )
+
+    assert response["platformAdminOverride"] is True
+    assert response["canManageLifecycle"] is False
 
 
 def test_build_skill_detail_response_allows_team_promotion_for_manager_when_not_blocked() -> None:

@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from app.admin.search import rebuild_search_index
+from app.admin.search import rebuild_search_index, upsert_skill_search_document
 from app.main import create_app
 
 
@@ -17,6 +17,13 @@ class FakeMappings:
 
     def all(self) -> list[dict[str, Any]]:
         return self.rows
+
+    def one_or_none(self) -> dict[str, Any] | None:
+        if not self.rows:
+            return None
+        if len(self.rows) != 1:
+            raise AssertionError(f"expected at most one row, got {len(self.rows)}")
+        return self.rows[0]
 
 
 class FakeResult:
@@ -58,6 +65,23 @@ class FakeSearchConnection:
         bound = params or {}
         self.statements.append(sql)
         self.params.append(bound)
+        if "FROM skill s" in sql and "WHERE s.id = :skill_id" in sql:
+            return FakeResult(
+                [
+                    {
+                        "skill_id": int(bound["skill_id"]),
+                        "namespace_id": 7,
+                        "namespace_slug": "global",
+                        "owner_id": "owner-a",
+                        "slug": "agent-helper",
+                        "display_name": "Agent Helper",
+                        "summary": "Helps agents",
+                        "visibility": "PUBLIC",
+                        "status": "ACTIVE",
+                        "parsed_metadata_json": None,
+                    }
+                ]
+            )
         if "FROM skill s" in sql and "LEFT JOIN namespace" in sql:
             return FakeResult(
                 [
@@ -204,6 +228,7 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
     active_skill_query = next(statement for statement in connection.statements if "FROM skill s" in statement)
     assert "JOIN skill_version sv ON sv.id = s.latest_version_id" in active_skill_query
     assert "sv.status = 'PUBLISHED'" in active_skill_query
+    assert "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)" in " ".join(active_skill_query.split())
     assert any("CAST(sv.parsed_metadata_json AS text)" in statement for statement in connection.statements)
     assert all("parsed_metadata_json::text" not in statement for statement in connection.statements)
     assert document["namespace_slug"] == "global"
@@ -231,3 +256,17 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
     assert connection.audit_rows[-1]["detail_json"] == '{"scope":"ALL"}'
     assert isinstance(connection.audit_rows[-1]["created_at"], datetime)
     assert connection.audit_rows[-1]["created_at"].tzinfo is None
+
+
+@pytest.mark.anyio
+async def test_upsert_search_document_requires_files_for_published_latest_version() -> None:
+    connection = FakeSearchConnection()
+
+    await upsert_skill_search_document(connection, 10)
+
+    source_query = next(
+        statement
+        for statement in connection.statements
+        if "FROM skill s" in statement and "WHERE s.id = :skill_id" in statement
+    )
+    assert "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)" in " ".join(source_query.split())

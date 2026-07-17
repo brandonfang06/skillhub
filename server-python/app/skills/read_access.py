@@ -33,7 +33,15 @@ def can_manage_lifecycle_for_row(row: dict[str, Any], current_user_id: str | Non
     )
 
 
-def can_access_skill_row(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> bool:
+def can_access_skill_row(
+    row: dict[str, Any],
+    current_user_id: str | None,
+    namespace_role: str | None,
+    *,
+    platform_read_override: bool = False,
+) -> bool:
+    if platform_read_override:
+        return True
     visibility = str(row["visibility"])
     if row.get("latest_version_id") is None:
         return current_user_id is not None and str(row["owner_id"]) == str(current_user_id)
@@ -46,8 +54,19 @@ def can_access_skill_row(row: dict[str, Any], current_user_id: str | None, names
     return False
 
 
-def assert_skill_row_access(row: dict[str, Any], current_user_id: str | None, namespace_role: str | None) -> None:
-    if not can_access_skill_row(row, current_user_id, namespace_role):
+def assert_skill_row_access(
+    row: dict[str, Any],
+    current_user_id: str | None,
+    namespace_role: str | None,
+    *,
+    platform_read_override: bool = False,
+) -> None:
+    if not can_access_skill_row(
+        row,
+        current_user_id,
+        namespace_role,
+        platform_read_override=platform_read_override,
+    ):
         raise SkillResolveError("error.skill.access.denied", status_code=403)
 
 

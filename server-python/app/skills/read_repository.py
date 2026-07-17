@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.auth.context import bearer_token, has_bearer_authorization, resolve_current_user_or_401
-from app.auth.policy import is_namespace_manager, is_namespace_member
+from app.auth.policy import is_api_token_principal, is_namespace_manager, is_namespace_member, platform_roles
 from app.download_analytics.repository import DownloadEventContext, record_skill_download_event
 from app.skills.read_compare import (
     BINARY_FILE_EXTENSIONS,
@@ -106,6 +106,29 @@ async def optional_current_user_id(
             return None
         raise
     return str(user["userId"])
+
+
+async def optional_current_user(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> dict[str, object] | None:
+    if normalized_current_user_id(mock_user_id) is not None or has_bearer_authorization(authorization):
+        return await resolve_current_user_or_401(request, mock_user_id, authorization)
+    try:
+        return await resolve_current_user_or_401(request, None, None)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return None
+        raise
+
+
+def platform_skill_read_override(user: dict[str, object] | None) -> bool:
+    return bool(
+        user is not None
+        and not is_api_token_principal(user)
+        and "SUPER_ADMIN" in set(platform_roles(user))
+    )
 
 
 async def read_namespace_role(
@@ -362,6 +385,7 @@ async def read_skill_versions(
     page: int,
     size: int,
     current_user_id: str | None = None,
+    platform_read_override: bool = False,
 ) -> dict[str, object]:
     page, size = normalize_page_request(page, size)
     async with engine.connect() as connection:
@@ -373,15 +397,15 @@ async def read_skill_versions(
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
-                      AND n.status = 'ACTIVE'
+                      AND (n.status = 'ACTIVE' OR :platform_read_override)
                       AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.hidden = false
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug},
+                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
             )
         ).mappings().one_or_none()
 
@@ -389,9 +413,14 @@ async def read_skill_versions(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_row_access(
+            dict(skill_row),
+            current_user_id,
+            namespace_role,
+            platform_read_override=platform_read_override,
+        )
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
-        visible_statuses = lifecycle_visible_statuses(can_manage)
+        visible_statuses = lifecycle_visible_statuses(can_manage or platform_read_override)
         status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
         rows = (
             await connection.execute(
@@ -432,6 +461,7 @@ async def read_skill_version_detail(
     slug: str,
     version: str,
     current_user_id: str | None = None,
+    platform_read_override: bool = False,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
         skill_row = (
@@ -442,15 +472,15 @@ async def read_skill_version_detail(
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
-                      AND n.status = 'ACTIVE'
+                      AND (n.status = 'ACTIVE' OR :platform_read_override)
                       AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.hidden = false
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug},
+                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
             )
         ).mappings().one_or_none()
 
@@ -458,7 +488,12 @@ async def read_skill_version_detail(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_row_access(
+            dict(skill_row),
+            current_user_id,
+            namespace_role,
+            platform_read_override=platform_read_override,
+        )
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         row = (
             await connection.execute(
@@ -486,7 +521,7 @@ async def read_skill_version_detail(
 
     if row is None:
         raise SkillResolveError("error.skill.version.notFound")
-    if str(row["status"]) != "PUBLISHED" and not can_manage:
+    if str(row["status"]) != "PUBLISHED" and not (can_manage or platform_read_override):
         raise SkillResolveError("error.skill.version.notPublished")
     return build_version_detail_response(dict(row))
 
@@ -496,6 +531,7 @@ async def read_skill_detail(
     namespace: str,
     slug: str,
     current_user_id: str | None = None,
+    platform_read_override: bool = False,
 ) -> dict[str, object]:
     async with engine.connect() as connection:
         skill_row = (
@@ -526,19 +562,19 @@ async def read_skill_detail(
                     LEFT JOIN user_account ua ON ua.id = s.owner_id
                     WHERE n.slug = :namespace
                       AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.hidden = false
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug},
+                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
             )
         ).mappings().one_or_none()
 
         if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
-        if str(skill_row["namespace_status"]) == "ARCHIVED":
+        if str(skill_row["namespace_status"]) == "ARCHIVED" and not platform_read_override:
             raise SkillResolveError("error.namespace.archived", status_code=403)
 
         namespace_role = None
@@ -560,8 +596,17 @@ async def read_skill_detail(
                     },
                 )
             ).scalar_one_or_none()
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
-        if str(skill_row["visibility"]) != "PUBLIC" and not is_namespace_member(namespace_role):
+        assert_skill_row_access(
+            dict(skill_row),
+            current_user_id,
+            namespace_role,
+            platform_read_override=platform_read_override,
+        )
+        if (
+            str(skill_row["visibility"]) != "PUBLIC"
+            and not is_namespace_member(namespace_role)
+            and not platform_read_override
+        ):
             raise SkillResolveError("error.skill.access.denied", status_code=403)
 
         published_version = (
@@ -592,7 +637,7 @@ async def read_skill_detail(
         )
         owner_preview_version = None
         owner_preview_review_comment = None
-        if can_manage_lifecycle:
+        if can_manage_lifecycle or platform_read_override:
             if published_version is None:
                 preview_where_sql = ""
                 preview_params: dict[str, Any] = {"skill_id": skill_row["id"]}
@@ -701,6 +746,7 @@ async def read_skill_detail(
     row["current_user_id"] = current_user_id
     row["namespace_role"] = namespace_role
     row["promotion_blocked"] = promotion_blocked
+    row["platform_read_override"] = platform_read_override
     label_rows = [
         {
             "slug": str(label["slug"]),
@@ -834,6 +880,7 @@ async def read_skill_search(
         "s.hidden = FALSE",
         namespace_status_filter,
         "isv.status = 'PUBLISHED'",
+        "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = isv.id)",
     ]
     published_version_join_sql = "JOIN skill_version isv ON isv.id = s.latest_version_id"
     if installable_only:
@@ -970,6 +1017,7 @@ async def read_skill_version_files(
     slug: str,
     version: str,
     current_user_id: str | None = None,
+    platform_read_override: bool = False,
 ) -> list[dict[str, object]]:
     async with engine.connect() as connection:
         skill_row = (
@@ -980,15 +1028,15 @@ async def read_skill_version_files(
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
-                      AND n.status = 'ACTIVE'
+                      AND (n.status = 'ACTIVE' OR :platform_read_override)
                       AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.hidden = false
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug},
+                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
             )
         ).mappings().one_or_none()
 
@@ -996,7 +1044,12 @@ async def read_skill_version_files(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_row_access(
+            dict(skill_row),
+            current_user_id,
+            namespace_role,
+            platform_read_override=platform_read_override,
+        )
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(
@@ -1015,7 +1068,7 @@ async def read_skill_version_files(
 
         if version_row is None:
             raise SkillResolveError("error.skill.version.notFound")
-        if str(version_row["status"]) != "PUBLISHED" and not can_manage:
+        if str(version_row["status"]) != "PUBLISHED" and not (can_manage or platform_read_override):
             raise SkillResolveError("error.skill.version.notPublished")
 
         version_id = version_row["id"]
@@ -1540,6 +1593,7 @@ async def read_skill_version_file_content(
     version: str,
     file_path: str,
     current_user_id: str | None = None,
+    platform_read_override: bool = False,
 ) -> bytes:
     async with engine.connect() as connection:
         skill_row = (
@@ -1550,15 +1604,15 @@ async def read_skill_version_file_content(
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
-                      AND n.status = 'ACTIVE'
+                      AND (n.status = 'ACTIVE' OR :platform_read_override)
                       AND s.slug = :slug
-                      AND s.status = 'ACTIVE'
-                      AND s.hidden = false
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     ORDER BY s.id ASC
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug},
+                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
             )
         ).mappings().one_or_none()
 
@@ -1566,7 +1620,12 @@ async def read_skill_version_file_content(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_row_access(
+            dict(skill_row),
+            current_user_id,
+            namespace_role,
+            platform_read_override=platform_read_override,
+        )
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(
@@ -1585,7 +1644,7 @@ async def read_skill_version_file_content(
 
         if version_row is None:
             raise SkillResolveError("error.skill.version.notFound")
-        assert_version_file_content_access(dict(version_row), can_manage)
+        assert_version_file_content_access(dict(version_row), can_manage or platform_read_override)
 
         file_row = (
             await connection.execute(

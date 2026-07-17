@@ -73,18 +73,19 @@ class FakeNamespaceConnection:
         self.params.append(params or {})
         if "FROM namespace_member" in sql and "JOIN namespace" not in sql:
             return FakeResult(self.roles)
-        if "EXISTS (SELECT 1 FROM skill" in sql:
-            namespace_id = int((params or {})["namespace_id"])
-            counts = self.dependency_counts.get(namespace_id, {})
-            return FakeResult(
-                [
+        if "COUNT(*) FROM skill" in sql:
+            rows = []
+            for namespace_id in (params or {})["namespace_ids"]:
+                counts = self.dependency_counts.get(int(namespace_id), {})
+                rows.append(
                     {
-                        "has_skill": counts.get("skill_count", 0) > 0,
-                        "has_review": counts.get("review_count", 0) > 0,
-                        "has_promotion": counts.get("promotion_count", 0) > 0,
+                        "namespace_id": int(namespace_id),
+                        "skill_count": counts.get("skill_count", 0),
+                        "review_task_count": counts.get("review_count", 0),
+                        "promotion_request_count": counts.get("promotion_count", 0),
                     }
-                ]
-            )
+                )
+            return FakeResult(rows)
         if "WHERE n.slug = :slug" in sql:
             slug = str((params or {})["slug"])
             return FakeResult([row for row in self.namespaces if row["slug"] == slug])
@@ -159,7 +160,36 @@ async def test_list_my_namespaces_includes_flags_and_dependency_sensitive_delete
     assert global_ns["canDelete"] is False
     assert team["currentUserRole"] == "OWNER"
     assert team["canFreeze"] is True
+    assert team["deleteAuthorized"] is True
     assert team["canDelete"] is False
+    assert team["deleteBlockers"] == {
+        "skillCount": 1,
+        "reviewTaskCount": 0,
+        "promotionRequestCount": 0,
+    }
+    assert sum("COUNT(*) FROM skill" in statement for statement in connection.statements) == 1
+
+
+@pytest.mark.anyio
+async def test_super_admin_managed_namespaces_include_all_team_namespaces() -> None:
+    connection = FakeNamespaceConnection(
+        roles=[],
+        namespaces=[
+            namespace_row(id=1, slug="global", type="GLOBAL"),
+            namespace_row(id=2, slug="team-a"),
+        ],
+    )
+
+    response = await list_my_namespaces(
+        FakeEngine(connection),
+        user_id="platform-admin",
+        platform_roles=["SUPER_ADMIN"],
+    )
+
+    assert [item["slug"] for item in response] == ["team-a"]
+    assert response[0]["currentUserRole"] is None
+    assert response[0]["deleteAuthorized"] is True
+    assert response[0]["canDelete"] is True
 
 
 @pytest.mark.anyio
