@@ -46,7 +46,7 @@ Kubernetes operation.
 | --- | --- | --- | --- |
 | `SKILLHUB_PRODUCT_SUITE_SOURCE_MODULE` | ConfigMap | unset | Required Python import path for the organization-owned PIC source module. |
 | `SKILLHUB_PRODUCT_SUITE_API_URL` | ConfigMap | unset | Required non-secret PIC API URL passed to the source module. |
-| `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | ConfigMap | `30` | Source timeout; must be greater than `0` and no greater than `300`. |
+| `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | ConfigMap | `30` | Source timeout; must be greater than `0` and no greater than `300`. The shared command enforces this deadline. |
 | `SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER` | ConfigMap | `keycloak` | `identity_binding.provider_code`; use the OAuth registration id, not the login button display name. |
 
 PIC credentials are private to the internal source module and should be

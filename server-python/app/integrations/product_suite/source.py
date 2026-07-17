@@ -20,8 +20,13 @@ ProductSuiteSource = Callable[
 ]
 
 
+class _ProductSuiteArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise ProductSuiteSourceError(f"invalid command arguments: {message}")
+
+
 def _argument_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _ProductSuiteArgumentParser(
         description="Synchronize product suite owners as namespace administrators."
     )
     parser.add_argument("--source-module")

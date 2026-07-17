@@ -160,7 +160,7 @@ docker run --rm <organization-image> `
 | `SKILLHUB_DATABASE_URL` | 是 | local PostgreSQL | Python async SQLAlchemy URL；CronJob 與 backend 必須連同一個 SkillHub database |
 | `SKILLHUB_PRODUCT_SUITE_SOURCE_MODULE` | 是 | 無 | 內部 module import path，例如 `company_pic.product_suite_source` |
 | `SKILLHUB_PRODUCT_SUITE_API_URL` | 是 | 無 | 內部 PIC API URL |
-| `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | 否 | `30` | Source module timeout，必須大於 `0` 且不超過 `300` |
+| `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | 否 | `30` | Source module timeout，必須大於 `0` 且不超過 `300`；shared command 也會在此期限取消 source call |
 | `SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER` | 否 | `keycloak` | `identity_binding.provider_code`，必須等於 Keycloak OAuth registration id |
 
 `SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER` 不是登入按鈕顯示名稱。若 OAuth callback

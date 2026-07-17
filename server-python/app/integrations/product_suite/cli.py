@@ -10,6 +10,7 @@ from typing import Any
 from app.core.config import Settings, get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.integrations.product_suite.contracts import (
+    ProductSuiteSourceError,
     ProductSuiteSyncConfig,
     ProductSuiteSyncIssue,
     ProductSuiteSyncSummary,
@@ -109,7 +110,17 @@ async def run_product_suite_sync(
     engine: Any | None = None
     try:
         fetcher = source_loader(config.source_module)
-        records = validate_snapshot(await fetcher(config.source))
+        try:
+            fetched_records = await asyncio.wait_for(
+                fetcher(config.source),
+                timeout=config.source.timeout_seconds,
+            )
+        except TimeoutError as exc:
+            raise ProductSuiteSourceError(
+                "product suite source timed out after "
+                f"{config.source.timeout_seconds:g} seconds"
+            ) from exc
+        records = validate_snapshot(fetched_records)
         engine = engine_factory(get_settings())
         summary = await reconcile_product_suite_admins(
             engine,

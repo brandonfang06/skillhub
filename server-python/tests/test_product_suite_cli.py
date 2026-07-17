@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -138,6 +139,42 @@ async def test_run_sync_returns_two_without_creating_engine_when_source_fails() 
 
 
 @pytest.mark.anyio
+async def test_run_sync_enforces_source_timeout_before_creating_engine() -> None:
+    factory_calls = 0
+    config = sync_config()
+    config = ProductSuiteSyncConfig(
+        source_module=config.source_module,
+        source=ProductSuiteSourceConfig(
+            api_url=config.source.api_url,
+            timeout_seconds=0.001,
+        ),
+        identity_provider=config.identity_provider,
+        dry_run=config.dry_run,
+    )
+
+    async def slow_source(
+        source_config: ProductSuiteSourceConfig,
+    ) -> list[ProductSuiteOwnerRecord]:
+        await asyncio.sleep(0.02)
+        return [owner_record()]
+
+    def engine_factory(settings: object) -> object:
+        nonlocal factory_calls
+        factory_calls += 1
+        return object()
+
+    result = await run_product_suite_sync(
+        config=config,
+        source_loader=lambda _: slow_source,
+        engine_factory=engine_factory,
+    )
+
+    assert result.exit_code == 2
+    assert "timed out" in result.error_detail
+    assert factory_calls == 0
+
+
+@pytest.mark.anyio
 async def test_run_sync_returns_two_and_disposes_engine_when_database_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -248,4 +285,26 @@ def test_main_maps_configuration_failure_to_fatal_json(
     assert exit_code == 2
     assert json.loads(captured.out)["status"] == "fatal"
     assert "source module" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_main_maps_invalid_cli_value_to_fatal_json(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = cli.main(
+        [
+            "--source-module",
+            "company.pic_api",
+            "--api-url",
+            "https://pic.example/api",
+            "--timeout-seconds",
+            "invalid",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert len(captured.out.strip().splitlines()) == 1
+    assert json.loads(captured.out)["status"] == "fatal"
+    assert "timeout-seconds" in captured.err
     assert "Traceback" not in captured.err
