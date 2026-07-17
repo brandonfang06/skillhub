@@ -1,6 +1,9 @@
 # Product Suite Namespace Admin Daily Sync Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Execution status:** Complete on 2026-07-17. Verification evidence is recorded
+in `docs/backend-python-maintenance/results/2026-07-17-product-suite-admin-sync.md`.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add an idempotent daily Python command that loads product-suite owners from an internal PIC source module and grants existing Keycloak users namespace `ADMIN`, with operator documentation and optional Kubernetes CronJob manifests.
 
@@ -61,7 +64,7 @@
 - Create: `server-python/app/integrations/product_suite/contracts.py`
 - Create: `server-python/app/integrations/product_suite/source.py`
 
-- [ ] **Step 1: Write failing contract and normalization tests**
+- [x] **Step 1: Write failing contract and normalization tests**
 
 Add tests that define the required source shape:
 
@@ -101,7 +104,7 @@ def test_owner_record_rejects_invalid_boundaries(field: str, value: str) -> None
         ProductSuiteOwnerRecord.create(**values)
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -112,7 +115,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_source.py -q
 
 Expected: collection fails because `app.integrations.product_suite` does not exist.
 
-- [ ] **Step 3: Implement immutable contracts and snapshot validation**
+- [x] **Step 3: Implement immutable contracts and snapshot validation**
 
 Implement these public types:
 
@@ -171,7 +174,7 @@ class ProductSuiteSyncSummary:
 - duplicate `namespace_slug`;
 - a non-record return value.
 
-- [ ] **Step 4: Write failing environment and module-loader tests**
+- [x] **Step 4: Write failing environment and module-loader tests**
 
 Cover:
 
@@ -206,7 +209,7 @@ async def test_load_source_calls_internal_async_module() -> None:
     assert records[0].namespace_slug == "product-a"
 ```
 
-- [ ] **Step 5: Implement configuration and trusted module loading**
+- [x] **Step 5: Implement configuration and trusted module loading**
 
 Add:
 
@@ -239,7 +242,7 @@ SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS
 SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER
 ```
 
-- [ ] **Step 6: Verify Task 1 GREEN**
+- [x] **Step 6: Verify Task 1 GREEN**
 
 Run:
 
@@ -249,7 +252,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_source.py -q
 
 Expected: all source contract tests pass.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 Commit:
 
@@ -264,7 +267,7 @@ feat: define product suite sync source contract
 - Create: `server-python/app/integrations/product_suite/repository.py`
 - Modify: `server-python/app/integrations/product_suite/__init__.py`
 
-- [ ] **Step 1: Write failing happy-path and dry-run tests**
+- [x] **Step 1: Write failing happy-path and dry-run tests**
 
 Use a stateful fake SQLAlchemy connection and verify:
 
@@ -304,7 +307,7 @@ async def test_reconcile_dry_run_reports_without_writing() -> None:
     assert connection.memberships == {}
 ```
 
-- [ ] **Step 2: Run reconciliation tests and verify RED**
+- [x] **Step 2: Run reconciliation tests and verify RED**
 
 Run:
 
@@ -314,7 +317,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_reconciliation.py -
 
 Expected: import fails because `repository.py` does not exist.
 
-- [ ] **Step 3: Implement transactional reconciliation**
+- [x] **Step 3: Implement transactional reconciliation**
 
 Implement:
 
@@ -391,7 +394,7 @@ WHERE namespace_id = :namespace_id
 If an insert or promotion loses a concurrency race, re-read the role and
 converge without failing.
 
-- [ ] **Step 4: Write failing boundary tests**
+- [x] **Step 4: Write failing boundary tests**
 
 Cover these exact outcomes:
 
@@ -404,7 +407,7 @@ Cover these exact outcomes:
 - repeated snapshot -> no duplicate insert/update;
 - a database exception exits the transaction and propagates.
 
-- [ ] **Step 5: Implement boundary classifications**
+- [x] **Step 5: Implement boundary classifications**
 
 Use stable issue codes and do not include secrets:
 
@@ -419,7 +422,7 @@ NAMESPACE_BLOCKED
 Unknown, frozen, archived, disabled, merged, and conflict records are skipped
 without preventing valid records in the same snapshot from converging.
 
-- [ ] **Step 6: Verify Task 2 GREEN**
+- [x] **Step 6: Verify Task 2 GREEN**
 
 Run:
 
@@ -431,7 +434,7 @@ uv --cache-dir .uv-cache run pytest `
 
 Expected: all source and reconciliation tests pass.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 Commit:
 
@@ -446,7 +449,7 @@ feat: reconcile product suite namespace admins
 - Create: `server-python/app/integrations/product_suite/cli.py`
 - Create: `server-python/app/integrations/product_suite/__main__.py`
 
-- [ ] **Step 1: Write failing CLI tests**
+- [x] **Step 1: Write failing CLI tests**
 
 Inject source loader and engine factory seams:
 
@@ -476,7 +479,7 @@ async def test_run_sync_returns_two_without_database_writes_when_source_fails() 
 Also verify blocked/conflict outcomes return `1`, while only
 `waitingForLogin` returns `0`.
 
-- [ ] **Step 2: Run CLI tests and verify RED**
+- [x] **Step 2: Run CLI tests and verify RED**
 
 Run:
 
@@ -486,7 +489,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_cli.py -q
 
 Expected: import fails because CLI files do not exist.
 
-- [ ] **Step 3: Implement command lifecycle**
+- [x] **Step 3: Implement command lifecycle**
 
 Implement:
 
@@ -524,7 +527,7 @@ Source-module, source-fetch, validation, engine, and database exceptions all
 map to fatal exit code `2`; the command boundary must not leak an unstructured
 traceback from an expected CronJob run.
 
-- [ ] **Step 4: Verify `python -m` entry point**
+- [x] **Step 4: Verify `python -m` entry point**
 
 Run:
 
@@ -535,7 +538,7 @@ uv --cache-dir .uv-cache run python -m app.integrations.product_suite --help
 Expected: exit `0` and help lists source module, API URL, timeout, identity
 provider, and dry-run options.
 
-- [ ] **Step 5: Verify Task 3 GREEN**
+- [x] **Step 5: Verify Task 3 GREEN**
 
 Run:
 
@@ -548,7 +551,7 @@ uv --cache-dir .uv-cache run pytest `
 
 Expected: all product-suite sync tests pass.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 Commit:
 
@@ -563,7 +566,7 @@ feat: add product suite admin sync command
 - Modify: `server-python/README.md`
 - Modify: `server-python/ENVIRONMENT_VARIABLES.md`
 
-- [ ] **Step 1: Write the complete operator manual**
+- [x] **Step 1: Write the complete operator manual**
 
 Document:
 
@@ -620,7 +623,7 @@ project; an organization module using it in the production image must add it
 to the organization image/dependencies, or use the Python standard library or
 another installed HTTP client.
 
-- [ ] **Step 2: Add README and environment links**
+- [x] **Step 2: Add README and environment links**
 
 Link the manual from `server-python/README.md`. Add this table to
 `server-python/ENVIRONMENT_VARIABLES.md`:
@@ -635,7 +638,7 @@ SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER
 Do not prescribe PIC token variable names because they belong to the internal
 module.
 
-- [ ] **Step 3: Verify documentation**
+- [x] **Step 3: Verify documentation**
 
 Run:
 
@@ -650,7 +653,7 @@ git diff --check
 Expected: every shared variable and operating boundary is documented, with no
 whitespace errors.
 
-- [ ] **Step 4: Commit Task 4**
+- [x] **Step 4: Commit Task 4**
 
 Commit:
 
@@ -670,7 +673,7 @@ docs: document product suite admin synchronization
 - Modify: `deploy/k8s/README.md`
 - Modify: `deploy/k8s/plain/README.md`
 
-- [ ] **Step 1: Write failing deployment contract tests**
+- [x] **Step 1: Write failing deployment contract tests**
 
 Assert:
 
@@ -694,7 +697,7 @@ Also assert the plain manifest remains `.yaml.example` so
 `kubectl apply -f deploy/k8s/plain/backend/` does not enable the CronJob
 implicitly.
 
-- [ ] **Step 2: Run deployment tests and verify RED**
+- [x] **Step 2: Run deployment tests and verify RED**
 
 Run:
 
@@ -704,7 +707,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_sync_deployment.py 
 
 Expected: fails because addon and plain example files do not exist.
 
-- [ ] **Step 3: Implement optional manifests**
+- [x] **Step 3: Implement optional manifests**
 
 The CronJob must:
 
@@ -734,7 +737,7 @@ The plain example is copied and edited before:
 kubectl -n skillhub apply -f deploy/k8s/plain/backend/product-suite-admin-sync-cronjob.yaml
 ```
 
-- [ ] **Step 4: Add K8s documentation**
+- [x] **Step 4: Add K8s documentation**
 
 Document:
 
@@ -747,7 +750,7 @@ Document:
 - suspend and delete commands;
 - the fact that the backend Deployment does not run this scheduler.
 
-- [ ] **Step 5: Verify manifest rendering**
+- [x] **Step 5: Verify manifest rendering**
 
 Run:
 
@@ -761,7 +764,7 @@ uv --cache-dir .uv-cache run pytest tests/test_product_suite_sync_deployment.py 
 Expected: Kustomize renders one CronJob, client dry-run accepts the plain
 example, and deployment tests pass.
 
-- [ ] **Step 6: Commit Task 5**
+- [x] **Step 6: Commit Task 5**
 
 Commit:
 
@@ -774,7 +777,7 @@ deploy: add optional product suite admin sync
 **Files:**
 - Modify only files identified by findings from review.
 
-- [ ] **Step 1: Run focused verification**
+- [x] **Step 1: Run focused verification**
 
 ```powershell
 cd server-python
@@ -785,13 +788,13 @@ uv --cache-dir .uv-cache run pytest `
   tests/test_product_suite_sync_deployment.py -q
 ```
 
-- [ ] **Step 2: Run full backend verification**
+- [x] **Step 2: Run full backend verification**
 
 ```powershell
 uv --cache-dir .uv-cache run pytest tests -q
 ```
 
-- [ ] **Step 3: Verify command and documentation**
+- [x] **Step 3: Verify command and documentation**
 
 ```powershell
 uv --cache-dir .uv-cache run python -m app.integrations.product_suite --help
@@ -801,7 +804,7 @@ rg -n "SKILLHUB_PRODUCT_SUITE_|fetch_product_suite_owners|waitingForLogin|dry-ru
   README.md
 ```
 
-- [ ] **Step 4: Verify image and Kubernetes artifacts**
+- [x] **Step 4: Verify image and Kubernetes artifacts**
 
 From repository root:
 
@@ -813,7 +816,7 @@ kubectl apply --dry-run=client --validate=false `
   -f deploy/k8s/plain/backend/product-suite-admin-sync-cronjob.yaml.example
 ```
 
-- [ ] **Step 5: Review the complete diff**
+- [x] **Step 5: Review the complete diff**
 
 Confirm:
 
@@ -828,14 +831,14 @@ Confirm:
 - transaction failure rolls back all membership writes;
 - optional manifests are not enabled by base/plain directory application.
 
-- [ ] **Step 6: Run final hygiene checks**
+- [x] **Step 6: Run final hygiene checks**
 
 ```powershell
 git diff --check
 git status --short
 ```
 
-- [ ] **Step 7: Commit review fixes, push, and report**
+- [x] **Step 7: Commit review fixes, push, and report**
 
 Use narrowly scoped commits for any review fixes. Push
 `codex/product-suite-admin-provisioning` only after all gates pass.
