@@ -1,8 +1,8 @@
-# Product Suite Namespace Admin Provisioning Design
+# Product Suite Namespace Admin Daily Sync Design
 
 **Date:** 2026-07-17
-**Status:** Proposed for review
-**Scope:** Organization-specific extension to the Python backend
+**Status:** Revised for review
+**Scope:** Organization-specific synchronization command and Kubernetes CronJob
 
 ## Problem
 
@@ -10,347 +10,290 @@ The organization maintains more than 60 SkillHub namespaces that correspond to
 product suites. An organization API identifies each product suite and its
 current owner by Windows account, such as `hcfange`.
 
-SkillHub cannot add that owner before the first Keycloak login because:
+SkillHub cannot add an owner who has never logged in because
+`namespace_member.user_id` must reference an existing `user_account`. The
+Keycloak login creates that account and binds the verified Keycloak `sub` to a
+random SkillHub `usr_<uuid>`.
 
-- Keycloak login creates the `user_account` row and the random SkillHub
-  `usr_<uuid>` identifier.
-- The verified Keycloak `sub` is bound to that user through
-  `identity_binding(provider_code, subject)`.
-- `namespace_member.user_id` has a foreign key to `user_account.id`.
+The operational requirement does not need immediate role assignment after
+login. A daily synchronization is sufficient. A person who logs in after the
+daily job can receive the namespace role on the next run.
 
-Creating a provisional SkillHub user from the Windows account would be unsafe.
-The later OAuth login would not find that provisional row by Keycloak `sub`
-and could create a second user, leaving the namespace role on the wrong
-identity.
+## Decision
+
+Implement one idempotent Python synchronization command and run it once per day
+from a Kubernetes CronJob.
+
+The command:
+
+1. fetches a complete product suite owner snapshot;
+2. resolves each product suite to an existing SkillHub namespace;
+3. finds an existing Keycloak identity by Windows account;
+4. adds or promotes that SkillHub user to namespace `ADMIN`;
+5. skips owners who have not logged in yet;
+6. reports structured counts and errors;
+7. repeats the same process on the next daily run.
+
+There is no pending-assignment table and no OAuth integration.
 
 ## Goals
 
-- Record a product suite owner before that person has logged in to SkillHub.
-- Add the person as namespace `ADMIN` after a trustworthy Keycloak login.
-- Immediately add already-known SkillHub users during product suite sync.
-- Treat product suite owner changes additively: add the new owner as `ADMIN`.
-- Never replace the namespace `OWNER`.
-- Do not automatically remove an `ADMIN` role that was already applied for a
-  previous product suite owner.
-- Keep login available when assignment reconciliation fails.
-- Keep the extension isolated so upstream SkillHub releases remain practical
-  to follow.
+- Automatically add logged-in product suite owners as namespace `ADMIN`.
+- Remove the current manual wait-then-add workflow.
+- Retry owners who have not logged in simply by running the next daily sync.
+- Add new product suite owners without changing the namespace `OWNER`.
+- Keep previously granted administrators unless someone removes them manually.
+- Keep the extension isolated from upstream SkillHub code.
+- Make repeated and concurrent-safe runs produce the same membership state.
 
 ## Non-Goals
 
+- Immediate role assignment in the OAuth callback.
 - Pre-creating fake or provisional `user_account` rows.
-- Changing SkillHub user IDs or the Keycloak `provider + sub` identity model.
+- Persisting pending owners in SkillHub.
+- Changing SkillHub UUID or Keycloak identity semantics.
 - Making product suite owners namespace `OWNER`.
-- Automatically revoking previously applied namespace roles.
-- Changing review, publish, search, notification, or visibility policies.
-- Adding a frontend management page in the first implementation.
-- Calling the product suite API from an OAuth request.
+- Removing previous owners automatically.
+- Adding a frontend page or public synchronization API.
+- Changing review, publish, search, notification, or visibility behavior.
 
-## Identity Contract
+## Identity Matching
 
-The product suite directory supplies a Windows account. Keycloak supplies the
-same value as `preferred_username`; SkillHub stores it as the OAuth
-`providerLogin`, updates `user_account.display_name`, and stores it in
-`identity_binding.login_name`.
+Keycloak supplies the Windows account as `preferred_username`. SkillHub stores
+that value as OAuth `providerLogin`, updates `user_account.display_name`, and
+stores it in `identity_binding.login_name`.
 
-Assignment matching uses:
+The sync command matches:
 
 ```text
-identity provider registration id + normalized Windows account
+identity_binding.provider_code = configured Keycloak registration id
+normalized identity_binding.login_name = normalized Windows account
 ```
 
 Normalization is deterministic:
 
 1. trim leading and trailing whitespace;
-2. reject an empty value;
+2. reject empty values;
 3. apply Unicode `casefold`;
 4. enforce the existing 128-character login-name boundary.
 
-Matching never uses fuzzy display-name search or email fallback. Once an
-assignment is resolved, it stores the resulting SkillHub `user_id`; future
-authorization continues to use the normal SkillHub UUID.
+The command never uses fuzzy display-name matching or email fallback. If more
+than one active identity matches a normalized login, that record fails closed
+as an identity conflict and receives no role.
 
-If more than one active Keycloak identity binding has the same normalized
-login name, reconciliation fails closed with `CONFLICT`. It does not guess
-which user should receive the role.
+## Product Suite To Namespace Mapping
 
-## Local Data Model
-
-Organization-owned schema remains under
-`server-python/app/db/local_migration/`; the upstream-followed
-`server-python/app/db/migration/V*__*.sql` chain is unchanged.
-
-### `local_product_suite_admin_assignment`
-
-Each row represents one product-suite-owner observation:
-
-| Column | Purpose |
-| --- | --- |
-| `id` | Local primary key |
-| `source_system` | Stable source identifier, initially `product-suite-api` |
-| `external_suite_id` | Stable product suite identifier from the source |
-| `namespace_id` | Resolved SkillHub namespace |
-| `identity_provider` | OAuth registration id, initially `keycloak` |
-| `external_login` | Original Windows account for operator diagnostics |
-| `normalized_external_login` | Exact normalized match key |
-| `state` | `PENDING`, `APPLIED`, `RETAINED`, `SUPERSEDED`, `BLOCKED`, or `CONFLICT` |
-| `source_current` | Whether the source still reports this person as current owner |
-| `resolved_user_id` | SkillHub user after successful identity resolution |
-| `first_seen_at` | First complete source snapshot containing this assignment |
-| `last_seen_at` | Most recent complete source snapshot containing it |
-| `applied_at` | Membership application time |
-| `last_error` | Bounded operator-facing diagnostic |
-| `created_at`, `updated_at` | Local record timestamps |
-
-The schema enforces one current assignment per source product suite and an
-idempotency key across source, suite, provider, and normalized login.
-
-### `local_product_suite_assignment_event`
-
-An append-only local event table records assignment lifecycle events:
-
-- `OBSERVED`
-- `APPLIED`
-- `PROMOTED`
-- `RETAINED`
-- `SUPERSEDED`
-- `BLOCKED`
-- `CONFLICT`
-- `RETRY_FAILED`
-
-Events contain the assignment id, optional resolved user id, event time, sync
-run identifier, and bounded detail JSON. This avoids changing the upstream
-audit API while preserving an operator-visible history of automatic
-permission changes.
-
-## Source Synchronization
-
-The product suite HTTP call runs outside request handling through a dedicated
-Python command using the backend image. In Kubernetes, a CronJob can execute
-that command with `concurrencyPolicy: Forbid`.
-
-The integration has two boundaries:
-
-- `ProductSuiteDirectoryClient` fetches and validates the complete external
-  snapshot.
-- `ProductSuiteAssignmentReconciler` receives normalized records containing
-  `externalSuiteId`, `namespaceSlug`, and `ownerWindowsAccount`.
-
-Keeping the reconciler independent from the organization HTTP response makes
-source-specific parsing replaceable and easy to test. The concrete HTTP
-adapter will be finalized against a sanitized API response and authentication
-example before its implementation milestone.
-
-Synchronization follows an all-before-write rule:
-
-1. Fetch all pages from the product suite API.
-2. Validate required fields, duplicate suite IDs, namespace mappings, and
-   Windows accounts in memory.
-3. If fetching or validation fails, write no assignment changes.
-4. In one database transaction, resolve namespace slugs and upsert current
-   observations.
-5. Reconcile assignments against existing active Keycloak identity bindings.
-6. Commit only after the full snapshot is processed.
-
-The command is idempotent. Reprocessing the same snapshot does not create
-duplicate memberships or events.
-
-### Owner Change Rules
-
-When the source changes from owner A to owner B:
-
-- B becomes the current assignment and is applied as namespace `ADMIN` when
-  resolvable.
-- If A was already applied, A changes to `RETAINED`; the namespace membership
-  remains and is not recreated if an administrator later removes it.
-- If A was still pending, A changes to `SUPERSEDED` and must not be applied
-  after a later login.
-- The namespace's existing `OWNER` is unchanged.
-
-When a previously known product suite is absent from a successfully validated
-complete snapshot, its current assignment is deactivated. An applied
-assignment becomes `RETAINED` and its namespace membership remains unchanged;
-an unresolved assignment becomes `SUPERSEDED` and must not be applied after a
-later login. No absence from the source snapshot automatically revokes an
-already-applied namespace role.
-
-## Membership Application Rules
-
-The reconciler uses a dedicated system service rather than the interactive
-namespace member route. It still preserves namespace lifecycle and role
-invariants:
-
-| Current namespace state | Result |
-| --- | --- |
-| Namespace missing | `BLOCKED` |
-| Namespace frozen or archived | `BLOCKED`, retry after it becomes active |
-| User missing | `PENDING` |
-| User disabled or merged | `BLOCKED` |
-| No membership | Insert `ADMIN` |
-| Existing `MEMBER` | Promote to `ADMIN` |
-| Existing `ADMIN` | No-op and mark `APPLIED` |
-| Existing `OWNER` | No-op and mark `APPLIED`; never demote |
-
-The product suite source cannot supply an arbitrary SkillHub role. The
-integration hardcodes the desired role to `ADMIN`.
-
-## OAuth Post-Bind Reconciliation
-
-After Keycloak OAuth has successfully created or updated the normal
-`user_account` and `identity_binding`, a narrow post-bind hook runs local
-reconciliation for:
+Each normalized source record must contain:
 
 ```text
-provider code + provider login + resolved SkillHub user id
+externalSuiteId
+namespaceSlug
+ownerWindowsAccount
 ```
 
-The hook:
+The HTTP adapter may obtain `namespaceSlug` directly from the organization API
+or from an explicit configuration mapping keyed by stable
+`externalSuiteId`. It must not guess a namespace from a display name.
 
-- reads only the local assignment table;
-- never performs an external HTTP call;
-- applies current `PENDING` assignments;
-- ignores `SUPERSEDED` and `RETAINED` assignments;
-- executes in a separate transaction after identity binding commits;
-- logs and records failures without rejecting the OAuth login.
+The concrete response parser and authentication configuration will be fixed
+against a sanitized product suite API response before implementation.
 
-The periodic synchronization command also retries unresolved and blocked
-assignments. Therefore, a process interruption between OAuth binding and
-membership application is eventually repaired.
+## Daily Synchronization Flow
 
-## Operational Interface
-
-The first implementation exposes a Python command, not a new public HTTP API:
+The product suite HTTP request occurs only inside the CronJob command:
 
 ```powershell
 uv run python -m app.integrations.product_suite sync
 ```
 
-Expected configuration categories are:
+The command performs:
 
-- feature enable flag;
-- product suite API base URL;
-- API authentication secret;
-- Keycloak registration id;
-- request timeout and page-size limits.
+1. Fetch all API pages with bounded timeouts.
+2. Parse the complete response into normalized source records.
+3. Validate required fields, duplicate suite IDs, duplicate namespace
+   mappings, and Windows account boundaries before database writes.
+4. Open a database transaction.
+5. Resolve every namespace slug without creating missing namespaces.
+6. Resolve every Windows account through active Keycloak
+   `identity_binding` and `user_account` rows.
+7. Apply the additive `ADMIN` membership rules.
+8. Commit after all valid records have been processed.
+9. Print a structured summary and return a nonzero exit code when records need
+   operator attention.
 
-Exact environment variable names and the HTTP authentication/response parser
-will be fixed in the implementation plan after reviewing a sanitized product
-suite API example. Secrets belong in a Kubernetes Secret, not a ConfigMap.
+If the external API request or complete-snapshot validation fails, the command
+writes no membership changes.
 
-The command emits structured counts for:
+Owners who do not yet have a Keycloak identity are counted as
+`waitingForLogin`. This is not a permanent error. The next daily run queries
+the source again and applies the role if the user has logged in by then.
+`waitingForLogin` alone does not make the command exit nonzero.
+
+## Membership Rules
+
+The command uses a dedicated organization integration service rather than the
+interactive namespace member route. The only role it can grant is `ADMIN`.
+
+| Condition | Result |
+| --- | --- |
+| Namespace missing | Report error; do not create it |
+| Namespace frozen or archived | Skip and report blocked |
+| User has never logged in | Count `waitingForLogin`; make no DB change |
+| User disabled or merged | Skip and report blocked |
+| User is not a member | Insert `namespace_member` as `ADMIN` |
+| User is `MEMBER` | Promote to `ADMIN` |
+| User is `ADMIN` | No-op |
+| User is `OWNER` | No-op; never demote |
+
+The operation is idempotent. Re-running the same snapshot does not create
+duplicate members or unnecessary updates. Membership reconciliation uses the
+existing `(namespace_id, user_id)` uniqueness boundary with an atomic upsert,
+so an operator-triggered run overlapping the CronJob also converges safely.
+
+## Owner Change And Manual Removal
+
+When the product suite source changes from owner A to owner B:
+
+- the next daily run adds B as namespace `ADMIN` if B has logged in;
+- A remains namespace `ADMIN`;
+- the namespace's existing `OWNER` remains unchanged.
+
+If an administrator manually removes A after A is no longer the source owner,
+later syncs do not add A again because A is absent from the current snapshot.
+
+If an administrator manually removes B while B is still the current source
+owner, the next daily sync adds B again. The current product suite owner is
+authoritative for the additive `ADMIN` grant.
+
+## Failure And Logging Behavior
+
+- API timeout, authorization failure, malformed pagination, or incomplete
+  snapshot: fail before database changes.
+- Unknown namespace: report the external suite ID and namespace slug.
+- Owner not logged in: report only as `waitingForLogin`.
+- Duplicate active identity matches: report conflict and do not grant access.
+- Membership write failure: roll back the synchronization transaction.
+- Secrets are never written to logs.
+
+The command emits a JSON-compatible summary containing:
 
 - suites fetched;
 - namespaces resolved;
-- assignments created or updated;
-- existing users applied;
-- pending users;
-- conflicts and blocked assignments.
+- administrators added;
+- members promoted;
+- memberships already correct;
+- owners waiting for first login;
+- blocked records;
+- identity conflicts;
+- errors.
 
-## Failure Behavior
+Kubernetes retains command output through the normal CronJob/Pod logging
+system. The first version does not add a local history table.
 
-- External API timeout, authorization failure, malformed pagination, or
-  incomplete response: fail the sync command with no assignment changes.
-- Unknown namespace: retain a blocked diagnostic; never create a namespace
-  implicitly.
-- Duplicate current owner rows for one suite: fail validation before writes.
-- Duplicate active identity matches: mark `CONFLICT`; do not grant access.
-- Membership write failure: roll back that reconciliation transaction and
-  leave the assignment retryable.
-- OAuth post-bind hook failure: log the error and allow login to finish.
+## Kubernetes Operation
 
-No logs contain API tokens. Windows accounts may appear in restricted
-operator logs and local assignment diagnostics because they are the explicit
-business key for this integration.
+Add an optional CronJob manifest that reuses the Python backend image and the
+same PostgreSQL connection configuration as the backend Deployment.
 
-## Upstream Isolation
+CronJob properties:
 
-The implementation should be concentrated in:
+- daily schedule supplied in the manifest or overlay;
+- `concurrencyPolicy: Forbid`;
+- bounded retry count;
+- `restartPolicy: Never`;
+- product suite API credentials from a Secret;
+- non-secret URL, Keycloak provider id, timeout, and mapping configuration from
+  a ConfigMap.
 
-- one local migration file;
+The backend Deployment does not run a scheduler or background daemon. Running
+the CronJob is the feature enablement boundary.
+
+## Upstream Impact
+
+This design has very low upstream impact:
+
+- no database migration;
+- no OAuth change;
+- no namespace member REST contract change;
+- no generated OpenAPI change;
+- no frontend change;
+- no authorization helper change.
+
+New code is isolated under:
+
 - `server-python/app/integrations/product_suite/`;
 - focused backend tests;
-- one narrow post-bind invocation in `server-python/app/auth/oauth.py`;
-- an optional Kubernetes CronJob manifest and operator documentation.
+- one optional Kubernetes CronJob manifest;
+- environment and operator documentation.
 
-It does not require changes to:
+The integration reads existing `identity_binding`, `user_account`, `namespace`,
+and `namespace_member` tables and writes only the normal additive membership
+state.
 
-- upstream Flyway-numbered migrations;
-- namespace member REST contracts;
-- generated OpenAPI types;
-- frontend pages;
-- core authorization policy helpers.
+When following an upstream release, verify only that:
 
-When following a future upstream release, the recurring review is limited to:
-
-1. verify the OAuth principal bind completion point still exists;
-2. reattach the best-effort post-bind reconciler if that flow changes;
-3. verify namespace membership and lifecycle invariants remain compatible;
-4. preserve the local migration chain unless upstream adds an equivalent
-   external-directory assignment feature.
+1. identity binding still exposes provider code and login name;
+2. namespace lifecycle values remain compatible;
+3. namespace membership roles remain `OWNER`, `ADMIN`, and `MEMBER`;
+4. the backend image still contains the synchronization command.
 
 ## Verification Strategy
 
-### Unit and Repository Tests
+### Unit Tests
 
-- Windows-account normalization and invalid boundaries.
-- Complete-snapshot validation and no-write-on-invalid behavior.
-- New assignment, unchanged snapshot, and owner-change state transitions.
-- Old applied owner retained; old pending owner superseded.
-- User lookup by Keycloak provider and normalized `login_name`.
-- Duplicate identity conflict fails closed.
-- Membership insert, `MEMBER` promotion, and `ADMIN`/`OWNER` no-op.
-- Frozen, archived, disabled, merged, and missing-resource handling.
-- Idempotent retries and event history.
+- Windows-account normalization.
+- Product suite response parsing.
+- Complete-snapshot validation.
+- Exact Keycloak identity matching.
+- Duplicate identity conflict.
+- Missing-login classification.
+- Membership insert, promotion, and no-op behavior.
+- Owner-change additive behavior.
+- Idempotent repeated snapshots.
 
-### OAuth Regression Tests
+### Database Tests
 
-- First login creates the normal identity before assignment reconciliation.
-- Matching pending assignments are applied to the resolved UUID.
-- Superseded assignments are ignored.
-- Reconciliation exceptions do not fail OAuth login or session creation.
-- Existing GitHub, GitLab, local login, and account merge behavior is
-  unchanged.
+- A logged-in owner becomes `ADMIN`.
+- A never-logged-in owner produces no placeholder user or membership.
+- A `MEMBER` becomes `ADMIN`.
+- Existing `ADMIN` and `OWNER` rows remain unchanged.
+- Frozen, archived, disabled, merged, and missing resources are skipped.
+- A failed write rolls back the transaction.
 
-### Database and Deployment Tests
+### Deployment Tests
 
-- Existing V43 database applies the new local migration exactly once.
-- Fresh database applies upstream and local migrations in order.
-- PostgreSQL transaction tests cover owner-change and membership promotion.
-- The sync command returns nonzero on source/validation failure.
-- Kubernetes CronJob rendering uses the backend image and Secret-backed
-  credentials.
+- Command exits zero for a complete successful run.
+- Command exits nonzero for source or validation failure.
+- Dry-run fixture confirms intended changes without writing.
+- Kubernetes CronJob renders with Secret-backed credentials.
+- Two attempted overlapping CronJobs are prevented by
+  `concurrencyPolicy: Forbid`.
 
 ### Final Gate
 
-- Relevant focused tests.
+- Focused integration tests.
 - Full `server-python` pytest suite.
-- Migration upgrade against PostgreSQL.
+- Dry-run against a sanitized product suite snapshot.
+- Live test with one existing user and one never-logged-in owner.
 - Docker backend image build.
 - Kubernetes manifest render.
 - `git diff --check`.
-- Review confirms no frontend, generated API, or upstream migration changes.
+- Review confirms no core schema, OAuth, frontend, or OpenAPI changes.
 
 ## Proposed Milestones
 
-1. **Local assignment schema and state machine**
-   - Add local migration, repository, normalization, and transition tests.
-   - Verify migration idempotency and owner-change behavior.
+1. **Sync domain and database reconciliation**
+   - Add the isolated command, normalized source model, identity resolver,
+     membership reconciler, dry-run mode, and focused tests.
+   - Verify existing, missing, promoted, blocked, and conflicting users.
 
-2. **Existing-user reconciliation**
-   - Resolve Keycloak login names and apply additive `ADMIN` membership.
-   - Verify permission and namespace lifecycle boundaries with PostgreSQL
-     transaction tests.
+2. **Organization API adapter**
+   - Freeze the HTTP wire contract from a sanitized response and
+     authentication example.
+   - Implement pagination, complete-snapshot validation, timeout behavior, and
+     structured command output.
 
-3. **OAuth post-bind reconciliation**
-   - Add the narrow best-effort hook.
-   - Verify login success, retry behavior, and auth regression coverage.
-
-4. **Product suite sync adapter and command**
-   - Freeze the external wire contract from a sanitized API example.
-   - Implement complete-snapshot fetching, validation, idempotent sync, and
-     structured results.
-
-5. **Kubernetes and operator cutover**
-   - Add the optional CronJob, Secret/ConfigMap contract, environment
-     documentation, dry-run procedure, and rollback steps.
-   - Run full backend, migration, image, and manifest verification.
+3. **Kubernetes and operator cutover**
+   - Add the optional daily CronJob, Secret/ConfigMap contract, environment
+     documentation, dry-run procedure, and rollback instructions.
+   - Run full backend, image, manifest, and live reconciliation verification.
