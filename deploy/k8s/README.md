@@ -139,6 +139,27 @@ Edit these common ConfigMap values:
 For the full environment variable manual, see
 [environment-variables.zh.md](environment-variables.zh.md).
 
+## Optional Product Suite Admin Sync
+
+`addons/product-suite-admin-sync/` provides an opt-in daily CronJob that loads
+the organization PIC source module and grants current product-suite owners
+namespace `ADMIN`.
+
+It is intentionally excluded from `base` and requires an organization image
+containing the private source module. Configure the image, source module, API
+URL, schedule, identity provider, and PIC Secret before applying:
+
+```bash
+kubectl apply -f deploy/k8s/addons/product-suite-admin-sync/secret.yaml
+kubectl apply -k deploy/k8s/addons/product-suite-admin-sync
+```
+
+See
+[`addons/product-suite-admin-sync/README.md`](addons/product-suite-admin-sync/README.md)
+and
+[`../../server-python/PRODUCT_SUITE_ADMIN_SYNC.zh.md`](../../server-python/PRODUCT_SUITE_ADMIN_SYNC.zh.md)
+for dry-run, logs, exit codes, and the internal Python contract.
+
 ## Apply
 
 ```bash

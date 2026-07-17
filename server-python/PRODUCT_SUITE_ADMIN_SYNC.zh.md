@@ -314,3 +314,6 @@ DB engine 前；DB 寫入失敗則會 rollback 整批 membership。修正原因�
 6. CronJob 與 backend 指向同一個 `SKILLHUB_DATABASE_URL`。
 7. PIC credentials 只來自 Secret，且 exception/log 不包含 secret。
 8. 先以測試 namespace 執行正式同步，再啟用每日排程。
+
+Kustomize 與 plain CronJob 範例請看
+[`../deploy/k8s/addons/product-suite-admin-sync/README.md`](../deploy/k8s/addons/product-suite-admin-sync/README.md)。

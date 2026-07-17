@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: skillhub-product-suite-admin-sync
+  namespace: skillhub
+  labels:
+    app.kubernetes.io/name: skillhub-product-suite-admin-sync
+    app.kubernetes.io/component: organization-integration
+    app.kubernetes.io/part-of: skillhub
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: skillhub-product-suite-admin-sync
+            app.kubernetes.io/component: organization-integration
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: product-suite-admin-sync
+              image: registry.example.internal/skillhub-server-python:product-suite-sync
+              imagePullPolicy: IfNotPresent
+              command:
+                - uv
+                - run
+                - python
+                - -m
+                - app.integrations.product_suite
+              env:
+                - name: SKILLHUB_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: skillhub-secret
+                      key: database-url
+                - name: SKILLHUB_PRODUCT_SUITE_SOURCE_MODULE
+                  value: company_pic.product_suite_source
+                - name: SKILLHUB_PRODUCT_SUITE_API_URL
+                  value: https://pic.example.internal/api/product-suites
+                - name: SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS
+                  value: "30"
+                - name: SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER
+                  value: keycloak
+              envFrom:
+                - secretRef:
+                    name: skillhub-product-suite-sync-secret
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi

@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: skillhub
+
+resources:
+  - cronjob.yaml
+
+images:
+  - name: ghcr.io/iflytek/skillhub-server-python
+    newName: registry.example.internal/skillhub-server-python
+    newTag: product-suite-sync
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: skillhub
+      app.kubernetes.io/managed-by: kustomize
