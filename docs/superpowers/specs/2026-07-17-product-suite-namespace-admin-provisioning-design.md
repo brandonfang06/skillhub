@@ -91,25 +91,89 @@ namespaceSlug
 ownerWindowsAccount
 ```
 
-The HTTP adapter may obtain `namespaceSlug` directly from the organization API
-or from an explicit configuration mapping keyed by stable
+The internal PIC module may obtain `namespaceSlug` directly from the
+organization API or from an explicit configuration mapping keyed by stable
 `externalSuiteId`. It must not guess a namespace from a display name.
 
-The concrete response parser and authentication configuration will be fixed
-against a sanitized product suite API response before implementation.
+## Internal Source Module Contract
+
+The open-source repository does not implement the organization-specific PIC
+HTTP client. It defines a stable Python boundary that the existing internal
+`.py` module can implement:
+
+```python
+async def fetch_product_suite_owners(
+    config: ProductSuiteSourceConfig,
+) -> Sequence[ProductSuiteOwnerRecord]:
+    ...
+```
+
+The shared types contain:
+
+```python
+@dataclass(frozen=True)
+class ProductSuiteSourceConfig:
+    api_url: str
+    timeout_seconds: float
+
+
+@dataclass(frozen=True)
+class ProductSuiteOwnerRecord:
+    external_suite_id: str
+    namespace_slug: str
+    owner_windows_account: str
+```
+
+The internal module owns:
+
+- PIC authentication;
+- PIC pagination and response parsing;
+- any organization-specific suite-to-namespace mapping;
+- returning a complete list of normalized records.
+
+The shared synchronization command owns:
+
+- loading the configured source module;
+- validating all returned records;
+- resolving Keycloak identities;
+- reconciling namespace membership;
+- dry-run and structured result output.
+
+The source module is trusted deployment code selected only by an operator. It
+must be installed in the backend image or otherwise available on Python's
+module path. The recommended organization deployment builds the internal
+module into an organization-owned derivative backend image instead of mounting
+executable Python through a ConfigMap.
 
 ## Daily Synchronization Flow
 
-The product suite HTTP request occurs only inside the CronJob command:
+The product suite HTTP request occurs only inside the configured internal
+source module invoked by the CronJob command:
 
 ```powershell
-uv run python -m app.integrations.product_suite sync
+uv run python -m app.integrations.product_suite sync `
+  --source-module company.pic_api `
+  --api-url https://pic.example.internal/api
 ```
+
+CLI values override environment values. The supported shared configuration is:
+
+| CLI option | Environment variable | Purpose |
+| --- | --- | --- |
+| `--source-module` | `SKILLHUB_PRODUCT_SUITE_SOURCE_MODULE` | Import path of the internal PIC module |
+| `--api-url` | `SKILLHUB_PRODUCT_SUITE_API_URL` | Non-secret PIC API base URL |
+| `--timeout-seconds` | `SKILLHUB_PRODUCT_SUITE_API_TIMEOUT_SECONDS` | Bounded source timeout |
+| `--identity-provider` | `SKILLHUB_PRODUCT_SUITE_IDENTITY_PROVIDER` | OAuth registration id; defaults to `keycloak` |
+| `--dry-run` | none | Report intended DB changes without writing |
+
+PIC-specific credentials remain private to the internal source module and are
+read from that module's own Secret-backed environment variables. The shared
+command does not interpret or log those credentials.
 
 The command performs:
 
-1. Fetch all API pages with bounded timeouts.
-2. Parse the complete response into normalized source records.
+1. Import the configured source module and validate its callable contract.
+2. Ask the module for a complete normalized source snapshot.
 3. Validate required fields, duplicate suite IDs, duplicate namespace
    mappings, and Windows account boundaries before database writes.
 4. Open a database transaction.
@@ -167,8 +231,8 @@ authoritative for the additive `ADMIN` grant.
 
 ## Failure And Logging Behavior
 
-- API timeout, authorization failure, malformed pagination, or incomplete
-  snapshot: fail before database changes.
+- Source-module import, API, authentication, pagination, or incomplete
+  snapshot failure: fail before database changes.
 - Unknown namespace: report the external suite ID and namespace slug.
 - Owner not logged in: report only as `waitingForLogin`.
 - Duplicate active identity matches: report conflict and do not grant access.
@@ -202,8 +266,11 @@ CronJob properties:
 - bounded retry count;
 - `restartPolicy: Never`;
 - product suite API credentials from a Secret;
-- non-secret URL, Keycloak provider id, timeout, and mapping configuration from
-  a ConfigMap.
+- source module path, non-secret API URL, Keycloak provider id, and timeout
+  from a ConfigMap.
+
+The internal source module and its PIC credentials are organization-owned and
+are not committed to the upstream-following repository.
 
 The backend Deployment does not run a scheduler or background daemon. Running
 the CronJob is the feature enablement boundary.
@@ -226,6 +293,9 @@ New code is isolated under:
 - one optional Kubernetes CronJob manifest;
 - environment and operator documentation.
 
+The organization-specific PIC module remains outside the upstream-following
+change set and depends only on the stable source contract.
+
 The integration reads existing `identity_binding`, `user_account`, `namespace`,
 and `namespace_member` tables and writes only the normal additive membership
 state.
@@ -242,7 +312,8 @@ When following an upstream release, verify only that:
 ### Unit Tests
 
 - Windows-account normalization.
-- Product suite response parsing.
+- Normalized source-record validation.
+- Source-module loading and contract validation.
 - Complete-snapshot validation.
 - Exact Keycloak identity matching.
 - Duplicate identity conflict.
@@ -287,13 +358,10 @@ When following an upstream release, verify only that:
      membership reconciler, dry-run mode, and focused tests.
    - Verify existing, missing, promoted, blocked, and conflicting users.
 
-2. **Organization API adapter**
-   - Freeze the HTTP wire contract from a sanitized response and
-     authentication example.
-   - Implement pagination, complete-snapshot validation, timeout behavior, and
-     structured command output.
-
-3. **Kubernetes and operator cutover**
-   - Add the optional daily CronJob, Secret/ConfigMap contract, environment
-     documentation, dry-run procedure, and rollback instructions.
+2. **Kubernetes and internal PIC handoff**
+   - Add the optional daily CronJob, source-module/API URL parameters,
+     Secret/ConfigMap contract, environment documentation, dry-run procedure,
+     rollback instructions, and an example test source module.
+   - Verify the internal PIC module can return the shared record contract
+     without adding PIC code to the upstream-following repository.
    - Run full backend, image, manifest, and live reconciliation verification.
