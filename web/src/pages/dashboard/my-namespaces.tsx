@@ -1,9 +1,19 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Search, X } from 'lucide-react'
+import type { ManagedNamespace } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
@@ -51,6 +61,23 @@ type NamespaceActionMutations = {
 type NamespaceActionToast = {
   success: (title: string, description?: string) => void
   error: (title: string, description?: string) => void
+}
+
+export type NamespaceStatusFilter = 'ALL' | 'ACTIVE' | 'FROZEN' | 'ARCHIVED'
+
+export function filterManagedNamespaces(
+  namespaces: ManagedNamespace[],
+  filters: { query: string; status: NamespaceStatusFilter },
+) {
+  const normalizedQuery = filters.query.trim().replace(/^@/, '').toLowerCase()
+
+  return namespaces.filter((namespace) => {
+    const matchesQuery = normalizedQuery.length === 0
+      || namespace.displayName.toLowerCase().includes(normalizedQuery)
+      || namespace.slug.toLowerCase().includes(normalizedQuery)
+    const matchesStatus = filters.status === 'ALL' || namespace.status === filters.status
+    return matchesQuery && matchesStatus
+  })
 }
 
 export function resolveNamespaceActionCopy(
@@ -150,12 +177,20 @@ export function MyNamespacesPage() {
   const { hasRole } = useAuth()
   const canCreateNamespace = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const [pendingAction, setPendingAction] = useState<PendingNamespaceAction | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<NamespaceStatusFilter>('ALL')
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { data: namespaces, isLoading } = useMyNamespaces()
   const freezeMutation = useFreezeNamespace()
   const unfreezeMutation = useUnfreezeNamespace()
   const archiveMutation = useArchiveNamespace()
   const restoreMutation = useRestoreNamespace()
   const deleteMutation = useDeleteNamespace()
+  const namespaceItems = namespaces ?? []
+  const filteredNamespaces = filterManagedNamespaces(namespaceItems, {
+    query: searchQuery,
+    status: statusFilter,
+  })
 
   const handleNamespaceClick = (slug: string) => {
     navigate({ to: `/space/${encodeURIComponent(slug)}` })
@@ -247,9 +282,72 @@ export function MyNamespacesPage() {
         ) : undefined}
       />
 
-      {namespaces && namespaces.length > 0 ? (
+      {namespaceItems.length > 0 && (
+        <div className="flex flex-col gap-3 border-y border-border/60 py-4 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              ref={searchInputRef}
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              aria-label={t('myNamespaces.searchLabel')}
+              placeholder={t('myNamespaces.searchPlaceholder')}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t('myNamespaces.clearSearch')}
+                title={t('myNamespaces.clearSearch')}
+                className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                onClick={() => {
+                  setSearchQuery('')
+                  searchInputRef.current?.focus()
+                }}
+              >
+                <X aria-hidden="true" className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as NamespaceStatusFilter)}
+          >
+            <SelectTrigger
+              aria-label={t('myNamespaces.statusFilterLabel')}
+              className="w-full sm:w-44"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">{t('myNamespaces.filterAll')}</SelectItem>
+              <SelectItem value="ACTIVE">{t('namespaceStatus.active')}</SelectItem>
+              <SelectItem value="FROZEN">{t('namespaceStatus.frozen')}</SelectItem>
+              <SelectItem value="ARCHIVED">{t('namespaceStatus.archived')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p
+            role="status"
+            aria-atomic="true"
+            className="shrink-0 text-sm text-muted-foreground"
+          >
+            {t('myNamespaces.resultCount', {
+              matched: filteredNamespaces.length,
+              total: namespaceItems.length,
+            })}
+          </p>
+        </div>
+      )}
+
+      {namespaceItems.length > 0 && filteredNamespaces.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {namespaces.map((namespace, idx) => (
+          {filteredNamespaces.map((namespace, idx) => (
             <Card
               key={namespace.id}
               data-testid={`namespace-card-${namespace.slug}`}
@@ -384,6 +482,22 @@ export function MyNamespacesPage() {
             </Card>
           ))}
         </div>
+      ) : namespaceItems.length > 0 ? (
+        <EmptyState
+          title={t('myNamespaces.noMatchTitle')}
+          description={t('myNamespaces.noMatchDescription')}
+          action={(
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('')
+                setStatusFilter('ALL')
+              }}
+            >
+              {t('myNamespaces.clearFilters')}
+            </Button>
+          )}
+        />
       ) : (
         <EmptyState
           title={t('myNamespaces.emptyTitle')}

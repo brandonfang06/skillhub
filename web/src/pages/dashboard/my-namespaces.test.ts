@@ -1,6 +1,8 @@
+/** @vitest-environment jsdom */
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import type { ManagedNamespace } from '@/api/types'
 
@@ -22,7 +24,9 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string) => key,
+      t: (key: string, options?: Record<string, unknown>) => key === 'myNamespaces.resultCount'
+        ? `${options?.matched}/${options?.total}`
+        : key,
     }),
   }
 })
@@ -39,6 +43,26 @@ vi.mock('@/shared/ui/card', () => ({
   Card: ({ children, ...props }: { children: ReactNode }) => createElement('div', props, children),
 }))
 
+vi.mock('@/shared/ui/select', () => ({
+  Select: ({
+    children,
+    value,
+    onValueChange,
+  }: {
+    children: ReactNode
+    value: string
+    onValueChange?: (value: string) => void
+  }) => createElement('select', {
+    'aria-label': 'myNamespaces.statusFilterLabel',
+    value,
+    onChange: (event: { target: { value: string } }) => onValueChange?.(event.target.value),
+  }, children),
+  SelectContent: ({ children }: { children: ReactNode }) => children,
+  SelectItem: ({ children, value }: { children: ReactNode; value: string }) => createElement('option', { value }, children),
+  SelectTrigger: ({ children }: { children: ReactNode }) => children,
+  SelectValue: () => null,
+}))
+
 vi.mock('@/shared/components/namespace-badge', () => ({
   NamespaceBadge: ({ name }: { name: string }) => createElement('span', null, name),
 }))
@@ -47,8 +71,8 @@ vi.mock('@/shared/components/empty-state', () => ({
   EmptyState: ({ title, description, action }: { title: string; description: string; action?: ReactNode }) => createElement(
     'section',
     null,
-    title,
-    description,
+    createElement('h2', null, title),
+    createElement('p', null, description),
     action,
   ),
 }))
@@ -84,8 +108,12 @@ vi.mock('@/shared/lib/toast', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-import { MyNamespacesPage } from './my-namespaces'
-import { executeNamespaceAction, resolveNamespaceActionCopy } from './my-namespaces'
+import {
+  executeNamespaceAction,
+  filterManagedNamespaces,
+  MyNamespacesPage,
+  resolveNamespaceActionCopy,
+} from './my-namespaces'
 
 function buildNamespace(overrides: Partial<ManagedNamespace> = {}): ManagedNamespace {
   return {
@@ -109,6 +137,10 @@ function buildNamespace(overrides: Partial<ManagedNamespace> = {}): ManagedNames
 }
 
 describe('MyNamespacesPage', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   beforeEach(() => {
     navigateMock.mockReset()
     freezeMutateAsync.mockReset()
@@ -121,6 +153,131 @@ describe('MyNamespacesPage', () => {
 
   it('exports a named component function', () => {
     expect(typeof MyNamespacesPage).toBe('function')
+  })
+
+  it('matches namespace display names and slugs without case sensitivity', () => {
+    const namespaces = [
+      buildNamespace({ id: 1, slug: 'product-alpha', displayName: 'Product Alpha' }),
+      buildNamespace({ id: 2, slug: 'data-platform', displayName: 'Analytics Team' }),
+    ]
+
+    expect(filterManagedNamespaces(namespaces, { query: '  PRODUCT  ', status: 'ALL' }))
+      .toEqual([namespaces[0]])
+    expect(filterManagedNamespaces(namespaces, { query: '@DATA-PLATFORM', status: 'ALL' }))
+      .toEqual([namespaces[1]])
+    expect(filterManagedNamespaces(namespaces, { query: 'data-platform', status: 'ALL' }))
+      .toEqual([namespaces[1]])
+  })
+
+  it('normalizes case independently from the browser locale', () => {
+    const namespace = buildNamespace({ slug: 'ISTANBUL', displayName: 'Unrelated' })
+    const localeLowerCase = vi.spyOn(String.prototype, 'toLocaleLowerCase')
+      .mockImplementation(() => {
+        throw new Error('locale-sensitive normalization called')
+      })
+
+    try {
+      expect(filterManagedNamespaces([namespace], { query: 'istanbul', status: 'ALL' }))
+        .toEqual([namespace])
+    } finally {
+      localeLowerCase.mockRestore()
+    }
+  })
+
+  it('combines exact status filtering with search and preserves input order', () => {
+    const namespaces = [
+      buildNamespace({ id: 3, slug: 'product-archived', displayName: 'Product Archived', status: 'ARCHIVED' }),
+      buildNamespace({ id: 1, slug: 'product-active', displayName: 'Product Active', status: 'ACTIVE' }),
+      buildNamespace({ id: 2, slug: 'product-frozen', displayName: 'Product Frozen', status: 'FROZEN' }),
+    ]
+
+    expect(filterManagedNamespaces(namespaces, { query: 'product', status: 'ACTIVE' }))
+      .toEqual([namespaces[1]])
+    expect(filterManagedNamespaces(namespaces, { query: '', status: 'ALL' }))
+      .toEqual(namespaces)
+  })
+
+  it('filters rendered namespace cards by search and status and shows the result count', () => {
+    mockNamespaces = [
+      buildNamespace({ id: 1, slug: 'product-alpha', displayName: 'Product Alpha', status: 'ACTIVE' }),
+      buildNamespace({ id: 2, slug: 'data-platform', displayName: 'Data Platform', status: 'ARCHIVED' }),
+      buildNamespace({ id: 3, slug: 'data-runtime', displayName: 'Data Runtime', status: 'ACTIVE' }),
+    ]
+    render(createElement(MyNamespacesPage))
+
+    expect(screen.getByRole('status').textContent).toBe('3/3')
+
+    fireEvent.change(screen.getByLabelText('myNamespaces.searchLabel'), {
+      target: { value: '@DATA' },
+    })
+
+    expect(screen.queryByTestId('namespace-card-product-alpha')).toBeNull()
+    expect(screen.getByTestId('namespace-card-data-platform')).toBeTruthy()
+    expect(screen.getByTestId('namespace-card-data-runtime')).toBeTruthy()
+    expect(screen.getByText('2/3')).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('myNamespaces.statusFilterLabel'), {
+      target: { value: 'ARCHIVED' },
+    })
+
+    expect(screen.getByTestId('namespace-card-data-platform')).toBeTruthy()
+    expect(screen.queryByTestId('namespace-card-data-runtime')).toBeNull()
+    expect(screen.getByText('1/3')).toBeTruthy()
+  })
+
+  it('returns keyboard focus to the search input after clearing its value', () => {
+    mockNamespaces = [buildNamespace()]
+    render(createElement(MyNamespacesPage))
+    const searchInput = screen.getByLabelText('myNamespaces.searchLabel')
+
+    fireEvent.change(searchInput, { target: { value: 'team' } })
+    const clearButton = screen.getByLabelText('myNamespaces.clearSearch')
+    clearButton.focus()
+    fireEvent.click(clearButton)
+
+    expect(document.activeElement).toBe(searchInput)
+  })
+
+  it('preserves permission-gated namespace actions after filtering', () => {
+    mockNamespaces = [
+      buildNamespace({
+        slug: 'product-alpha',
+        displayName: 'Product Alpha',
+        currentUserRole: 'OWNER',
+        canArchive: true,
+      }),
+      buildNamespace({ id: 2, slug: 'data-platform', displayName: 'Data Platform' }),
+    ]
+    render(createElement(MyNamespacesPage))
+
+    fireEvent.change(screen.getByLabelText('myNamespaces.searchLabel'), {
+      target: { value: 'product-alpha' },
+    })
+
+    expect(screen.getByText('myNamespaces.manageMembers')).toBeTruthy()
+    expect(screen.getByText('myNamespaces.reviewTasks')).toBeTruthy()
+    expect(screen.getByText('myNamespaces.archive')).toBeTruthy()
+  })
+
+  it('shows a filter-specific empty state and clears active filters', () => {
+    mockNamespaces = [
+      buildNamespace({ id: 1, slug: 'product-alpha', displayName: 'Product Alpha' }),
+      buildNamespace({ id: 2, slug: 'data-platform', displayName: 'Data Platform' }),
+    ]
+    render(createElement(MyNamespacesPage))
+
+    fireEvent.change(screen.getByLabelText('myNamespaces.searchLabel'), {
+      target: { value: 'missing' },
+    })
+
+    expect(screen.getByText('myNamespaces.noMatchTitle')).toBeTruthy()
+    expect(screen.queryByTestId('namespace-card-product-alpha')).toBeNull()
+
+    fireEvent.click(screen.getByText('myNamespaces.clearFilters'))
+
+    expect(screen.getByTestId('namespace-card-product-alpha')).toBeTruthy()
+    expect(screen.getByTestId('namespace-card-data-platform')).toBeTruthy()
+    expect(screen.queryByText('myNamespaces.noMatchTitle')).toBeNull()
   })
 
   it('renders the delete action when the namespace is deletable', () => {
