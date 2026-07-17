@@ -715,7 +715,7 @@ The CronJob must:
 - use `backoffLimit: 2`;
 - set `restartPolicy: Never`;
 - use the Python backend image;
-- invoke `uv run python -m app.integrations.product_suite`;
+- invoke `uv run --no-sync python -m app.integrations.product_suite`;
 - read `SKILLHUB_DATABASE_URL` from `skillhub-secret/database-url`;
 - set the four shared source variables;
 - import PIC-private credentials through

@@ -150,8 +150,11 @@ COPY company_pic ./company_pic
 
 ```powershell
 docker run --rm <organization-image> `
-  uv run python -c "import company_pic.product_suite_source"
+  uv run --no-sync python -c "import company_pic.product_suite_source"
 ```
+
+Kubernetes CronJob 同樣使用 `uv run --no-sync`，所以正式執行時不需要連外下載
+Python packages。
 
 ## Shared 環境變數
 

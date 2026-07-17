@@ -13,6 +13,9 @@
 3. Source module 可在 image 內 import，且必要 production dependencies 已安裝。
 4. PIC credentials 已存入獨立 Secret。
 
+CronJob 使用 `uv run --no-sync`，不會在啟動時下載或安裝套件。所有 production
+dependencies 必須在 organization image build 階段完成。
+
 請先修改 `kustomization.yaml` 的 `newName`、`newTag`，指向實際的
 organization image。不要直接使用不含內部 source module 的公共 backend image。
 

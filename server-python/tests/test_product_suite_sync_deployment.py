@@ -38,6 +38,7 @@ def test_product_suite_sync_cronjob_uses_python_command_and_shared_contract() ->
     assert "ghcr.io/iflytek/skillhub-server-python:edge" in cronjob
     assert "- uv" in cronjob
     assert "- run" in cronjob
+    assert "- --no-sync" in cronjob
     assert "- python" in cronjob
     assert "- -m" in cronjob
     assert "- app.integrations.product_suite" in cronjob
@@ -66,6 +67,7 @@ def test_plain_cronjob_remains_an_explicit_example() -> None:
     assert enabled_path.exists() is False
     assert "kind: CronJob" in example
     assert "app.integrations.product_suite" in example
+    assert "- --no-sync" in example
 
 
 def test_product_suite_sync_docs_explain_internal_image_and_opt_in() -> None:

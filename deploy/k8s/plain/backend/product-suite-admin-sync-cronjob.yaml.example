@@ -29,6 +29,7 @@ spec:
               command:
                 - uv
                 - run
+                - --no-sync
                 - python
                 - -m
                 - app.integrations.product_suite
