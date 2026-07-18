@@ -154,7 +154,8 @@ docker run --rm <organization-image> `
 ```
 
 Kubernetes CronJob 同樣使用 `uv run --no-sync`，所以正式執行時不需要連外下載
-Python packages。
+Python packages。範例 Job 的 `activeDeadlineSeconds` 是 900 秒，避免 PIC 或
+database 連線卡住後，因 `concurrencyPolicy: Forbid` 持續阻擋後續每日排程。
 
 ## Shared 環境變數
 

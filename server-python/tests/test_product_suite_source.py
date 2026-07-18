@@ -39,6 +39,19 @@ def test_owner_record_normalizes_windows_account() -> None:
     assert record.normalized_windows_account == "hcfange"
 
 
+def test_owner_record_constructor_enforces_normalized_fields() -> None:
+    record = ProductSuiteOwnerRecord(
+        external_suite_id=" suite-1 ",
+        namespace_slug=" product-a ",
+        owner_windows_account=" HCFange ",
+    )
+
+    assert record.external_suite_id == "suite-1"
+    assert record.namespace_slug == "product-a"
+    assert record.owner_windows_account == "HCFange"
+    assert record.normalized_windows_account == "hcfange"
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

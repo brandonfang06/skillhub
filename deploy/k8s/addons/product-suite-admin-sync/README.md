@@ -31,6 +31,10 @@ organization image。不要直接使用不含內部 source module 的公共 back
 controller 的時區，許多叢集是 UTC。若叢集版本支援 CronJob `timeZone`，可明確
 設定，例如 `timeZone: Asia/Taipei`。
 
+每次 Job 最長執行 900 秒，避免 PIC 或 database 連線卡住時，因
+`concurrencyPolicy: Forbid` 持續阻擋後續排程。若內部 API 合理執行時間更長，
+請連同 source timeout 與 `activeDeadlineSeconds` 一起評估。
+
 ## 建立 PIC Secret
 
 複製 example，依內部 module 實際讀取的 env key 修改：

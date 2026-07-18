@@ -1,8 +1,8 @@
 # Product Suite Namespace Admin Sync Result
 
-**Date:** 2026-07-17  
-**Branch:** `codex/product-suite-admin-provisioning`  
-**Status:** Complete
+- **Date:** 2026-07-17
+- **Branch:** `codex/product-suite-admin-provisioning`
+- **Status:** Complete
 
 ## Delivered
 
@@ -26,9 +26,13 @@ or organization-specific PIC parser was added.
 2. Converted argparse failures to fatal JSON instead of leaking `SystemExit`
    usage output.
 3. Enforced the configured source timeout in the shared command so an internal
-   module cannot block future `concurrencyPolicy: Forbid` runs indefinitely.
+   module has a bounded fetch window.
 4. Added `uv run --no-sync` to container commands after image verification
    showed plain `uv run` downloading development packages at runtime.
+5. Moved owner-record normalization into the dataclass invariant so an internal
+   source cannot construct mismatched display and lookup accounts.
+6. Added a 900-second Kubernetes Job deadline so a stuck source cancellation or
+   database connection cannot block future `concurrencyPolicy: Forbid` runs.
 
 ## Verification
 
@@ -39,7 +43,7 @@ cd server-python
 uv --cache-dir .uv-cache run pytest tests -q
 ```
 
-Result: `980 passed, 1 warning in 118.05s`. The warning is the existing
+Result: `981 passed, 1 warning in 107.38s`. The warning is the existing
 Starlette `TestClient` / `httpx` deprecation warning.
 
 Focused product-suite verification:
@@ -52,21 +56,23 @@ uv --cache-dir .uv-cache run pytest `
   tests/test_product_suite_sync_deployment.py -q
 ```
 
-Result: all focused tests passed.
+Result: `49 passed in 0.70s`.
 
 ### Production image
 
 ```powershell
 docker build `
-  -t skillhub-server-python:product-suite-sync `
+  -t skillhub-server-python:product-suite-review `
   -f server-python/Dockerfile .
 
-docker run --rm skillhub-server-python:product-suite-sync `
+docker run --rm skillhub-server-python:product-suite-review `
   uv run --no-sync python -m app.integrations.product_suite --help
 ```
 
 Result: image build completed and the command exposed source module, API URL,
 timeout, identity provider, and dry-run options without downloading packages.
+An additional in-image smoke check confirmed direct record construction enforces
+trimmed fields and the case-folded Windows-account lookup invariant.
 
 ### Kubernetes
 
@@ -77,12 +83,12 @@ kubectl kustomize deploy/k8s/addons/product-suite-admin-sync
 
 Result: base still rendered the original frontend/backend/scanner workloads;
 the addon independently rendered one `batch/v1` CronJob using the organization
-image placeholder and `uv run --no-sync`.
+image placeholder, `uv run --no-sync`, and `activeDeadlineSeconds: 900`.
 
-The plain `.yaml.example` was parsed with a temporary offline Kustomize wrapper
-and rendered as one valid CronJob. `kubectl apply --dry-run=client` could not be
-used without Kubernetes API discovery in this local environment; the wrapper
-was removed immediately after verification.
+The plain `.yaml.example` was parsed offline with PyYAML and confirmed as one
+valid CronJob with the same 900-second deadline.
+`kubectl apply --dry-run=client` could not be used without Kubernetes API
+discovery in this local environment.
 
 ### Real PostgreSQL transaction
 

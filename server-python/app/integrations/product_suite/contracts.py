@@ -30,7 +30,27 @@ class ProductSuiteOwnerRecord:
     external_suite_id: str
     namespace_slug: str
     owner_windows_account: str
-    normalized_windows_account: str
+    normalized_windows_account: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        suite_id = _required_text(
+            self.external_suite_id,
+            field_name="external_suite_id",
+        )
+        slug = _required_text(
+            self.namespace_slug,
+            field_name="namespace_slug",
+            max_length=64,
+        )
+        account = _required_text(
+            self.owner_windows_account,
+            field_name="owner_windows_account",
+            max_length=128,
+        )
+        object.__setattr__(self, "external_suite_id", suite_id)
+        object.__setattr__(self, "namespace_slug", slug)
+        object.__setattr__(self, "owner_windows_account", account)
+        object.__setattr__(self, "normalized_windows_account", account.casefold())
 
     @classmethod
     def create(
@@ -40,25 +60,10 @@ class ProductSuiteOwnerRecord:
         namespace_slug: str,
         owner_windows_account: str,
     ) -> ProductSuiteOwnerRecord:
-        suite_id = _required_text(
-            external_suite_id,
-            field_name="external_suite_id",
-        )
-        slug = _required_text(
-            namespace_slug,
-            field_name="namespace_slug",
-            max_length=64,
-        )
-        account = _required_text(
-            owner_windows_account,
-            field_name="owner_windows_account",
-            max_length=128,
-        )
         return cls(
-            external_suite_id=suite_id,
-            namespace_slug=slug,
-            owner_windows_account=account,
-            normalized_windows_account=account.casefold(),
+            external_suite_id=external_suite_id,
+            namespace_slug=namespace_slug,
+            owner_windows_account=owner_windows_account,
         )
 
 

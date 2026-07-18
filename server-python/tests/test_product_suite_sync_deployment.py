@@ -25,6 +25,7 @@ def test_product_suite_sync_cronjob_is_optional_and_daily() -> None:
     assert "successfulJobsHistoryLimit: 3" in cronjob
     assert "failedJobsHistoryLimit: 5" in cronjob
     assert "backoffLimit: 2" in cronjob
+    assert "activeDeadlineSeconds: 900" in cronjob
     assert "restartPolicy: Never" in cronjob
     assert "cronjob.yaml" in addon
     assert "product-suite-admin-sync" not in base
@@ -66,6 +67,7 @@ def test_plain_cronjob_remains_an_explicit_example() -> None:
     assert example_path.is_file()
     assert enabled_path.exists() is False
     assert "kind: CronJob" in example
+    assert "activeDeadlineSeconds: 900" in example
     assert "app.integrations.product_suite" in example
     assert "- --no-sync" in example
 
