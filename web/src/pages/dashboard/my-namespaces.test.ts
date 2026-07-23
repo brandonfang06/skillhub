@@ -2,9 +2,11 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import i18next from 'i18next'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import type { ManagedNamespace } from '@/api/types'
+import en from '@/i18n/locales/en.json'
 
 const navigateMock = vi.fn()
 const freezeMutateAsync = vi.fn()
@@ -238,6 +240,27 @@ describe('MyNamespacesPage', () => {
     expect(document.activeElement).toBe(searchInput)
   })
 
+  it('uses only the custom search clear control', () => {
+    mockNamespaces = [buildNamespace()]
+    render(createElement(MyNamespacesPage))
+
+    expect(screen.getByLabelText('myNamespaces.searchLabel').getAttribute('type')).toBe('text')
+  })
+
+  it('pluralizes the English namespace result count', async () => {
+    const instance = i18next.createInstance()
+    await instance.init({
+      lng: 'en',
+      resources: { en: { translation: en } },
+      showSupportNotice: false,
+    })
+
+    expect(instance.t('myNamespaces.resultCount', { count: 1, matched: 1, total: 1 }))
+      .toBe('1 of 1 namespace')
+    expect(instance.t('myNamespaces.resultCount', { count: 2, matched: 2, total: 3 }))
+      .toBe('2 of 3 namespaces')
+  })
+
   it('preserves permission-gated namespace actions after filtering', () => {
     mockNamespaces = [
       buildNamespace({
@@ -265,19 +288,23 @@ describe('MyNamespacesPage', () => {
       buildNamespace({ id: 2, slug: 'data-platform', displayName: 'Data Platform' }),
     ]
     render(createElement(MyNamespacesPage))
+    const searchInput = screen.getByLabelText('myNamespaces.searchLabel')
 
-    fireEvent.change(screen.getByLabelText('myNamespaces.searchLabel'), {
+    fireEvent.change(searchInput, {
       target: { value: 'missing' },
     })
 
     expect(screen.getByText('myNamespaces.noMatchTitle')).toBeTruthy()
     expect(screen.queryByTestId('namespace-card-product-alpha')).toBeNull()
 
-    fireEvent.click(screen.getByText('myNamespaces.clearFilters'))
+    const clearFiltersButton = screen.getByText('myNamespaces.clearFilters')
+    clearFiltersButton.focus()
+    fireEvent.click(clearFiltersButton)
 
     expect(screen.getByTestId('namespace-card-product-alpha')).toBeTruthy()
     expect(screen.getByTestId('namespace-card-data-platform')).toBeTruthy()
     expect(screen.queryByText('myNamespaces.noMatchTitle')).toBeNull()
+    expect(document.activeElement).toBe(searchInput)
   })
 
   it('renders the delete action when the namespace is deletable', () => {

@@ -291,7 +291,7 @@ export function MyNamespacesPage() {
             />
             <Input
               ref={searchInputRef}
-              type="search"
+              type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               aria-label={t('myNamespaces.searchLabel')}
@@ -338,6 +338,7 @@ export function MyNamespacesPage() {
             className="shrink-0 text-sm text-muted-foreground"
           >
             {t('myNamespaces.resultCount', {
+              count: filteredNamespaces.length,
               matched: filteredNamespaces.length,
               total: namespaceItems.length,
             })}
@@ -492,6 +493,7 @@ export function MyNamespacesPage() {
               onClick={() => {
                 setSearchQuery('')
                 setStatusFilter('ALL')
+                searchInputRef.current?.focus()
               }}
             >
               {t('myNamespaces.clearFilters')}
