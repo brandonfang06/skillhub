@@ -60,7 +60,7 @@ test.describe('My Namespaces Data (Real API)', () => {
     }
   })
 
-  test('hides the delete action when the namespace has dependent skills', async ({ page }, testInfo) => {
+  test('disables the delete action when the namespace has dependencies', async ({ page }, testInfo) => {
     const builder = new E2eTestDataBuilder(page, testInfo)
     await builder.init()
 
@@ -76,7 +76,8 @@ test.describe('My Namespaces Data (Real API)', () => {
 
       const namespaceCard = page.getByTestId(`namespace-card-${namespace.slug}`)
       await expect(namespaceCard.getByText(`@${namespace.slug}`)).toBeVisible()
-      await expect(page.getByTestId(`delete-namespace-${namespace.slug}`)).toHaveCount(0)
+      await expect(namespaceCard.getByTestId(`delete-namespace-${namespace.slug}`)).toBeDisabled()
+      await expect(namespaceCard).toContainText('Remove dependencies first: 1 skills, 0 review tasks, 0 promotion requests.')
     } finally {
       await builder.cleanup()
     }
