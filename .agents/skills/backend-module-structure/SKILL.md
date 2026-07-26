@@ -1,6 +1,6 @@
 ---
 name: backend-module-structure
-description: Rules for the SkillHub backend Maven multi-module clean architecture. Ensures agents place new code in the correct module and respect dependency direction.
+description: Rules for placing SkillHub Python backend code in the FastAPI application without crossing route, workflow, repository, or infrastructure boundaries.
 license: Apache-2.0
 ---
 
@@ -8,101 +8,64 @@ license: Apache-2.0
 
 ## Trigger
 
-Use this skill when:
-- Adding or modifying Java backend code
-- Creating new services, controllers, repositories, or entities
-- Refactoring backend code across files
-- Reviewing backend code placement
+Use this skill when adding or moving Python backend routes, workflows,
+repositories, integrations, migrations, or tests.
 
-## Rules
+## Runtime Boundary
 
-### Dependency Direction
+The active backend is `server-python/`, using Python 3.12, FastAPI, async
+SQLAlchemy, and `uv`. New backend work must not create another runtime or place
+backend code outside `server-python/`.
 
-The design-doc dependency direction:
+## Placement
 
+| Concern | Location |
+| --- | --- |
+| FastAPI route and request binding | `server-python/app/api/` |
+| Feature workflow or business rule | `server-python/app/<feature>/` |
+| SQL repository or read model | `server-python/app/<feature>/*repository.py` |
+| Authentication and authorization | `server-python/app/auth/` |
+| Audit writing | `server-python/app/audit/` |
+| Shared configuration and infrastructure | `server-python/app/core/` |
+| Database session and unit of work | `server-python/app/db/` |
+| Bundled schema baseline | `server-python/app/db/migration/` |
+| Backend tests | `server-python/tests/` |
+
+Follow the existing feature packages such as `namespace`, `publish`, `review`,
+`skills`, and `governance` instead of creating a generic service directory.
+
+## Dependency Direction
+
+- Route modules bind HTTP inputs, resolve auth context, call a workflow or
+  repository, and shape the response.
+- Business rules belong in focused feature modules and must not depend on
+  FastAPI request or response objects.
+- SQL belongs in repository, query, or helper modules, not route handlers.
+- Storage, scanner, Redis, notification, and identity-provider calls stay
+  behind their existing integration boundaries.
+- Shared infrastructure may be imported by feature modules; shared
+  infrastructure must not import feature workflows.
+
+Existing route-level SQL is temporary compatibility code. Do not expand it;
+keep the architecture allowlist in
+`server-python/tests/test_post_cutover_architecture.py` narrow.
+
+## Schema And Mutations
+
+- Schema changes use the Python-owned migration path and require a milestone
+  plan plus targeted migration tests.
+- New ORM models require explicit transaction coverage.
+- Mutating endpoints require authorization, audit actor, idempotency,
+  transaction, and rollback or compensation tests.
+- User identities remain strings across API, database, auth, and audit
+  boundaries.
+
+## Commands
+
+```powershell
+cd server-python
+uv sync --frozen
+uv run pytest tests -q
+uv run python -m app.migrations upgrade
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
-app → domain, auth, search, storage, infra, notification
-infra → domain          # implements domain repository interfaces
-auth → domain
-search → domain
-notification → domain
-storage → (independent) # pure SPI
-```
-
-**Design intent**: `skillhub-domain` should be the innermost layer, defining entities,
-repository interfaces, and domain services without depending on infra, auth, search, or storage.
-
-**Code reality**: `skillhub-domain` declares a Maven dependency on `skillhub-storage` (via
-`pom.xml`), and several domain services (`SkillHardDeleteService`, `SkillDownloadService`,
-`SkillPublishService`, `SkillGovernanceService`, `SkillQueryService`,
-`SkillStorageDeletionCompensationService`) import `com.iflytek.skillhub.storage.ObjectStorageService`.
-This is an existing deviation from the ideal clean architecture. New code should avoid adding
-further cross-module dependencies from domain.
-
-### Where to Place Code
-
-| Code Type | Module | Java Package |
-|-----------|--------|-------------|
-| Entity / Value Object | skillhub-domain | `com.iflytek.skillhub.domain.{submodule}/` |
-| Repository Interface | skillhub-domain | `com.iflytek.skillhub.domain.{submodule}/` |
-| Domain Service | skillhub-domain | `com.iflytek.skillhub.domain.{submodule}/service/` |
-| Domain Event | skillhub-domain | `com.iflytek.skillhub.domain/event/` |
-| Domain Exception | skillhub-domain | `com.iflytek.skillhub.domain/shared/exception/` |
-| JPA Repository Impl | skillhub-infra | `com.iflytek.skillhub.infra.repository/` |
-| Controller | skillhub-app | `com.iflytek.skillhub.controller/` |
-| App Service | skillhub-app | `com.iflytek.skillhub.service/` |
-| Query Repository | skillhub-app | `com.iflytek.skillhub.repository/` |
-| DTO / Response | skillhub-app | `com.iflytek.skillhub.dto/` |
-| OAuth2 / Auth Config | skillhub-auth | `com.iflytek.skillhub.auth/` |
-| Search SPI / Impl | skillhub-search | `com.iflytek.skillhub.search/` |
-| Storage SPI / Impl | skillhub-storage | `com.iflytek.skillhub.storage/` |
-| Notification Service | skillhub-notification | `com.iflytek.skillhub.notification/` |
-
-### Maven Modules
-
-The parent POM (`server/pom.xml`) defines 7 modules with `spring-boot-starter-parent:3.2.3`:
-
-```
-skillhub-app | skillhub-domain | skillhub-auth | skillhub-search
-skillhub-storage | skillhub-infra | skillhub-notification
-```
-
-### Repository vs Query Repository
-
-- **Domain Repository** (`skillhub-domain`): Aggregate reads, state transitions, rule evaluation.
-  Returns domain objects. Defined as interfaces, implemented in `skillhub-infra` via Spring Data JPA.
-- **Query Repository** (`com.iflytek.skillhub.repository`): Read-model assembly, joins multiple
-  sources, presentation projection. Returns DTOs. Implemented directly in `skillhub-app`.
-
-Current query repositories:
-- `GovernanceQueryRepository` / `JpaGovernanceQueryRepository`
-- `MySkillQueryRepository` / `JpaMySkillQueryRepository`
-- `ProfileReviewQueryRepository` / `JpaProfileReviewQueryRepository`
-- `AdminSkillReportQueryRepository` / `JpaAdminSkillReportQueryRepository`
-
-When a new read use case arrives:
-1. If it's for state transition or domain rule → domain repository port
-2. If it's for page/list/detail response assembly with joins → app query repository
-3. If it's a thin single-aggregate read → direct domain repository call from app service
-4. If direct SQL/EntityManager is needed → add class-level comment explaining why
-
-### Building Backend Tests
-
-Never run `./mvnw -pl skillhub-app clean test` directly under `server/`. Use:
-```bash
-make test-backend-app   # skillhub-app + dependencies (includes -am)
-make test-backend       # all backend modules
-```
-
-Running clean test on skillhub-app alone can fall back to stale artifacts from the local Maven
-repository, surfacing misleading `cannot find symbol` and signature-mismatch errors.
-
-### User Identity Type
-
-User identity is **always String** throughout the codebase. This covers:
-- Authentication, API params, permissions, audit
-- Resource owner, creator, reviewer, actor, submittedBy
-- All user-associated fields
-
-The `UserAccount` entity uses `@Column(length = 128)` for its ID. The platform needs to support
-external SSO/OIDC/SCIM identity sources whose UIDs are typically stable strings.

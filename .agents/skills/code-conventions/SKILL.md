@@ -1,135 +1,104 @@
 ---
 name: code-conventions
-description: Code style, logging, and testing conventions for SkillHub backend (Java) and frontend (TypeScript). Use when writing or reviewing code.
+description: Code style, logging, and testing conventions for the SkillHub Python backend and TypeScript frontend.
 license: Apache-2.0
 ---
 
 # Code Conventions Skill
 
-## Java / Backend Conventions
+## Python Backend
 
-### User Identity Type
+### Types And Boundaries
 
-User identity is **always `String`** throughout the codebase. This covers:
-- Authentication and authorization
-- API parameters and responses
-- Permission checks
-- Audit logs
-- Resource owner, creator, reviewer, actor, submittedBy fields
+- Target Python 3.12 and add type hints to public functions.
+- Keep FastAPI route handlers transport-focused.
+- Put business workflows in the matching feature package under
+  `server-python/app/`.
+- Put SQL in repository, query, or helper modules.
+- Use the existing database session and unit-of-work helpers.
+- Keep user IDs as strings.
 
-Never introduce `int`, `long`, or `bigint` as user identifiers. The platform needs to support
-external SSO/OIDC/SCIM identity sources whose UIDs are typically stable strings.
+### Errors And Responses
 
-### Exception Handling
+- Reuse the existing response envelope and request-id helpers.
+- Validate external inputs at HTTP, file, environment, and service boundaries.
+- Preserve the established HTTP status and error-detail contract.
+- Do not catch exceptions only to log and re-raise without adding context.
 
-- Use `LocalizedDomainException` for user-facing error messages (supports i18n)
-- Use `DomainBadRequestException` for invalid client input
-- Use `DomainNotFoundException` for missing resources
-- Use `DomainForbiddenException` for authorization failures
-- Exception classes live in `skillhub-domain/shared/exception/`
+### Async And Transactions
 
-### Domain Services
-
-- Return domain objects, not DTOs
-- Contain business rules and state transitions
-- Use domain events for cross-cutting side effects (publishing, notifications)
-- Located in `domain/{submodule}/service/`
-
-### Controllers
-
-- Transport only: extract auth context, bind request params, wrap responses
-- No business logic in controllers
-- Located in `com.iflytek.skillhub.controller/`
-
-### Query Repositories
-
-- Handle read-model joins and presentation projection
-- Return DTOs or presentation models
-- Located in `com.iflytek.skillhub.repository/`
-- Named like `*QueryRepository` (e.g., `GovernanceQueryRepository`, `MySkillQueryRepository`)
-
-### App Services
-
-- Workflow orchestration: coordinate domain services and query repositories
-- Should express "what this endpoint does", not "how it assembles DTOs"
-- Located in `com.iflytek.skillhub.service/`
+- Await async database, storage, scanner, Redis, and HTTP operations.
+- Do not perform blocking network or filesystem work on the event loop.
+- Keep write transactions explicit and test rollback or compensation paths.
+- Mutating workflows must preserve authorization, audit actor, and idempotency
+  behavior.
 
 ### Logging
 
-- Use SLF4J with structured logging
-- Use MDC for request tracing
-- Log at appropriate levels: INFO for business events, DEBUG for troubleshooting, ERROR for failures
+- Use Python `logging` with parameterized messages.
+- Include request, actor, namespace, or skill context when it is available and
+  safe to log.
+- Never log credentials, tokens, session cookies, or private skill contents.
 
-## TypeScript / Frontend Conventions
+## TypeScript Frontend
 
-### Type Safety
+### Type Safety And Data
 
-- Strict TypeScript mode. No `any` types.
-- Use generated OpenAPI types from `web/src/api/generated/schema.d.ts` for all API interactions.
-- Additional types in `web/src/types/`
+- Use strict TypeScript and avoid `any`.
+- Use generated OpenAPI types from `web/src/api/generated/schema.d.ts`.
+- Use TanStack Query for server state; do not fetch server data with
+  `useEffect`.
+- Use the shared API client and existing query-key conventions.
 
-### Data Fetching
-
-- **Always use TanStack Query** (`@tanstack/react-query`) for server state
-- **Never use `useEffect`** for data fetching
-- Use `openapi-fetch` client for type-safe API calls
-
-### Component Composition
-
-- **Radix UI** primitives: `@radix-ui/react-dropdown-menu`, `@radix-ui/react-select`
-- **class-variance-authority** (cva) for component variants
-- **clsx** + **tailwind-merge** for class merging
-- **`cn()` utility**: `web/src/shared/lib/utils.ts`
-- shadcn/ui is NOT used as a library
-
-### State Management
-
-- **TanStack Query** for server state (API data, caching, invalidation)
-- **Zustand** for local/UI state (theme, sidebar, modals, form state)
-
-### Feature-Sliced Design
+### Feature Structure
 
 | Layer | Path | Purpose |
-|-------|------|---------|
-| Pages | `web/src/pages/` | Route-level page components |
-| Features | `web/src/features/` | Self-contained business features |
-| Entities | `web/src/entities/` | Domain entity display logic |
-| Shared | `web/src/shared/` | Reusable UI components, hooks, utilities |
+| --- | --- | --- |
+| Pages | `web/src/pages/` | Route-level composition |
+| Features | `web/src/features/` | User workflows |
+| Entities | `web/src/entities/` | Domain display logic |
+| Shared | `web/src/shared/` | Reusable UI and utilities |
 
-Place code at the lowest appropriate layer. Do not put page-level logic in shared.
+Place code at the lowest appropriate layer. Keep page logic out of `shared`.
 
-### Styling
+### UI Conventions
 
-- Tailwind CSS for all styling
-- Follow existing component patterns
-- Use `cn()` for conditional class merging
+- Reuse existing Radix primitives and component patterns.
+- Use `cn()` for conditional class merging.
+- Keep user-facing text in i18next translation resources.
+- Test behavior and user interactions, not implementation details.
 
-### Internationalization
-
-- Use i18next + react-i18next
-- All user-facing text must be translatable
-- Translation keys in `web/src/i18n/`
-
-## Testing Philosophy
+## Testing
 
 ### Backend
 
-- JUnit 5 + Mockito + AssertJ
-- Use Spring Boot test slices where possible (`@WebMvcTest`, `@DataJpaTest`)
-- Test behaviors, not implementations
-- Use `make test-backend-app` (includes `-am` for dependent modules)
-- Never run `./mvnw -pl skillhub-app clean test` directly — stale Maven cache causes misleading errors
+- Tests live in `server-python/tests/` and use pytest.
+- Write tests before or alongside behavior changes.
+- Route changes need response, auth, and request-id coverage.
+- Write workflows need transaction, audit, idempotency, and side-effect
+  coverage.
+
+```powershell
+cd server-python
+uv run pytest tests -q
+```
 
 ### Frontend
 
-- Vitest for unit tests
-- Playwright for E2E tests
-- Test component behavior and user interactions
+- Vitest covers unit and component behavior.
+- Playwright covers authenticated browser and viewport flows.
+
+```powershell
+cd web
+pnpm run typecheck
+pnpm run lint
+pnpm run test
+```
 
 ## Common Pitfalls
 
-- **Maven multi-module**: Always use `-am` flag or Makefile targets to include dependent modules
-- **OpenAPI types**: Must regenerate and commit after API contract changes
-- **String identity**: Never use numeric types for user identifiers
-- **Controller business logic**: Move to domain service or app service
-- **Complex read-models in app service**: Extract to query repository
+- Adding SQL to a route instead of a repository boundary.
+- Changing an API contract without regenerating frontend types.
+- Using numeric user IDs.
+- Adding a write path without rollback or compensation coverage.
+- Placing feature-specific frontend logic in `shared`.
