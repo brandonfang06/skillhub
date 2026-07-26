@@ -15,19 +15,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-new_tmp() {
-  local d
-  d="$(mktemp -d)"
-  TMP_DIRS+=("$d")
-  echo "$d"
-}
-
 fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
 
-tmp="$(new_tmp)"
+tmp="$(mktemp -d)"
+TMP_DIRS+=("$tmp")
 skill_dir="$tmp/skill"
 mkdir -p "$skill_dir/demo-skill"
 
@@ -50,8 +44,15 @@ chmod +x "$skill_dir/demo-skill/run.sh"
 IMAGE_TAG="skillhub-scanner-llm-base-url-test:$(date +%s)"
 docker build --no-cache -t "$IMAGE_TAG" "$SCANNER_DIR" >/dev/null
 
-docker run --rm -i \
-  -v "$skill_dir:/work/skill:ro" \
+skill_mount_dir="$skill_dir"
+docker_run=(docker run)
+if [[ "$(uname -s)" == MINGW* ]]; then
+  skill_mount_dir="$(cygpath -w "$skill_dir")"
+  docker_run=(env MSYS_NO_PATHCONV=1 docker run)
+fi
+
+"${docker_run[@]}" --rm -i \
+  -v "$skill_mount_dir:/work/skill:ro" \
   --entrypoint python \
   "$IMAGE_TAG" - <<'PY'
 import asyncio

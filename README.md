@@ -452,6 +452,12 @@ namespace `my-space` plus skill slug `my-skill`.
 
 📖 **[Complete OpenClaw Integration Guide →](./docs/openclaw-integration.md)**
 
+### [Hermes Agent](https://github.com/NousResearch/hermes-agent)
+
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) uses the standard `SKILL.md` format and recursively discovers skills under `$HERMES_HOME/skills/`. Use SkillHub CLI's explicit `--dir` option to install a complete SkillHub package into Hermes without a registry adapter, then verify it with `hermes skills list`.
+
+📖 **[Complete Hermes Agent Integration Guide →](./docs/hermes-integration-en.md)**
+
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
 [AstronClaw](https://agent.xfyun.cn/astron-claw) is a cloud AI assistant built on OpenClaw's core capabilities, providing 24/7 online service through enterprise platforms like WeChat Work, DingTalk, and Feishu. It features a built-in skill system with over 130 official skills. You can connect it to a self-hosted SkillHub registry to enable one-click skill installation, search repository, dialogue-based automatic installation, and even custom skills management within your organization.

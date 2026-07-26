@@ -136,11 +136,38 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 A: When using the OpenClaw CLI, you can specify the namespace using the `<namespace>--<skill-name>` format for operations like search or installation. If you encounter issues finding it on the web interface, you can also manage it by exporting the skill package and importing it into your target namespace.
 
+## Q: Which component and versions does SkillHub security scanning use?
+
+A: SkillHub provides scanner integration, task orchestration, audit persistence, and deployment wiring. The underlying scanner is Cisco's [cisco-ai-skill-scanner](https://github.com/cisco-ai-defense/skill-scanner) under Apache License 2.0. The current `scanner/Dockerfile` pins `cisco-ai-skill-scanner==1.0.2` and `litellm==1.90.2` while preserving SkillHub's LLM base URL backport.
+
+## Q: How do I troubleshoot `registry returned 400` from `skillhub publish`?
+
+A: A 400 response usually means server-side validation failed. Confirm that the package root contains `SKILL.md`, its frontmatter has valid `name` and `description` fields, the namespace exists and the current user may publish to it, and package paths, file types, sizes, and sensitive-content checks satisfy policy. Name or version conflicts also produce validation errors.
+
+## Q: What package layout and archive format are required?
+
+A: The package root must contain `SKILL.md` with at least valid `name` and `description` frontmatter. If publishing reports `malformed input`, make sure zip entry names use UTF-8 and avoid unsupported paths or special characters.
+
+## Q: Does SkillHub support MySQL?
+
+A: The current runtime supports PostgreSQL only, not MySQL.
+
+## Q: How do I check the SkillHub and CLI versions?
+
+A: Inspect the Python backend image label:
+
+```bash
+docker image inspect ghcr.io/iflytek/skillhub-server-python:latest --format '{{index .Config.Labels "org.opencontainers.image.version"}}'
+```
+
+Check the CLI version with `skillhub version`.
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:
 
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
+- **Online documentation**: https://iflytek.github.io/skillhub/
 - **Documentation**: Refer to the project README.md
 - **Community Discussions**: https://github.com/iflytek/skillhub/discussions
 

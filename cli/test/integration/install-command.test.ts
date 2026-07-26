@@ -874,6 +874,35 @@ describe('install command — multi-agent & auto-detect', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — --scope', () => {
+  test('--scope user honors every explicitly repeated --agent target', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u1', displayName: 'User One' },
+      skills: [{ namespace: 'global', slug: 'foo', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+
+    const result = await runCli(
+      [
+        'install', 'foo',
+        '--scope', 'user',
+        '--agent', 'codex',
+        '--agent', 'claude-code',
+        '--registry', registry.url,
+        '--token', 'sk_ok',
+        '--json'
+      ],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string }> }
+    expect(parsed.installed.map(target => target.agent).sort()).toEqual(['claude-code', 'codex'])
+    expect(await Bun.file(join(env.home, '.codex', 'skills', 'foo', '.skillhub', 'metadata.json')).exists()).toBe(true)
+    expect(await Bun.file(join(env.home, '.claude', 'skills', 'foo', '.skillhub', 'metadata.json')).exists()).toBe(true)
+  })
+
   test('--scope project --agent codex installs to <cwd>/.codex/skills', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({

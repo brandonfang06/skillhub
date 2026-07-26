@@ -145,6 +145,7 @@ skillhub install pdf-parser --agent codex
 
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
+skillhub install pdf-parser --scope user --agent codex --agent claude-code
 
 # Install to custom directory
 skillhub install pdf-parser --dir ~/.claude/skills
@@ -159,8 +160,8 @@ The CLI determines the installation location using the following logic:
 
 1. If `--dir` is specified: Install to that directory, agent marked as `custom`. `--dir` is mutually exclusive with `--scope` and `--agent`.
 2. If `--scope user|project` is specified: Limit detection to the chosen scope.
-   - With `--agent <profile>`: Install to that profile's user or project skills directory directly.
-   - Without `--agent`: Detect existing skills directories within the chosen scope only.
+   - With one or more `--agent <profile>` values: Install to every explicitly requested profile's user or project skills directory directly.
+   - Without `--agent`: Detect existing skills directories within the chosen scope only. In interactive user scope, the `generic` target (`<home>/.agents/skills/`) is always also offered and can be selected alone or together with detected targets.
    - No detected directory in the chosen scope → Fallback to `<home>/.agents/skills/` for `--scope user` or `<cwd>/.agents/skills/` for `--scope project`.
 3. If `--agent` is specified (no `--scope`): Install to the corresponding Agent's skills directory (existing behaviour, unchanged).
 4. If none of the above is specified:
@@ -168,6 +169,10 @@ The CLI determines the installation location using the following logic:
    - **Non-interactive mode**: Auto-scan current directory to detect existing Agent config directories. 1 Agent detected → install directly; multiple → error; none detected → fallback to `<cwd>/.agents/skills/`.
 
 > `--dir` cannot be combined with `--scope` or `--agent`.
+
+Before contacting the registry, the CLI validates the skill slug, canonicalizes every selected target, and preflights the complete destination set. If the slug is not a single path segment, targets resolve to the same skill directory, or any destination already exists without `--force`, the command fails before downloading or writing any target.
+
+Multi-target installation is transactional within one CLI process. If a later target fails after staging or commit begins, the CLI removes earlier new installs, restores `--force` backups, and restores the pre-install inventory.
 
 ### Install Paths
 
@@ -191,7 +196,7 @@ Each Agent has both project-level and user-level skills directories. Use `--scop
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
-For Agents not in the list, use `--dir` to specify the installation path. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
+For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
 
 ### File Structure After Installation
 

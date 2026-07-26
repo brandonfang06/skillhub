@@ -142,6 +142,7 @@ skillhub install pdf-parser --agent codex
 
 # 安装到多个 Agent
 skillhub install pdf-parser --agent codex --agent claude-code
+skillhub install pdf-parser --scope user --agent codex --agent claude-code
 
 # 安装到自定义目录
 skillhub install pdf-parser --dir ~/.claude/skills
@@ -156,8 +157,8 @@ CLI 按以下逻辑确定安装位置：
 
 1. 指定 `--dir`：安装到该目录，agent 标记为 `custom`。`--dir` 与 `--scope`、`--agent` 互斥。
 2. 指定 `--scope user|project`：探测限定在该 scope 内。
-   - 同时指定 `--agent <profile>`：直接安装到该 profile 对应 scope 的 skills 目录。
-   - 未指定 `--agent`：只探测该 scope 下已存在的 skills 目录。
+   - 同时指定一个或多个 `--agent <profile>`：直接安装到每个显式指定 profile 对应 scope 的 skills 目录。
+   - 未指定 `--agent`：只探测该 scope 下已存在的 skills 目录。在交互式 user scope 下，始终额外提供 `generic` 目标（`<home>/.agents/skills/`），可单独选择或与已探测目标同时选择。
    - 该 scope 下未探测到 → fallback：`--scope user` 回退到 `<home>/.agents/skills/`，`--scope project` 回退到 `<cwd>/.agents/skills/`。
 3. 指定 `--agent`（无 `--scope`）：安装到对应 Agent 的 skills 目录（沿用现有行为，不变）。
 4. 三者均未指定：
@@ -165,6 +166,10 @@ CLI 按以下逻辑确定安装位置：
    - **非交互模式**：自动扫描当前目录探测已存在的 Agent 配置目录。1 个 → 直接安装；多个 → 报错；未探测到 → 回退到 `<cwd>/.agents/skills/`。
 
 > `--dir` 不能与 `--scope` 或 `--agent` 同时使用。
+
+CLI 会在访问 registry 前校验技能 slug、规范化所有已选目标，并对完整目标集合执行预检。如果 slug 不是单一安全路径段、多个目标解析到同一技能目录，或任一目标已存在且未指定 `--force`，命令会在下载或写入任何目标前失败。
+
+单次 CLI 进程内的多目标安装具有事务性。若较后的目标在暂存或提交开始后失败，CLI 会移除较早的新安装、恢复 `--force` 备份，并还原安装前的 inventory。
 
 ### 安装路径
 
@@ -188,7 +193,7 @@ CLI 按以下逻辑确定安装位置：
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
-对于不在列表中的 Agent，使用 `--dir` 指定安装路径。当 `--scope user|project` 找不到匹配的 agent 目录时，CLI 会回退到上表的 `_fallback_` 行。
+对于自定义路径或不在列表中的 Agent 目录，使用 `--dir` 显式指定安装路径。交互式 user scope 下会与已探测 Agent 目标一同提供 `generic` 目标；当 `--scope user|project` 找不到匹配的 agent 目录时，CLI 会回退到上表的 `_fallback_` 行。
 
 ### 安装后的文件结构
 

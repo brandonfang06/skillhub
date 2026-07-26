@@ -6,7 +6,7 @@ import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { extractZip } from '../platform/archive'
 import { readBoundedResponseBody } from '../platform/download'
-import { pathExists } from '../platform/paths'
+import { canonicalizePath, pathExists } from '../platform/paths'
 import type { AgentCandidate } from '../agents/types'
 
 export interface InstallOptions {
@@ -20,34 +20,93 @@ export interface InstallOptions {
   home?: string | undefined
 }
 
-export async function installSkill(options: InstallOptions): Promise<{ installed: Array<{ agent: string; dir: string }> }> {
-  const client = new SkillHubClient(options.registry, options.token)
-  const resolved = await client.resolve(options.namespace, options.slug, options.version)
-  const response = await client.download(options.namespace, options.slug, resolved.version)
-  const buffer = await readBoundedResponseBody(response)
+function validateInstallSlug(slug: string): void {
+  if (
+    slug.length === 0 ||
+    slug === '.' ||
+    slug === '..' ||
+    slug.includes('/') ||
+    slug.includes('\\') ||
+    slug.includes('\0')
+  ) {
+    throw new CliError('skill slug must be a single path segment', EXIT.usage, {
+      slug,
+      next: 'use the registry skill slug without path separators'
+    })
+  }
+}
 
-  const installed: Array<{ agent: string; dir: string }> = []
-  const store = new InventoryStore(options.home)
+async function preflightInstallTargets(
+  targets: AgentCandidate[],
+  slug: string,
+  force: boolean
+): Promise<Array<{ target: AgentCandidate; skillDir: string }>> {
+  validateInstallSlug(slug)
+  const seenSkillDirs = new Set<string>()
+  const preparedTargets: Array<{ target: AgentCandidate; skillDir: string }> = []
 
-  for (const target of options.targets) {
-    const skillDir = join(target.rootDir, options.slug)
+  for (const target of targets) {
+    const canonicalRootDir = await canonicalizePath(target.rootDir)
+    const canonicalSkillDir = join(canonicalRootDir, slug)
+    const canonicalIdentity = process.platform === 'win32'
+      ? canonicalSkillDir.toLowerCase()
+      : canonicalSkillDir
+    if (seenSkillDirs.has(canonicalIdentity)) {
+      throw new CliError(`multiple install targets resolve to ${canonicalSkillDir}`, EXIT.usage, {
+        path: canonicalSkillDir,
+        next: 'select only one target for this directory'
+      })
+    }
+    seenSkillDirs.add(canonicalIdentity)
 
-    if (await pathExists(skillDir) && !options.force) {
+    const skillDir = join(target.rootDir, slug)
+    if (await pathExists(skillDir) && !force) {
       throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
         path: skillDir,
         next: 'pass --force to overwrite'
       })
     }
+    preparedTargets.push({ target, skillDir })
+  }
 
-    await mkdir(target.rootDir, { recursive: true })
-    const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
-    let movedIntoPlace = false
-    let backupDir: string | null = null
+  return preparedTargets
+}
 
-    try {
+export async function installSkill(options: InstallOptions): Promise<{ installed: Array<{ agent: string; dir: string }> }> {
+  const preparedTargets = await preflightInstallTargets(options.targets, options.slug, options.force)
+  const client = new SkillHubClient(options.registry, options.token)
+  const resolved = await client.resolve(options.namespace, options.slug, options.version)
+  const response = await client.download(options.namespace, options.slug, resolved.version)
+  const buffer = await readBoundedResponseBody(response)
+
+  const store = new InventoryStore(options.home)
+  const stagedTargets: Array<{
+    target: AgentCandidate
+    skillDir: string
+    tempDir: string
+    installedAt: string
+    movedIntoPlace: boolean
+    backupDir: string | null
+  }> = []
+  let completed = false
+
+  try {
+    for (const { target, skillDir } of preparedTargets) {
+      await mkdir(target.rootDir, { recursive: true })
+      const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
+      const installedAt = new Date().toISOString()
+      const stagedTarget = {
+        target,
+        skillDir,
+        tempDir,
+        installedAt,
+        movedIntoPlace: false,
+        backupDir: null
+      }
+      stagedTargets.push(stagedTarget)
+
       await extractZip(buffer, tempDir)
 
-      const installedAt = new Date().toISOString()
       const metaDir = join(tempDir, '.skillhub')
       await mkdir(metaDir, { recursive: true })
       await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
@@ -58,39 +117,44 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
         agent: target.agent,
         installedAt
       }, null, 2))
+    }
 
-      if (await pathExists(skillDir) && !options.force) {
-        throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
-          path: skillDir,
-          next: 'pass --force to overwrite'
-        })
-      }
+    const previousInventory = await store.read()
+    let inventoryChanged = false
 
-      if (await pathExists(skillDir) && options.force) {
-        backupDir = await mkdtemp(join(target.rootDir, `.${options.slug}.backup-`))
-        await rm(backupDir, { recursive: true, force: true })
-        await rename(skillDir, backupDir)
-      }
+    try {
+      for (const stagedTarget of stagedTargets) {
+        const { target, skillDir, tempDir } = stagedTarget
 
-      try {
-        await rename(tempDir, skillDir)
-      } catch (error) {
-        if (backupDir && !(await pathExists(skillDir))) {
-          await rename(backupDir, skillDir).catch(() => {})
-          backupDir = null
-        }
-        if (!options.force && await pathExists(skillDir)) {
+        if (await pathExists(skillDir) && !options.force) {
           throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
             path: skillDir,
             next: 'pass --force to overwrite'
           })
         }
-        throw error
-      }
-      movedIntoPlace = true
 
-      const previousInventory = await store.read()
-      try {
+        if (await pathExists(skillDir) && options.force) {
+          stagedTarget.backupDir = await mkdtemp(join(target.rootDir, `.${options.slug}.backup-`))
+          await rm(stagedTarget.backupDir, { recursive: true, force: true })
+          await rename(skillDir, stagedTarget.backupDir)
+        }
+
+        try {
+          await rename(tempDir, skillDir)
+        } catch (error) {
+          if (!options.force && await pathExists(skillDir)) {
+            throw new CliError(`skill already installed at ${skillDir}`, EXIT.filesystem, {
+              path: skillDir,
+              next: 'pass --force to overwrite'
+            })
+          }
+          throw error
+        }
+        stagedTarget.movedIntoPlace = true
+      }
+
+      for (const { target, skillDir, installedAt } of stagedTargets) {
+        inventoryChanged = true
         await store.removeTargetsByInstallDir(skillDir)
         await store.upsertTarget(options.registry, options.namespace, options.slug, resolved.version, {
           agent: target.agent,
@@ -98,28 +162,55 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
           installDir: skillDir,
           installedAt
         })
-      } catch (error) {
-        await store.writeAtomic(previousInventory).catch(() => {})
-        if (backupDir) {
-          await rm(skillDir, { recursive: true, force: true }).catch(() => {})
-          await rename(backupDir, skillDir).catch(() => {})
-          backupDir = null
-        } else {
-          await rm(skillDir, { recursive: true, force: true }).catch(() => {})
+      }
+    } catch (error) {
+      const rollbackErrors: unknown[] = []
+
+      if (inventoryChanged) {
+        try {
+          await store.writeAtomic(previousInventory)
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError)
         }
-        throw error
       }
-    } finally {
-      if (!movedIntoPlace) {
-        await rm(tempDir, { recursive: true, force: true }).catch(() => {})
+
+      for (const stagedTarget of [...stagedTargets].reverse()) {
+        if (stagedTarget.movedIntoPlace) {
+          try {
+            await rm(stagedTarget.skillDir, { recursive: true, force: true })
+            stagedTarget.movedIntoPlace = false
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError)
+          }
+        }
+        if (stagedTarget.backupDir && !(await pathExists(stagedTarget.skillDir))) {
+          try {
+            await rename(stagedTarget.backupDir, stagedTarget.skillDir)
+            stagedTarget.backupDir = null
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError)
+          }
+        }
       }
-      if (backupDir) {
-        await rm(backupDir, { recursive: true, force: true }).catch(() => {})
+
+      if (rollbackErrors.length > 0) {
+        throw new AggregateError([error, ...rollbackErrors], 'installation failed and rollback was incomplete')
       }
+      throw error
     }
 
-    installed.push({ agent: target.agent, dir: skillDir })
+    completed = true
+    return {
+      installed: stagedTargets.map(({ target, skillDir }) => ({ agent: target.agent, dir: skillDir }))
+    }
+  } finally {
+    for (const stagedTarget of stagedTargets) {
+      if (!stagedTarget.movedIntoPlace) {
+        await rm(stagedTarget.tempDir, { recursive: true, force: true }).catch(() => {})
+      }
+      if (completed && stagedTarget.backupDir) {
+        await rm(stagedTarget.backupDir, { recursive: true, force: true }).catch(() => {})
+      }
+    }
   }
-
-  return { installed }
 }

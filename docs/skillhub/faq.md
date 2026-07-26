@@ -136,11 +136,38 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 A: 使用 OpenClaw CLI 命令行工具时，可以通过 `<namespace>--<skill-name>` 的格式来指定命名空间进行操作（例如搜索、安装）。如果在网页端搜索遇到问题，也可以尝试通过先导出技能、再导入到目标命名空间的方式来完成跨空间操作。
 
+## Q: SkillHub 的安全扫描使用什么组件和版本？
+
+A: 扫描接入、任务编排、审计落库和部署集成由 SkillHub 实现；底层扫描服务使用 Cisco 的 [cisco-ai-skill-scanner](https://github.com/cisco-ai-defense/skill-scanner)（Apache License 2.0）。当前 `scanner/Dockerfile` 固定使用 `cisco-ai-skill-scanner==1.0.2` 和 `litellm==1.90.2`，并保留 SkillHub 的 LLM base URL backport。
+
+## Q: 使用 CLI `skillhub publish` 报错 `registry returned 400` 怎么排查？
+
+A: 400 通常表示服务端校验未通过。请检查技能包根目录是否包含 `SKILL.md`、frontmatter 是否包含有效的 `name` 和 `description`、namespace 是否存在且当前用户有发布权限，以及包内路径、文件类型、大小和敏感信息是否符合策略。名称或版本冲突也会返回校验错误。
+
+## Q: 技能包的目录结构和压缩格式有什么要求？
+
+A: 技能包根目录必须包含 `SKILL.md`，其 frontmatter 至少需要有效的 `name` 和 `description`。如果发布时报 `malformed input`，请确认 zip 文件名使用 UTF-8 编码，并避免不受支持的路径或特殊字符。
+
+## Q: SkillHub 支持 MySQL 吗？
+
+A: 当前运行时仅支持 PostgreSQL，不支持 MySQL。
+
+## Q: 如何查看 SkillHub 和 CLI 版本？
+
+A: 查看 Python 后端镜像标签：
+
+```bash
+docker image inspect ghcr.io/iflytek/skillhub-server-python:latest --format '{{index .Config.Labels "org.opencontainers.image.version"}}'
+```
+
+查看 CLI 版本：`skillhub version`。
+
 ## Q: 遇到问题怎么办？
 
 A: 可以通过以下方式获取帮助：
 
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
+- **在线文档**: https://iflytek.github.io/skillhub/
 - **文档**: 参考项目 README.md
 - **社区讨论**: https://github.com/iflytek/skillhub/discussions
 

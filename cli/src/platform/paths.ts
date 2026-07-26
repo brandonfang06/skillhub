@@ -24,6 +24,30 @@ export async function pathExists(path: string): Promise<boolean> {
   }
 }
 
+export async function canonicalizeExistingPath(path: string): Promise<string> {
+  const { realpath } = await import('node:fs/promises')
+  try {
+    return await realpath(path)
+  } catch {
+    return path
+  }
+}
+
+export async function canonicalizePath(path: string): Promise<string> {
+  const { basename, dirname, join } = await import('node:path')
+  const missingSegments: string[] = []
+  let ancestor = path
+
+  while (!(await pathExists(ancestor))) {
+    const parent = dirname(ancestor)
+    if (parent === ancestor) return path
+    missingSegments.unshift(basename(ancestor))
+    ancestor = parent
+  }
+
+  return join(await canonicalizeExistingPath(ancestor), ...missingSegments)
+}
+
 export async function applyCredentialPermissions(path: string): Promise<void> {
   if (process.platform === 'win32') return
   const { chmod } = await import('node:fs/promises')

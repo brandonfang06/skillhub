@@ -365,6 +365,12 @@ namespace `my-space` 和 skill slug `my-skill`。
 
 📖 **[完整 OpenClaw 集成指南 →](./docs/openclaw-integration.md)**
 
+### [Hermes Agent](https://github.com/NousResearch/hermes-agent)
+
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) 使用标准 `SKILL.md` 格式，并会递归发现 `$HERMES_HOME/skills/` 中的技能。通过 SkillHub CLI 的 `--dir` 参数即可把完整技能包安装到 Hermes，无需新增 registry 适配器；安装后可使用 `hermes skills list` 验证。
+
+📖 **[完整 Hermes Agent 集成指南 →](./docs/hermes-integration.md)**
+
 ### [AstronClaw](https://agent.xfyun.cn/astron-claw)
 
 [AstronClaw](https://agent.xfyun.cn/astron-claw) 是基于 OpenClaw 核心能力打造的云端 AI 助手，提供全天候在线服务，随时随地通过企业微信、钉钉、飞书等渠道提供服务。它内置了丰富的技能系统，您可以将其连接到自托管的 SkillHub 注册中心，支持技能市场一键安装、仓库搜索、对话自动安装，甚至管理和分发组织内部的自定义私有技能。

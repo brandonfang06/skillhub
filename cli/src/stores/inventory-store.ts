@@ -1,6 +1,6 @@
 import { open, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { joinPath, userStateDir, ensureDir, pathExists } from '../platform/paths'
+import { canonicalizePath, joinPath, userStateDir, ensureDir, pathExists } from '../platform/paths'
 
 export interface InventoryTarget {
   agent: string
@@ -153,10 +153,24 @@ export class InventoryStore {
 
   async removeTargetsByInstallDir(installDir: string): Promise<number> {
     const inventory = await this.read()
+    const canonicalInstallDir = await canonicalizePath(installDir)
+    const installDirIdentity = process.platform === 'win32'
+      ? canonicalInstallDir.toLowerCase()
+      : canonicalInstallDir
     let removed = 0
     for (const item of inventory.items) {
       const before = item.targets.length
-      item.targets = item.targets.filter(t => t.installDir !== installDir)
+      const retainedTargets: InventoryTarget[] = []
+      for (const target of item.targets) {
+        const canonicalTargetDir = await canonicalizePath(target.installDir)
+        const targetIdentity = process.platform === 'win32'
+          ? canonicalTargetDir.toLowerCase()
+          : canonicalTargetDir
+        if (targetIdentity !== installDirIdentity) {
+          retainedTargets.push(target)
+        }
+      }
+      item.targets = retainedTargets
       removed += before - item.targets.length
     }
     if (removed > 0) {
