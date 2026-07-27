@@ -45,6 +45,7 @@ import {
   getSessionBootstrapRuntimeConfig,
   namespaceApi,
   reviewApi,
+  skillLifecycleApi,
 } from './client'
 
 beforeEach(() => {
@@ -190,6 +191,50 @@ describe('namespaceApi.delete', () => {
         headers: expect.any(Headers),
       }),
     )
+  })
+})
+
+describe('skillLifecycleApi.updateVisibility', () => {
+  it('patches the normalized web endpoint with JSON and CSRF headers', async () => {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: {
+        cookie: 'XSRF-TOKEN=test-token',
+      },
+    })
+    const response = {
+      skillId: 101,
+      visibility: 'NAMESPACE_ONLY' as const,
+      changed: true,
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: response,
+        timestamp: '2026-07-27T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      skillLifecycleApi.updateVisibility('@team-ai', 'demo skill', 'NAMESPACE_ONLY'),
+    ).resolves.toEqual(response)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/web/skills/team-ai/demo%20skill/visibility',
+      expect.objectContaining({
+        method: 'PATCH',
+        headers: expect.any(Headers),
+        body: JSON.stringify({ visibility: 'NAMESPACE_ONLY' }),
+      }),
+    )
+    const request = fetchMock.mock.calls[0]?.[1]
+    expect(request?.headers.get('Content-Type')).toBe('application/json')
+    expect(request?.headers.get('X-XSRF-TOKEN')).toBe('test-token')
   })
 })
 

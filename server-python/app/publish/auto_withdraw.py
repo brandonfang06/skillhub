@@ -44,6 +44,7 @@ async def auto_withdraw_pending_review_versions(
             UPDATE skill_version
             SET status = 'UPLOADED'
             WHERE id = ANY(:version_ids)
+              AND status = 'PENDING_REVIEW'
             """
         ),
         {"version_ids": version_ids},

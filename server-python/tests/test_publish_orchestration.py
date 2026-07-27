@@ -73,6 +73,8 @@ class FakeConnection:
         self.statements.append(str(statement))
         self.params.append(params or {})
         sql = str(statement)
+        if "SELECT status" in sql and "FROM skill_version" in sql:
+            return FakeResult(row={"status": "UPLOADED"})
         if "status = 'PENDING_REVIEW'" in sql:
             return FakeResult(rows=[])
         if "FROM namespace_member nm" in sql and "notification_preference" in sql:
@@ -372,6 +374,7 @@ async def test_execute_publish_write_auto_withdraws_pending_review_before_new_ve
     assert withdraw_select < withdraw_delete < withdraw_update < version_insert
     assert connection.params[withdraw_update]["version_ids"] == [41]
     assert "updated_by" not in connection.params[withdraw_update]
+    assert "AND status = 'PENDING_REVIEW'" in connection.statements[withdraw_update]
 
 
 @pytest.mark.anyio

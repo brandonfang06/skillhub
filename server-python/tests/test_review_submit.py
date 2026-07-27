@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.review.approval import ReviewSubmitInput, submit_review_task
+from app.review.approval import ReviewApprovalError, ReviewSubmitInput, submit_review_task
 
 
 @dataclass
@@ -30,11 +30,21 @@ class FakeResult:
     def scalar_one(self) -> Any:
         return self.scalar
 
+    def scalar_one_or_none(self) -> Any:
+        return self.scalar
+
 
 class FakeReviewSubmitConnection:
-    def __init__(self, *, duplicate_count: int = 0, version_status: str = "UPLOADED") -> None:
+    def __init__(
+        self,
+        *,
+        duplicate_count: int = 0,
+        version_status: str = "UPLOADED",
+        version_update_result: int | None = 1,
+    ) -> None:
         self.duplicate_count = duplicate_count
         self.version_status = version_status
+        self.version_update_result = version_update_result
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.notifications: list[dict[str, Any]] = []
@@ -69,7 +79,7 @@ class FakeReviewSubmitConnection:
         if "FROM review_task" in sql and "COUNT" in sql:
             return FakeResult(scalar=self.duplicate_count)
         if "UPDATE skill_version" in sql:
-            return FakeResult(scalar=1)
+            return FakeResult(scalar=self.version_update_result)
         if "INSERT INTO review_task" in sql:
             return FakeResult(row={"id": 901, "submitted_at": datetime(2026, 6, 9, 12, 0, tzinfo=UTC)})
         if "INSERT INTO audit_log" in sql:
@@ -177,6 +187,18 @@ async def test_submit_review_task_rejects_non_draft_or_uploaded_version() -> Non
 
     with pytest.raises(ValueError, match="review.submit.not_draft"):
         await submit_review_task(FakeEngine(connection), submit_input())
+
+
+@pytest.mark.anyio
+async def test_submit_review_task_maps_lost_version_update_to_conflict() -> None:
+    connection = FakeReviewSubmitConnection(version_update_result=None)
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await submit_review_task(FakeEngine(connection), submit_input())
+
+    assert str(error.value) == "review.concurrent_update"
+    assert error.value.status_code == 409
+    assert not any("INSERT INTO review_task" in sql for sql in connection.statements)
 
 
 def test_review_submit_route_returns_java_created_envelope() -> None:

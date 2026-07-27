@@ -7,6 +7,7 @@ import {
   isFrontmatterFailureMessage,
   isPrecheckConfirmationMessage,
   isPrecheckFailureMessage,
+  isRejectedVersionReuseMessage,
   isVersionExistsMessage,
 } from '@/features/publish/publish-error-utils'
 import { normalizePublishPrefill } from '@/features/publish/publish-prefill'
@@ -96,6 +97,14 @@ export function PublishPage() {
     } catch (error) {
       if (error instanceof ApiError && error.status === 408) {
         toast.error(t('publish.timeoutTitle'), t('publish.timeoutDescription'))
+        return
+      }
+
+      if (error instanceof ApiError && isRejectedVersionReuseMessage(error.serverMessage || error.message)) {
+        toast.error(
+          t('publish.rejectedVersionReuseTitle'),
+          t('publish.rejectedVersionReuseDescription'),
+        )
         return
       }
 

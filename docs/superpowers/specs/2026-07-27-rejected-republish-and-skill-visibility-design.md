@@ -64,8 +64,10 @@ storage writes, scanner handoff, notification creation, or review creation.
 ### Write-boundary guard
 
 The replacement layer will also reject a `ReplaceableVersion` whose status is
-`REJECTED` before executing cleanup SQL. This protects direct workflow calls and
-the race where state changes after dry-run but before the publish transaction.
+`REJECTED` before executing cleanup SQL. For an initially replaceable status,
+the write transaction locks and re-reads the current `skill_version.status`
+before cleanup. This protects direct workflow calls and the race where state
+changes after dry-run or replacement lookup but before the publish transaction.
 
 The route boundary will map the write-layer domain exception to the same HTTP
 409 and stable code. The transaction will roll back without deleting review
@@ -117,14 +119,16 @@ authorization again at the mutation boundary.
 
 The workflow belongs in `server-python/app/lifecycle/skill.py` and reuses the
 existing skill context, namespace-role, authorization, transaction, and audit
-helpers.
+helpers. It locks the skill row while reading the previous visibility so
+concurrent managers cannot produce stale audit history.
 
 For a changed value it will:
 
 1. update `skill.visibility`, `updated_by`, and `updated_at`;
 2. write an `UPDATE_SKILL_VISIBILITY` audit record containing the previous and
    new visibility;
-3. commit both changes atomically.
+3. synchronize the existing denormalized search document for that skill;
+4. commit all changes atomically.
 
 Sending the current visibility is a successful idempotent no-op with
 `changed=false`. It performs neither an `UPDATE` nor a duplicate audit write.
@@ -132,8 +136,10 @@ Sending the current visibility is a successful idempotent no-op with
 Invalid visibility values are rejected by the request contract. Missing skills
 remain `404`; unauthorized callers remain `401` or `403`.
 
-No schema migration, search-index rebuild, version-pointer recalculation,
-storage operation, scanner operation, or notification fanout is required.
+No schema migration, broad search-index rebuild, version-pointer recalculation,
+storage operation, scanner operation, or notification fanout is required. The
+single affected search document must be updated so access filters cannot retain
+the previous visibility.
 
 ## Frontend Design
 
@@ -245,8 +251,18 @@ Authenticated Playwright coverage will verify:
   workflow publishes them.
 - Rejected review history is retained, so reviewer comments and audit evidence
   remain available.
-- The write-boundary guard prevents a timing race from reintroducing the
-  foreign-key 500 after a successful dry-run.
+- Auto-withdraw only reopens versions that are still `PENDING_REVIEW`, so a
+  concurrent rejection cannot be overwritten before the locked replacement
+  guard returns the stable 409.
+- Approval preserves a manual visibility update recorded after review
+  submission; otherwise it retains the existing requested-visibility behavior.
+- Search indexing and reads select the current published fallback independently
+  from the workflow latest pointer, so a private owner preview cannot hide the
+  installable release.
+- Visibility changes lock the namespace and skill rows and reject frozen or
+  archived namespaces.
+- Review optimistic updates treat a missing `RETURNING` row as a 409 conflict
+  rather than an internal SQLAlchemy exception.
 
 ## Out Of Scope
 
