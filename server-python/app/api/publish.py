@@ -15,6 +15,7 @@ from app.core.response import ok
 from app.core.redis import create_redis_client
 from app.object_storage import object_storage_for_settings
 from app.publish.dry_run import (
+    REJECTED_VERSION_REUSE_ERROR,
     PublishDryRunInput,
     PublishDryRunRepository,
     PublishDryRunResult,
@@ -22,7 +23,7 @@ from app.publish.dry_run import (
 )
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, determine_content_type, extract_package, normalize_entry_path, validate_package
-from app.publish.replacement import ReplaceableVersion, find_replaceable_version
+from app.publish.replacement import RejectedVersionReuseError, ReplaceableVersion, find_replaceable_version
 from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
@@ -270,7 +271,8 @@ async def publish_entries(
             result=dry_run,
         )
         messages = dry_run.errors or dry_run.warnings
-        raise HTTPException(status_code=400, detail=", ".join(messages))
+        status_code = 409 if REJECTED_VERSION_REUSE_ERROR in dry_run.errors else 400
+        raise HTTPException(status_code=status_code, detail=", ".join(messages))
     if dry_run.resolved_slug is None or dry_run.resolved_version is None:
         raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid")
 
@@ -313,7 +315,10 @@ async def publish_entries(
         compat_slug=compat_slug,
         replacement=replacement,
     )
-    result = await run_publish_write(request, write_input)
+    try:
+        result = await run_publish_write(request, write_input)
+    except RejectedVersionReuseError as exc:
+        raise HTTPException(status_code=409, detail=REJECTED_VERSION_REUSE_ERROR) from exc
     return dry_run, result, resolved_visibility
 
 

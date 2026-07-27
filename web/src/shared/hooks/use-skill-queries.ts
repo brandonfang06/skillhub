@@ -163,6 +163,28 @@ export function useArchiveSkill() {
   })
 }
 
+export function useUpdateSkillVisibility() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      namespace,
+      slug,
+      visibility,
+    }: {
+      namespace: string
+      slug: string
+      visibility: 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE'
+    }) => skillLifecycleApi.updateVisibility(namespace, slug, visibility),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
 export function useUnarchiveSkill() {
   const queryClient = useQueryClient()
 

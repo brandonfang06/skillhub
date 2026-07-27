@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 from sqlalchemy import text
 
+from app.admin.search import upsert_skill_search_document
 from app.audit.writer import write_audit_log
 from app.db.unit_of_work import transaction_connection
 
@@ -34,6 +35,7 @@ DELETABLE_VERSION_STATUSES = {"DRAFT", "REJECTED", "SCAN_FAILED", "UPLOADED"}
 CONFIRM_PUBLISH_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
 SUBMIT_REVIEW_VERSION_STATUSES = {"UPLOADED", "DRAFT"}
 SUBMIT_REVIEW_VISIBILITIES = {"PUBLIC", "NAMESPACE_ONLY"}
+SKILL_VISIBILITIES = {"PUBLIC", "NAMESPACE_ONLY", "PRIVATE"}
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,18 @@ class SkillArchiveInput:
     slug: str
     user_id: str
     reason: str | None = None
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    now: datetime | None = None
+
+
+@dataclass(frozen=True)
+class SkillVisibilityUpdateInput:
+    namespace: str
+    slug: str
+    visibility: str
+    user_id: str
     request_id: str | None = None
     client_ip: str | None = None
     user_agent: str | None = None
@@ -144,11 +158,18 @@ def _reason_detail(reason: str | None) -> str | None:
     return json.dumps({"reason": reason}, separators=(",", ":"))
 
 
-async def _read_skill_context(connection: Any, namespace: str, slug: str) -> dict[str, Any]:
+async def _read_skill_context(
+    connection: Any,
+    namespace: str,
+    slug: str,
+    *,
+    lock_skill: bool = False,
+) -> dict[str, Any]:
+    lock_clause = "FOR UPDATE OF n, s" if lock_skill else ""
     row = (
         await connection.execute(
             text(
-                """
+                f"""
                 SELECT s.id AS skill_id,
                        s.namespace_id,
                        s.slug AS skill_slug,
@@ -163,6 +184,7 @@ async def _read_skill_context(connection: Any, namespace: str, slug: str) -> dic
                 WHERE n.slug = :namespace_slug
                   AND s.slug = :skill_slug
                 LIMIT 1
+                {lock_clause}
                 """
             ),
             {"namespace_slug": _clean_namespace(namespace), "skill_slug": slug},
@@ -301,6 +323,67 @@ async def unarchive_skill(engine: Any, request: SkillArchiveInput) -> dict[str, 
         audit_action="UNARCHIVE_SKILL",
         detail_json=None,
     )
+
+
+async def update_skill_visibility(engine: Any, request: SkillVisibilityUpdateInput) -> dict[str, Any]:
+    if request.visibility not in SKILL_VISIBILITIES:
+        raise SkillLifecycleError("error.skill.publish.visibility.invalid")
+
+    timestamp = _now(request.now)
+    async with transaction_connection(engine) as connection:
+        skill = await _read_skill_context(
+            connection,
+            request.namespace,
+            request.slug,
+            lock_skill=True,
+        )
+        namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
+        _assert_can_manage(skill, request.user_id, namespace_role)
+        _assert_namespace_active(skill["namespace_status"])
+
+        skill_id = int(skill["skill_id"])
+        previous_visibility = str(skill["visibility"])
+        if previous_visibility == request.visibility:
+            return {"skillId": skill_id, "visibility": request.visibility, "changed": False}
+
+        await connection.execute(
+            text(
+                """
+                UPDATE skill
+                SET visibility = :visibility,
+                    updated_by = :updated_by,
+                    updated_at = :updated_at
+                WHERE id = :skill_id
+                """
+            ),
+            {
+                "visibility": request.visibility,
+                "updated_by": request.user_id,
+                "updated_at": timestamp,
+                "skill_id": skill_id,
+            },
+        )
+        await _write_audit(
+            connection,
+            actor_user_id=request.user_id,
+            action="UPDATE_SKILL_VISIBILITY",
+            target_type="SKILL",
+            target_id=skill_id,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+            detail_json=json.dumps(
+                {
+                    "previousVisibility": previous_visibility,
+                    "visibility": request.visibility,
+                },
+                separators=(",", ":"),
+            ),
+            created_at=timestamp,
+        )
+        await upsert_skill_search_document(connection, skill_id)
+
+    return {"skillId": skill_id, "visibility": request.visibility, "changed": True}
 
 
 async def _read_version(connection: Any, skill_id: int, version: str) -> dict[str, Any]:

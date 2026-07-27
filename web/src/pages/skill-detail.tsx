@@ -39,6 +39,7 @@ import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
@@ -60,6 +61,7 @@ import {
   useWithdrawSkillReview,
   useSubmitForReview,
   useConfirmPublish,
+  useUpdateSkillVisibility,
 } from '@/shared/hooks/use-skill-queries'
 import { useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 
@@ -76,6 +78,16 @@ function suggestNextVersion(version: string) {
     return `${major}.${minor}.${Number.parseInt(patch, 10) + 1}`
   }
   return `${version}.1`
+}
+
+type SkillVisibility = 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE'
+
+function isSkillVisibility(value: string | undefined): value is SkillVisibility {
+  return value === 'PUBLIC' || value === 'NAMESPACE_ONLY' || value === 'PRIVATE'
+}
+
+function getReviewTargetVisibility(value: string | undefined): 'PUBLIC' | 'NAMESPACE_ONLY' | null {
+  return value === 'PUBLIC' || value === 'NAMESPACE_ONLY' ? value : null
 }
 
 function parseMetadataJson(parsed?: string) {
@@ -141,6 +153,7 @@ export function SkillDetailPage() {
   const [diffSourceVersion, setDiffSourceVersion] = useState<string | null>(null)
   const [confirmPublishTarget, setConfirmPublishTarget] = useState<string | null>(null)
   const [submitReviewTarget, setSubmitReviewTarget] = useState<string | null>(null)
+  const [visibilityDraft, setVisibilityDraft] = useState<SkillVisibility>('PUBLIC')
   const [diffCompareVersion, setDiffCompareVersion] = useState<string | null>(null)
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false)
   const [isOverviewCollapsible, setIsOverviewCollapsible] = useState(false)
@@ -202,6 +215,15 @@ export function SkillDetailPage() {
   const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
   const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
   const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
+  const namespaceOnlyVisibilityLabel = skill?.namespace === 'global'
+    ? t('publish.visibilityOptions.loggedInUsersOnly')
+    : t('publish.visibilityOptions.namespaceOnly')
+
+  useEffect(() => {
+    if (isSkillVisibility(skill?.visibility)) {
+      setVisibilityDraft(skill.visibility)
+    }
+  }, [skill?.visibility])
 
   useEffect(() => {
     // Recompute collapse rules whenever rendered documentation height changes so the page can keep
@@ -293,6 +315,7 @@ export function SkillDetailPage() {
   const reportMutation = useSubmitSkillReport(namespace, slug)
   const submitForReviewMutation = useSubmitForReview()
   const confirmPublishMutation = useConfirmPublish()
+  const updateVisibilityMutation = useUpdateSkillVisibility()
 
   const triggerBrowserDownload = (url: string) => {
     const link = document.createElement('a')
@@ -638,11 +661,12 @@ export function SkillDetailPage() {
   }
 
   const handleSubmitForReview = async () => {
-    if (!submitReviewTarget) {
+    const targetVisibility = getReviewTargetVisibility(skill?.visibility)
+    if (!submitReviewTarget || !targetVisibility) {
       return
     }
     try {
-      await submitForReviewMutation.mutateAsync({ namespace, slug, version: submitReviewTarget, targetVisibility: 'PUBLIC' })
+      await submitForReviewMutation.mutateAsync({ namespace, slug, version: submitReviewTarget, targetVisibility })
       toast.success(
         t('skillDetail.submitReviewSuccessTitle'),
         t('skillDetail.submitReviewSuccessDescription', { version: submitReviewTarget }),
@@ -651,6 +675,28 @@ export function SkillDetailPage() {
     } catch (error) {
       toast.error(t('skillDetail.submitReviewErrorTitle'), error instanceof Error ? error.message : '')
       throw error
+    }
+  }
+
+  const handleUpdateVisibility = async () => {
+    if (!skill || visibilityDraft === skill.visibility) {
+      return
+    }
+    try {
+      await updateVisibilityMutation.mutateAsync({
+        namespace,
+        slug,
+        visibility: visibilityDraft,
+      })
+      toast.success(
+        t('skillDetail.visibilityUpdateSuccessTitle'),
+        t('skillDetail.visibilityUpdateSuccessDescription'),
+      )
+    } catch (error) {
+      toast.error(
+        t('skillDetail.visibilityUpdateErrorTitle'),
+        error instanceof Error ? error.message : '',
+      )
     }
   }
 
@@ -1051,7 +1097,7 @@ export function SkillDetailPage() {
                               {t('skillDetail.confirmPublish')}
                             </Button>
                           )}
-                          {skill.canManageLifecycle && version.status === 'UPLOADED' && skill.visibility === 'PRIVATE' && (
+                          {skill.canManageLifecycle && version.status === 'UPLOADED' && getReviewTargetVisibility(skill.visibility) && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -1336,6 +1382,44 @@ export function SkillDetailPage() {
                 ? t('skillDetail.archivedPublishHint')
                 : t('skillDetail.lifecycleHint')}
             </p>
+            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3 space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-foreground">
+                  {t('skillDetail.visibilityLabel')}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {t('skillDetail.visibilityHint')}
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Select
+                  value={visibilityDraft}
+                  onValueChange={(value) => {
+                    if (isSkillVisibility(value)) {
+                      setVisibilityDraft(value)
+                    }
+                  }}
+                >
+                  <SelectTrigger aria-label={t('skillDetail.visibilityLabel')} className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PUBLIC">{t('publish.visibilityOptions.public')}</SelectItem>
+                    <SelectItem value="NAMESPACE_ONLY">{namespaceOnlyVisibilityLabel}</SelectItem>
+                    <SelectItem value="PRIVATE">{t('publish.visibilityOptions.private')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  onClick={handleUpdateVisibility}
+                  disabled={updateVisibilityMutation.isPending || visibilityDraft === skill.visibility}
+                >
+                  {updateVisibilityMutation.isPending
+                    ? t('skillDetail.savingVisibility')
+                    : t('skillDetail.saveVisibility')}
+                </Button>
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">

@@ -530,6 +530,25 @@ export const accountApi = {
 }
 
 export const skillLifecycleApi = {
+  async updateVisibility(
+    namespace: string,
+    slug: string,
+    visibility: 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE',
+  ): Promise<{
+    skillId: number
+    visibility: 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE'
+    changed: boolean
+  }> {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    return fetchJson(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/visibility`, {
+      method: 'PATCH',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ visibility }),
+    })
+  },
+
   async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/archive`, {

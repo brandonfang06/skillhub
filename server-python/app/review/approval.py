@@ -278,6 +278,48 @@ async def _read_review_task(connection: Any, review_task_id: int) -> dict[str, A
     return dict(task_row)
 
 
+async def _resolve_approval_visibility(connection: Any, task: dict[str, Any]) -> str:
+    skill_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT visibility
+                FROM skill
+                WHERE id = :skill_id
+                FOR UPDATE
+                """
+            ),
+            {"skill_id": int(task["skill_id"])},
+        )
+    ).mappings().one_or_none()
+    if skill_row is None:
+        raise ReviewApprovalError("error.skill.notFound", status_code=404)
+
+    visibility_updated_after_submission = (
+        await connection.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM audit_log
+                    WHERE action = 'UPDATE_SKILL_VISIBILITY'
+                      AND target_type = 'SKILL'
+                      AND target_id = :skill_id
+                      AND created_at > :submitted_at
+                )
+                """
+            ),
+            {
+                "skill_id": int(task["skill_id"]),
+                "submitted_at": task["submitted_at"],
+            },
+        )
+    ).scalar_one()
+    if bool(visibility_updated_after_submission):
+        return str(skill_row["visibility"])
+    return str(task["requested_visibility"])
+
+
 def _assert_review_task_pending(task: dict[str, Any]) -> None:
     if str(task["status"]) != "PENDING":
         raise ReviewApprovalError("review.not_pending")
@@ -382,8 +424,8 @@ async def submit_review_task(
                 ),
                 {"skill_version_id": request.skill_version_id, "status": "PENDING_REVIEW"},
             )
-        ).scalar_one()
-        if int(updated) == 0:
+        ).scalar_one_or_none()
+        if updated is None:
             raise ReviewApprovalError("review.concurrent_update", status_code=409)
 
         try:
@@ -522,8 +564,8 @@ async def approve_review_task(
                     "expected_version": int(task["version"]),
                 },
             )
-        ).scalar_one()
-        if int(updated) == 0:
+        ).scalar_one_or_none()
+        if updated is None:
             raise ReviewApprovalError("review.concurrent_update", status_code=409)
 
         await connection.execute(
@@ -542,6 +584,7 @@ async def approve_review_task(
             },
         )
 
+        effective_visibility = await _resolve_approval_visibility(connection, task)
         await connection.execute(
             text(
                 """
@@ -558,7 +601,7 @@ async def approve_review_task(
             {
                 "skill_id": int(task["skill_id"]),
                 "latest_version_id": int(task["skill_version_id"]),
-                "visibility": task["requested_visibility"],
+                "visibility": effective_visibility,
                 "display_name": _metadata_value(task.get("parsed_metadata_json"), "name"),
                 "summary": _metadata_value(task.get("parsed_metadata_json"), "description"),
                 "updated_by": request.reviewer_id,
@@ -637,8 +680,8 @@ async def reject_review_task(
                     "expected_version": int(task["version"]),
                 },
             )
-        ).scalar_one()
-        if int(updated) == 0:
+        ).scalar_one_or_none()
+        if updated is None:
             raise ReviewApprovalError("review.concurrent_update", status_code=409)
 
         await connection.execute(
@@ -710,8 +753,8 @@ async def withdraw_review_task(engine: Any, request: ReviewWithdrawInput) -> Non
                 ),
                 {"review_task_id": request.review_task_id},
             )
-        ).scalar_one()
-        if int(deleted) == 0:
+        ).scalar_one_or_none()
+        if deleted is None:
             raise ReviewApprovalError("review.concurrent_update", status_code=409)
 
         await connection.execute(

@@ -8,6 +8,7 @@ import pytest
 
 from app.publish import replacement as replacement_module
 from app.publish.replacement import (
+    RejectedVersionReuseError,
     ReplaceableVersion,
     find_replaceable_version,
     StorageDeleteCompensationInput,
@@ -34,8 +35,14 @@ class FakeResult:
 
 
 class FakeConnection:
-    def __init__(self, results: list[FakeResult] | None = None) -> None:
+    def __init__(
+        self,
+        results: list[FakeResult] | None = None,
+        *,
+        current_status: str = "UPLOADED",
+    ) -> None:
         self.results = results or []
+        self.current_status = current_status
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -43,6 +50,8 @@ class FakeConnection:
         sql = str(statement)
         self.statements.append(sql)
         self.params.append(params or {})
+        if "SELECT status" in sql and "FROM skill_version" in sql:
+            return FakeResult(row={"status": self.current_status})
         if self.results and ("SELECT storage_key" in sql or "FROM skill s" in sql):
             return self.results.pop(0)
         return FakeResult()
@@ -73,15 +82,38 @@ async def test_cleanup_rejects_published_version() -> None:
 
 
 @pytest.mark.anyio
+async def test_cleanup_rejects_rejected_version_before_running_sql() -> None:
+    connection = FakeConnection()
+
+    with pytest.raises(RejectedVersionReuseError, match="error.skill.publish.rejectedVersionReuse"):
+        await cleanup_replaceable_version(connection, replaceable_version(status="REJECTED"))
+
+    assert connection.statements == []
+
+
+@pytest.mark.anyio
+async def test_cleanup_rechecks_status_inside_transaction_before_deleting() -> None:
+    connection = FakeConnection(current_status="REJECTED")
+
+    with pytest.raises(RejectedVersionReuseError, match="error.skill.publish.rejectedVersionReuse"):
+        await cleanup_replaceable_version(connection, replaceable_version(status="UPLOADED"))
+
+    assert len(connection.statements) == 1
+    assert "SELECT status" in connection.statements[0]
+    assert "FOR UPDATE" in connection.statements[0]
+    assert connection.params[0] == {"version_id": 42}
+
+
+@pytest.mark.anyio
 async def test_cleanup_clears_latest_version_before_delete() -> None:
     connection = FakeConnection([FakeResult(rows=[])])
 
     await cleanup_replaceable_version(connection, replaceable_version(latest_version_id=42))
 
-    assert "UPDATE skill" in connection.statements[0]
-    assert "latest_version_id = NULL" in connection.statements[0]
-    assert connection.params[0]["skill_id"] == 7
-    assert connection.params[0]["publisher_id"] == "local-user"
+    update_index = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill" in sql)
+    assert "latest_version_id = NULL" in connection.statements[update_index]
+    assert connection.params[update_index]["skill_id"] == 7
+    assert connection.params[update_index]["publisher_id"] == "local-user"
     assert "DELETE FROM skill_version" in connection.statements[-1]
 
 

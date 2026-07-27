@@ -68,6 +68,7 @@ export interface SeedSkillOptions {
   description?: string
   version?: string
   readmeHeading?: string
+  visibility?: 'PUBLIC' | 'NAMESPACE_ONLY' | 'PRIVATE'
 }
 
 function asApiErrorBody(value: unknown): string {
@@ -562,7 +563,7 @@ export class E2eTestDataBuilder {
             mimeType: 'application/zip',
             buffer: zipBuffer,
           },
-          visibility: 'PUBLIC',
+          visibility: options?.visibility || 'PUBLIC',
         },
       }),
     )

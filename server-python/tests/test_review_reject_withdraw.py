@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.review.approval import (
+    ReviewApprovalError,
     ReviewRejectInput,
     ReviewWithdrawInput,
     reject_review_task,
@@ -35,9 +36,19 @@ class FakeResult:
     def scalar_one(self) -> Any:
         return self.scalar
 
+    def scalar_one_or_none(self) -> Any:
+        return self.scalar
+
 
 class FakeReviewLifecycleConnection:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        review_update_result: int | None = 1,
+        review_delete_result: int | None = 1,
+    ) -> None:
+        self.review_update_result = review_update_result
+        self.review_delete_result = review_delete_result
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.notifications: list[dict[str, Any]] = []
@@ -75,13 +86,13 @@ class FakeReviewLifecycleConnection:
         if "FROM namespace_member" in sql:
             return FakeResult(row={"role": "ADMIN"})
         if "UPDATE review_task" in sql:
-            return FakeResult(scalar=1)
+            return FakeResult(scalar=self.review_update_result)
         if "UPDATE skill_version" in sql:
             return FakeResult()
         if "UPDATE skill" in sql:
             return FakeResult()
         if "DELETE FROM review_task" in sql:
-            return FakeResult(scalar=1)
+            return FakeResult(scalar=self.review_delete_result)
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
         if "notification_preference" in sql:
@@ -219,6 +230,21 @@ async def test_reject_review_task_persists_notification_without_fanout() -> None
 
 
 @pytest.mark.anyio
+async def test_reject_review_task_maps_lost_optimistic_update_to_conflict() -> None:
+    connection = FakeReviewLifecycleConnection(review_update_result=None)
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await reject_review_task(
+            FakeEngine(connection),
+            ReviewRejectInput(review_task_id=801, reviewer_id="team-admin"),
+        )
+
+    assert str(error.value) == "review.concurrent_update"
+    assert error.value.status_code == 409
+    assert not any("UPDATE skill_version" in sql for sql in connection.statements)
+
+
+@pytest.mark.anyio
 async def test_withdraw_review_task_deletes_pending_task_reopens_version_and_audits() -> None:
     connection = FakeReviewLifecycleConnection()
 
@@ -244,6 +270,21 @@ async def test_withdraw_review_task_deletes_pending_task_reopens_version_and_aud
     assert connection.params[skill_update]["updated_by"] == "local-user"
     assert connection.params[audit_insert]["action"] == "REVIEW_WITHDRAW"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"skillVersionId": 52}
+
+
+@pytest.mark.anyio
+async def test_withdraw_review_task_maps_lost_delete_to_conflict() -> None:
+    connection = FakeReviewLifecycleConnection(review_delete_result=None)
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await withdraw_review_task(
+            FakeEngine(connection),
+            ReviewWithdrawInput(review_task_id=801, user_id="local-user"),
+        )
+
+    assert str(error.value) == "review.concurrent_update"
+    assert error.value.status_code == 409
+    assert not any("UPDATE skill_version" in sql for sql in connection.statements)
 
 
 def test_reject_route_returns_java_envelope() -> None:

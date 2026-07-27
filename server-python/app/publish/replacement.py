@@ -9,6 +9,10 @@ from app.object_storage import object_storage_for_base_path
 from sqlalchemy import text
 
 
+class RejectedVersionReuseError(ValueError):
+    pass
+
+
 @dataclass(frozen=True)
 class ReplaceableVersion:
     skill_id: int
@@ -101,7 +105,28 @@ async def find_replaceable_version(
 
 
 async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersion) -> ReplacementCleanupResult:
+    if version.status == "REJECTED":
+        raise RejectedVersionReuseError("error.skill.publish.rejectedVersionReuse")
     if version.status == "PUBLISHED":
+        raise ValueError(f"Version already published: {version.version}")
+
+    status_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT status
+                FROM skill_version
+                WHERE id = :version_id
+                FOR UPDATE
+                """
+            ),
+            {"version_id": version.version_id},
+        )
+    ).mappings().one_or_none()
+    current_status = str(status_row["status"]) if status_row is not None else version.status
+    if current_status == "REJECTED":
+        raise RejectedVersionReuseError("error.skill.publish.rejectedVersionReuse")
+    if current_status == "PUBLISHED":
         raise ValueError(f"Version already published: {version.version}")
 
     now = normalized_now(version.now)

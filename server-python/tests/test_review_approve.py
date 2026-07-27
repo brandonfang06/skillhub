@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.review.approval import ReviewApproveInput, approve_review_task
+from app.review.approval import ReviewApprovalError, ReviewApproveInput, approve_review_task
 
 
 @dataclass
@@ -33,9 +33,21 @@ class FakeResult:
     def scalar_one(self) -> Any:
         return self.scalar
 
+    def scalar_one_or_none(self) -> Any:
+        return self.scalar
+
 
 class FakeReviewApproveConnection:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        current_visibility: str = "NAMESPACE_ONLY",
+        visibility_updated_after_submission: bool = False,
+        review_update_result: int | None = 1,
+    ) -> None:
+        self.current_visibility = current_visibility
+        self.visibility_updated_after_submission = visibility_updated_after_submission
+        self.review_update_result = review_update_result
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.notifications: list[dict[str, Any]] = []
@@ -75,14 +87,18 @@ class FakeReviewApproveConnection:
         if "SELECT COUNT(*)" in sql and "FROM skill other" in sql:
             return FakeResult(scalar=0)
         if "UPDATE review_task" in sql:
-            return FakeResult(scalar=1)
+            return FakeResult(scalar=self.review_update_result)
         if "UPDATE skill_version" in sql:
             return FakeResult()
+        if "SELECT visibility" in sql and "FROM skill" in sql:
+            return FakeResult(row={"visibility": self.current_visibility})
+        if "SELECT EXISTS" in sql and "UPDATE_SKILL_VISIBILITY" in sql:
+            return FakeResult(scalar=self.visibility_updated_after_submission)
         if "UPDATE skill" in sql:
             return FakeResult()
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
-        if "FROM skill s" in sql and "JOIN skill_version sv ON sv.id = s.latest_version_id" in sql:
+        if "FROM skill s" in sql and "JOIN LATERAL" in sql:
             return FakeResult(
                 row={
                     "skill_id": 7,
@@ -178,10 +194,12 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     skill_update = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill\n" in sql)
     audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
     search_upsert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_search_document" in sql)
-    search_source = next(sql for sql in connection.statements if "FROM skill s" in sql and "s.latest_version_id" in sql)
+    skill_lock = next(sql for sql in connection.statements if "SELECT visibility" in sql and "FROM skill" in sql)
+    search_source = next(sql for sql in connection.statements if "FROM skill s" in sql and "JOIN LATERAL" in sql)
     assert review_update < version_update < skill_update < audit_insert
     assert audit_insert < search_upsert
     assert "sv.status = 'PUBLISHED'" in search_source
+    assert "FOR UPDATE" in skill_lock
     assert connection.params[review_update]["status"] == "APPROVED"
     assert connection.params[version_update]["status"] == "PUBLISHED"
     assert connection.params[skill_update]["latest_version_id"] == 42
@@ -192,6 +210,44 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     assert connection.params[audit_insert]["target_type"] == "REVIEW_TASK"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "ship it"}
     assert connection.params[search_upsert]["skill_id"] == 7
+
+
+@pytest.mark.anyio
+async def test_approve_review_task_preserves_visibility_changed_after_submission() -> None:
+    connection = FakeReviewApproveConnection(
+        current_visibility="PRIVATE",
+        visibility_updated_after_submission=True,
+    )
+
+    await approve_review_task(FakeEngine(connection), approve_input())
+
+    skill_update = next(index for index, sql in enumerate(connection.statements) if "UPDATE skill\n" in sql)
+    visibility_audit_check = next(
+        index
+        for index, sql in enumerate(connection.statements)
+        if "SELECT EXISTS" in sql and "UPDATE_SKILL_VISIBILITY" in sql
+    )
+    assert connection.params[skill_update]["visibility"] == "PRIVATE"
+    assert connection.params[visibility_audit_check]["submitted_at"] == datetime(
+        2026,
+        6,
+        9,
+        10,
+        0,
+        tzinfo=UTC,
+    )
+
+
+@pytest.mark.anyio
+async def test_approve_review_task_maps_lost_optimistic_update_to_conflict() -> None:
+    connection = FakeReviewApproveConnection(review_update_result=None)
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await approve_review_task(FakeEngine(connection), approve_input())
+
+    assert str(error.value) == "review.concurrent_update"
+    assert error.value.status_code == 409
+    assert not any("UPDATE skill_version" in sql for sql in connection.statements)
 
 
 @pytest.mark.anyio

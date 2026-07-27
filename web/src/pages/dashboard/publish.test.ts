@@ -1,9 +1,15 @@
-import { createElement } from 'react'
+/** @vitest-environment jsdom */
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const useSearchMock = vi.fn()
 const selectRecords: Array<{ value?: string }> = []
+const { publishMutationMock, toastErrorMock } = vi.hoisted(() => ({
+  publishMutationMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
@@ -21,11 +27,17 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/publish/upload-zone', () => ({
-  UploadZone: () => null,
+  UploadZone: ({ onFileSelect }: { onFileSelect: (file: File) => void }) =>
+    createElement(
+      'button',
+      { type: 'button', onClick: () => onFileSelect(new File(['skill'], 'skill.zip')) },
+      'choose-file',
+    ),
 }))
 
 vi.mock('@/shared/ui/button', () => ({
-  Button: ({ children }: { children: unknown }) => children,
+  Button: ({ children, ...props }: { children: ReactNode; [key: string]: unknown }) =>
+    createElement('button', { type: 'button', ...props }, children),
 }))
 
 vi.mock('@/shared/ui/select', () => ({
@@ -49,7 +61,7 @@ vi.mock('@/shared/ui/card', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
-  usePublishSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePublishSkill: () => ({ mutateAsync: publishMutationMock, isPending: false }),
 }))
 
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
@@ -61,20 +73,31 @@ vi.mock('@/shared/components/dashboard-page-header', () => ({
 }))
 
 vi.mock('@/shared/lib/toast', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: toastErrorMock },
 }))
 
 vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error {
+    status: number
+    serverMessage?: string
     serverMessageKey?: string
+
+    constructor(message: string, status: number, serverMessage?: string) {
+      super(message)
+      this.status = status
+      this.serverMessage = serverMessage
+    }
   },
 }))
 
+import { ApiError } from '@/api/client'
 import { PublishPage } from './publish'
 
 describe('PublishPage', () => {
   beforeEach(() => {
     selectRecords.length = 0
+    publishMutationMock.mockReset()
+    toastErrorMock.mockReset()
     useSearchMock.mockReturnValue({
       namespace: '  team-ai  ',
       visibility: 'private',
@@ -99,5 +122,26 @@ describe('PublishPage', () => {
 
   it('exports a named component function', () => {
     expect(typeof PublishPage).toBe('function')
+  })
+
+  it('shows dedicated guidance when a rejected version is reused', async () => {
+    publishMutationMock.mockRejectedValue(
+      new ApiError(
+        'Publish failed',
+        409,
+        'error.skill.publish.rejectedVersionReuse',
+      ),
+    )
+
+    render(createElement(PublishPage))
+    fireEvent.click(screen.getByText('choose-file'))
+    fireEvent.click(screen.getByText('publish.confirm'))
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'publish.rejectedVersionReuseTitle',
+        'publish.rejectedVersionReuseDescription',
+      )
+    })
   })
 })
