@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
-import { getCurrentUser } from '@/api/client'
+import { getCollectionsRuntimeConfig, getCurrentUser } from '@/api/client'
 import { RoleGuard } from '@/shared/components/role-guard'
 import { createRequireAuth } from '@/shared/lib/auth-route'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
@@ -61,6 +61,23 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   }
 }
 
+function createCollectionRouteComponent<
+  TModule extends Record<string, unknown>,
+>(
+  importer: () => Promise<TModule>,
+  exportName: keyof TModule,
+) {
+  const RouteComponent = createLazyRouteComponent(importer, exportName)
+  return function CollectionRouteComponent(
+    props: Record<string, unknown>,
+  ) {
+    if (!getCollectionsRuntimeConfig().enabled) {
+      return <DefaultNotFound />
+    }
+    return <RouteComponent {...props} />
+  }
+}
+
 const LandingPage = createLazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
@@ -71,6 +88,10 @@ const SearchPage = createLazyRouteComponent(() => import('@/pages/search'), 'Sea
 const TermsOfServicePage = createLazyRouteComponent(() => import('@/pages/terms'), 'TermsOfServicePage')
 const NamespacePage = createLazyRouteComponent(() => import('@/pages/namespace'), 'NamespacePage')
 const SkillDetailPage = createLazyRouteComponent(() => import('@/pages/skill-detail'), 'SkillDetailPage')
+const CollectionDetailPage = createCollectionRouteComponent(
+  () => import('@/pages/collection-detail'),
+  'CollectionDetailPage',
+)
 const SkillPlaygroundPage = createLazyRouteComponent(
   () => import('@/pages/skill-playground'),
   'SkillPlaygroundPage',
@@ -90,6 +111,14 @@ const NamespaceMembersPage = createLazyRouteComponent(
 const NamespaceReviewsPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-reviews'),
   'NamespaceReviewsPage',
+)
+const NamespaceCollectionsPage = createCollectionRouteComponent(
+  () => import('@/pages/dashboard/namespace-collections'),
+  'NamespaceCollectionsPage',
+)
+const CollectionMaintenancePage = createCollectionRouteComponent(
+  () => import('@/pages/dashboard/collection-maintenance'),
+  'CollectionMaintenancePage',
 )
 const NamespaceReviewDetailPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/review-detail'),
@@ -233,6 +262,12 @@ const namespaceRoute = createRoute({
   component: NamespacePage,
 })
 
+const collectionDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/space/$namespace/collections/$collection',
+  component: CollectionDetailPage,
+})
+
 const skillDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/space/$namespace/$slug',
@@ -307,6 +342,20 @@ const dashboardNamespaceMembersRoute = createRoute({
   path: 'dashboard/namespaces/$slug/members',
   beforeLoad: requireAuth,
   component: NamespaceMembersPage,
+})
+
+const dashboardNamespaceCollectionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/namespaces/$namespace/collections',
+  beforeLoad: requireAuth,
+  component: NamespaceCollectionsPage,
+})
+
+const dashboardCollectionMaintenanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/namespaces/$namespace/collections/$collection',
+  beforeLoad: requireAuth,
+  component: CollectionMaintenancePage,
 })
 
 const dashboardNamespaceReviewsRoute = createRoute({
@@ -472,6 +521,7 @@ const routeTree = rootRoute.addChildren([
   searchRoute,
   termsRoute,
   namespaceRoute,
+  collectionDetailRoute,
   skillDetailRoute,
   skillPlaygroundRoute,
   skillVersionCompareRoute,
@@ -479,6 +529,8 @@ const routeTree = rootRoute.addChildren([
   dashboardSkillsRoute,
   dashboardPublishRoute,
   dashboardNamespacesRoute,
+  dashboardNamespaceCollectionsRoute,
+  dashboardCollectionMaintenanceRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
   dashboardNamespaceReviewDetailRoute,

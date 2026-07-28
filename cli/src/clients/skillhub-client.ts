@@ -1,5 +1,6 @@
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { z } from 'zod'
 
 export interface WhoAmIResponse {
   handle: string
@@ -28,6 +29,40 @@ export interface ResolveResponse {
   fingerprint: string
   downloadUrl: string
 }
+
+export interface CollectionResolveMember {
+  namespace: string
+  slug: string
+  version: string
+  versionId: number
+  fingerprint: string
+  downloadUrl: string
+}
+
+export interface CollectionResolveResponse {
+  namespace: string
+  slug: string
+  version: string
+  versionId: number
+  members: CollectionResolveMember[]
+}
+
+const collectionResolveSchema = z.object({
+  namespace: z.string().min(1),
+  slug: z.string().min(1),
+  version: z.string().min(1),
+  versionId: z.number().int().positive(),
+  members: z.array(z.object({
+    namespace: z.string().min(1),
+    slug: z.string().min(1),
+    version: z.string().min(1),
+    versionId: z.number().int().positive(),
+    fingerprint: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    downloadUrl: z.string().regex(
+      /^\/api\/cli\/v1\/skills\/[^/?#]+\/[^/?#]+\/versions\/[^/?#]+\/download$/
+    )
+  }))
+})
 
 export interface DeleteResponse {
   ok: boolean
@@ -71,6 +106,27 @@ export class SkillHubClient {
   async resolve(namespace: string, slug: string, version?: string): Promise<ResolveResponse> {
     const params = version ? `?version=${encodeURIComponent(version)}` : ''
     return this.getJson(`/skills/${namespace}/${slug}/resolve${params}`)
+  }
+
+  async resolveCollection(
+    namespace: string,
+    slug: string,
+    version?: string
+  ): Promise<CollectionResolveResponse> {
+    const params = version ? `?version=${encodeURIComponent(version)}` : ''
+    const data = await this.getJson<unknown>(
+      `/collections/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/resolve${params}`
+    )
+    const parsed = collectionResolveSchema.safeParse(data)
+    if (!parsed.success) {
+      throw new CliError('invalid collection manifest', EXIT.generic, {
+        issues: parsed.error.issues.slice(0, 5).map(issue => ({
+          path: issue.path.join('.'),
+          message: issue.message
+        }))
+      })
+    }
+    return parsed.data
   }
 
   async downloadUrl(namespace: string, slug: string, version?: string): Promise<string> {

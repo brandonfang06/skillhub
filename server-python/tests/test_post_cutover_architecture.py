@@ -119,6 +119,10 @@ def test_sql_inventory_script_exposes_categories() -> None:
 
     assert module.categorize_path(Path("app/api/skills.py")) == "api-route"
     assert module.categorize_path(Path("app/skills/read_repository.py")) == "repository-query"
+    assert (
+        module.categorize_path(Path("app/repository_imports/repository.py"))
+        == "repository-query"
+    )
     assert module.categorize_path(Path("app/bootstrap.py")) == "migration-bootstrap"
     assert module.categorize_path(Path("tests/test_skill_detail.py")) == "test"
 

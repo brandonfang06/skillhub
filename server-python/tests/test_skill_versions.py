@@ -136,6 +136,57 @@ def test_skill_versions_web_alias_returns_same_contract() -> None:
     assert response.json()["data"] == version_page(0, 20)
 
 
+def test_skill_versions_by_id_web_route_forwards_immutable_skill_id() -> None:
+    seen: list[tuple[int, int, int, str | None]] = []
+    app = create_app()
+
+    def reader(
+        skill_id: int,
+        page: int,
+        size: int,
+        current_user_id: str | None,
+    ) -> dict[str, object]:
+        seen.append((skill_id, page, size, current_user_id))
+        return version_page(page, size)
+
+    app.state.skill_versions_by_id_reader = reader
+    client = TestClient(app)
+    response = client.get(
+        "/api/web/skill-versions/by-skill-id/202",
+        params={"page": 1, "size": 5},
+        headers={"X-Mock-User-Id": " owner-b "},
+    )
+
+    assert response.status_code == 200
+    assert seen == [(202, 1, 5, "owner-b")]
+    assert response.json()["data"] == version_page(1, 5)
+
+
+def test_skill_versions_coordinate_route_preserves_by_id_namespace() -> None:
+    seen: list[tuple[str, str]] = []
+    app = create_app()
+
+    def reader(
+        namespace: str,
+        slug: str,
+        page: int,
+        size: int,
+        current_user_id: str | None,
+    ) -> dict[str, object]:
+        seen.append((namespace, slug))
+        return version_page(page, size)
+
+    app.state.skill_versions_reader = reader
+    client = TestClient(app)
+
+    numeric = client.get("/api/web/skills/by-id/202/versions")
+    text = client.get("/api/web/skills/by-id/demo/versions")
+
+    assert numeric.status_code == 200
+    assert text.status_code == 200
+    assert seen == [("by-id", "202"), ("by-id", "demo")]
+
+
 def test_skill_versions_route_forwards_page_size_and_current_user_to_reader() -> None:
     seen: list[tuple[int, int, str | None]] = []
     app = create_app()
@@ -274,3 +325,32 @@ def test_read_skill_versions_allows_platform_admin_without_owner_access() -> Non
     )
 
     assert result["items"][0]["status"] == "PENDING_REVIEW"
+
+
+def test_read_skill_versions_by_id_does_not_resolve_duplicate_slug_coordinate() -> None:
+    connection = _SkillVersionsOwnerPreviewWithoutLatestConnection()
+    original_execute = connection.execute
+
+    async def execute(statement: object, params: dict[str, object] | None = None) -> _FakeResult:
+        sql = str(statement)
+        if "FROM skill s" in sql:
+            assert "s.id = :skill_id" in sql
+            assert "s.slug = :slug" not in sql
+            assert "ORDER BY s.id ASC" not in sql
+            assert params is not None
+            assert params["skill_id"] == 202
+        return await original_execute(statement, params)
+
+    connection.execute = execute  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        skills.read_skill_versions_by_id(
+            _FakeEngine(connection),
+            202,
+            0,
+            20,
+            "owner-1",
+        )
+    )
+
+    assert result["items"][0]["id"] == 101

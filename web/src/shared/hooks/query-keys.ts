@@ -24,3 +24,11 @@ export function getSkillLabelsQueryKey(namespace: string, slug: string) {
 export function getAdminLabelDefinitionsQueryKey() {
   return ['labels', 'admin', getI18nCacheKey()] as const
 }
+
+export function getCollectionListQueryKey(namespace: string) {
+  return ['collections', 'namespace', namespace, getI18nCacheKey()] as const
+}
+
+export function getCollectionDetailQueryKey(namespace: string, collection: string) {
+  return ['collections', 'detail', namespace, collection, getI18nCacheKey()] as const
+}

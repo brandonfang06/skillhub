@@ -56,6 +56,33 @@ describe('router', () => {
     expect(childPaths).toContain('/space/$namespace/$slug/playground')
   })
 
+  it('registers public and authenticated collection routes', () => {
+    const children = (router.routeTree.children ?? []) as Array<{
+      fullPath?: string
+      path?: string
+      options?: { beforeLoad?: unknown }
+    }>
+    const byPath = new Map(
+      children.map((route) => [route.fullPath ?? route.path, route]),
+    )
+
+    expect(byPath.has('/space/$namespace/collections/$collection')).toBe(true)
+    expect(
+      byPath.has('/dashboard/namespaces/$namespace/collections'),
+    ).toBe(true)
+    expect(
+      byPath.has('/dashboard/namespaces/$namespace/collections/$collection'),
+    ).toBe(true)
+    expect(
+      byPath.get('/space/$namespace/collections/$collection')?.options
+        ?.beforeLoad,
+    ).toBeUndefined()
+    expect(
+      byPath.get('/dashboard/namespaces/$namespace/collections')?.options
+        ?.beforeLoad,
+    ).toBeDefined()
+  })
+
   it('registers the super-admin download events route', () => {
     const children = (router.routeTree.children ?? []) as Array<{ fullPath?: string; path?: string }>
     const childPaths = children.map((route) => route.fullPath ?? route.path)

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import os
 from pathlib import Path
@@ -28,6 +28,11 @@ DEFAULT_SCAN_CONSUMER_BLOCK_MS = 2000
 DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 120000
 DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT = 20
 DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS = 12
+DEFAULT_GITLAB_ARCHIVE_MAX_BYTES = 50 * 1024 * 1024
+DEFAULT_GITLAB_ARCHIVE_MAX_FILES = 500
+DEFAULT_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024
+DEFAULT_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES = 50 * 1024 * 1024
+DEFAULT_GITLAB_IMPORT_MAX_CANDIDATES = 100
 log = logging.getLogger("uvicorn.error")
 
 
@@ -53,6 +58,19 @@ class Settings:
     publish_allowed_file_extensions: set[str] | None
     download_analytics_retention_months: int
     local_registration_enabled: bool
+    collections_enabled: bool
+    gitlab_import_enabled: bool
+    gitlab_base_url: str
+    gitlab_allowed_groups: list[str]
+    gitlab_token: str = field(repr=False)
+    gitlab_ca_bundle_path: str
+    gitlab_connect_timeout_ms: int
+    gitlab_read_timeout_ms: int
+    gitlab_archive_max_bytes: int
+    gitlab_archive_max_files: int
+    gitlab_archive_max_single_file_bytes: int
+    gitlab_archive_max_expanded_bytes: int
+    gitlab_import_max_candidates: int
     security_scanner_enabled: bool
     security_scanner_mode: str
     redis_url: str
@@ -112,6 +130,11 @@ def parse_int(value: str | None, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def parse_positive_int(value: str | None, default: int) -> int:
+    parsed = parse_int(value, default)
+    return parsed if parsed > 0 else default
 
 
 def parse_duration_seconds(value: str | None, default: int) -> int:
@@ -271,6 +294,10 @@ def redis_ssl_enabled() -> bool:
 
 
 def get_settings() -> Settings:
+    collections_enabled = parse_bool(os.getenv("SKILLHUB_COLLECTIONS_ENABLED"))
+    gitlab_import_enabled = collections_enabled and parse_bool(
+        os.getenv("SKILLHUB_GITLAB_IMPORT_ENABLED")
+    )
     settings = Settings(
         database_url=resolve_database_url(),
         storage_provider=os.getenv("SKILLHUB_STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER).strip().lower(),
@@ -307,6 +334,40 @@ def get_settings() -> Settings:
             DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS,
         ),
         local_registration_enabled=parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True),
+        collections_enabled=collections_enabled,
+        gitlab_import_enabled=gitlab_import_enabled,
+        gitlab_base_url=os.getenv("SKILLHUB_GITLAB_BASE_URL", "").strip().rstrip("/"),
+        gitlab_allowed_groups=split_csv(os.getenv("SKILLHUB_GITLAB_ALLOWED_GROUPS")),
+        gitlab_token=os.getenv("SKILLHUB_GITLAB_TOKEN", ""),
+        gitlab_ca_bundle_path=os.getenv("SKILLHUB_GITLAB_CA_BUNDLE_PATH", "").strip(),
+        gitlab_connect_timeout_ms=parse_int(
+            os.getenv("SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS"),
+            5000,
+        ),
+        gitlab_read_timeout_ms=parse_int(
+            os.getenv("SKILLHUB_GITLAB_READ_TIMEOUT_MS"),
+            60000,
+        ),
+        gitlab_archive_max_bytes=parse_positive_int(
+            os.getenv("SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES"),
+            DEFAULT_GITLAB_ARCHIVE_MAX_BYTES,
+        ),
+        gitlab_archive_max_files=parse_positive_int(
+            os.getenv("SKILLHUB_GITLAB_ARCHIVE_MAX_FILES"),
+            DEFAULT_GITLAB_ARCHIVE_MAX_FILES,
+        ),
+        gitlab_archive_max_single_file_bytes=parse_positive_int(
+            os.getenv("SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES"),
+            DEFAULT_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES,
+        ),
+        gitlab_archive_max_expanded_bytes=parse_positive_int(
+            os.getenv("SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES"),
+            DEFAULT_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES,
+        ),
+        gitlab_import_max_candidates=parse_positive_int(
+            os.getenv("SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES"),
+            DEFAULT_GITLAB_IMPORT_MAX_CANDIDATES,
+        ),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),
         redis_url=resolve_redis_url(),

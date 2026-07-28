@@ -16,12 +16,22 @@ describe('help command', () => {
     expect(result.stdout).toContain('skillhub search')
   })
 
+  test('prints collection install help with an explicit registry example', async () => {
+    const result = await runCli(['help', 'collection'])
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain(
+      'Usage: skillhub collection install @namespace/collection'
+    )
+    expect(result.stdout).toContain('--registry https://skillhub.example.internal')
+    expect(result.stdout).toContain('--scope user')
+  })
+
   // P1: bare `skillhub help` (no topic) prints the directory of all commands
   test('bare help lists all commands in human format', async () => {
     const result = await runCli(['help'])
     expect(result.exitCode).toBe(0)
     // Sample at least 6 of the 12 known commands appear in the output
-    for (const name of ['login', 'logout', 'search', 'install', 'list', 'publish']) {
+    for (const name of ['login', 'logout', 'search', 'install', 'collection', 'list', 'publish']) {
       expect(result.stdout).toContain(name)
     }
   })

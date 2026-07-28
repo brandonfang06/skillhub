@@ -272,6 +272,74 @@ spec:
                   name: skillhub-config
                   key: local-registration-enabled
 
+            # Organization-local skill collections and repository import.
+            - name: SKILLHUB_COLLECTIONS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: collections-enabled
+            - name: SKILLHUB_GITLAB_IMPORT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-import-enabled
+            - name: SKILLHUB_GITLAB_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-base-url
+            - name: SKILLHUB_GITLAB_ALLOWED_GROUPS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-allowed-groups
+            - name: SKILLHUB_GITLAB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: gitlab-token
+                  optional: true
+            - name: SKILLHUB_GITLAB_CA_BUNDLE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-ca-bundle-path
+            - name: SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-connect-timeout-ms
+            - name: SKILLHUB_GITLAB_READ_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-read-timeout-ms
+            - name: SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-archive-max-bytes
+            - name: SKILLHUB_GITLAB_ARCHIVE_MAX_FILES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-archive-max-files
+            - name: SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-archive-max-single-file-bytes
+            - name: SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-archive-max-expanded-bytes
+            - name: SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: gitlab-import-max-candidates
+
             # Bootstrap admin
             - name: BOOTSTRAP_ADMIN_ENABLED
               valueFrom:

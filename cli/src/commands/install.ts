@@ -57,7 +57,7 @@ export async function resolveEffectiveScope(
   return undefined
 }
 
-async function defaultPromptScope(): Promise<'user' | 'project'> {
+export async function promptInstallScope(): Promise<'user' | 'project'> {
   const prompts = await import('prompts')
   const { scope } = await prompts.default({
     type: 'select',
@@ -86,7 +86,7 @@ export async function installCommand(
   }))
   const isTTY = isTTYFn()
 
-  const promptScope = deps.promptScope ?? defaultPromptScope
+  const promptScope = deps.promptScope ?? promptInstallScope
   const effectiveScope = await resolveEffectiveScope(options, { isTTY, promptScope })
 
   const configStore = new ConfigStore()

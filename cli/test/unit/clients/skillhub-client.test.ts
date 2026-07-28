@@ -157,6 +157,113 @@ describe('SkillHubClient', () => {
     expect(capturedUrl).toContain('?version=2.0.0')
   })
 
+  test('resolveCollection() requests the exact version and forwards bearer auth', async () => {
+    let capturedUrl = ''
+    let capturedAuthorization = ''
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      capturedUrl = String(input)
+      capturedAuthorization = new Headers(init?.headers).get('authorization') ?? ''
+      return Response.json({
+        data: {
+          namespace: 'opensource',
+          slug: 'superpowers',
+          version: '1.2.0',
+          versionId: 120,
+          members: [{
+            namespace: 'opensource',
+            slug: 'brainstorming',
+            version: '4.1.0',
+            versionId: 901,
+            fingerprint: `sha256:${'a'.repeat(64)}`,
+            downloadUrl: '/api/cli/v1/skills/opensource/brainstorming/versions/4.1.0/download'
+          }]
+        }
+      })
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    const result = await client.resolveCollection('opensource', 'superpowers', '1.2.0')
+
+    expect(capturedUrl).toBe(
+      'http://registry.test/api/cli/v1/collections/opensource/superpowers/resolve?version=1.2.0'
+    )
+    expect(capturedAuthorization).toBe('Bearer token')
+    expect(result.members[0]).toMatchObject({
+      slug: 'brainstorming',
+      version: '4.1.0',
+      versionId: 901
+    })
+  })
+
+  test.each([
+    {
+      name: 'missing members',
+      mutate: (data: Record<string, unknown>) => {
+        delete data.members
+      }
+    },
+    {
+      name: 'non-integer version id',
+      mutate: (data: Record<string, unknown>) => {
+        data.versionId = 1.5
+      }
+    },
+    {
+      name: 'invalid fingerprint',
+      mutate: (data: Record<string, unknown>) => {
+        const members = data.members as Array<Record<string, unknown>>
+        members[0]!.fingerprint = 'deadbeef'
+      }
+    },
+    {
+      name: 'absolute download URL',
+      mutate: (data: Record<string, unknown>) => {
+        const members = data.members as Array<Record<string, unknown>>
+        members[0]!.downloadUrl = 'https://evil.example/skill.zip'
+      }
+    }
+  ])('resolveCollection() rejects $name', async ({ mutate }) => {
+    const data: Record<string, unknown> = {
+      namespace: 'opensource',
+      slug: 'superpowers',
+      version: '1.2.0',
+      versionId: 120,
+      members: [{
+        namespace: 'opensource',
+        slug: 'brainstorming',
+        version: '4.1.0',
+        versionId: 901,
+        fingerprint: `sha256:${'a'.repeat(64)}`,
+        downloadUrl: '/api/cli/v1/skills/opensource/brainstorming/versions/4.1.0/download'
+      }]
+    }
+    mutate(data)
+    const fetchImpl = (async () => Response.json({ data })) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    const error = expect(client.resolveCollection('opensource', 'superpowers')).rejects
+    await error.toBeInstanceOf(CliError)
+    await error.toHaveProperty('message', 'invalid collection manifest')
+    await error.toHaveProperty('exitCode', EXIT.generic)
+  })
+
+  test('resolveCollection() retains degraded response detail on 409', async () => {
+    const fetchImpl = (async () => Response.json(
+      { detail: 'error.collection.degraded' },
+      { status: 409 }
+    )) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    try {
+      await client.resolveCollection('opensource', 'superpowers')
+      throw new Error('expected resolve failure')
+    } catch (error) {
+      expect(error).toBeInstanceOf(CliError)
+      expect(error).toHaveProperty('message', 'registry returned 409')
+      expect((error as CliError).details.detail).toContain('error.collection.degraded')
+    }
+  })
+
   // --- handleJsonResponse() non-2xx classification ---
 
   test('whoami() throws generic error on 500', async () => {

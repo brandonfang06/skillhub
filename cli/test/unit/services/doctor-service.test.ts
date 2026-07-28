@@ -192,6 +192,46 @@ describe('doctor-service', () => {
     expect(localSkillItem.targets).toHaveLength(1)
   })
 
+  test('preserves collection records while rebuilding skill items', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
+    const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
+    const inventoryPath = join(home, '.skillhub', 'inventory.json')
+    await mkdir(join(home, '.skillhub'), { recursive: true })
+    await writeFile(inventoryPath, JSON.stringify({
+      items: [],
+      collections: [{
+        registry: 'https://skillhub.example.test',
+        namespace: 'opensource',
+        slug: 'superpowers',
+        version: '1.2.0',
+        members: [{
+          namespace: 'opensource',
+          slug: 'brainstorming',
+          version: '4.1.0'
+        }],
+        installedAt: '2026-07-27T00:00:00.000Z'
+      }]
+    }))
+    await setupSkillDir(cwd, '.codex', 'brainstorming', {
+      registry: 'https://skillhub.example.test',
+      namespace: 'opensource',
+      slug: 'brainstorming',
+      version: '4.1.0',
+      agent: 'codex',
+      installedAt: '2026-07-27T00:00:00.000Z'
+    })
+
+    await runDoctor(cwd, home)
+
+    const finalInventory = JSON.parse(await readFile(inventoryPath, 'utf-8')) as {
+      collections: Array<{ slug: string; version: string }>
+    }
+    expect(finalInventory.collections).toEqual([expect.objectContaining({
+      slug: 'superpowers',
+      version: '1.2.0'
+    })])
+  })
+
   test('refreshes old record when scan hits same installDir', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))

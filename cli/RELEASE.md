@@ -2,189 +2,243 @@
 
 ## Overview
 
-CLI releases use a PR-based flow. Running `make publish-cli` on a clean `main` branch:
+CLI releases use a PR-based flow. `make publish-cli` prepares a release branch
+and PR. After that PR is merged, a `cli-vX.Y.Z` tag triggers
+[`release-cli.yml`](../.github/workflows/release-cli.yml).
 
-1. Runs local build-and-test (lint, typecheck, test, build)
-2. Computes the next version from the latest `cli-v*` tag on `origin`
-3. Creates a `release/cli-vX.Y.Z` branch with the version bump committed
-4. Pushes the branch and opens a PR to `main`
+The workflow builds and tests once, creates one immutable npm tarball, records
+its source commit and SHA-256, and passes that same artifact to publication and
+GitHub Release jobs. It never rebuilds the package in the publish job.
 
-After the PR is merged, you manually tag and push — the tag triggers [`release-cli.yml`](../.github/workflows/release-cli.yml) which builds, publishes to npm, and creates a GitHub Release.
+Publication is internal-only. The build job stays on a GitHub-hosted runner,
+while the publish job runs on an approved self-hosted runner that can reach the
+organization's Nexus hosted and group repositories.
 
-## Prerequisites
+## Repository Configuration
 
-### Repository Secrets
+Configure these under GitHub repository **Settings → Secrets and variables →
+Actions**.
 
-Configure in GitHub repository → Settings → Secrets and variables → Actions:
+### Secret
 
-- `NPM_TOKEN`: npm token with publish permissions
-  - Generate at https://www.npmjs.com/settings/YOUR_USERNAME/tokens
-  - Use **Classic Automation Token** (bypasses 2FA automatically), or
-  - **Granular Access Token** with "Allow bypass 2FA" enabled, scoped to the package
+- `NPM_TOKEN` — npm automation token with permission to publish to the hosted
+  registry and read from the install/group registry. It is never stored in an
+  artifact or printed by the workflow.
 
-### Repository Variables (optional)
+### Variables
 
-- `NPM_REGISTRY`: npm registry URL (default: `https://registry.npmjs.org`)
+- `NPM_PUBLISH_REGISTRY` — required hosted registry used by `npm publish`.
+- `NPM_INSTALL_REGISTRY` — required group registry used by employees and by
+  post-publish verification.
+- `NPM_PACKAGE_NAME` — optional internal package coordinate, for example
+  `@company/skillhub`.
 
-### Local Environment
+The publish workflow has no `NPM_REGISTRY` or public npm fallback. A missing
+hosted or group URL fails before publication. Package-name resolution remains:
 
-- `node` and `bun` installed
-- `gh` CLI installed and authenticated (`gh auth login`)
-- `git` with push access to the repository
-- On the `main` branch with a clean working tree
+| Purpose | Resolution order |
+| --- | --- |
+| Publish | required `NPM_PUBLISH_REGISTRY` |
+| Install/verify | required `NPM_INSTALL_REGISTRY` |
+| Package name | `NPM_PACKAGE_NAME` → `name` in `cli/package.json` |
 
-### Package Configuration
+Do not commit an internal Nexus URL, package coordinate, or token. The URL and
+package name are repository variables; the token is a repository or
+environment secret.
 
-In [`cli/package.json`](./package.json):
+The `publish-npm` job requires a self-hosted runner with all three labels:
+`self-hosted`, `linux`, and `skillhub-nexus`. The runner must resolve Nexus,
+trust its TLS chain, and have `npm`, Node.js, and `sha256sum`. Keep the build
+job on `ubuntu-latest`; it does not need Nexus connectivity or credentials.
 
-```json
-{
-  "name": "@astron-team/skillhub",
-  "publishConfig": {
-    "access": "public"
-  }
-}
+### Nexus Example
+
+The actual organization URLs belong in GitHub variables:
+
+```text
+NPM_PUBLISH_REGISTRY=https://nexus.example.com/repository/npm-hosted/
+NPM_INSTALL_REGISTRY=https://nexus.example.com/repository/npm-group/
+NPM_PACKAGE_NAME=@company/skillhub
 ```
+
+Employees can then install through the group repository:
+
+```bash
+npm install -g @company/skillhub@<version> \
+  --registry https://nexus.example.com/repository/npm-group/
+```
+
+The CLI's own `--registry` flag is different: it selects the SkillHub HTTP API,
+not the npm/Nexus package repository.
 
 ## Release Process
 
-### Step 1: Run the publish script
+### 1. Prepare the release PR
 
-From the repository root, on a clean `main` branch:
+From a clean `main` branch:
 
 ```bash
-make publish-cli         # patch: 0.1.5 -> 0.1.6
-make publish-cli-minor   # minor: 0.1.5 -> 0.2.0
-make publish-cli-major   # major: 0.1.5 -> 1.0.0
+make publish-cli
+make publish-cli-minor
+make publish-cli-major
 ```
 
-[`scripts/publish-cli.sh`](../scripts/publish-cli.sh) performs the following steps:
+[`scripts/publish-cli.sh`](../scripts/publish-cli.sh) runs local gates, computes
+the next `cli-v*` version, creates a release branch, pushes it, and opens a PR.
 
-1. Verify `gh` CLI is installed and authenticated
-2. Verify the working tree is clean and on `main`
-3. `git pull --ff-only` from `origin/main`
-4. Run full local build-and-test (lint, typecheck, test, build)
-5. Compute the next version from the latest `cli-v*` tag on `origin` (via `git ls-remote`, so local orphan tags from a failed `git push origin cli-vX.Y.Z` are ignored)
-6. Verify the tag and release branch don't already exist
-7. After interactive confirmation: create release branch, commit version bump, push, and open PR
-
-### Step 2: Merge the PR
-
-Review and merge the PR on GitHub as usual.
-
-### Step 3: Tag and push
+### 2. Merge and tag
 
 After the PR is merged:
 
 ```bash
 git fetch origin main
-git tag cli-vX.Y.Z origin/main   # replace with the actual version
+git tag cli-vX.Y.Z origin/main
 git push origin cli-vX.Y.Z
 ```
 
-This ensures the tag is always placed on the merge commit on `origin/main`, regardless of your local branch state.
+### 3. CI packages and publishes
 
-Pushing the tag triggers CI which builds, publishes to npm, and creates a GitHub Release.
+The workflow has three jobs:
 
-### CI Workflow
+1. `build-and-test`
+   - validates the tag;
+   - applies the configured package name and tag version;
+   - runs lint, typecheck, tests, build, and runtime-version verification;
+   - runs `npm pack --json` once;
+   - uploads the tarball, SHA-256, release files, and
+     `cli-release-metadata.json`.
+2. `publish-npm`
+   - downloads the immutable artifact without checking out or rebuilding;
+   - checks the exact package/version in the hosted registry;
+   - publishes the tarball only when absent;
+   - downloads the exact version from both hosted and install/group
+     registries;
+   - compares both downloaded SHA-256 values with the build artifact digest;
+   - fails if an existing version contains different bytes;
+   - writes npm credentials only to
+     `${{ runner.temp }}/skillhub-cli-release.npmrc` and removes the file with
+     an `if: always()` cleanup step.
+3. `create-release`
+   - creates source-independent CLI archives from the uploaded files;
+   - attaches the npm tarball, metadata, and checksums to the GitHub Release.
 
-[`release-cli.yml`](../.github/workflows/release-cli.yml) contains three jobs:
+The metadata records `package`, `version`, `sourceCommit`, workflow commit,
+tarball name, and `packageSha256`. Job summaries repeat the package identity,
+source commit, and digest for operator review.
 
-1. **build-and-test**
-   - Extract version from tag name (`cli-v0.1.6` → `0.1.6`) and write it into `cli/package.json`
-   - Install deps, lint, typecheck, test, build
-   - Verify the built CLI's runtime version matches the tag
+## Package-Only Dry Run
 
-2. **publish-npm**
-   - Skip if the target version already exists on the registry
-   - Configure `~/.npmrc` and run `npm publish --access public`
+Use **Actions → Release CLI → Run workflow**, enter an existing
+`cli-vX.Y.Z` tag, and enable `dry_run`.
 
-3. **create-release**
-   - Package `dist/` + README + LICENSE as `tar.gz` and `zip`
-   - Generate SHA256 checksums
-   - Create a GitHub Release and upload artifacts
+A dry run performs all build, test, runtime-version, pack, checksum, and
+artifact-upload steps. It skips both registry publication and GitHub Release
+creation. Download `cli-package` from the workflow run and inspect:
 
-### Verify Release
+```text
+package/<package-version>.tgz
+package/<package-version>.tgz.sha256
+cli-release-metadata.json
+cli-release/
+```
 
-- Workflow: https://github.com/iflytek/skillhub/actions/workflows/release-cli.yml
-- Release: https://github.com/iflytek/skillhub/releases
-- npm: `npm view @astron-team/skillhub@<version>`
+This is the required preflight when introducing or changing Nexus variables.
+The build/dry-run job remains on `ubuntu-latest`, so it does not require Nexus
+network access or registry variables. It does not prove write permission; the
+first real publish must still be observed through the hosted and group
+repositories.
 
-## Release Audit Trail
+`skip_npm` is separate: it skips package publication but can still create a
+GitHub Release. Do not combine it with `dry_run` unless only the package
+artifact is wanted.
 
-GitHub Actions automatically records on each workflow run page:
+### Local no-publish rehearsal
 
-- **Triggering user** (the developer who pushed the tag, i.e. `github.actor`)
-- **Trigger event** (`push` tag or `workflow_dispatch`)
-- **Tag name and commit SHA**
-
-The team can review the full audit trail in the Actions tab without any extra configuration.
-
-## Manual Trigger
-
-From the Actions UI:
-
-1. Actions → Release CLI → "Run workflow"
-2. Enter an existing tag name matching `cli-vX.Y.Z`
-3. Optionally enable skip npm publish
-
-## Error Recovery
-
-The script uses a cleanup state machine. If it fails at different stages:
-
-- **Before push**: release branch is deleted locally, you're returned to `main`
-- **After push, before PR**: the script prints recovery instructions (open PR manually or delete the remote branch)
-- **After PR opened**: success — no cleanup needed
-
-If you need to manually clean up a failed release:
+Before triggering the workflow, a clean local checkout can prove the package
+shape without a token or registry write:
 
 ```bash
-git checkout main
-git branch -D release/cli-vX.Y.Z           # delete local branch
-git push origin --delete release/cli-vX.Y.Z # delete remote branch (if pushed)
+cd cli
+bun run lint
+bun run typecheck
+bun test
+bun run build
+npm pack --json --pack-destination <temporary-directory>
+node dist/index.js version
 ```
+
+Record the tarball filename, SHA-256, package name/version, and source commit.
+Inspect `npm pack --dry-run --json` or the tarball file list for unintended
+files. Do not set `NPM_TOKEN` and do not run `npm publish` during this rehearsal.
+The GitHub Actions `dry_run` remains the authoritative CI/CD rehearsal because
+it also uploads immutable metadata and exercises the workflow job boundaries.
+
+## Verification
+
+After a real release:
+
+```bash
+npm view <package>@<version> version --registry <install-registry>
+npm install -g <package>@<version> --registry <install-registry>
+skillhub version
+skillhub help collection
+```
+
+Confirm the `npm view` result equals the tag version. The release workflow must
+also report that tarballs downloaded independently from the hosted and group
+registries both equal the `packageSha256` value in
+`cli-release-metadata.json`.
+
+For token rotation, create and test a replacement Nexus token with the same
+hosted-write/group-read permissions, update the `NPM_TOKEN` Actions secret,
+run a package-only dry run, and revoke the old token only after verification.
+Never republish different bytes under an existing version. If group
+verification fails after hosted publication, fix Nexus group membership,
+content selectors, routing/cache, or read permission and verify the same
+immutable version.
 
 ## Troubleshooting
 
-### `releases must be cut from 'main'`
+### Hosted lookup fails
 
-Switch back to `main`, pull the latest, and retry.
+An authentication, TLS, DNS, or server error is treated as unknown state and
+fails the job. Only an explicit not-found response permits publishing.
 
-### `git working tree is not clean`
+### Publish succeeds but group verification fails
 
-Commit or stash local changes first.
+Check Nexus group membership, content selectors, routing rules, cache state,
+and token read permission. Do not rebuild or republish under the same version;
+the version and tarball are immutable.
 
-### `tag cli-vX.Y.Z already exists`
+### `403 Forbidden`
 
-The previous release didn't clean up, or someone else released the same version. Check `git tag --list 'cli-v*'` and remote tags, then retry with a higher version.
+Confirm `NPM_TOKEN` has publish permission for the hosted repository and the
+configured `NPM_PACKAGE_NAME` scope.
 
-### `branch release/cli-vX.Y.Z already exists`
+### Publish job does not start
 
-A previous release attempt left a stale branch. Delete it locally and/or on origin, then retry.
+Confirm an online runner has the exact `self-hosted`, `linux`, and
+`skillhub-nexus` labels.
 
-### npm Publish Fails
+### Registry configuration is missing
 
-- **403 with 2FA message**: `NPM_TOKEN` is not an Automation Token, or bypass 2FA is not enabled — regenerate with the correct type
-- **403 Forbidden**: Package scope doesn't match token permissions — confirm publish rights for the `@astron-team` org
-- **E404**: The registry doesn't host this scope — check `NPM_REGISTRY`
+Set both `NPM_PUBLISH_REGISTRY` and `NPM_INSTALL_REGISTRY`. The workflow does
+not fall back to npmjs or a legacy single-registry variable.
 
-### Build / Test Fails
+### Build or test failure
 
 Reproduce locally:
 
 ```bash
-make lint-cli && make typecheck-cli && make test-cli && make build-cli
+make lint-cli
+make typecheck-cli
+make test-cli
+make build-cli
 ```
 
-Confirm the Bun version matches `packageManager` in [`cli/package.json`](./package.json).
+## Tag Naming
 
-### Version Mismatch (runtime ≠ tag)
+- CLI releases: `cli-v*` (for example `cli-v0.1.10`)
+- Repository releases: `v*` (for example `v0.3.0`)
 
-CI runs `node dist/index.js version` and requires the output to match the tag. If the CLI's `version` command implementation changes, update the verification logic in [`release-cli.yml`](../.github/workflows/release-cli.yml) accordingly.
-
-## Tag Naming Convention
-
-- CLI releases: `cli-v*` (e.g., `cli-v0.1.6`)
-- Repository releases: `v*` (e.g., `v0.3.0`)
-
-The two tag namespaces are independent, allowing CLI and server to version separately.
+The namespaces are independent.

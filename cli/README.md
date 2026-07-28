@@ -174,6 +174,70 @@ Before contacting the registry, the CLI validates the skill slug, canonicalizes 
 
 Multi-target installation is transactional within one CLI process. If a later target fails after staging or commit begins, the CLI removes earlier new installs, restores `--force` backups, and restores the pre-install inventory.
 
+### Install a Versioned Collection
+
+A collection is a versioned, namespace-owned manifest that pins an exact
+version of every member skill. Install it with an explicit SkillHub registry:
+
+```bash
+skillhub collection install @myspace/platform-starter \
+  --registry https://skillhub.example.com
+
+# Resolve a specific collection version
+skillhub collection install @myspace/platform-starter \
+  --version 1.2.0 \
+  --scope user \
+  --agent codex \
+  --registry https://skillhub.example.com
+
+# Machine-readable aggregate result
+skillhub collection install @myspace/platform-starter \
+  --registry https://skillhub.example.com \
+  --scope user \
+  --json
+```
+
+`--registry` is required for this command even when
+`SKILLHUB_REGISTRY` or `~/.skillhub/config.json` is configured. This makes the
+server that owns and resolves the collection explicit. The optional `--token`
+follows the normal token resolution rules.
+
+The server returns one immutable collection version whose members each contain
+an exact skill version. The CLI preflights all member/target destinations,
+downloads and stages every member, and then commits the installation as one
+transaction. A conflict or failure leaves no partial collection installed; with
+`--force`, overwritten directories and the prior inventory are restored on
+failure.
+
+Supported targeting flags are the same as `skillhub install`: `--scope`,
+repeatable `--agent`, `--dir`, and `--force`. `--dir` remains mutually exclusive
+with `--scope` and `--agent`.
+
+The inventory records both the installed skill targets and the collection
+version that selected them. Collection-level update and remove commands are not
+available in this release; individual installed skills continue to use the
+existing list and remove commands.
+
+When the CLI itself comes from an internal Nexus repository, the two registry
+arguments have different owners:
+
+```bash
+npx --yes --registry <Nexus-npm-group> <internal-package>@<version> \
+  collection install @opensource/superpowers \
+  --registry <SkillHub-base-URL> \
+  --scope user
+```
+
+The first `--registry` is consumed by `npx` to download the CLI package. The
+second is consumed by SkillHub CLI to resolve and download the versioned
+collection.
+
+Collection and member version lines remain independent: publishing a newer
+member does not change an installed or published collection. Curators create a
+new collection snapshot, and employees explicitly install it. Source update
+checks and collection-level update/remove commands do not run automatically.
+See the product collection guide for the GitLab import and maintenance model.
+
 ### Install Paths
 
 Each Agent has both project-level and user-level skills directories. Use `--scope user|project` to control which one is used.
@@ -343,6 +407,7 @@ Update mechanism:
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <slug> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
+| `skillhub collection install @<namespace>/<collection> --registry <url> [--version <v>] [--scope <user\|project>] [--agent <profile>] [--dir <path>] [--force] [--token <token>] [--json]` | Transactionally install an exact versioned collection |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <slug> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |

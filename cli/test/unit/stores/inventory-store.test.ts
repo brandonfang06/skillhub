@@ -19,6 +19,60 @@ function makeTarget(slug: string) {
 }
 
 describe('InventoryStore', () => {
+  test('normalizes an absent inventory to empty items and collections', async () => {
+    const home = await makeTempHome()
+    const store = new InventoryStore(home)
+
+    expect(await store.read()).toEqual({
+      items: [],
+      collections: []
+    })
+  })
+
+  test('normalizes a legacy inventory without collections', async () => {
+    const home = await makeTempHome()
+    const store = new InventoryStore(home)
+    await mkdir(dirname(store.path), { recursive: true })
+    await writeFile(store.path, JSON.stringify({ items: [] }))
+
+    expect(await store.read()).toEqual({
+      items: [],
+      collections: []
+    })
+  })
+
+  test('preserves collections while single-skill inventory methods run', async () => {
+    const home = await makeTempHome()
+    const store = new InventoryStore(home)
+    await store.writeAtomic({
+      items: [],
+      collections: [{
+        registry: 'https://skillhub.example.test',
+        namespace: 'opensource',
+        slug: 'superpowers',
+        version: '1.2.0',
+        members: [{
+          namespace: 'opensource',
+          slug: 'brainstorming',
+          version: '4.1.0'
+        }],
+        installedAt: '2026-07-27T00:00:00.000Z'
+      }]
+    })
+
+    await store.upsertTarget(
+      'https://skillhub.example.test',
+      'opensource',
+      'brainstorming',
+      '4.1.0',
+      makeTarget('brainstorming')
+    )
+
+    const inventory = await store.read()
+    expect(inventory.collections).toHaveLength(1)
+    expect(inventory.collections[0]?.slug).toBe('superpowers')
+  })
+
   test('5 sequential upsertTarget calls all persist', async () => {
     const home = await makeTempHome()
     const store = new InventoryStore(home)

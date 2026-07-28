@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from collections.abc import AsyncIterator
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -13,6 +15,7 @@ from app.core.config import get_settings
 
 BASELINE_FLYWAY_VERSION = 43
 BASELINE_REVISION = "skillhub_flyway_v43_baseline"
+LOCAL_MIGRATION_LOCK_KEY = 0x534B494C4C485542
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 LOCAL_MIGRATION_DIR = ROOT / "server-python" / "app" / "db" / "local_migration"
@@ -22,6 +25,12 @@ class DatabaseConnection(Protocol):
     async def fetchval(self, sql: str, *params: object) -> object: ...
 
     async def execute(self, sql: str, *params: object) -> str: ...
+
+    def transaction(
+        self,
+        *,
+        isolation: str | None = None,
+    ) -> AbstractAsyncContextManager[object]: ...
 
 
 @dataclass(frozen=True)
@@ -100,7 +109,37 @@ async def apply_existing_database_compatibility_migrations(
     await connection.execute(migration.path.read_text(encoding="utf-8"))
 
 
+async def _execute_flyway_migration(
+    connection: DatabaseConnection,
+    migration: FlywayMigration,
+) -> None:
+    previous_lock_timeout = await connection.fetchval("SHOW lock_timeout")
+    await connection.execute(migration.path.read_text(encoding="utf-8"))
+    await connection.execute(
+        "SELECT set_config('lock_timeout', $1, true)",
+        previous_lock_timeout,
+    )
+
+
+@asynccontextmanager
+async def migration_operation(connection: DatabaseConnection) -> AsyncIterator[None]:
+    async with connection.transaction(isolation="read_committed"):
+        await connection.execute(
+            "SELECT pg_advisory_xact_lock($1)",
+            LOCAL_MIGRATION_LOCK_KEY,
+        )
+        yield
+
+
 async def apply_local_schema_migrations(
+    connection: DatabaseConnection,
+    local_dir: Path = LOCAL_MIGRATION_DIR,
+) -> None:
+    async with migration_operation(connection):
+        await _apply_local_schema_migrations(connection, local_dir)
+
+
+async def _apply_local_schema_migrations(
     connection: DatabaseConnection,
     local_dir: Path = LOCAL_MIGRATION_DIR,
 ) -> None:
@@ -129,33 +168,35 @@ async def apply_local_schema_migrations(
 
 
 async def stamp_existing_database(connection: DatabaseConnection) -> None:
-    if not await table_exists(connection, "user_account"):
-        raise RuntimeError("Cannot stamp baseline: expected existing Flyway table user_account")
-    await apply_existing_database_compatibility_migrations(connection)
-    await _stamp_baseline(connection)
+    async with migration_operation(connection):
+        if not await table_exists(connection, "user_account"):
+            raise RuntimeError("Cannot stamp baseline: expected existing Flyway table user_account")
+        await apply_existing_database_compatibility_migrations(connection)
+        await _stamp_baseline(connection)
 
 
 async def upgrade_database(
     connection: DatabaseConnection,
     flyway_dir: Path = DEFAULT_FLYWAY_DIR,
 ) -> None:
-    if await table_exists(connection, "user_account"):
-        await apply_existing_database_compatibility_migrations(connection, flyway_dir)
-        await _stamp_baseline(connection)
-        await apply_local_schema_migrations(connection)
-        return
+    async with migration_operation(connection):
+        if await table_exists(connection, "user_account"):
+            await apply_existing_database_compatibility_migrations(connection, flyway_dir)
+            await _stamp_baseline(connection)
+            await _apply_local_schema_migrations(connection)
+            return
 
-    migrations = flyway_migration_files(flyway_dir)
-    if not migrations or migrations[-1].version != BASELINE_FLYWAY_VERSION:
-        raise RuntimeError(
-            f"Baseline expects Flyway V{BASELINE_FLYWAY_VERSION}, "
-            f"found V{migrations[-1].version if migrations else 'none'}"
+        migrations = flyway_migration_files(flyway_dir)
+        if not migrations or migrations[-1].version != BASELINE_FLYWAY_VERSION:
+            raise RuntimeError(
+                f"Baseline expects Flyway V{BASELINE_FLYWAY_VERSION}, "
+                f"found V{migrations[-1].version if migrations else 'none'}"
         )
 
-    for migration in migrations:
-        await connection.execute(migration.path.read_text(encoding="utf-8"))
-    await _stamp_baseline(connection)
-    await apply_local_schema_migrations(connection)
+        for migration in migrations:
+            await _execute_flyway_migration(connection, migration)
+        await _stamp_baseline(connection)
+        await _apply_local_schema_migrations(connection)
 
 
 async def migration_status(connection: DatabaseConnection) -> str:

@@ -10,6 +10,7 @@ dependencies = [
   "bcrypt>=5.0.0",
   "boto3>=1.39.0",
   "fastapi>=0.116.0",
+  "httpx>=0.28.0",
   "python-multipart>=0.0.20",
   "redis>=8.0.0",
   "sqlalchemy[asyncio]>=2.0.0",
@@ -18,7 +19,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "httpx>=0.28.0",
   "pytest>=8.4.0",
 ]
 

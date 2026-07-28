@@ -144,6 +144,107 @@ def test_local_registration_can_be_disabled_for_organization_deployments(monkeyp
     assert settings.local_registration_enabled is False
 
 
+def test_collection_features_default_to_disabled(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_COLLECTIONS_ENABLED", raising=False)
+    monkeypatch.delenv("SKILLHUB_GITLAB_IMPORT_ENABLED", raising=False)
+
+    settings = get_settings()
+
+    assert settings.collections_enabled is False
+    assert settings.gitlab_import_enabled is False
+
+
+def test_gitlab_import_requires_collections(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_COLLECTIONS_ENABLED", "false")
+    monkeypatch.setenv("SKILLHUB_GITLAB_IMPORT_ENABLED", "true")
+
+    settings = get_settings()
+
+    assert settings.collections_enabled is False
+    assert settings.gitlab_import_enabled is False
+
+
+def test_collection_features_can_be_enabled_independently(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_COLLECTIONS_ENABLED", "true")
+    monkeypatch.setenv("SKILLHUB_GITLAB_IMPORT_ENABLED", "false")
+
+    settings = get_settings()
+
+    assert settings.collections_enabled is True
+    assert settings.gitlab_import_enabled is False
+
+    monkeypatch.setenv("SKILLHUB_GITLAB_IMPORT_ENABLED", "true")
+
+    with_import = get_settings()
+
+    assert with_import.collections_enabled is True
+    assert with_import.gitlab_import_enabled is True
+
+
+def test_gitlab_import_settings_are_bounded_and_token_is_not_represented(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_COLLECTIONS_ENABLED", "true")
+    monkeypatch.setenv("SKILLHUB_GITLAB_IMPORT_ENABLED", "true")
+    monkeypatch.setenv("SKILLHUB_GITLAB_BASE_URL", "https://gitlab.internal.example/")
+    monkeypatch.setenv("SKILLHUB_GITLAB_ALLOWED_GROUPS", "oss-mirrors,approved/tools")
+    monkeypatch.setenv("SKILLHUB_GITLAB_TOKEN", "top-secret")
+    monkeypatch.setenv("SKILLHUB_GITLAB_CA_BUNDLE_PATH", "C:/certs/internal-ca.pem")
+    monkeypatch.setenv("SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS", "2500")
+    monkeypatch.setenv("SKILLHUB_GITLAB_READ_TIMEOUT_MS", "45000")
+    monkeypatch.setenv("SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES", "2048")
+    monkeypatch.setenv("SKILLHUB_GITLAB_ARCHIVE_MAX_FILES", "12")
+    monkeypatch.setenv("SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES", "4096")
+    monkeypatch.setenv("SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES", "16384")
+    monkeypatch.setenv("SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES", "7")
+
+    settings = get_settings()
+
+    assert settings.gitlab_base_url == "https://gitlab.internal.example"
+    assert settings.gitlab_allowed_groups == ["oss-mirrors", "approved/tools"]
+    assert settings.gitlab_token == "top-secret"
+    assert settings.gitlab_ca_bundle_path == "C:/certs/internal-ca.pem"
+    assert settings.gitlab_connect_timeout_ms == 2500
+    assert settings.gitlab_read_timeout_ms == 45000
+    assert settings.gitlab_archive_max_bytes == 2048
+    assert settings.gitlab_archive_max_files == 12
+    assert settings.gitlab_archive_max_single_file_bytes == 4096
+    assert settings.gitlab_archive_max_expanded_bytes == 16384
+    assert settings.gitlab_import_max_candidates == 7
+    assert "top-secret" not in repr(settings)
+
+
+def test_gitlab_operation_limits_have_safe_defaults_and_reject_non_positive_overrides(
+    monkeypatch,
+):
+    names = (
+        "SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES",
+        "SKILLHUB_GITLAB_ARCHIVE_MAX_FILES",
+        "SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES",
+        "SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES",
+        "SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES",
+    )
+    for name in names:
+        monkeypatch.delenv(name, raising=False)
+
+    defaults = get_settings()
+
+    assert defaults.gitlab_archive_max_bytes == 50 * 1024 * 1024
+    assert defaults.gitlab_archive_max_files == 500
+    assert defaults.gitlab_archive_max_single_file_bytes == 5 * 1024 * 1024
+    assert defaults.gitlab_archive_max_expanded_bytes == 50 * 1024 * 1024
+    assert defaults.gitlab_import_max_candidates == 100
+
+    for name in names:
+        monkeypatch.setenv(name, "0")
+
+    bounded = get_settings()
+
+    assert bounded.gitlab_archive_max_bytes == 50 * 1024 * 1024
+    assert bounded.gitlab_archive_max_files == 500
+    assert bounded.gitlab_archive_max_single_file_bytes == 5 * 1024 * 1024
+    assert bounded.gitlab_archive_max_expanded_bytes == 50 * 1024 * 1024
+    assert bounded.gitlab_import_max_candidates == 100
+
+
 def test_download_analytics_retention_defaults_to_twelve_months(monkeypatch):
     monkeypatch.delenv("SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS", raising=False)
 

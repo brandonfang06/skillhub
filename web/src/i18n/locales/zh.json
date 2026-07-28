@@ -825,6 +825,11 @@
   "namespace": {
     "notFound": "命名空间不存在",
     "skillList": "技能列表",
+    "skillsTab": "技能",
+    "collectionsTab": "集合",
+    "collectionList": "集合",
+    "collectionEmptyTitle": "暂无集合",
+    "collectionEmptyDescription": "此命名空间尚无可用的已发布集合。",
     "emptyTitle": "暂无技能",
     "emptyDescription": "该命名空间下还没有发布任何技能"
   },
@@ -1621,6 +1626,111 @@
         "notAuthenticated": "未检测到可用的外部登录会话"
       }
     }
+  },
+  "collectionCard": {
+    "members": "个技能",
+    "unpublished": "尚未发布",
+    "archived": "已归档",
+    "draft": "草稿"
+  },
+  "collectionInstall": {
+    "title": "安装集合",
+    "copy": "复制集合安装命令",
+    "unavailable": "尚未配置精确的内部 CLI 安装命令。"
+  },
+  "collectionDiff": {
+    "title": "此草稿的变更",
+    "reordered": "成员顺序已变更",
+    "metadataOnly": "仅元数据变更"
+  },
+  "collectionEditor": {
+    "skill": "技能",
+    "selectSkill": "选择技能",
+    "version": "已发布版本",
+    "selectVersion": "选择精确版本",
+    "add": "添加",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "remove": "移除",
+    "note": "可选成员备注",
+    "newerVersion": "有更新的已发布版本：{{version}}"
+  },
+  "collectionDetail": {
+    "notFound": "找不到集合",
+    "maintain": "维护集合",
+    "members": "v{{version}} 的成员（{{count}}）",
+    "degraded": "此历史集合包含已删除的 Skill 版本，因此无法再安装。",
+    "unpublished": "此集合尚未发布。"
+  },
+  "collectionAdmin": {
+    "disabled": "集合功能已停用",
+    "title": "集合",
+    "createTitle": "创建集合",
+    "slug": "集合标识",
+    "displayName": "显示名称",
+    "summary": "摘要",
+    "create": "创建集合",
+    "createSuccess": "集合已创建",
+    "createError": "创建集合失败",
+    "namespaceOwnerOnly": "只有命名空间 OWNER/ADMIN 或平台技能管理员可以创建集合。",
+    "emptyTitle": "尚无集合",
+    "emptyDescription": "为此命名空间创建版本化集合。"
+  },
+  "collectionMaintenance": {
+    "denied": "您没有维护此集合的权限。",
+    "title": "维护集合",
+    "releaseNotes": "发布说明",
+    "saveSuccess": "草稿已保存",
+    "saveError": "保存草稿失败",
+    "publishSuccess": "集合已发布",
+    "publishError": "发布集合失败",
+    "draftCreated": "草稿已创建",
+    "draftCreateError": "创建草稿失败",
+    "createDraft": "创建草稿",
+    "saveDraft": "保存草稿",
+    "deleteDraftConfirm": "删除此草稿？",
+    "deleteSuccess": "草稿已删除",
+    "deleteError": "删除草稿失败",
+    "deleteDraft": "删除草稿",
+    "degradedDraftHelp": "此草稿包含已删除的 Skill 或版本。请明确移除后，按需加入替代 Skill，才能保存或发布。",
+    "removeDegradedMember": "移除已删除成员",
+    "restoreSuccess": "集合已恢复",
+    "archiveSuccess": "集合已归档",
+    "statusError": "变更集合状态失败",
+    "restore": "恢复",
+    "archive": "归档",
+    "publish": "发布",
+    "suggestedVersion": "建议的下一个版本：{{version}}。请输入版本以确认。",
+    "publishVersion": "集合版本"
+  },
+  "repositoryImport": {
+    "open": "从 GitLab 导入",
+    "title": "导入仓库 Skills",
+    "description": "预览允许范围内的内部 GitLab 仓库，明确选择 Skills 后导入此命名空间。",
+    "projectPath": "GitLab 项目路径",
+    "ref": "分支、标签或提交",
+    "preview": "预览仓库",
+    "previewError": "仓库预览失败",
+    "targetSlug": "目标 Skill slug",
+    "targetVersion": "目标 Skill 版本",
+    "visibility": "可见范围",
+    "namespaceOnly": "仅命名空间",
+    "private": "私有",
+    "public": "公开",
+    "created": "Skill 已建立",
+    "failed": "导入失败",
+    "retry": "重试失败项目",
+    "ingest": "导入已选 Skills",
+    "ingestError": "仓库导入失败",
+    "seedCollection": "将导入的 Skills 加入集合草稿",
+    "seedSuccess": "集合草稿已更新",
+    "seedError": "无法更新集合草稿",
+    "checkUpdates": "检查更新",
+    "manualUpdateOnly": "只有管理员主动操作时才会检查来源更新。",
+    "noUpdates": "设定的 GitLab ref 没有变化",
+    "updateAvailable": "已有新的 commit，可明确预览并选择",
+    "updateError": "无法检查仓库更新",
+    "commitComparison": "Commit {{previous}} → {{current}}"
   },
   "notification": {
     "title": "通知",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -8,6 +9,45 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
+
+
+def test_web_runtime_config_entrypoint_covers_every_template_variable() -> None:
+    template = read("web/runtime-config.js.template")
+    entrypoint = read("web/docker-entrypoint.d/30-runtime-config.sh")
+    template_variables = set(re.findall(r"\$\{([A-Z0-9_]+)\}", template))
+    defaulted_variables = set(
+        re.findall(r'^: "\$\{([A-Z0-9_]+):=', entrypoint, re.MULTILINE)
+    )
+    envsubst_match = re.search(r"envsubst '([^']+)'", entrypoint)
+
+    assert envsubst_match is not None
+    substituted_variables = set(
+        re.findall(r"\$\{([A-Z0-9_]+)\}", envsubst_match.group(1))
+    )
+    assert {
+        "missing_defaults": template_variables - defaulted_variables,
+        "missing_envsubst": template_variables - substituted_variables,
+    } == {
+        "missing_defaults": set(),
+        "missing_envsubst": set(),
+    }
+
+
+def test_web_runtime_config_exports_defaulted_values_to_envsubst() -> None:
+    template = read("web/runtime-config.js.template")
+    entrypoint = read("web/docker-entrypoint.d/30-runtime-config.sh")
+    template_variables = set(re.findall(r"\$\{([A-Z0-9_]+)\}", template))
+    exported_variables = set(
+        re.findall(r"^export ([A-Z0-9_]+)$", entrypoint, re.MULTILINE)
+    )
+
+    assert template_variables - exported_variables == set()
+
+
+def test_web_image_normalizes_runtime_entrypoint_line_endings() -> None:
+    dockerfile = read("web/Dockerfile")
+
+    assert "sed -i 's/\\r$//'" in dockerfile
 
 
 def test_kubernetes_backend_deployment_uses_python_runtime_contract() -> None:
@@ -75,6 +115,61 @@ def test_kubernetes_config_and_secret_examples_expose_python_env_inputs() -> Non
     assert "oauth2-gitlab" not in secret_example
 
 
+def test_collection_feature_flags_are_default_off_in_kubernetes() -> None:
+    base_config = read("deploy/k8s/base/configmap.yaml")
+    base_backend = read("deploy/k8s/base/backend-deployment.yaml")
+    base_frontend = read("deploy/k8s/base/frontend-deployment.yaml")
+    plain_config = read("deploy/k8s/plain/backend/config.yaml")
+    plain_backend = read("deploy/k8s/plain/backend/deployment.yaml")
+    plain_frontend = read("deploy/k8s/plain/frontend/deployment.yaml")
+    base_secret = read("deploy/k8s/base/secret.yaml.example")
+    plain_secret = read("deploy/k8s/plain/backend/secret.yaml.example")
+
+    for config in (base_config, plain_config):
+        assert 'collections-enabled: "false"' in config
+        assert 'gitlab-import-enabled: "false"' in config
+        assert 'gitlab-base-url: ""' in config
+        assert 'gitlab-allowed-groups: ""' in config
+        assert 'gitlab-ca-bundle-path: ""' in config
+        assert 'gitlab-connect-timeout-ms: "5000"' in config
+        assert 'gitlab-read-timeout-ms: "60000"' in config
+        assert 'gitlab-archive-max-bytes: "52428800"' in config
+        assert 'gitlab-archive-max-files: "500"' in config
+        assert 'gitlab-archive-max-single-file-bytes: "5242880"' in config
+        assert 'gitlab-archive-max-expanded-bytes: "52428800"' in config
+        assert 'gitlab-import-max-candidates: "100"' in config
+        assert 'web-collections-enabled: "false"' in config
+        assert 'web-gitlab-import-enabled: "false"' in config
+        assert 'web-cli-npm-registry: ""' in config
+        assert 'web-cli-package: ""' in config
+        assert 'web-cli-version: ""' in config
+
+    for backend in (base_backend, plain_backend):
+        assert "SKILLHUB_COLLECTIONS_ENABLED" in backend
+        assert "SKILLHUB_GITLAB_IMPORT_ENABLED" in backend
+        assert "SKILLHUB_GITLAB_BASE_URL" in backend
+        assert "SKILLHUB_GITLAB_ALLOWED_GROUPS" in backend
+        assert "SKILLHUB_GITLAB_TOKEN" in backend
+        assert "SKILLHUB_GITLAB_CA_BUNDLE_PATH" in backend
+        assert "SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS" in backend
+        assert "SKILLHUB_GITLAB_READ_TIMEOUT_MS" in backend
+        assert "SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES" in backend
+        assert "SKILLHUB_GITLAB_ARCHIVE_MAX_FILES" in backend
+        assert "SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES" in backend
+        assert "SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES" in backend
+        assert "SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES" in backend
+
+    for secret in (base_secret, plain_secret):
+        assert 'gitlab-token: ""' in secret
+
+    for frontend in (base_frontend, plain_frontend):
+        assert "SKILLHUB_WEB_COLLECTIONS_ENABLED" in frontend
+        assert "SKILLHUB_WEB_GITLAB_IMPORT_ENABLED" in frontend
+        assert "SKILLHUB_WEB_CLI_NPM_REGISTRY" in frontend
+        assert "SKILLHUB_WEB_CLI_PACKAGE" in frontend
+        assert "SKILLHUB_WEB_CLI_VERSION" in frontend
+
+
 def test_kubernetes_manifests_do_not_deploy_external_infrastructure() -> None:
     manifest_text = "\n".join(
         path.read_text(encoding="utf-8")
@@ -101,6 +196,10 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS:" in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED:" in release_compose
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_FILES:" in release_compose
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES:" in release_compose
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES:" in release_compose
+    assert "SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI:" in release_compose
     assert "OAUTH2_GITHUB" not in release_compose
@@ -110,6 +209,10 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS=" in release_env
     assert "SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS=12" in release_env
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED=true" in release_env
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_FILES=500" in release_env
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES=5242880" in release_env
+    assert "SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES=52428800" in release_env
+    assert "SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES=100" in release_env
     assert "OAUTH2_GITHUB" not in release_env
     assert "OAUTH2_GITLAB" not in release_env
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_env

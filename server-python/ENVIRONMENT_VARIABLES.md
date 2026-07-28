@@ -122,6 +122,33 @@ returns the file response itself; it does not redirect clients to object storage
 | `BOOTSTRAP_ADMIN_DISPLAY_NAME` | ConfigMap | `Platform Admin` | Display name. |
 | `BOOTSTRAP_ADMIN_EMAIL` | ConfigMap | `admin@example.com` | Email. |
 
+## Skill Collections
+
+| Env var | Source | Default | Notes |
+| --- | --- | --- | --- |
+| `SKILLHUB_COLLECTIONS_ENABLED` | ConfigMap | `false` | Enables collection APIs. |
+| `SKILLHUB_GITLAB_IMPORT_ENABLED` | ConfigMap | `false` | Enables GitLab import only when collections are also enabled. |
+| `SKILLHUB_GITLAB_BASE_URL` | ConfigMap | empty | Exact internal GitLab HTTPS origin. User input cannot override the host. |
+| `SKILLHUB_GITLAB_ALLOWED_GROUPS` | ConfigMap | empty | Comma-separated project path prefixes, for example `oss-mirrors,approved/tools`. |
+| `SKILLHUB_GITLAB_TOKEN` | Secret | empty | Backend-only project access token with `read_api` and `read_repository`; never expose it through web runtime config. |
+| `SKILLHUB_GITLAB_CA_BUNDLE_PATH` | ConfigMap | empty | Optional CA bundle path already mounted in the backend container. |
+| `SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS` | ConfigMap | `5000` | GitLab connect timeout. |
+| `SKILLHUB_GITLAB_READ_TIMEOUT_MS` | ConfigMap | `60000` | GitLab response/archive read timeout. |
+| `SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES` | ConfigMap | `52428800` | Maximum compressed repository archive size. Extraction has additional file/count/expanded-size limits. |
+| `SKILLHUB_GITLAB_ARCHIVE_MAX_FILES` | ConfigMap | `500` | Maximum non-directory entries accepted from one repository ZIP. |
+| `SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES` | ConfigMap | `5242880` | Maximum expanded size of one archive member (5 MiB). |
+| `SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES` | ConfigMap | `52428800` | Maximum total expanded bytes retained for discovery (50 MiB). |
+| `SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES` | ConfigMap | `100` | Maximum discovered Skill candidates persisted by one preview. |
+
+Backend flags are authoritative for behavior. The GitLab import flag cannot
+enable import while collections are disabled. Configure an organization-owned
+token, keep both flags off until the allowlist and TLS trust are verified, then
+enable the backend before enabling the matching web flag.
+
+ZIP parsing runs outside the async event loop. Values less than one fall back
+to the safe defaults. Archives or candidate sets over these limits fail with
+HTTP 413 before preview persistence or Skill publication.
+
 ## Backend Scanner Control
 
 These variables belong to the backend pod. Scanner container LLM credentials

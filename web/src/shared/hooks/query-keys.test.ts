@@ -13,6 +13,8 @@ import {
   getVisibleLabelsQueryKey,
   getSkillLabelsQueryKey,
   getAdminLabelDefinitionsQueryKey,
+  getCollectionDetailQueryKey,
+  getCollectionListQueryKey,
 } from './query-keys'
 
 describe('getI18nCacheKey', () => {
@@ -44,5 +46,26 @@ describe('getSkillLabelsQueryKey', () => {
 describe('getAdminLabelDefinitionsQueryKey', () => {
   it('returns a tuple with labels, admin, and language', () => {
     expect(getAdminLabelDefinitionsQueryKey()).toEqual(['labels', 'admin', 'en'])
+  })
+})
+
+describe('collection query keys', () => {
+  it('uses a collection-specific localized namespace list key', () => {
+    expect(getCollectionListQueryKey('opensource')).toEqual([
+      'collections',
+      'namespace',
+      'opensource',
+      'en',
+    ])
+  })
+
+  it('uses a collection-specific localized detail key', () => {
+    expect(getCollectionDetailQueryKey('opensource', 'superpowers')).toEqual([
+      'collections',
+      'detail',
+      'opensource',
+      'superpowers',
+      'en',
+    ])
   })
 })

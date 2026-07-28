@@ -23,6 +23,13 @@ async function getSkillVersions(namespace: string, slug: string): Promise<SkillV
   return page.items
 }
 
+async function getSkillVersionsById(skillId: number): Promise<SkillVersion[]> {
+  const page = await fetchJson<PagedResponse<SkillVersion>>(
+    `${WEB_API_PREFIX}/skill-versions/by-skill-id/${skillId}`,
+  )
+  return page.items
+}
+
 async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
   const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
   return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/files`)
@@ -84,6 +91,14 @@ export function useSkillVersions(namespace: string, slug: string, enabled = true
     queryKey: ['skills', namespace, slug, 'versions'],
     queryFn: () => getSkillVersions(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
+  })
+}
+
+export function useSkillVersionsById(skillId: number, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', 'by-id', skillId, 'versions'],
+    queryFn: () => getSkillVersionsById(skillId),
+    enabled: enabled && skillId > 0,
   })
 }
 

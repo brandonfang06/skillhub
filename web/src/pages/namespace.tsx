@@ -3,9 +3,13 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { NamespaceHeader } from '@/features/namespace/namespace-header'
 import { SkillCard } from '@/features/skill/skill-card'
+import { CollectionCard } from '@/features/collection/collection-card'
+import { useCollections } from '@/features/collection/use-collections'
+import { getCollectionsRuntimeConfig } from '@/api/client'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
 import { Pagination } from '@/shared/components/pagination'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useNamespaceDetail } from '@/shared/hooks/use-namespace-queries'
 
@@ -19,6 +23,8 @@ export function NamespacePage() {
   const navigate = useNavigate()
   const { namespace } = useParams({ from: '/space/$namespace' })
   const [page, setPage] = useState(0)
+  const [activeTab, setActiveTab] = useState('skills')
+  const collectionsEnabled = getCollectionsRuntimeConfig().enabled
 
   // Reset page when namespace changes
   useEffect(() => {
@@ -31,11 +37,22 @@ export function NamespacePage() {
     page,
     size: PAGE_SIZE,
   })
+  const { data: collectionsData, isLoading: isLoadingCollections } =
+    useCollections(
+      namespace,
+      collectionsEnabled && activeTab === 'collections',
+    )
 
   const totalPages = skillsData ? Math.max(Math.ceil(skillsData.total / skillsData.size), 1) : 1
 
   const handleSkillClick = (slug: string) => {
     navigate({ to: `/space/${namespace}/${encodeURIComponent(slug)}` })
+  }
+
+  const handleCollectionClick = (collection: string) => {
+    navigate({
+      to: `/space/${namespace}/collections/${encodeURIComponent(collection)}`,
+    })
   }
 
   if (isLoadingNamespace) {
@@ -55,34 +72,71 @@ export function NamespacePage() {
     <div className="space-y-8 animate-fade-up">
       <NamespaceHeader namespace={namespaceData} />
 
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold font-heading">{t('namespace.skillList')}</h2>
-        {isLoadingSkills ? (
-          <SkeletonList count={6} />
-        ) : skillsData && skillsData.items.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {skillsData.items.map((skill, idx) => (
-                <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                  <SkillCard
-                    skill={skill}
-                    onClick={() => handleSkillClick(skill.slug)}
-                  />
-                </div>
-              ))}
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {collectionsEnabled ? (
+          <TabsList className="mb-6">
+            <TabsTrigger value="skills">{t('namespace.skillsTab')}</TabsTrigger>
+            <TabsTrigger value="collections">
+              {t('namespace.collectionsTab')}
+            </TabsTrigger>
+          </TabsList>
+        ) : null}
 
-            {skillsData.total > PAGE_SIZE ? (
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-            ) : null}
-          </>
-        ) : (
-          <EmptyState
-            title={t('namespace.emptyTitle')}
-            description={t('namespace.emptyDescription')}
-          />
-        )}
-      </div>
+        <TabsContent value="skills" className="space-y-6">
+          <h2 className="text-2xl font-bold font-heading">{t('namespace.skillList')}</h2>
+          {isLoadingSkills ? (
+            <SkeletonList count={6} />
+          ) : skillsData && skillsData.items.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {skillsData.items.map((skill, idx) => (
+                  <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
+                    <SkillCard
+                      skill={skill}
+                      onClick={() => handleSkillClick(skill.slug)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {skillsData.total > PAGE_SIZE ? (
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              ) : null}
+            </>
+          ) : (
+            <EmptyState
+              title={t('namespace.emptyTitle')}
+              description={t('namespace.emptyDescription')}
+            />
+          )}
+        </TabsContent>
+
+        {collectionsEnabled ? (
+          <TabsContent value="collections" className="space-y-6">
+            <h2 className="text-2xl font-bold font-heading">
+              {t('namespace.collectionList')}
+            </h2>
+            {isLoadingCollections ? (
+              <SkeletonList count={6} />
+            ) : collectionsData && collectionsData.items.length > 0 ? (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {collectionsData.items.map((collection) => (
+                  <CollectionCard
+                    key={collection.collectionId}
+                    collection={collection}
+                    onClick={() => handleCollectionClick(collection.slug)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={t('namespace.collectionEmptyTitle')}
+                description={t('namespace.collectionEmptyDescription')}
+              />
+            )}
+          </TabsContent>
+        ) : null}
+      </Tabs>
     </div>
   )
 }

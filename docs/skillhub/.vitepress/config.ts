@@ -34,6 +34,7 @@ export default defineConfig({
             items: [
               { text: 'Skill 发布与版本管理', link: '/guide/skill-publish' },
               { text: 'Skill 搜索与发现', link: '/guide/skill-discovery' },
+              { text: '版本化集合与 GitLab 导入', link: '/guide/collections' },
               { text: '命名空间与团队管理', link: '/guide/namespace' },
               { text: '审核与治理', link: '/guide/review' },
               { text: '安全扫描', link: '/guide/scanner' },
@@ -79,6 +80,7 @@ export default defineConfig({
             items: [
               { text: 'Skill Publishing & Versioning', link: '/en/guide/skill-publish' },
               { text: 'Skill Search & Discovery', link: '/en/guide/skill-discovery' },
+              { text: 'Versioned Collections & GitLab Import', link: '/en/guide/collections' },
               { text: 'Namespace & Team Management', link: '/en/guide/namespace' },
               { text: 'Review & Governance', link: '/en/guide/review' },
               { text: 'Security Scanning', link: '/en/guide/scanner' },

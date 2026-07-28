@@ -9,7 +9,11 @@ on:
         description: 'Tag to release (e.g. cli-v0.1.5)'
         required: true
       skip_npm:
-        description: 'Skip npm publish'
+        description: 'Skip npm/Nexus publish'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Build and verify the immutable package without publishing'
         type: boolean
         default: false
 
@@ -24,8 +28,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.extract.outputs.version }}
-      package_name: ${{ steps.extract.outputs.package_name }}
+      version: ${{ steps.release_package.outputs.version }}
+      package_name: ${{ steps.release_package.outputs.package_name }}
+      tarball_name: ${{ steps.pack.outputs.tarball_name }}
+      package_sha256: ${{ steps.pack.outputs.package_sha256 }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -36,60 +42,63 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           TAG="${{ github.event.inputs.tag }}"
-
-          # Verify tag exists
           if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             echo "ERROR: Tag '$TAG' does not exist in the repository" >&2
             exit 1
           fi
 
-          # Verify current checkout matches the tag
           TAG_SHA=$(git rev-parse "refs/tags/$TAG^{commit}")
           CURRENT_SHA=$(git rev-parse HEAD)
-
           if [ "$TAG_SHA" != "$CURRENT_SHA" ]; then
             echo "ERROR: Current checkout SHA does not match tag '$TAG'" >&2
-            echo "  Tag SHA:     $TAG_SHA" >&2
-            echo "  Current SHA: $CURRENT_SHA" >&2
-            echo "" >&2
-            echo "This indicates the checkout did not switch to the specified tag." >&2
+            echo "Tag SHA: $TAG_SHA" >&2
+            echo "Current SHA: $CURRENT_SHA" >&2
             exit 1
           fi
-
-          echo "✓ Tag '$TAG' validated (SHA: $TAG_SHA)"
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
 
-      - name: Extract version from tag
-        id: extract
-        working-directory: cli
+      - name: Extract release version
+        id: version
         run: |
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           if [[ ! "$TAG" =~ ^cli-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
-            echo "Invalid tag format: $TAG (expected cli-vX.Y.Z)"
+            echo "Invalid tag format: $TAG (expected cli-vX.Y.Z)" >&2
             exit 1
           fi
-          VERSION="${BASH_REMATCH[1]}"
-
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "Version set to: $VERSION"
-          echo "Package name: $PACKAGE_NAME"
+          echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         working-directory: cli
         run: bun install --frozen-lockfile
+
+      - name: Configure release package and registries
+        id: release_package
+        working-directory: cli
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          CONFIGURED_PACKAGE_NAME: ${{ vars.NPM_PACKAGE_NAME }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const configuredName = process.env.CONFIGURED_PACKAGE_NAME.trim();
+            const name = configuredName || pkg.name;
+            if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name)) {
+              throw new Error('NPM_PACKAGE_NAME is not a valid npm package name');
+            }
+            pkg.name = name;
+            pkg.version = process.env.RELEASE_VERSION;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "Package: $PACKAGE_NAME@$RELEASE_VERSION"
 
       - name: Run linter
         working-directory: cli
@@ -112,148 +121,182 @@ jobs:
         run: |
           node dist/index.js version
           RUNTIME_VERSION=$(node dist/index.js version | sed -E 's/^SkillHub CLI //')
-          if [ "$RUNTIME_VERSION" != "${{ steps.extract.outputs.version }}" ]; then
-            echo "Version mismatch: runtime=$RUNTIME_VERSION, tag=${{ steps.extract.outputs.version }}"
+          if [ "$RUNTIME_VERSION" != "${{ steps.release_package.outputs.version }}" ]; then
+            echo "Version mismatch: runtime=$RUNTIME_VERSION, tag=${{ steps.release_package.outputs.version }}" >&2
             exit 1
           fi
 
-      - name: Upload build artifacts
+      - name: Pack immutable npm artifact
+        id: pack
+        working-directory: cli
+        env:
+          RELEASE_VERSION: ${{ steps.release_package.outputs.version }}
+          PACKAGE_NAME: ${{ steps.release_package.outputs.package_name }}
+          WORKFLOW_COMMIT: ${{ github.sha }}
+        run: |
+          mkdir -p release-artifacts/package release-artifacts/cli-release
+          PACK_JSON=$(npm pack --json --pack-destination release-artifacts/package)
+          TARBALL_NAME=$(node -e "const result=JSON.parse(process.argv[1]); process.stdout.write(result[0].filename)" "$PACK_JSON")
+          PACKAGE_SHA256=$(sha256sum "release-artifacts/package/$TARBALL_NAME" | cut -d ' ' -f 1)
+          sha256sum "release-artifacts/package/$TARBALL_NAME" > "release-artifacts/package/$TARBALL_NAME.sha256"
+          SOURCE_COMMIT=$(git rev-parse HEAD)
+
+          cp -R dist release-artifacts/cli-release/
+          cp package.json README.md LICENSE release-artifacts/cli-release/
+          node -e "
+            const fs = require('fs');
+            const metadata = {
+              package: process.env.PACKAGE_NAME,
+              version: process.env.RELEASE_VERSION,
+              sourceCommit: process.argv[1],
+              workflowCommit: process.env.WORKFLOW_COMMIT,
+              packageSha256: process.argv[2],
+              tarball: process.argv[3],
+            };
+            fs.writeFileSync(
+              'release-artifacts/cli-release-metadata.json',
+              JSON.stringify(metadata, null, 2) + '\n',
+            );
+          " "$SOURCE_COMMIT" "$PACKAGE_SHA256" "$TARBALL_NAME"
+
+          echo "tarball_name=$TARBALL_NAME" >> "$GITHUB_OUTPUT"
+          echo "package_sha256=$PACKAGE_SHA256" >> "$GITHUB_OUTPUT"
+          {
+            echo "### CLI package"
+            echo "- Package: \`$PACKAGE_NAME@$RELEASE_VERSION\`"
+            echo "- Source: \`$SOURCE_COMMIT\`"
+            echo "- SHA-256: \`$PACKAGE_SHA256\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cli-dist
-          path: |
-            cli/dist/
-            cli/package.json
-            cli/README.md
-            cli/LICENSE
+          name: cli-package
+          path: cli/release-artifacts/
+          if-no-files-found: error
           retention-days: 7
 
   publish-npm:
     needs: build-and-test
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_npm }}
+    runs-on: [self-hosted, linux, skillhub-nexus]
+    if: ${{ !inputs.skip_npm && !inputs.dry_run }}
+    env:
+      NPM_PUBLISH_REGISTRY: ${{ vars.NPM_PUBLISH_REGISTRY }}
+      NPM_INSTALL_REGISTRY: ${{ vars.NPM_INSTALL_REGISTRY }}
+      NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/skillhub-cli-release.npmrc
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      PACKAGE_NAME: ${{ needs.build-and-test.outputs.package_name }}
+      VERSION: ${{ needs.build-and-test.outputs.version }}
+      TARBALL_NAME: ${{ needs.build-and-test.outputs.tarball_name }}
+      EXPECTED_SHA256: ${{ needs.build-and-test.outputs.package_sha256 }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Download immutable package
+        uses: actions/download-artifact@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          name: cli-package
+          path: release-artifacts
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.13
-
-      - name: Set version from tag
-        working-directory: cli
+      - name: Configure npm authentication
         run: |
-          VERSION="${{ needs.build-and-test.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
+          set -euo pipefail
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "NPM_TOKEN is required to publish the CLI" >&2
+            exit 1
+          fi
+          if [ -z "$NPM_PUBLISH_REGISTRY" ]; then
+            echo "NPM_PUBLISH_REGISTRY is required" >&2
+            exit 1
+          fi
+          if [ -z "$NPM_INSTALL_REGISTRY" ]; then
+            echo "NPM_INSTALL_REGISTRY is required" >&2
+            exit 1
+          fi
+          for REGISTRY in "$NPM_PUBLISH_REGISTRY" "$NPM_INSTALL_REGISTRY"; do
+            case "$REGISTRY" in
+              http://*|https://*) ;;
+              *) echo "Nexus registries must be HTTP(S) URLs" >&2; exit 1 ;;
+            esac
+            REGISTRY_KEY="${REGISTRY#http://}"
+            REGISTRY_KEY="${REGISTRY_KEY#https://}"
+            REGISTRY_KEY="${REGISTRY_KEY%/}"
+            printf '//%s/:_authToken=%s\n' "$REGISTRY_KEY" "$NPM_TOKEN" >> "$NPM_CONFIG_USERCONFIG"
+          done
+          printf 'always-auth=true\n' >> "$NPM_CONFIG_USERCONFIG"
 
-      - name: Install dependencies
-        working-directory: cli
-        run: bun install --frozen-lockfile
-
-      - name: Build CLI
-        working-directory: cli
-        run: bun run build
-
-      - name: Check if version exists on npm
-        id: check_npm
-        env:
-          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+      - name: Check hosted registry
+        id: check_hosted
         run: |
-          PACKAGE_NAME="${{ needs.build-and-test.outputs.package_name }}"
-          VERSION="${{ needs.build-and-test.outputs.version }}"
-
-          # Three-state check: success (exists) / 404 (missing) / error (fail job)
           set +e
-          NPM_OUTPUT=$(npm view "${PACKAGE_NAME}@${VERSION}" version --registry "$NPM_REGISTRY" 2>&1)
+          NPM_OUTPUT=$(npm view "${PACKAGE_NAME}@${VERSION}" version --registry "$NPM_PUBLISH_REGISTRY" 2>&1)
           NPM_EXIT_CODE=$?
           set -e
 
-          if [ $NPM_EXIT_CODE -eq 0 ]; then
-            # Success: version exists on registry
+          if [ "$NPM_EXIT_CODE" -eq 0 ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Version $VERSION already exists on registry, skipping publish"
           elif echo "$NPM_OUTPUT" | grep -Eiq '(E404|404 Not Found|is not in this registry|Not found)'; then
-            # Explicit 404: version does not exist
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Version $VERSION does not exist on registry, proceeding with publish"
           else
-            # Uncertain state: network error, auth failure, registry error, etc.
-            echo "ERROR: Failed to check npm registry (exit code: $NPM_EXIT_CODE)" >&2
-            echo "Output: $NPM_OUTPUT" >&2
-            echo "" >&2
-            echo "This could be due to:" >&2
-            echo "  - Network connectivity issues" >&2
-            echo "  - Registry service errors (5xx)" >&2
-            echo "  - Authentication/authorization failures" >&2
-            echo "  - DNS or TLS problems" >&2
-            echo "" >&2
-            echo "Cannot safely determine if version exists. Failing job to prevent silent skip." >&2
+            echo "Unable to query the hosted registry safely: $NPM_OUTPUT" >&2
             exit 1
           fi
 
-      - name: Configure npm authentication
-        if: steps.check_npm.outputs.exists == 'false'
-        env:
-          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish immutable package to hosted registry
+        if: steps.check_hosted.outputs.exists == 'false'
         run: |
-          REGISTRY_HOST="${NPM_REGISTRY#http://}"
-          REGISTRY_HOST="${REGISTRY_HOST#https://}"
-          REGISTRY_HOST="${REGISTRY_HOST%/}"
+          npm publish "release-artifacts/package/$TARBALL_NAME" --access public --registry "$NPM_PUBLISH_REGISTRY"
 
-          cat > ~/.npmrc <<EOF
-          registry=${NPM_REGISTRY}
-          //${REGISTRY_HOST}/:_authToken=${NPM_TOKEN}
-          always-auth=true
-          EOF
-
-      - name: Publish to npm
-        if: steps.check_npm.outputs.exists == 'false'
-        working-directory: cli
-        env:
-          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+      - name: Verify hosted and install registry artifact bytes
         run: |
-          npm publish --access public --registry "$NPM_REGISTRY"
-          echo "Published ${{ needs.build-and-test.outputs.package_name }}@${{ needs.build-and-test.outputs.version }}"
+          set -euo pipefail
+          VERIFY_ROOT=$(mktemp -d "$RUNNER_TEMP/skillhub-cli-registry-verify.XXXXXX")
+          for VERIFY_NAME in hosted install; do
+            if [ "$VERIFY_NAME" = "hosted" ]; then
+              VERIFY_REGISTRY="$NPM_PUBLISH_REGISTRY"
+            else
+              VERIFY_REGISTRY="$NPM_INSTALL_REGISTRY"
+            fi
+            mkdir -p "$VERIFY_ROOT/$VERIFY_NAME"
+            PACK_JSON=$(npm pack "${PACKAGE_NAME}@${VERSION}" \
+              --registry "$VERIFY_REGISTRY" \
+              --pack-destination "$VERIFY_ROOT/$VERIFY_NAME" \
+              --json)
+            REMOTE_TARBALL=$(node -e \
+              "const p=JSON.parse(process.argv[1]); process.stdout.write(p[0].filename)" \
+              "$PACK_JSON")
+            REMOTE_SHA256=$(sha256sum \
+              "$VERIFY_ROOT/$VERIFY_NAME/$REMOTE_TARBALL" | cut -d ' ' -f 1)
+            if [ "$REMOTE_SHA256" != "$EXPECTED_SHA256" ]; then
+              echo "Registry artifact digest mismatch for $VERIFY_NAME: expected=$EXPECTED_SHA256 actual=$REMOTE_SHA256" >&2
+              exit 1
+            fi
+          done
+          {
+            echo "### Registry verification"
+            echo "- Package: \`$PACKAGE_NAME@$VERSION\`"
+            echo "- SHA-256: \`$EXPECTED_SHA256\`"
+            echo "- Verified byte-for-byte through hosted and install registries."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove npm credentials
+        if: always()
+        run: rm -f "$NPM_CONFIG_USERCONFIG"
 
   create-release:
     needs: [build-and-test, publish-npm]
     runs-on: ubuntu-latest
-    # Only create the GitHub Release after npm publish has actually succeeded
-    # (or was explicitly skipped via skip_npm=true). This prevents a
-    # half-released state where Release exists but `npm install -g` fails.
-    if: ${{ always() && needs.build-and-test.result == 'success' && (needs.publish-npm.result == 'success' || (inputs.skip_npm && needs.publish-npm.result == 'skipped')) }}
+    if: ${{ !inputs.dry_run && always() && needs.build-and-test.result == 'success' && (needs.publish-npm.result == 'success' || (inputs.skip_npm && needs.publish-npm.result == 'skipped')) }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
-
-      - name: Download build artifacts
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          name: cli-dist
-          path: cli-release
+          name: cli-package
+          path: release-artifacts
 
       - name: Create release archives
         run: |
           VERSION="${{ needs.build-and-test.outputs.version }}"
-
-          # Create tar.gz
-          tar -czf "skillhub-cli-${VERSION}.tar.gz" -C cli-release .
-
-          # Create zip
-          (cd cli-release && zip -r "../skillhub-cli-${VERSION}.zip" .)
-
-          # Generate checksums
+          tar -czf "skillhub-cli-${VERSION}.tar.gz" -C release-artifacts/cli-release .
+          (cd release-artifacts/cli-release && zip -r "../../skillhub-cli-${VERSION}.zip" .)
           sha256sum "skillhub-cli-${VERSION}.tar.gz" > "skillhub-cli-${VERSION}.tar.gz.sha256"
           sha256sum "skillhub-cli-${VERSION}.zip" > "skillhub-cli-${VERSION}.zip.sha256"
 
@@ -264,41 +307,37 @@ jobs:
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           VERSION="${{ needs.build-and-test.outputs.version }}"
           PACKAGE_NAME="${{ needs.build-and-test.outputs.package_name }}"
+          TARBALL_NAME="${{ needs.build-and-test.outputs.tarball_name }}"
 
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG already exists, skipping"
             exit 0
           fi
 
-          # Generate release notes
           cat > release-notes.md <<EOF
           # SkillHub CLI ${VERSION}
 
           ## Installation
 
-          ### npm
           \`\`\`bash
           npm install -g ${PACKAGE_NAME}@${VERSION}
           \`\`\`
 
-          ### From source
-          Download and extract the archive, then:
-          \`\`\`bash
-          npm install -g .
-          \`\`\`
+          The npm registry may be overridden by your organization.
 
           ## Verify installation
+
           \`\`\`bash
           skillhub version
           \`\`\`
-
-          ## Changes
-          See commit history for details.
           EOF
 
           gh release create "$TAG" \
             --title "CLI ${VERSION}" \
             --notes-file release-notes.md \
+            "release-artifacts/package/$TARBALL_NAME" \
+            "release-artifacts/package/$TARBALL_NAME.sha256" \
+            "release-artifacts/cli-release-metadata.json" \
             "skillhub-cli-${VERSION}.tar.gz" \
             "skillhub-cli-${VERSION}.tar.gz.sha256" \
             "skillhub-cli-${VERSION}.zip" \

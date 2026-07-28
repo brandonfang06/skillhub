@@ -9,7 +9,10 @@ function setMockWindow(runtimeConfig?: Window['__SKILLHUB_RUNTIME_CONFIG__']) {
     writable: true,
     value: {
       __SKILLHUB_RUNTIME_CONFIG__: runtimeConfig,
-    } satisfies Pick<Window, '__SKILLHUB_RUNTIME_CONFIG__'>,
+      location: {
+        origin: 'https://skills.example.com',
+      },
+    },
   })
 }
 
@@ -39,6 +42,7 @@ import {
   adminApi,
   buildApiUrl,
   fetchText,
+  getCollectionsRuntimeConfig,
   getDirectAuthRuntimeConfig,
   getLocalRegistrationRuntimeConfig,
   getPlaygroundRuntimeConfig,
@@ -105,6 +109,96 @@ describe('getPlaygroundRuntimeConfig', () => {
     setMockWindow({ playgroundEnabled: 'true', playgroundBaseUrl: '' })
 
     expect(getPlaygroundRuntimeConfig()).toEqual({ enabled: false })
+  })
+})
+
+describe('getCollectionsRuntimeConfig', () => {
+  it('defaults to disabled with no CLI distribution config', () => {
+    setMockWindow()
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: false,
+      gitlabImportEnabled: false,
+    })
+  })
+
+  it('does not enable GitLab import while collections are disabled', () => {
+    setMockWindow({
+      collectionsEnabled: 'false',
+      gitlabImportEnabled: 'true',
+      cliNpmRegistry: 'https://nexus.example/npm-group/',
+      cliPackage: '@example/skillhub',
+      cliVersion: '0.2.0',
+    })
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: false,
+      gitlabImportEnabled: false,
+    })
+  })
+
+  it('returns normalized immutable CLI distribution config', () => {
+    setMockWindow({
+      collectionsEnabled: 'true',
+      gitlabImportEnabled: 'true',
+      cliNpmRegistry: 'https://nexus.example/npm-group/',
+      cliPackage: '@example/skillhub',
+      cliVersion: '0.2.0',
+    })
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: true,
+      gitlabImportEnabled: true,
+      skillhubBaseUrl: 'https://skills.example.com',
+      cli: {
+        npmRegistry: 'https://nexus.example/npm-group',
+        packageName: '@example/skillhub',
+        version: '0.2.0',
+      },
+    })
+  })
+
+  it('omits CLI config when any required value is blank', () => {
+    setMockWindow({
+      collectionsEnabled: 'true',
+      cliNpmRegistry: 'https://nexus.example/npm-group',
+      cliPackage: '@example/skillhub',
+      cliVersion: '',
+    })
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: true,
+      gitlabImportEnabled: false,
+      skillhubBaseUrl: 'https://skills.example.com',
+    })
+  })
+
+  it('uses an absolute API base URL as the SkillHub command registry', () => {
+    setMockWindow({
+      apiBaseUrl: 'https://api.example.com/skillhub/',
+      collectionsEnabled: 'true',
+    })
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: true,
+      gitlabImportEnabled: false,
+      skillhubBaseUrl: 'https://api.example.com/skillhub',
+    })
+  })
+
+  it('does not expose a latest-floating CLI package', () => {
+    setMockWindow({
+      collectionsEnabled: 'true',
+      cliNpmRegistry: 'https://nexus.example/npm-group',
+      cliPackage: '@example/skillhub',
+      cliVersion: 'latest',
+    })
+
+    expect(getCollectionsRuntimeConfig()).toEqual({
+      enabled: true,
+      gitlabImportEnabled: false,
+      skillhubBaseUrl: 'https://skills.example.com',
+    })
   })
 })
 

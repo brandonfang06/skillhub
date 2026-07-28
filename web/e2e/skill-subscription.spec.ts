@@ -42,17 +42,27 @@ test.describe('Skill Subscription (Real API)', () => {
 
       await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
 
-      const subscribeButton = page.getByRole('button', { name: /Subscribe/ })
+      const subscribeButton = page.getByRole('button', { name: /^Subscribe \(\d+\)$/ })
       await expect(subscribeButton).toBeVisible()
 
+      const subscribeResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === 'PUT'
+        && /\/api\/web\/skills\/\d+\/subscription$/.test(new URL(response.url()).pathname),
+      )
       await subscribeButton.click()
+      expect((await subscribeResponsePromise).ok()).toBeTruthy()
 
-      await expect(page.getByRole('button', { name: /Subscribed/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^Subscribed \(\d+\)$/ })).toBeVisible()
 
-      const subscribedButton = page.getByRole('button', { name: /Subscribed/ })
+      const subscribedButton = page.getByRole('button', { name: /^Subscribed \(\d+\)$/ })
+      const unsubscribeResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === 'DELETE'
+        && /\/api\/web\/skills\/\d+\/subscription$/.test(new URL(response.url()).pathname),
+      )
       await subscribedButton.click()
+      expect((await unsubscribeResponsePromise).ok()).toBeTruthy()
 
-      await expect(page.getByRole('button', { name: /Subscribe/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^Subscribe \(\d+\)$/ })).toBeVisible()
     } finally {
       await adminBuilder.cleanup()
       await adminContext.close()
@@ -81,11 +91,16 @@ test.describe('Skill Subscription (Real API)', () => {
 
       await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
 
-      const subscribeButton = page.getByRole('button', { name: /Subscribe/ })
+      const subscribeButton = page.getByRole('button', { name: /^Subscribe \(\d+\)$/ })
       await expect(subscribeButton).toBeVisible()
+      const subscribeResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === 'PUT'
+        && /\/api\/web\/skills\/\d+\/subscription$/.test(new URL(response.url()).pathname),
+      )
       await subscribeButton.click()
+      expect((await subscribeResponsePromise).ok()).toBeTruthy()
 
-      await expect(page.getByRole('button', { name: /Subscribed/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: /^Subscribed \(\d+\)$/ })).toBeVisible()
 
       await page.goto('/dashboard/subscriptions')
 

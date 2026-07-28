@@ -718,6 +718,7 @@ dependencies = [
     { name = "bcrypt" },
     { name = "boto3" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "python-multipart" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -726,7 +727,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
 ]
 
@@ -737,6 +737,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "boto3", specifier = ">=1.39.0" },
     { name = "fastapi", specifier = ">=0.116.0" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "redis", specifier = ">=8.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.0" },
@@ -744,10 +745,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "httpx", specifier = ">=0.28.0" },
-    { name = "pytest", specifier = ">=8.4.0" },
-]
+dev = [{ name = "pytest", specifier = ">=8.4.0" }]
 
 [[package]]
 name = "sqlalchemy"

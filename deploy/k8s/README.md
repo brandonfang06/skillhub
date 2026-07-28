@@ -115,6 +115,7 @@ Edit these required Secret values:
 | `storage-s3-secret-key` | Feeds `SKILLHUB_STORAGE_S3_SECRET_KEY`. MinIO/S3 secret key. |
 | `oauth2-keycloak-client-id` | Feeds `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID`. Leave empty until the provider is ready. |
 | `oauth2-keycloak-client-secret` | Feeds `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET`. Leave empty until the provider is ready. |
+| `gitlab-token` | Feeds backend-only `SKILLHUB_GITLAB_TOKEN`. Use an organization token limited to `read_api` and `read_repository`; never copy it into web runtime config. |
 | `bootstrap-admin-password` | Feeds `BOOTSTRAP_ADMIN_PASSWORD`. Rotate or disable after first setup. |
 
 Edit these common ConfigMap values:
@@ -135,9 +136,38 @@ Edit these common ConfigMap values:
 | `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
 | `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
+| `collections-enabled` | `SKILLHUB_COLLECTIONS_ENABLED` | Default-off versioned collection APIs. |
+| `gitlab-import-enabled` | `SKILLHUB_GITLAB_IMPORT_ENABLED` | Default-off backend import gate; requires collections. |
+| `gitlab-base-url` | `SKILLHUB_GITLAB_BASE_URL` | Fixed internal GitLab HTTPS origin. |
+| `gitlab-allowed-groups` | `SKILLHUB_GITLAB_ALLOWED_GROUPS` | Comma-separated allowlisted project path prefixes. |
+| `gitlab-ca-bundle-path` | `SKILLHUB_GITLAB_CA_BUNDLE_PATH` | Optional CA bundle path supplied by your overlay/cluster mount. |
 
 For the full environment variable manual, see
 [environment-variables.zh.md](environment-variables.zh.md).
+
+For the complete collections, internal GitLab, Nexus CLI, phased rollout, smoke
+test, and rollback procedure, see
+[skill-collections-operations.zh.md](skill-collections-operations.zh.md).
+
+### Collection and GitLab import rollout
+
+Keep all four flags off while configuring. Verify the fixed GitLab HTTPS
+origin, CA trust, allowed group prefixes, and an organization token limited to
+`read_api` plus `read_repository`. Rotate the token by creating the replacement,
+updating `skillhub-secret/gitlab-token`, restarting the backend, verifying a
+curator preview, and revoking the old token only afterward.
+
+Enable in this order:
+
+1. backend collections;
+2. web collections after collection API smoke;
+3. backend GitLab import after secret/allowlist/TLS smoke;
+4. web GitLab import after the backend preview API passes.
+
+Rollback in reverse by disabling web/import/collection flags, then revert
+application images if required. Do not drop the additive `local_*` tables;
+they retain provenance and audit evidence and are not used by existing Skill
+routes.
 
 ## Apply
 

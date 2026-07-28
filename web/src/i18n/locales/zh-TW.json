@@ -825,6 +825,11 @@
   "namespace": {
     "notFound": "命名空間不存在",
     "skillList": "技能列表",
+    "skillsTab": "技能",
+    "collectionsTab": "集合",
+    "collectionList": "集合",
+    "collectionEmptyTitle": "尚無集合",
+    "collectionEmptyDescription": "此命名空間尚無可用的已發布集合。",
     "emptyTitle": "暫無技能",
     "emptyDescription": "該命名空間下還沒有發佈任何技能"
   },
@@ -1620,6 +1625,111 @@
         "notAuthenticated": "未檢測到可用的外部登入會話"
       }
     }
+  },
+  "collectionCard": {
+    "members": "個技能",
+    "unpublished": "尚未發布",
+    "archived": "已封存",
+    "draft": "草稿"
+  },
+  "collectionInstall": {
+    "title": "安裝集合",
+    "copy": "複製集合安裝指令",
+    "unavailable": "尚未設定精確的內部 CLI 安裝指令。"
+  },
+  "collectionDiff": {
+    "title": "此草稿的變更",
+    "reordered": "成員順序已變更",
+    "metadataOnly": "僅中繼資料變更"
+  },
+  "collectionEditor": {
+    "skill": "技能",
+    "selectSkill": "選擇技能",
+    "version": "已發布版本",
+    "selectVersion": "選擇精確版本",
+    "add": "新增",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "remove": "移除",
+    "note": "選填成員備註",
+    "newerVersion": "有更新的已發布版本：{{version}}"
+  },
+  "collectionDetail": {
+    "notFound": "找不到集合",
+    "maintain": "維護集合",
+    "members": "v{{version}} 的成員（{{count}}）",
+    "degraded": "此歷史集合包含已刪除的 Skill 版本，因此無法再安裝。",
+    "unpublished": "此集合尚未發布。"
+  },
+  "collectionAdmin": {
+    "disabled": "集合功能已停用",
+    "title": "集合",
+    "createTitle": "建立集合",
+    "slug": "集合識別字",
+    "displayName": "顯示名稱",
+    "summary": "摘要",
+    "create": "建立集合",
+    "createSuccess": "集合已建立",
+    "createError": "建立集合失敗",
+    "namespaceOwnerOnly": "只有命名空間 OWNER/ADMIN 或平台技能管理員可以建立集合。",
+    "emptyTitle": "尚無集合",
+    "emptyDescription": "為此命名空間建立版本化集合。"
+  },
+  "collectionMaintenance": {
+    "denied": "您沒有維護此集合的權限。",
+    "title": "維護集合",
+    "releaseNotes": "發布說明",
+    "saveSuccess": "草稿已儲存",
+    "saveError": "儲存草稿失敗",
+    "publishSuccess": "集合已發布",
+    "publishError": "發布集合失敗",
+    "draftCreated": "草稿已建立",
+    "draftCreateError": "建立草稿失敗",
+    "createDraft": "建立草稿",
+    "saveDraft": "儲存草稿",
+    "deleteDraftConfirm": "刪除此草稿？",
+    "deleteSuccess": "草稿已刪除",
+    "deleteError": "刪除草稿失敗",
+    "deleteDraft": "刪除草稿",
+    "degradedDraftHelp": "此草稿包含已刪除的 Skill 或版本。請明確移除後，視需要加入替代 Skill，才能儲存或發布。",
+    "removeDegradedMember": "移除已刪除成員",
+    "restoreSuccess": "集合已復原",
+    "archiveSuccess": "集合已封存",
+    "statusError": "變更集合狀態失敗",
+    "restore": "復原",
+    "archive": "封存",
+    "publish": "發布",
+    "suggestedVersion": "建議的下一個版本：{{version}}。請輸入版本以確認。",
+    "publishVersion": "集合版本"
+  },
+  "repositoryImport": {
+    "open": "從 GitLab 匯入",
+    "title": "匯入 repository skills",
+    "description": "預覽允許範圍內的內部 GitLab repository，明確選取 skills 後匯入此 namespace。",
+    "projectPath": "GitLab project path",
+    "ref": "Branch、tag 或 commit",
+    "preview": "預覽 repository",
+    "previewError": "Repository 預覽失敗",
+    "targetSlug": "目標 skill slug",
+    "targetVersion": "目標 skill 版本",
+    "visibility": "可見範圍",
+    "namespaceOnly": "僅 namespace",
+    "private": "私人",
+    "public": "公開",
+    "created": "Skill 已建立",
+    "failed": "匯入失敗",
+    "retry": "重試失敗項目",
+    "ingest": "匯入已選 skills",
+    "ingestError": "Repository 匯入失敗",
+    "seedCollection": "將匯入的 skills 加入集合草稿",
+    "seedSuccess": "集合草稿已更新",
+    "seedError": "無法更新集合草稿",
+    "checkUpdates": "檢查更新",
+    "manualUpdateOnly": "只有 curator 主動操作時才會檢查來源更新。",
+    "noUpdates": "設定的 GitLab ref 沒有變更",
+    "updateAvailable": "已有新的 commit，可明確預覽並選取",
+    "updateError": "無法檢查 repository 更新",
+    "commitComparison": "Commit {{previous}} → {{current}}"
   },
   "notification": {
     "title": "通知",

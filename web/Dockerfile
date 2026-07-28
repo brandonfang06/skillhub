@@ -12,7 +12,8 @@ COPY --from=build /app/src/docs/skill.md.template /usr/share/nginx/html/registry
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template
 COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-config.sh
-RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/30-runtime-config.sh \
+    && chmod +x /docker-entrypoint.d/30-runtime-config.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/nginx-health || exit 1

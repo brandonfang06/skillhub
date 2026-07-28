@@ -838,6 +838,11 @@
   "namespace": {
     "notFound": "Namespace not found",
     "skillList": "Skills",
+    "skillsTab": "Skills",
+    "collectionsTab": "Collections",
+    "collectionList": "Collections",
+    "collectionEmptyTitle": "No collections",
+    "collectionEmptyDescription": "No published collections are available in this namespace yet.",
     "emptyTitle": "No skills",
     "emptyDescription": "No skills have been published in this namespace yet"
   },
@@ -1633,6 +1638,111 @@
         "notAuthenticated": "No authenticated external session was found"
       }
     }
+  },
+  "collectionCard": {
+    "members": "skills",
+    "unpublished": "Not published",
+    "archived": "Archived",
+    "draft": "Draft"
+  },
+  "collectionInstall": {
+    "title": "Install collection",
+    "copy": "Copy collection install command",
+    "unavailable": "The exact internal CLI install command is not configured."
+  },
+  "collectionDiff": {
+    "title": "Changes in this draft",
+    "reordered": "Member order changed",
+    "metadataOnly": "Metadata-only change"
+  },
+  "collectionEditor": {
+    "skill": "Skill",
+    "selectSkill": "Select a skill",
+    "version": "Published version",
+    "selectVersion": "Select an exact version",
+    "add": "Add",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "note": "Optional member note",
+    "newerVersion": "Newer published version available: {{version}}"
+  },
+  "collectionDetail": {
+    "notFound": "Collection not found",
+    "maintain": "Maintain collection",
+    "members": "Members in v{{version}} ({{count}})",
+    "degraded": "This historical collection can no longer be installed because one or more pinned Skill versions were deleted.",
+    "unpublished": "This collection has not been published."
+  },
+  "collectionAdmin": {
+    "disabled": "Collections are disabled",
+    "title": "Collections",
+    "createTitle": "Create a collection",
+    "slug": "Collection slug",
+    "displayName": "Display name",
+    "summary": "Summary",
+    "create": "Create collection",
+    "createSuccess": "Collection created",
+    "createError": "Failed to create collection",
+    "namespaceOwnerOnly": "Only namespace OWNER/ADMIN or a platform skill curator can create collections.",
+    "emptyTitle": "No collections yet",
+    "emptyDescription": "Create a versioned collection for this namespace."
+  },
+  "collectionMaintenance": {
+    "denied": "You do not have permission to maintain this collection.",
+    "title": "Maintain collection",
+    "releaseNotes": "Release notes",
+    "saveSuccess": "Draft saved",
+    "saveError": "Failed to save draft",
+    "publishSuccess": "Collection published",
+    "publishError": "Failed to publish collection",
+    "draftCreated": "Draft created",
+    "draftCreateError": "Failed to create draft",
+    "createDraft": "Create draft",
+    "saveDraft": "Save draft",
+    "deleteDraftConfirm": "Delete this draft?",
+    "deleteSuccess": "Draft deleted",
+    "deleteError": "Failed to delete draft",
+    "deleteDraft": "Delete draft",
+    "degradedDraftHelp": "This draft contains a deleted Skill or version. Explicitly remove it, then add a replacement if needed before saving or publishing.",
+    "removeDegradedMember": "Remove deleted member",
+    "restoreSuccess": "Collection restored",
+    "archiveSuccess": "Collection archived",
+    "statusError": "Failed to change collection status",
+    "restore": "Restore",
+    "archive": "Archive",
+    "publish": "Publish",
+    "suggestedVersion": "Suggested next version: {{version}}. Confirm by entering a version.",
+    "publishVersion": "Collection version"
+  },
+  "repositoryImport": {
+    "open": "Import from GitLab",
+    "title": "Import repository skills",
+    "description": "Preview an allowlisted internal GitLab repository, explicitly select skills, and import them into this namespace.",
+    "projectPath": "GitLab project path",
+    "ref": "Branch, tag, or commit",
+    "preview": "Preview repository",
+    "previewError": "Repository preview failed",
+    "targetSlug": "Target skill slug",
+    "targetVersion": "Target skill version",
+    "visibility": "Visibility",
+    "namespaceOnly": "Namespace only",
+    "private": "Private",
+    "public": "Public",
+    "created": "Skill created",
+    "failed": "Import failed",
+    "retry": "Retry failed imports",
+    "ingest": "Import selected skills",
+    "ingestError": "Repository import failed",
+    "seedCollection": "Add imported skills to collection draft",
+    "seedSuccess": "Collection draft updated",
+    "seedError": "Could not update the collection draft",
+    "checkUpdates": "Check for updates",
+    "manualUpdateOnly": "Source updates are checked only when a curator requests them.",
+    "noUpdates": "The configured GitLab ref has not changed",
+    "updateAvailable": "A changed commit is ready for explicit preview and selection",
+    "updateError": "Could not check repository updates",
+    "commitComparison": "Commit {{previous}} → {{current}}"
   },
   "notification": {
     "title": "Notifications",

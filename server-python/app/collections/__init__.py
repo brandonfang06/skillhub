@@ -1,0 +1,1 @@
+"""Versioned SkillHub collection domain."""

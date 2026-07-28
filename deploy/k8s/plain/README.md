@@ -13,6 +13,12 @@ PostgreSQL, Redis, MinIO/S3, and Keycloak/OIDC are external services. Edit the
 placeholder values in `backend/config.yaml`, `backend/secret.yaml`, and
 `scanner/secret.yaml` before applying.
 
+GitLab repository import is default-off. To enable it, configure the fixed
+internal HTTPS base URL and allowed group prefixes in `backend/config.yaml`,
+put the read-only organization token in `backend/secret.yaml`, verify TLS trust,
+then enable both the backend and web import flags. The token must never be added
+to frontend runtime configuration.
+
 ## Apply
 
 ```bash

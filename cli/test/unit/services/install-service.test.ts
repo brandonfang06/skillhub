@@ -1,9 +1,10 @@
 import { access, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, spyOn, test } from 'bun:test'
 import { zipSync } from 'fflate'
 import { installSkill } from '../../../src/services/install-service'
+import { InventoryStore } from '../../../src/stores/inventory-store'
 
 const originalFetch = globalThis.fetch
 
@@ -106,6 +107,35 @@ describe('installSkill', () => {
       expect(await exists(firstSkillDir)).toBe(false)
       expect(await exists(join(home, '.skillhub', 'inventory.json'))).toBe(false)
     } finally {
+      await rm(home, { recursive: true, force: true })
+      await rm(firstRoot, { recursive: true, force: true })
+      await rm(secondRoot, { recursive: true, force: true })
+    }
+  })
+
+  test('commits a multi-target install with one inventory write', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Demo' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const firstRoot = await mkdtemp(join(tmpdir(), 'skillhub-install-first-root-'))
+    const secondRoot = await mkdtemp(join(tmpdir(), 'skillhub-install-second-root-'))
+    const writeAtomic = spyOn(InventoryStore.prototype, 'writeAtomic')
+
+    try {
+      await installSkill({
+        registry: 'http://registry.test',
+        namespace: 'global',
+        slug: 'demo',
+        targets: [
+          { agent: 'codex', rootDir: firstRoot, scope: 'project', source: 'explicit' },
+          { agent: 'claude-code', rootDir: secondRoot, scope: 'project', source: 'explicit' }
+        ],
+        force: false,
+        home
+      })
+
+      expect(writeAtomic).toHaveBeenCalledTimes(1)
+    } finally {
+      writeAtomic.mockRestore()
       await rm(home, { recursive: true, force: true })
       await rm(firstRoot, { recursive: true, force: true })
       await rm(secondRoot, { recursive: true, force: true })

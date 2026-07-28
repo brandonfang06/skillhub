@@ -238,6 +238,47 @@ SKILL_SCANNER_LLM_MODEL=...
 | `skillhub-config/auth-session-bootstrap-enabled` | `SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED` | `false` | local/dev session bootstrap，正式環境建議 `false`。 |
 | `skillhub-config/local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | `false` | 是否開放本機帳號自助註冊；設為 `false` 只會隱藏/阻擋註冊，不會關閉 local/admin 登入。 |
 
+## Skill Collections 與內部 CLI
+
+| K8s key | Pod env | Default | 說明 |
+| --- | --- | --- | --- |
+| `skillhub-config/collections-enabled` | backend `SKILLHUB_COLLECTIONS_ENABLED` | `false` | 啟用 collection API。 |
+| `skillhub-config/gitlab-import-enabled` | backend `SKILLHUB_GITLAB_IMPORT_ENABLED` | `false` | 啟用 GitLab repository import；只有 collections 同時啟用時才會生效。 |
+| `skillhub-config/gitlab-base-url` | backend `SKILLHUB_GITLAB_BASE_URL` | empty | 內部 GitLab 的固定 HTTPS origin；user input 不可覆寫 host。 |
+| `skillhub-config/gitlab-allowed-groups` | backend `SKILLHUB_GITLAB_ALLOWED_GROUPS` | empty | 允許匯入的 project path prefix，以逗號分隔，例如 `oss-mirrors,approved/tools`。 |
+| `skillhub-secret/gitlab-token` | backend `SKILLHUB_GITLAB_TOKEN` | empty | 僅供 backend 使用的 organization token，最小權限為 `read_api` 與 `read_repository`；不可放入 frontend runtime config。 |
+| `skillhub-config/gitlab-ca-bundle-path` | backend `SKILLHUB_GITLAB_CA_BUNDLE_PATH` | empty | 內部 CA bundle 在 backend container 內的既有掛載路徑；空值使用系統 trust store。 |
+| `skillhub-config/gitlab-connect-timeout-ms` | backend `SKILLHUB_GITLAB_CONNECT_TIMEOUT_MS` | `5000` | GitLab 連線 timeout。 |
+| `skillhub-config/gitlab-read-timeout-ms` | backend `SKILLHUB_GITLAB_READ_TIMEOUT_MS` | `60000` | GitLab API/archive 讀取 timeout。 |
+| `skillhub-config/gitlab-archive-max-bytes` | backend `SKILLHUB_GITLAB_ARCHIVE_MAX_BYTES` | `52428800` | 壓縮 archive 上限；解壓縮另有檔案數、單檔與總大小限制。 |
+| `skillhub-config/gitlab-archive-max-files` | backend `SKILLHUB_GITLAB_ARCHIVE_MAX_FILES` | `500` | 每個 ZIP 最多可含的非目錄檔案數。 |
+| `skillhub-config/gitlab-archive-max-single-file-bytes` | backend `SKILLHUB_GITLAB_ARCHIVE_MAX_SINGLE_FILE_BYTES` | `5242880` | 單一檔案解壓縮後上限（5 MiB）。 |
+| `skillhub-config/gitlab-archive-max-expanded-bytes` | backend `SKILLHUB_GITLAB_ARCHIVE_MAX_EXPANDED_BYTES` | `52428800` | discovery 可保留的解壓縮總量上限（50 MiB）。 |
+| `skillhub-config/gitlab-import-max-candidates` | backend `SKILLHUB_GITLAB_IMPORT_MAX_CANDIDATES` | `100` | 單次 preview 最多可持久化的 Skill candidates。 |
+| `skillhub-config/web-collections-enabled` | web `SKILLHUB_WEB_COLLECTIONS_ENABLED` | `false` | backend collections 啟用後，控制前端是否顯示 collection routes。 |
+| `skillhub-config/web-gitlab-import-enabled` | web `SKILLHUB_WEB_GITLAB_IMPORT_ENABLED` | `false` | backend import 啟用後，控制前端是否顯示 GitLab import actions。 |
+| `skillhub-config/web-cli-npm-registry` | web `SKILLHUB_WEB_CLI_NPM_REGISTRY` | empty | 產生 `npx --registry ...` 指令時使用的 Nexus npm group URL。 |
+| `skillhub-config/web-cli-package` | web `SKILLHUB_WEB_CLI_PACKAGE` | empty | 核准的內部 CLI package coordinate。 |
+| `skillhub-config/web-cli-version` | web `SKILLHUB_WEB_CLI_VERSION` | empty | 核准且不可變的內部 CLI version。 |
+
+Backend flags 才是行為的權威；web flags 只控制呈現，不能繞過 backend。
+GitLab import 必須依賴 collections。前端只有在 registry、package、version
+三個 CLI distribution 值都有填寫時才產生安裝指令，而且 web runtime
+config 不得放 Nexus token、GitLab token 或任何其他 credential。先驗證
+GitLab TLS trust 與 allowlist，再依序啟用 backend 與 web flag。
+ZIP 解析會移出 async event loop；archive、candidate 或 collection 超過上限時，
+會在 preview persistence、publish 或 install filesystem mutation 前拒絕。
+
+完整的 K8s/Compose 設定範例、內部 CA mount、Nexus CLI release pipeline、
+分階段 rollout、smoke test、token 輪替與 rollback 操作，請參考
+[skill-collections-operations.zh.md](skill-collections-operations.zh.md)。
+
+Rollout 順序為 backend collections → web collections → backend GitLab
+import → web GitLab import，每一步都先做 API smoke。Rollback 反向關閉
+flags，再視需要回退 image；不要刪除 additive `local_*` tables。GitLab token
+輪替時先建立 replacement、更新 `skillhub-secret/gitlab-token`、重啟並完成
+curator preview 驗證，最後才撤銷舊 token。
+
 ## Bootstrap Admin
 
 | K8s key | Pod env | 範例 | 說明 |

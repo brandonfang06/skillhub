@@ -25,7 +25,12 @@ def categorize_path(path: Path) -> str:
         return "migration-bootstrap"
     if normalized.startswith("app/api/"):
         return "api-route"
-    if name.endswith("_repository.py") or name.endswith("_query.py") or "/repository/" in normalized:
+    if (
+        name.endswith("_repository.py")
+        or name.endswith("_query.py")
+        or name == "repository.py"
+        or "/repository/" in normalized
+    ):
         return "repository-query"
     return "service-domain"
 

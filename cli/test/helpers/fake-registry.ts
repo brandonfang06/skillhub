@@ -64,6 +64,23 @@ export interface FakeSkill {
   zipBytes?: Uint8Array
 }
 
+export interface FakeCollectionMember {
+  namespace: string
+  slug: string
+  version: string
+  versionId?: number
+  fingerprint?: string
+  downloadUrl?: string
+}
+
+export interface FakeCollection {
+  namespace: string
+  slug: string
+  version: string
+  versionId?: number
+  members: FakeCollectionMember[]
+}
+
 // Minimal valid ZIP: local file header + end-of-central-directory record with
 // zero entries. Enough for any consumer that just checks Content-Type / length.
 const MINIMAL_ZIP = new Uint8Array([
@@ -108,6 +125,13 @@ export interface CapturedResolve {
   token: string | null
 }
 
+export interface CapturedCollectionResolve {
+  namespace: string
+  slug: string
+  version: string | null
+  token: string | null
+}
+
 /** Last DELETE: useful for verifying remote hard-delete actually hit the server. */
 export interface CapturedDelete {
   namespace: string
@@ -125,6 +149,8 @@ interface FakeRegistryOptions {
   searchItems?: Array<{ namespace: string; slug: string; latestVersion: string; summary: string }>
   /** Skills available for resolve / download / delete / publish. */
   skills?: FakeSkill[]
+  collections?: FakeCollection[]
+  downloadFailures?: Record<string, FailureMode>
   /** Response to return for publish/validate (dry-run) requests. */
   dryRunResponse?: { valid: boolean; errors: string[]; warnings: string[]; resolvedSlug: string | null; resolvedVersion: string | null }
   /**
@@ -178,9 +204,18 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
   const state: {
     publish: CapturedPublish | null
     resolve: CapturedResolve | null
+    collectionResolve: CapturedCollectionResolve | null
+    downloads: Array<{ namespace: string; slug: string; version: string | null }>
     delete: CapturedDelete | null
     validate: CapturedValidate | null
-  } = { publish: null, resolve: null, delete: null, validate: null }
+  } = {
+    publish: null,
+    resolve: null,
+    collectionResolve: null,
+    downloads: [],
+    delete: null,
+    validate: null
+  }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -211,6 +246,13 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
   // Helper: look up a skill by namespace + slug.
   function findSkill(namespace: string, slug: string): FakeSkill | undefined {
     return options.skills?.find(s => s.namespace === namespace && s.slug === slug)
+  }
+
+  function findCollection(namespace: string, slug: string): FakeCollection | undefined {
+    return options.collections?.find(
+      collection =>
+        collection.namespace === namespace && collection.slug === slug
+    )
   }
 
   // Helper: build the download URL that resolve returns.
@@ -253,6 +295,50 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         })
       }
 
+      const collectionResolveMatch = path.match(
+        /^\/api\/cli\/v1\/collections\/([^/]+)\/([^/]+)\/resolve$/
+      )
+      if (collectionResolveMatch && req.method === 'GET') {
+        const authErr = checkAuth(req)
+        if (authErr) return authErr
+        const namespace = collectionResolveMatch[1]!
+        const slug = collectionResolveMatch[2]!
+        state.collectionResolve = {
+          namespace,
+          slug,
+          version: url.searchParams.get('version'),
+          token: req.headers.get('authorization') ?? null
+        }
+        const collection = findCollection(namespace, slug)
+        if (!collection) {
+          return Response.json(
+            { code: 404, message: 'not found' },
+            { status: 404 }
+          )
+        }
+        return Response.json({
+          code: 0,
+          data: {
+            namespace: collection.namespace,
+            slug: collection.slug,
+            version: collection.version,
+            versionId: collection.versionId ?? 1,
+            members: collection.members.map((member, index) => ({
+              namespace: member.namespace,
+              slug: member.slug,
+              version: member.version,
+              versionId: member.versionId ?? index + 1,
+              fingerprint: member.fingerprint ?? `sha256:${'a'.repeat(64)}`,
+              downloadUrl: member.downloadUrl ?? (
+                `/api/cli/v1/skills/${encodeURIComponent(member.namespace)}/` +
+                `${encodeURIComponent(member.slug)}/versions/` +
+                `${encodeURIComponent(member.version)}/download`
+              )
+            }))
+          }
+        })
+      }
+
       // ------------------------------------------------------------------ //
       // Route: /api/cli/v1/skills/:namespace/:slug/...
       // ------------------------------------------------------------------ //
@@ -290,9 +376,12 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
       // Download (latest): GET /api/cli/v1/skills/:namespace/:slug/download
       const downloadLatestMatch = path.match(/^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/download$/)
       if (downloadLatestMatch && req.method === 'GET') {
-        if (options.failures?.download) return failureResponse(options.failures.download)
         const namespace = downloadLatestMatch[1]!
         const slug = downloadLatestMatch[2]!
+        state.downloads.push({ namespace, slug, version: null })
+        const failure = options.downloadFailures?.[`${namespace}/${slug}`]
+          ?? options.failures?.download
+        if (failure) return failureResponse(failure)
         const skill = findSkill(namespace, slug)
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
@@ -309,9 +398,13 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         /^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/versions\/([^/]+)\/download$/
       )
       if (downloadVersionedMatch && req.method === 'GET') {
-        if (options.failures?.download) return failureResponse(options.failures.download)
         const namespace = downloadVersionedMatch[1]!
         const slug = downloadVersionedMatch[2]!
+        const version = downloadVersionedMatch[3]!
+        state.downloads.push({ namespace, slug, version })
+        const failure = options.downloadFailures?.[`${namespace}/${slug}`]
+          ?? options.failures?.download
+        if (failure) return failureResponse(failure)
         const skill = findSkill(namespace, slug)
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })

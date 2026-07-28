@@ -171,6 +171,40 @@ CLI 会在访问 registry 前校验技能 slug、规范化所有已选目标，�
 
 单次 CLI 进程内的多目标安装具有事务性。若较后的目标在暂存或提交开始后失败，CLI 会移除较早的新安装、恢复 `--force` 备份，并还原安装前的 inventory。
 
+### 安装版本化集合
+
+Collection 是 namespace 所有、并锁定每个成员精确 Skill 版本的不可变快照。
+此命令必须明确带上 SkillHub registry：
+
+```bash
+skillhub collection install @opensource/superpowers \
+  --registry https://skillhub.example.com
+
+# 锁定 collection 版本并安装到 Codex user scope
+skillhub collection install @opensource/superpowers \
+  --version 1.1.0 \
+  --scope user \
+  --agent codex \
+  --registry https://skillhub.example.com
+```
+
+如果 CLI 来自公司 Nexus，命令中有两个不同的 registry：
+
+```bash
+npx --yes --registry <Nexus-npm-group> <internal-cli-package>@<exact-version> \
+  collection install @opensource/superpowers \
+  --registry <SkillHub-base-URL> \
+  --scope user
+```
+
+第一个 `--registry` 由 `npx` 下载指定版本 CLI；第二个由 SkillHub CLI
+解析 collection。CLI 会在第一次下载或写入前预检所有成员/目标，暂存全部
+package 后一次提交。任一失败都会恢复 `--force` 备份与旧 inventory。
+
+当前版本没有 collection-level update/remove；成员不会因为发布了新版本而
+自动变化。完整维护与 GitLab import 说明请参阅
+[版本化集合与 GitLab 导入](./collections.md)。
+
 ### 安装路径
 
 每个 Agent 有项目级和用户级两个 skills 目录。`--scope user|project` 决定使用哪一个。

@@ -1,1 +1,4 @@
-export { useSkillVersions } from '@/shared/hooks/use-skill-queries'
+export {
+  useSkillVersions,
+  useSkillVersionsById,
+} from '@/shared/hooks/use-skill-queries'

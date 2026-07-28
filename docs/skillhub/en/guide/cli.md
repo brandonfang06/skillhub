@@ -171,6 +171,44 @@ Before contacting the registry, the CLI validates the skill slug, canonicalizes 
 
 Multi-target installation is transactional within one CLI process. If a later target fails after staging or commit begins, the CLI removes earlier new installs, restores `--force` backups, and restores the pre-install inventory.
 
+### Install a Versioned Collection
+
+A collection is a namespace-owned immutable snapshot that pins every member
+to an exact Skill version. This command requires the explicit SkillHub
+registry:
+
+```bash
+skillhub collection install @opensource/superpowers \
+  --registry https://skillhub.example.com
+
+# Pin the collection and install to the Codex user scope
+skillhub collection install @opensource/superpowers \
+  --version 1.1.0 \
+  --scope user \
+  --agent codex \
+  --registry https://skillhub.example.com
+```
+
+For a CLI distributed by an internal Nexus, the command has two different
+registries:
+
+```bash
+npx --yes --registry <Nexus-npm-group> <internal-cli-package>@<exact-version> \
+  collection install @opensource/superpowers \
+  --registry <SkillHub-base-URL> \
+  --scope user
+```
+
+The first `--registry` lets `npx` fetch the exact CLI; the second lets SkillHub
+CLI resolve the collection. Every member/destination is preflighted before the
+first download or write, all packages are staged, and then one transaction is
+committed. A failure restores `--force` backups and the prior inventory.
+
+Collection-level update/remove commands are not part of this release, and
+member releases never change a collection automatically. See
+[Versioned Collections and GitLab Import](./collections.md) for the curator
+workflow.
+
 ### Install Paths
 
 Each Agent has both project-level and user-level skills directories. Use `--scope user|project` to control which one is used.

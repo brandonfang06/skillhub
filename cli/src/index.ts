@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { cac } from 'cac'
 import { doctorCommand } from './commands/doctor'
+import {
+  collectionInstallCommand,
+  type CollectionCommandOptions
+} from './commands/collection'
 import { commands, formatCommandList, helpCommand } from './commands/help'
 import { installCommand, type InstallCommandOptions } from './commands/install'
 import { listCommand, type ListCommandOptions } from './commands/list'
@@ -12,6 +16,7 @@ import { searchCommand } from './commands/search'
 import { updateCommand } from './commands/update'
 import { versionCommand } from './commands/version'
 import { whoamiCommand } from './commands/whoami'
+import { EXIT } from './shared/constants'
 import { CliError } from './shared/errors'
 import { renderError } from './shared/output'
 
@@ -243,6 +248,41 @@ cli
   .option('--json', 'Output JSON')
   .action((slug: string, options: InstallCommandOptions & { agent?: string | string[] }) => {
     return runCommand(() => installCommand(slug, { ...options, agent: toArray(options.agent) }), Boolean(options.json))
+  })
+
+cli
+  .command('collection <action> <coordinate>', 'Install a collection atomically')
+  .option('--version <v>', 'Collection version')
+  .option('--scope <scope>', 'Install scope: user or project')
+  .option('--agent <profile>', 'Agent profile (repeatable)')
+  .option('--dir <path>', 'Install directory')
+  .option('--force', 'Overwrite existing')
+  .option('--registry <url>', 'SkillHub registry URL (required)')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((
+    action: string,
+    coordinate: string,
+    options: CollectionCommandOptions & { agent?: string | string[] }
+  ) => {
+    if (action !== 'install') {
+      return runCommand(
+        async () => {
+          throw new CliError(
+            `unknown collection action "${action}"; expected "install"`,
+            EXIT.usage
+          )
+        },
+        Boolean(options.json)
+      )
+    }
+    return runCommand(
+      () => collectionInstallCommand(
+        coordinate,
+        { ...options, agent: toArray(options.agent) }
+      ),
+      Boolean(options.json)
+    )
   })
 
 cli

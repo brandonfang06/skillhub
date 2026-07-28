@@ -40,6 +40,14 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  collection: {
+    summary: 'Install a collection atomically',
+    usage: 'skillhub collection install @namespace/collection --registry <url> [--version <v>] [--scope <user|project>] [--agent <profile>] [--dir <path>] [--force] [--json]',
+    examples: [
+      'skillhub collection install @opensource/superpowers --registry https://skillhub.example.internal --scope user',
+      'skillhub collection install @opensource/superpowers --registry https://skillhub.example.internal --scope project --agent codex'
+    ]
+  },
   list: {
     summary: 'List local installs',
     usage: 'skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]',

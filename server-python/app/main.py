@@ -12,6 +12,7 @@ from app.api.admin_review_reports import router as admin_review_reports_router
 from app.api.admin_search import router as admin_search_router
 from app.api.admin_users import router as admin_users_router
 from app.api.auth import router as auth_router
+from app.api.collections import router as collections_router
 from app.api.device_auth import router as device_auth_router
 from app.api.download_analytics import router as download_analytics_router
 from app.api.governance import router as governance_router
@@ -25,6 +26,7 @@ from app.api.promotions import router as promotions_router
 from app.api.playground import router as playground_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
+from app.api.repository_imports import router as repository_imports_router
 from app.api.skill_reports import router as skill_reports_router
 from app.api.security_audit import router as security_audit_router
 from app.api.skills import router as skills_router
@@ -124,6 +126,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_skills_router)
     app.include_router(admin_users_router)
     app.include_router(auth_router)
+    app.include_router(collections_router)
     app.include_router(device_auth_router)
     app.include_router(download_analytics_router)
     app.include_router(governance_router)
@@ -142,6 +145,7 @@ def create_app() -> FastAPI:
     app.include_router(tokens_router)
     app.include_router(user_profile_router)
     app.include_router(reviews_router)
+    app.include_router(repository_imports_router)
     app.include_router(skills_router)
     app.include_router(well_known_router)
     return app

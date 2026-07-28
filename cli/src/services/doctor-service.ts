@@ -2,7 +2,13 @@ import { lstat, readdir, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
-import { InventoryStore, type Inventory, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
+import {
+  InventoryStore,
+  type Inventory,
+  type InventoryItem,
+  type InventoryTarget,
+  type NormalizedInventory
+} from '../stores/inventory-store'
 
 interface MetadataJson {
   registry: string
@@ -65,11 +71,11 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
   }
 
   // Read old inventory
-  let oldInventory: Inventory
+  let oldInventory: NormalizedInventory
   try {
     oldInventory = await store.read()
   } catch {
-    oldInventory = { items: [] }
+    oldInventory = { items: [], collections: [] }
   }
 
   // Collect scanned installDirs
@@ -107,7 +113,10 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
   }
 
   // Atomically write new inventory
-  const newInventory: Inventory = { items }
+  const newInventory: Inventory = {
+    items,
+    collections: oldInventory.collections
+  }
   await store.writeAtomic(newInventory)
 
   return {

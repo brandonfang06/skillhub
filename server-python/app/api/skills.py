@@ -545,6 +545,35 @@ async def get_skill_version_detail(
     return ok("获取成功", data, request)
 
 
+@router.get("/api/web/skill-versions/by-skill-id/{skill_id}")
+async def list_skill_versions_by_id(
+    skill_id: int,
+    request: Request,
+    page: int = 0,
+    size: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, object]:
+    reader = getattr(request.app.state, "skill_versions_by_id_reader", None)
+    page, size = normalize_page_request(page, size)
+    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
+    try:
+        if reader is not None:
+            data = await _resolve_reader_result(reader(skill_id, page, size, current_user_id))
+        else:
+            data = await read_skill_versions_by_id(
+                request.app.state.db_engine,
+                skill_id,
+                page,
+                size,
+                current_user_id,
+                platform_read_override,
+            )
+    except SkillResolveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok("?瑕???", data, request)
+
+
 @router.get("/api/v1/skills/{namespace}/{slug}/versions")
 @router.get("/api/web/skills/{namespace}/{slug}/versions")
 async def list_skill_versions(

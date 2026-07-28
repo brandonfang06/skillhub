@@ -8,5 +8,10 @@ window.__SKILLHUB_RUNTIME_CONFIG__ = {
   authSessionBootstrapProvider: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER}",
   authSessionBootstrapAuto: "${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO}",
   playgroundEnabled: "${SKILLHUB_WEB_PLAYGROUND_ENABLED}",
-  playgroundBaseUrl: "${SKILLHUB_WEB_PLAYGROUND_BASE_URL}"
+  playgroundBaseUrl: "${SKILLHUB_WEB_PLAYGROUND_BASE_URL}",
+  collectionsEnabled: "${SKILLHUB_WEB_COLLECTIONS_ENABLED}",
+  gitlabImportEnabled: "${SKILLHUB_WEB_GITLAB_IMPORT_ENABLED}",
+  cliNpmRegistry: "${SKILLHUB_WEB_CLI_NPM_REGISTRY}",
+  cliPackage: "${SKILLHUB_WEB_CLI_PACKAGE}",
+  cliVersion: "${SKILLHUB_WEB_CLI_VERSION}"
 };

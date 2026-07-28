@@ -6,6 +6,7 @@ on:
       - 'cli/**'
       - 'Makefile'
       - '.github/workflows/pr-cli.yml'
+      - '.github/workflows/release-cli.yml'
 
 jobs:
   cli:

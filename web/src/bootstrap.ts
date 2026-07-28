@@ -29,6 +29,11 @@ function ensureRuntimeConfigFallback() {
       authSessionBootstrapAuto: 'false',
       playgroundEnabled: 'false',
       playgroundBaseUrl: '',
+      collectionsEnabled: 'false',
+      gitlabImportEnabled: 'false',
+      cliNpmRegistry: '',
+      cliPackage: '',
+      cliVersion: '',
     }
   }
 }

@@ -1,11 +1,74 @@
-import type { components } from './generated/schema'
-
 export interface PlaygroundCapability {
   token: string
   expiresAt: number
 }
 
-export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'displayName' | 'platformRoles'> & {
+interface AuthMeSchema {
+  userId?: string
+  displayName?: string
+  email?: string
+  avatarUrl?: string
+  oauthProvider?: string
+  platformRoles?: string[]
+}
+
+interface AuthProviderSchema {
+  id?: string
+  name?: string
+  authorizationUrl?: string
+}
+
+interface TokenSummarySchema {
+  id?: number
+  name?: string
+  tokenPrefix?: string
+  createdAt?: string
+  expiresAt?: string
+  lastUsedAt?: string
+}
+
+interface TokenCreateSchema {
+  name: string
+  scopes?: string[]
+  expiresAt?: string
+}
+
+interface TokenCreateResponseSchema {
+  token?: string
+  id?: number
+  name?: string
+  tokenPrefix?: string
+  createdAt?: string
+  expiresAt?: string
+}
+
+interface NamespaceRequestSchema {
+  slug: string
+  displayName: string
+  description?: string
+}
+
+interface SkillLabelSchema {
+  slug?: string
+  type?: string
+  displayName?: string
+}
+
+interface LabelTranslationSchema {
+  locale?: string
+  displayName?: string
+}
+
+interface LabelDefinitionSchema {
+  slug?: string
+  type?: string
+  visibleInFilter?: boolean
+  sortOrder?: number
+  translations?: LabelTranslationSchema[]
+  createdAt?: string
+}
+
+export type User = Omit<AuthMeSchema, 'userId' | 'displayName' | 'platformRoles'> & {
   userId: string
   displayName: string
   email?: string
@@ -15,7 +78,7 @@ export type User = Omit<components['schemas']['AuthMeResponse'], 'userId' | 'dis
   platformRoles: string[]
 }
 
-export type OAuthProvider = Omit<components['schemas']['AuthProviderResponse'], 'id' | 'name' | 'authorizationUrl'> & {
+export type OAuthProvider = Omit<AuthProviderSchema, 'id' | 'name' | 'authorizationUrl'> & {
   id: string
   name: string
   authorizationUrl: string
@@ -29,7 +92,7 @@ export interface AuthMethod {
   actionUrl: string
 }
 
-export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
+export type ApiToken = Omit<TokenSummarySchema, 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
   id: number
   name: string
   tokenPrefix: string
@@ -38,13 +101,13 @@ export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' 
   lastUsedAt?: string
 }
 
-export type CreateTokenRequest = Omit<components['schemas']['TokenCreateRequest'], 'name'> & {
+export type CreateTokenRequest = Omit<TokenCreateSchema, 'name'> & {
   name: string
   scopes?: string[]
   expiresAt?: string
 }
 
-export type CreateTokenResponse = Omit<components['schemas']['TokenCreateResponse'], 'token' | 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
+export type CreateTokenResponse = Omit<TokenCreateResponseSchema, 'token' | 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
   token: string
   id: number
   name: string
@@ -77,7 +140,7 @@ export interface PasswordResetConfirmRequest {
   newPassword: string
 }
 
-export type CreateNamespaceRequest = Omit<components['schemas']['NamespaceRequest'], 'slug' | 'displayName'> & {
+export type CreateNamespaceRequest = Omit<NamespaceRequestSchema, 'slug' | 'displayName'> & {
   slug: string
   displayName: string
   description?: string
@@ -187,19 +250,19 @@ export interface SkillSummary {
   resolutionMode?: string
 }
 
-export type LabelItem = Omit<components['schemas']['SkillLabelDto'], 'slug' | 'type' | 'displayName'> & {
+export type LabelItem = Omit<SkillLabelSchema, 'slug' | 'type' | 'displayName'> & {
   slug: string
   type: 'RECOMMENDED' | 'PRIVILEGED' | string
   displayName: string
 }
 
-export type LabelTranslation = Omit<components['schemas']['LabelTranslationResponse'], 'locale' | 'displayName'> & {
+export type LabelTranslation = Omit<LabelTranslationSchema, 'locale' | 'displayName'> & {
   locale: string
   displayName: string
 }
 
 export type LabelDefinition = Omit<
-  components['schemas']['LabelDefinitionResponse'],
+  LabelDefinitionSchema,
   'slug' | 'type' | 'translations' | 'sortOrder' | 'visibleInFilter'
 > & {
   slug: string

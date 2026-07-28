@@ -28,6 +28,31 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: local-registration-enabled
+            - name: SKILLHUB_WEB_COLLECTIONS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-collections-enabled
+            - name: SKILLHUB_WEB_GITLAB_IMPORT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-gitlab-import-enabled
+            - name: SKILLHUB_WEB_CLI_NPM_REGISTRY
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-cli-npm-registry
+            - name: SKILLHUB_WEB_CLI_PACKAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-cli-package
+            - name: SKILLHUB_WEB_CLI_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-cli-version
           ports:
             - containerPort: 80
               name: http

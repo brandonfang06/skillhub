@@ -378,6 +378,67 @@ async def read_clawhub_legacy_slug_coordinate(engine: AsyncEngine, slug: str) ->
     return str(row["namespace"]), str(row["slug"])
 
 
+async def _read_skill_versions_page(
+    connection: Any,
+    *,
+    skill_row: dict[str, Any],
+    page: int,
+    size: int,
+    current_user_id: str | None,
+    platform_read_override: bool,
+) -> dict[str, object]:
+    namespace_role = await read_namespace_role(
+        connection,
+        int(skill_row["namespace_id"]),
+        current_user_id,
+    )
+    assert_skill_row_access(
+        skill_row,
+        current_user_id,
+        namespace_role,
+        platform_read_override=platform_read_override,
+    )
+    can_manage = can_manage_lifecycle_for_row(
+        skill_row,
+        current_user_id,
+        namespace_role,
+    )
+    visible_statuses = lifecycle_visible_statuses(
+        can_manage or platform_read_override,
+    )
+    status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
+    rows = (
+        await connection.execute(
+            text(
+                f"""
+                SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready
+                FROM skill_version
+                WHERE skill_id = :skill_id
+                  AND status IN ({status_literals})
+                ORDER BY
+                  CASE status
+                    WHEN 'PUBLISHED' THEN 0
+                    WHEN 'REJECTED' THEN 1
+                    WHEN 'PENDING_REVIEW' THEN 2
+                    WHEN 'UPLOADED' THEN 3
+                    WHEN 'DRAFT' THEN 4
+                    WHEN 'SCANNING' THEN 5
+                    WHEN 'SCAN_FAILED' THEN 6
+                    WHEN 'YANKED' THEN 7
+                    ELSE 8
+                  END,
+                  published_at DESC NULLS LAST,
+                  created_at DESC NULLS LAST,
+                  id DESC
+                """
+            ),
+            {"skill_id": skill_row["id"]},
+        )
+    ).mappings().all()
+    page_rows, total = paginate_rows([dict(row) for row in rows], page, size)
+    return build_versions_page_response(page_rows, total, page, size)
+
+
 async def read_skill_versions(
     engine: AsyncEngine,
     namespace: str,
@@ -405,54 +466,64 @@ async def read_skill_versions(
                     LIMIT 1
                     """
                 ),
-                {"namespace": namespace, "slug": slug, "platform_read_override": platform_read_override},
+                {
+                    "namespace": namespace,
+                    "slug": slug,
+                    "platform_read_override": platform_read_override,
+                },
             )
         ).mappings().one_or_none()
-
         if skill_row is None:
             raise SkillResolveError("error.skill.notFound")
-
-        namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(
-            dict(skill_row),
-            current_user_id,
-            namespace_role,
+        return await _read_skill_versions_page(
+            connection,
+            skill_row=dict(skill_row),
+            page=page,
+            size=size,
+            current_user_id=current_user_id,
             platform_read_override=platform_read_override,
         )
-        can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
-        visible_statuses = lifecycle_visible_statuses(can_manage or platform_read_override)
-        status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
-        rows = (
+
+
+async def read_skill_versions_by_id(
+    engine: AsyncEngine,
+    skill_id: int,
+    page: int,
+    size: int,
+    current_user_id: str | None = None,
+    platform_read_override: bool = False,
+) -> dict[str, object]:
+    page, size = normalize_page_request(page, size)
+    async with engine.connect() as connection:
+        skill_row = (
             await connection.execute(
                 text(
-                    f"""
-                    SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready
-                    FROM skill_version
-                    WHERE skill_id = :skill_id
-                      AND status IN ({status_literals})
-                    ORDER BY
-                      CASE status
-                        WHEN 'PUBLISHED' THEN 0
-                        WHEN 'REJECTED' THEN 1
-                        WHEN 'PENDING_REVIEW' THEN 2
-                        WHEN 'UPLOADED' THEN 3
-                        WHEN 'DRAFT' THEN 4
-                        WHEN 'SCANNING' THEN 5
-                        WHEN 'SCAN_FAILED' THEN 6
-                        WHEN 'YANKED' THEN 7
-                        ELSE 8
-                      END,
-                      published_at DESC NULLS LAST,
-                      created_at DESC NULLS LAST,
-                      id DESC
+                    """
+                    SELECT s.id, s.owner_id, s.namespace_id, s.visibility, s.latest_version_id
+                    FROM skill s
+                    JOIN namespace n ON n.id = s.namespace_id
+                    WHERE s.id = :skill_id
+                      AND (n.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.status = 'ACTIVE' OR :platform_read_override)
+                      AND (s.hidden = false OR :platform_read_override)
                     """
                 ),
-                {"skill_id": skill_row["id"]},
+                {
+                    "skill_id": skill_id,
+                    "platform_read_override": platform_read_override,
+                },
             )
-        ).mappings().all()
-
-    page_rows, total = paginate_rows([dict(row) for row in rows], page, size)
-    return build_versions_page_response(page_rows, total, page, size)
+        ).mappings().one_or_none()
+        if skill_row is None:
+            raise SkillResolveError("error.skill.notFound")
+        return await _read_skill_versions_page(
+            connection,
+            skill_row=dict(skill_row),
+            page=page,
+            size=size,
+            current_user_id=current_user_id,
+            platform_read_override=platform_read_override,
+        )
 
 
 async def read_skill_version_detail(

@@ -74,6 +74,11 @@ type RuntimeConfig = {
   authSessionBootstrapAuto?: string
   playgroundEnabled?: string
   playgroundBaseUrl?: string
+  collectionsEnabled?: string
+  gitlabImportEnabled?: string
+  cliNpmRegistry?: string
+  cliPackage?: string
+  cliVersion?: string
 }
 
 declare global {
@@ -163,6 +168,17 @@ export type PlaygroundRuntimeConfig =
   | { enabled: false }
   | { enabled: true; baseUrl: string }
 
+export type CollectionsRuntimeConfig = {
+  enabled: boolean
+  gitlabImportEnabled: boolean
+  skillhubBaseUrl?: string
+  cli?: {
+    npmRegistry: string
+    packageName: string
+    version: string
+  }
+}
+
 export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
   const config = getRuntimeConfig()
   const provider = config.authDirectProvider?.trim()
@@ -186,6 +202,49 @@ export function getPlaygroundRuntimeConfig(): PlaygroundRuntimeConfig {
     return { enabled: false }
   }
   return { enabled: true, baseUrl }
+}
+
+export function getCollectionsRuntimeConfig(): CollectionsRuntimeConfig {
+  const config = getRuntimeConfig()
+  const enabled = parseBooleanFlag(config.collectionsEnabled)
+  if (!enabled) {
+    return { enabled: false, gitlabImportEnabled: false }
+  }
+
+  const npmRegistry = config.cliNpmRegistry?.trim().replace(/\/+$/, '')
+  const packageName = config.cliPackage?.trim()
+  const version = config.cliVersion?.trim()
+  const cli = npmRegistry && packageName && version && version.toLowerCase() !== 'latest'
+    ? { npmRegistry, packageName, version }
+    : undefined
+  const skillhubBaseUrl = resolveSkillHubBaseUrl(config.apiBaseUrl)
+
+  return {
+    enabled: true,
+    gitlabImportEnabled: parseBooleanFlag(config.gitlabImportEnabled),
+    ...(skillhubBaseUrl ? { skillhubBaseUrl } : {}),
+    ...(cli ? { cli } : {}),
+  }
+}
+
+function resolveSkillHubBaseUrl(configuredBaseUrl: string | undefined): string | undefined {
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+  const origin = window.location?.origin
+  const candidate = configuredBaseUrl?.trim() || origin
+  if (!candidate) {
+    return undefined
+  }
+  try {
+    const url = new URL(candidate, origin)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return undefined
+    }
+    return url.toString().replace(/\/+$/, '')
+  } catch {
+    return undefined
+  }
 }
 
 export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfig {
@@ -909,10 +968,10 @@ export const tokenApi = {
   },
 
   async deleteToken(tokenId: number): Promise<void> {
-    const { error, response } = await client.DELETE('/api/v1/tokens/{id}', {
+    const { error, response } = await client.DELETE('/api/v1/tokens/{token_id}', {
       params: {
         path: {
-          id: tokenId,
+          token_id: tokenId,
         },
       },
       headers: withCsrf(),

@@ -17,8 +17,97 @@ export interface InventoryItem {
   targets: InventoryTarget[]
 }
 
+export interface InventoryCollectionMember {
+  namespace: string
+  slug: string
+  version: string
+}
+
+export interface InventoryCollection {
+  registry: string
+  namespace: string
+  slug: string
+  version: string
+  members: InventoryCollectionMember[]
+  installedAt: string
+}
+
 export interface Inventory {
   items: InventoryItem[]
+  collections?: InventoryCollection[]
+}
+
+export interface NormalizedInventory extends Inventory {
+  collections: InventoryCollection[]
+}
+
+export interface InstalledSkillCoordinate {
+  registry: string
+  namespace: string
+  slug: string
+  version: string
+}
+
+export function applyInstalledTarget(
+  inventory: NormalizedInventory,
+  coordinate: InstalledSkillCoordinate,
+  target: InventoryTarget
+): NormalizedInventory {
+  const items = inventory.items.map(item => ({
+    ...item,
+    targets: [...item.targets]
+  }))
+  let item = items.find(existing =>
+    existing.registry === coordinate.registry &&
+    existing.namespace === coordinate.namespace &&
+    existing.slug === coordinate.slug
+  )
+  if (!item) {
+    item = {
+      registry: coordinate.registry,
+      namespace: coordinate.namespace,
+      slug: coordinate.slug,
+      version: coordinate.version,
+      targets: []
+    }
+    items.push(item)
+  }
+  item.version = coordinate.version
+  const existingIndex = item.targets.findIndex(existing =>
+    existing.installDir === target.installDir
+  )
+  if (existingIndex >= 0) {
+    item.targets[existingIndex] = target
+  } else {
+    item.targets.push(target)
+  }
+  return {
+    items,
+    collections: [...inventory.collections]
+  }
+}
+
+export function applyInstalledCollection(
+  inventory: NormalizedInventory,
+  collection: InventoryCollection
+): NormalizedInventory {
+  return {
+    items: inventory.items.map(item => ({
+      ...item,
+      targets: [...item.targets]
+    })),
+    collections: [
+      ...inventory.collections.filter(existing =>
+        existing.registry !== collection.registry ||
+        existing.namespace !== collection.namespace ||
+        existing.slug !== collection.slug
+      ),
+      {
+        ...collection,
+        members: collection.members.map(member => ({ ...member }))
+      }
+    ]
+  }
 }
 
 export class InventoryStore {
@@ -28,9 +117,13 @@ export class InventoryStore {
     this.path = joinPath(userStateDir(home), 'inventory.json')
   }
 
-  async read(): Promise<Inventory> {
-    if (!(await pathExists(this.path))) return { items: [] }
-    return JSON.parse(await readFile(this.path, 'utf-8')) as Inventory
+  async read(): Promise<NormalizedInventory> {
+    if (!(await pathExists(this.path))) return { items: [], collections: [] }
+    const parsed = JSON.parse(await readFile(this.path, 'utf-8')) as Partial<Inventory>
+    return {
+      items: Array.isArray(parsed.items) ? parsed.items : [],
+      collections: Array.isArray(parsed.collections) ? parsed.collections : []
+    }
   }
 
   async write(inventory: Inventory): Promise<void> {
