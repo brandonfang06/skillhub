@@ -16,6 +16,10 @@ const VERSION_EXISTS_MARKERS = [
   '版本已存在',
 ]
 
+const REJECTED_VERSION_REUSE_MARKERS = [
+  'error.skill.publish.rejectedVersionReuse',
+]
+
 const FRONTMATTER_FAILURE_MARKERS = [
   'Invalid SKILL.md frontmatter',
   '技能包校验失败：Invalid SKILL.md frontmatter',
@@ -31,6 +35,10 @@ function includesAnyMarker(message: string | undefined, markers: string[]): bool
 
 export function isVersionExistsMessage(message?: string): boolean {
   return includesAnyMarker(message, VERSION_EXISTS_MARKERS)
+}
+
+export function isRejectedVersionReuseMessage(message?: string): boolean {
+  return includesAnyMarker(message, REJECTED_VERSION_REUSE_MARKERS)
 }
 
 export function isPrecheckFailureMessage(message?: string): boolean {

@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.publish.orchestration import PublishWriteResult
-from app.publish.replacement import ReplaceableVersion
-from app.publish.dry_run import PublishDryRunResult
+from app.publish.replacement import RejectedVersionReuseError, ReplaceableVersion
+from app.publish.dry_run import REJECTED_VERSION_REUSE_ERROR, PublishDryRunResult
 from app.publish.package import PackageEntry
 from app.publish.side_effects import PublishSideEffectResult
 from app.publish.storage import StoredPackageResult
@@ -458,6 +458,97 @@ def test_cli_publish_write_rejects_invalid_preflight_before_write() -> None:
     assert response.status_code == 400
     assert response.json()["detail"] == "Publisher is not a member of namespace: global"
     assert not writer_called
+
+
+def test_cli_publish_write_returns_conflict_for_rejected_version_preflight() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user()
+    replacement_called = False
+    writer_called = False
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=False,
+            errors=[REJECTED_VERSION_REUSE_ERROR],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def replacement_reader(*args: object, **kwargs: object) -> None:
+        nonlocal replacement_called
+        replacement_called = True
+
+    async def write_reader(*args: object, **kwargs: object) -> PublishWriteResult:
+        nonlocal writer_called
+        writer_called = True
+        raise AssertionError("write must not run")
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_replacement_reader = replacement_reader
+    app.state.publish_write_reader = write_reader
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == REJECTED_VERSION_REUSE_ERROR
+    assert not replacement_called
+    assert not writer_called
+
+
+def test_cli_publish_write_maps_rejected_version_race_to_conflict() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user()
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def write_reader(*args: object, **kwargs: object) -> PublishWriteResult:
+        raise RejectedVersionReuseError(REJECTED_VERSION_REUSE_ERROR)
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == REJECTED_VERSION_REUSE_ERROR
 
 
 def test_cli_publish_write_logs_invalid_preflight_for_forensics(caplog) -> None:

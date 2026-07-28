@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable
 from inspect import isawaitable
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
@@ -24,6 +24,7 @@ from app.lifecycle.skill import (
     SkillLifecycleError,
     SkillRereleaseInput,
     SkillSubmitReviewInput,
+    SkillVisibilityUpdateInput,
     SkillVersionDeleteInput,
     SkillVersionWithdrawReviewInput,
     archive_skill as archive_skill_workflow,
@@ -33,6 +34,7 @@ from app.lifecycle.skill import (
     rerelease_skill_version,
     submit_skill_version_for_review,
     unarchive_skill as unarchive_skill_workflow,
+    update_skill_visibility,
     withdraw_skill_version_review,
 )
 from app.publish.orchestration import execute_publish_write
@@ -44,6 +46,10 @@ router = APIRouter()
 
 class SkillArchiveRequest(BaseModel):
     reason: str | None = None
+
+
+class SkillVisibilityUpdateRequest(BaseModel):
+    visibility: Literal["PUBLIC", "NAMESPACE_ONLY", "PRIVATE"]
 
 
 class SkillConfirmPublishRequest(BaseModel):
@@ -123,6 +129,35 @@ async def archive_skill_route_data(
     try:
         data = await _resolve_result(
             writer(archive_input) if writer is not None else archive_skill_workflow(request.app.state.db_engine, archive_input)
+        )
+    except SkillLifecycleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+async def update_skill_visibility_route_data(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillVisibilityUpdateRequest,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    update_input = SkillVisibilityUpdateInput(
+        namespace=namespace,
+        slug=slug,
+        visibility=body.visibility,
+        user_id=user_id,
+        request_id=getattr(request.state, "request_id", None),
+        client_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    writer = getattr(request.app.state, "skill_visibility_writer", None)
+    try:
+        data = await _resolve_result(
+            writer(update_input)
+            if writer is not None
+            else update_skill_visibility(request.app.state.db_engine, update_input)
         )
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -401,6 +436,18 @@ async def rerelease_route_data(
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", data, request)
+
+
+@router.patch("/api/v1/skills/{namespace}/{slug}/visibility")
+@router.patch("/api/web/skills/{namespace}/{slug}/visibility")
+async def update_skill_visibility_route(
+    request: Request,
+    namespace: str,
+    slug: str,
+    body: SkillVisibilityUpdateRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await update_skill_visibility_route_data(request, namespace, slug, body, x_mock_user_id)
 
 
 @router.post("/api/v1/skills/{namespace}/{slug}/archive")

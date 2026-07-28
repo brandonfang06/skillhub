@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { MouseEvent } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +11,19 @@ const useSkillLabelsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
 const useResourceDiagnosticsMock = vi.fn()
+const {
+  confirmPublishMutationMock,
+  submitForReviewMutationMock,
+  toastErrorMock,
+  toastSuccessMock,
+  updateVisibilityMutationMock,
+} = vi.hoisted(() => ({
+  confirmPublishMutationMock: vi.fn(),
+  submitForReviewMutationMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  updateVisibilityMutationMock: vi.fn(),
+}))
 let playgroundEnabled = false
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
@@ -53,7 +66,45 @@ vi.mock('@/features/report/use-skill-reports', () => ({
 }))
 
 vi.mock('@/shared/lib/toast', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: toastSuccessMock, error: toastErrorMock },
+}))
+
+vi.mock('@/shared/ui/select', () => ({
+  Select: ({
+    value,
+    onValueChange,
+  }: {
+    value?: string
+    onValueChange?: (value: string) => void
+  }) => (
+    <select
+      aria-label="skillDetail.visibilityLabel"
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      <option value="PUBLIC">PUBLIC</option>
+      <option value="NAMESPACE_ONLY">NAMESPACE_ONLY</option>
+      <option value="PRIVATE">PRIVATE</option>
+    </select>
+  ),
+  SelectContent: ({ children }: { children: unknown }) => children,
+  SelectItem: ({ children }: { children: unknown }) => children,
+  SelectTrigger: ({ children }: { children: unknown }) => children,
+  SelectValue: () => null,
+}))
+
+vi.mock('@/shared/components/confirm-dialog', () => ({
+  ConfirmDialog: ({
+    open,
+    confirmText,
+    onConfirm,
+  }: {
+    open: boolean
+    confirmText: string
+    onConfirm: () => void
+  }) => open
+    ? <button type="button" onClick={onConfirm}>{`confirm:${confirmText}`}</button>
+    : null,
 }))
 
 vi.mock('@/api/client', () => ({
@@ -163,8 +214,9 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useRereleaseSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSubmitForReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useConfirmPublish: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSubmitForReview: () => ({ mutateAsync: submitForReviewMutationMock, isPending: false }),
+  useConfirmPublish: () => ({ mutateAsync: confirmPublishMutationMock, isPending: false }),
+  useUpdateSkillVisibility: () => ({ mutateAsync: updateVisibilityMutationMock, isPending: false }),
 }))
 
 vi.mock('@/shared/hooks/use-label-queries', () => ({
@@ -251,6 +303,18 @@ describe('SkillDetailPage', () => {
     })
     useSkillFilesMock.mockReturnValue({ data: [] })
     useResourceDiagnosticsMock.mockReturnValue({ data: undefined, isLoading: false, error: null })
+    confirmPublishMutationMock.mockReset()
+    confirmPublishMutationMock.mockResolvedValue(undefined)
+    submitForReviewMutationMock.mockReset()
+    submitForReviewMutationMock.mockResolvedValue(undefined)
+    updateVisibilityMutationMock.mockReset()
+    updateVisibilityMutationMock.mockResolvedValue({
+      skillId: 1,
+      visibility: 'NAMESPACE_ONLY',
+      changed: true,
+    })
+    toastErrorMock.mockReset()
+    toastSuccessMock.mockReset()
   })
 
   it('shows hard delete action for the skill owner', () => {
@@ -390,6 +454,146 @@ describe('SkillDetailPage', () => {
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
     expect(html).not.toContain('skillDetail.labelsSectionTitle')
+  })
+
+  it('shows the current visibility control only to lifecycle managers', () => {
+    const { rerender } = render(<SkillDetailPage />)
+
+    const select = screen.getByLabelText('skillDetail.visibilityLabel') as HTMLSelectElement
+    expect(select.value).toBe('PUBLIC')
+    expect(screen.getByText('skillDetail.saveVisibility').closest('button')?.disabled).toBe(true)
+
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    rerender(<SkillDetailPage />)
+
+    expect(screen.queryByLabelText('skillDetail.visibilityLabel')).toBeNull()
+  })
+
+  it('updates visibility without triggering publish or review transitions', async () => {
+    render(<SkillDetailPage />)
+
+    fireEvent.change(screen.getByLabelText('skillDetail.visibilityLabel'), {
+      target: { value: 'NAMESPACE_ONLY' },
+    })
+    fireEvent.click(screen.getByText('skillDetail.saveVisibility'))
+
+    await waitFor(() => {
+      expect(updateVisibilityMutationMock).toHaveBeenCalledWith({
+        namespace: 'global',
+        slug: 'demo-skill',
+        visibility: 'NAMESPACE_ONLY',
+      })
+    })
+    expect(submitForReviewMutationMock).not.toHaveBeenCalled()
+    expect(confirmPublishMutationMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'skillDetail.visibilityUpdateSuccessTitle',
+      'skillDetail.visibilityUpdateSuccessDescription',
+    )
+  })
+
+  it('shows an error toast when visibility update fails', async () => {
+    updateVisibilityMutationMock.mockRejectedValue(new Error('network failed'))
+    render(<SkillDetailPage />)
+
+    fireEvent.change(screen.getByLabelText('skillDetail.visibilityLabel'), {
+      target: { value: 'PRIVATE' },
+    })
+    fireEvent.click(screen.getByText('skillDetail.saveVisibility'))
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'skillDetail.visibilityUpdateErrorTitle',
+        'network failed',
+      )
+    })
+  })
+
+  it.each([
+    ['PUBLIC', 'PUBLIC'],
+    ['NAMESPACE_ONLY', 'NAMESPACE_ONLY'],
+  ] as const)('submits an uploaded %s skill for review with its current visibility', async (visibility, targetVisibility) => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        visibility,
+        headlineVersion: { id: 11, version: '1.1.0', status: 'UPLOADED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'UPLOADED' },
+        resolutionMode: 'OWNER_PREVIEW',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [{
+        id: 11,
+        version: '1.1.0',
+        status: 'UPLOADED',
+        changelog: '',
+        fileCount: 1,
+        totalSize: 12,
+        publishedAt: null,
+        downloadAvailable: false,
+      }],
+    })
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByText('skillDetail.tabVersions'))
+
+    expect(screen.queryByText('skillDetail.confirmPublish')).toBeNull()
+    fireEvent.click(screen.getByText('skillDetail.submitReview'))
+    fireEvent.click(screen.getByText('confirm:skillDetail.submitReview'))
+
+    await waitFor(() => {
+      expect(submitForReviewMutationMock).toHaveBeenCalledWith({
+        namespace: 'global',
+        slug: 'demo-skill',
+        version: '1.1.0',
+        targetVisibility,
+      })
+    })
+    expect(confirmPublishMutationMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps direct publish for an uploaded private skill', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        visibility: 'PRIVATE',
+        headlineVersion: { id: 11, version: '1.1.0', status: 'UPLOADED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'UPLOADED' },
+        resolutionMode: 'OWNER_PREVIEW',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [{
+        id: 11,
+        version: '1.1.0',
+        status: 'UPLOADED',
+        changelog: '',
+        fileCount: 1,
+        totalSize: 12,
+        publishedAt: null,
+        downloadAvailable: false,
+      }],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByText('skillDetail.tabVersions'))
+
+    expect(screen.getByText('skillDetail.confirmPublish')).toBeTruthy()
+    expect(screen.queryByText('skillDetail.submitReview')).toBeNull()
   })
 
   it('does not render dependent social controls while the detail query is still refetching', () => {

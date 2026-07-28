@@ -279,6 +279,16 @@ async def test_own_published_version_is_invalid() -> None:
 
 
 @pytest.mark.anyio
+async def test_own_rejected_version_requires_a_new_version_number() -> None:
+    result = await run_dry_run(
+        FakeDryRunRepository(conflict_context=PublishConflictContext(own_version_status="REJECTED"))
+    )
+
+    assert not result.valid
+    assert result.errors == ["error.skill.publish.rejectedVersionReuse"]
+
+
+@pytest.mark.anyio
 async def test_other_owner_published_skill_blocks_name() -> None:
     result = await run_dry_run(
         FakeDryRunRepository(conflict_context=PublishConflictContext(other_owner_has_published=True))

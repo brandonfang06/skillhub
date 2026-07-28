@@ -226,9 +226,13 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
     assert set(connection.documents) == {10}
     document = connection.documents[10]
     active_skill_query = next(statement for statement in connection.statements if "FROM skill s" in statement)
-    assert "JOIN skill_version sv ON sv.id = s.latest_version_id" in active_skill_query
+    assert "JOIN LATERAL" in active_skill_query
+    assert "sv.skill_id = s.id" in active_skill_query
     assert "sv.status = 'PUBLISHED'" in active_skill_query
-    assert "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)" in " ".join(active_skill_query.split())
+    normalized_active_query = " ".join(active_skill_query.split())
+    assert "EXISTS (" in normalized_active_query
+    assert "SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id" in normalized_active_query
+    assert "CASE WHEN sv.id = s.latest_version_id THEN 0 ELSE 1 END" in " ".join(active_skill_query.split())
     assert any("CAST(sv.parsed_metadata_json AS text)" in statement for statement in connection.statements)
     assert all("parsed_metadata_json::text" not in statement for statement in connection.statements)
     assert document["namespace_slug"] == "global"
@@ -259,7 +263,7 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
 
 
 @pytest.mark.anyio
-async def test_upsert_search_document_requires_files_for_published_latest_version() -> None:
+async def test_upsert_search_document_uses_published_fallback_with_files() -> None:
     connection = FakeSearchConnection()
 
     await upsert_skill_search_document(connection, 10)
@@ -269,4 +273,9 @@ async def test_upsert_search_document_requires_files_for_published_latest_versio
         for statement in connection.statements
         if "FROM skill s" in statement and "WHERE s.id = :skill_id" in statement
     )
-    assert "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id)" in " ".join(source_query.split())
+    assert "JOIN LATERAL" in source_query
+    assert "sv.skill_id = s.id" in source_query
+    normalized_source_query = " ".join(source_query.split())
+    assert "EXISTS (" in normalized_source_query
+    assert "SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id" in normalized_source_query
+    assert "JOIN skill_version sv ON sv.id = s.latest_version_id" not in source_query

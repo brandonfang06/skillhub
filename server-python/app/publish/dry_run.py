@@ -13,6 +13,7 @@ from sqlalchemy import text
 from app.publish.package import PackageEntry, validate_package
 
 
+REJECTED_VERSION_REUSE_ERROR = "error.skill.publish.rejectedVersionReuse"
 RESERVED_SLUGS = {
     "admin",
     "api",
@@ -313,6 +314,8 @@ async def validate_publish_dry_run(
             errors.append(f"Cannot publish to archived skill: {resolved_slug}")
         if conflicts.own_version_status == "PUBLISHED":
             errors.append(f"Version already published: {resolved_version}")
+        if conflicts.own_version_status == "REJECTED":
+            errors.append(REJECTED_VERSION_REUSE_ERROR)
         if conflicts.other_owner_has_published:
             errors.append(f'Name conflict: slug "{resolved_slug}" is already published by another user')
 

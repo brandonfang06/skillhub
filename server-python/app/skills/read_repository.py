@@ -953,7 +953,29 @@ async def read_skill_search(
         "isv.status = 'PUBLISHED'",
         "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = isv.id)",
     ]
-    published_version_join_sql = "JOIN skill_version isv ON isv.id = s.latest_version_id"
+    published_version_join_sql = """
+        JOIN LATERAL (
+            SELECT isv.id,
+                   isv.version,
+                   isv.status,
+                   isv.download_ready,
+                   isv.yanked_at
+            FROM skill_version isv
+            WHERE isv.skill_id = s.id
+              AND isv.status = 'PUBLISHED'
+              AND EXISTS (
+                  SELECT 1
+                  FROM skill_file sf
+                  WHERE sf.version_id = isv.id
+              )
+            ORDER BY
+              CASE WHEN isv.id = s.latest_version_id THEN 0 ELSE 1 END,
+              isv.published_at DESC NULLS LAST,
+              isv.created_at DESC NULLS LAST,
+              isv.id DESC
+            LIMIT 1
+        ) isv ON TRUE
+    """
     if installable_only:
         filters.extend(
             [
@@ -1050,26 +1072,14 @@ async def read_skill_search(
                            s.rating_count,
                            n.slug AS namespace,
                            s.updated_at,
-                           pv.id AS published_version_id,
-                           pv.version AS published_version,
-                           pv.status AS published_version_status,
-                           CASE WHEN pv.id IS NULL THEN 'NONE' ELSE 'PUBLISHED' END AS resolution_mode
+                           isv.id AS published_version_id,
+                           isv.version AS published_version,
+                           isv.status AS published_version_status,
+                           'PUBLISHED' AS resolution_mode
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
                     {published_version_join_sql}
-                    LEFT JOIN LATERAL (
-                        SELECT sv.id, sv.version, sv.status
-                        FROM skill_version sv
-                        WHERE sv.skill_id = s.id
-                          AND sv.status = 'PUBLISHED'
-                        ORDER BY
-                          CASE WHEN sv.id = s.latest_version_id THEN 0 ELSE 1 END,
-                          sv.published_at DESC NULLS LAST,
-                          sv.created_at DESC NULLS LAST,
-                          sv.id DESC
-                        LIMIT 1
-                    ) pv ON TRUE
                     WHERE {where_sql}
                     ORDER BY {order_sql}
                     LIMIT :limit OFFSET :offset
