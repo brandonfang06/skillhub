@@ -302,6 +302,14 @@ async def test_read_review_skill_detail_returns_not_found_for_missing_snapshot(t
 def test_review_skill_detail_route_returns_java_read_envelope() -> None:
     app = create_app()
     seen: list[tuple[int, str, str]] = []
+    app.state.local_auth_login = lambda payload: {
+        "userId": "team-admin",
+        "displayName": "Team Admin",
+        "email": "team-admin@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
 
     async def reader(engine: object, storage_base_path: str, *, review_task_id: int, user_id: str) -> dict[str, object]:
         seen.append((review_task_id, user_id, storage_base_path))
@@ -319,10 +327,14 @@ def test_review_skill_detail_route_returns_java_read_envelope() -> None:
     app.state.db_engine = object()
     app.state.settings = SimpleNamespace(storage_base_path="C:/tmp/review-skill-detail-test-storage")
     client = TestClient(app)
+    assert client.post(
+        "/api/v1/auth/local/login",
+        json={"username": "team-admin", "password": "Abcd123!"},
+    ).status_code == 200
 
     response = client.get(
         "/api/web/reviews/801/skill-detail",
-        headers={"X-Mock-User-Id": "team-admin", "X-Request-Id": "review-skill-detail-test"},
+        headers={"X-Request-Id": "review-skill-detail-test"},
     )
 
     assert response.status_code == 200
@@ -334,10 +346,25 @@ def test_review_skill_detail_route_returns_java_read_envelope() -> None:
     assert seen == [(801, "team-admin", "C:/tmp/review-skill-detail-test-storage")]
 
 
-def test_review_skill_detail_route_requires_mock_user() -> None:
+def test_review_skill_detail_route_requires_authentication() -> None:
     app = create_app()
     client = TestClient(app)
 
     response = client.get("/api/v1/reviews/801/skill-detail")
 
     assert response.status_code == 401
+
+
+def test_review_skill_detail_route_rejects_mock_header_without_session() -> None:
+    app = create_app()
+    app.state.review_skill_detail_reader = lambda *args, **kwargs: pytest.fail(
+        "mock header must not reach review content"
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/reviews/801/skill-detail",
+        headers={"X-Mock-User-Id": "docker-admin"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"

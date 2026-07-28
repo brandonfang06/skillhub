@@ -42,6 +42,17 @@ def resolve_response() -> dict[str, object]:
     }
 
 
+def token_principal(user_id: str = "user-1") -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "api_token",
+        "platformRoles": ["USER"],
+    }
+
+
 def test_cli_search_returns_java_envelope_and_forwards_query_params() -> None:
     app = create_app()
     seen: list[dict[str, object]] = []
@@ -172,6 +183,7 @@ def test_cli_resolve_fails_closed_for_invalid_bearer_token() -> None:
 def test_cli_download_routes_stream_existing_python_download_results() -> None:
     app = create_app()
     seen: list[tuple[object, ...]] = []
+    app.state.auth_bearer_reader = lambda token: token_principal() if token == "sk_valid" else None
 
     async def latest_reader(namespace: str, slug: str, user_id: str | None) -> DownloadResult:
         seen.append(("latest", namespace, slug, user_id))
@@ -194,11 +206,12 @@ def test_cli_download_routes_stream_existing_python_download_results() -> None:
     app.state.skill_download_latest_reader = latest_reader
     app.state.skill_download_version_reader = version_reader
     client = TestClient(app)
+    headers = {"Authorization": "Bearer sk_valid"}
 
-    latest = client.get("/api/cli/v1/skills/global/agent-helper/download")
+    latest = client.get("/api/cli/v1/skills/global/agent-helper/download", headers=headers)
     version = client.get(
         "/api/cli/v1/skills/global/agent-helper/versions/1.2.0/download",
-        headers={"X-Mock-User-Id": "user-1"},
+        headers=headers,
     )
 
     assert latest.status_code == 200
@@ -208,7 +221,7 @@ def test_cli_download_routes_stream_existing_python_download_results() -> None:
     assert version.content == b"version bytes"
     assert version.headers["content-disposition"] == 'attachment; filename="version.zip"'
     assert seen == [
-        ("latest", "global", "agent-helper", None),
+        ("latest", "global", "agent-helper", "user-1"),
         ("version", "global", "agent-helper", "1.2.0", "user-1"),
     ]
 

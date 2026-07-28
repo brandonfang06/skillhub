@@ -1,11 +1,23 @@
 import asyncio
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api import skills
 from app.api.skills import build_compare_response
 from app.main import create_app
 from app.skills import read_repository as skill_repository
+
+
+def token_principal(user_id: str = "owner-1") -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "api_token",
+        "platformRoles": ["USER"],
+    }
 
 
 class _FakeMappings:
@@ -165,6 +177,7 @@ def compare_response() -> dict[str, object]:
 
 def test_skill_version_compare_v1_route_returns_envelope() -> None:
     app = create_app()
+    app.state.auth_bearer_reader = lambda token: token_principal() if token == "sk_valid" else None
     app.state.skill_version_compare_reader = (
         lambda namespace, slug, from_version, to_version, current_user_id: compare_response()
     )
@@ -173,7 +186,7 @@ def test_skill_version_compare_v1_route_returns_envelope() -> None:
     response = client.get(
         "/api/v1/skills/global/demo/versions/compare",
         params={"from": "1.0.0", "to": "1.1.0"},
-        headers={"X-Request-Id": "compare-test"},
+        headers={"Authorization": "Bearer sk_valid", "X-Request-Id": "compare-test"},
     )
 
     assert response.status_code == 200
@@ -185,11 +198,16 @@ def test_skill_version_compare_v1_route_returns_envelope() -> None:
 
 def test_skill_version_compare_web_alias_returns_same_contract() -> None:
     app = create_app()
+    app.state.local_auth_login = lambda payload: token_principal()
     app.state.skill_version_compare_reader = (
         lambda namespace, slug, from_version, to_version, current_user_id: compare_response()
     )
 
     client = TestClient(app)
+    assert client.post(
+        "/api/v1/auth/local/login",
+        json={"username": "owner-1", "password": "Abcd123!"},
+    ).status_code == 200
     response = client.get("/api/web/skills/global/demo/versions/compare", params={"from": "1.0.0", "to": "1.1.0"})
 
     assert response.status_code == 200
@@ -211,19 +229,27 @@ def test_skill_version_compare_route_forwards_params_and_current_user() -> None:
         return compare_response()
 
     app.state.skill_version_compare_reader = reader
+    app.state.auth_bearer_reader = lambda token: token_principal() if token == "sk_valid" else None
 
     client = TestClient(app)
     response = client.get(
         "/api/v1/skills/global/demo/versions/compare",
         params={"from": "1.0.0", "to": "1.1.0"},
-        headers={"X-Mock-User-Id": " owner-1 "},
+        headers={"Authorization": "Bearer sk_valid"},
     )
 
     assert response.status_code == 200
     assert seen == [("global", "demo", "1.0.0", "1.1.0", "owner-1")]
 
 
-def test_skill_version_compare_route_forwards_blank_current_user_as_none() -> None:
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/skills/global/demo/versions/compare",
+        "/api/web/skills/global/demo/versions/compare",
+    ],
+)
+def test_skill_version_compare_routes_require_authentication(path: str) -> None:
     seen: list[str | None] = []
     app = create_app()
 
@@ -239,15 +265,27 @@ def test_skill_version_compare_route_forwards_blank_current_user_as_none() -> No
 
     app.state.skill_version_compare_reader = reader
 
-    client = TestClient(app)
-    response = client.get(
-        "/api/web/skills/global/demo/versions/compare",
-        params={"from": "1.0.0", "to": "1.1.0"},
-        headers={"X-Mock-User-Id": "   "},
+    response = TestClient(app).get(path, params={"from": "1.0.0", "to": "1.1.0"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+    assert seen == []
+
+
+def test_skill_version_compare_route_rejects_mock_header_without_session() -> None:
+    app = create_app()
+    app.state.skill_version_compare_reader = (
+        lambda namespace, slug, from_version, to_version, current_user_id: compare_response()
     )
 
-    assert response.status_code == 200
-    assert seen == [None]
+    response = TestClient(app).get(
+        "/api/v1/skills/global/demo/versions/compare",
+        params={"from": "1.0.0", "to": "1.1.0"},
+        headers={"X-Mock-User-Id": "docker-admin"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
 
 
 def test_build_compare_response_reports_modified_added_removed_and_omits_identical_files() -> None:

@@ -166,6 +166,15 @@ def test_download_analytics_retention_can_be_overridden_or_disabled(monkeypatch)
     assert disabled.download_analytics_retention_months == 0
 
 
+def test_download_authentication_cannot_be_disabled_by_environment(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_DOWNLOAD_REQUIRE_AUTH", "false")
+
+    settings = get_settings()
+
+    assert "download_require_auth" not in Settings.__annotations__
+    assert not hasattr(settings, "download_require_auth")
+
+
 def test_scanner_handoff_settings_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
     monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_MODE", "upload")

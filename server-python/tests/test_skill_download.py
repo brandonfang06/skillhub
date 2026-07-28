@@ -22,6 +22,7 @@ from app.api.skills import (
     sanitize_download_filename,
 )
 from app.main import create_app
+from app.skills.read_access import assert_skill_content_access
 from app.skills import read_files as read_files_module
 
 
@@ -34,6 +35,81 @@ def session_principal(user_id: str = "local-user") -> dict[str, object]:
         "oauthProvider": "local",
         "platformRoles": ["USER"],
     }
+
+
+def authenticated_client(app: Any, user_id: str = "local-user") -> TestClient:
+    app.state.local_auth_login = lambda payload: session_principal(user_id)
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/auth/local/login",
+        json={"username": user_id, "password": "Abcd123!"},
+    )
+    assert response.status_code == 200
+    return client
+
+
+def skill_download_access_row(
+    visibility: str,
+    namespace_type: str,
+    *,
+    owner_id: str = "owner",
+) -> dict[str, object]:
+    return {
+        "owner_id": owner_id,
+        "visibility": visibility,
+        "namespace_type": namespace_type,
+        "latest_version_id": 42,
+    }
+
+
+@pytest.mark.parametrize(
+    ("visibility", "namespace_type", "current_user_id", "namespace_role"),
+    [
+        ("PUBLIC", "TEAM", "ordinary-user", None),
+        ("NAMESPACE_ONLY", "TEAM", "member-user", "MEMBER"),
+        ("PRIVATE", "TEAM", "owner", None),
+        ("PRIVATE", "TEAM", "admin-user", "ADMIN"),
+    ],
+)
+def test_skill_download_access_allows_authorized_callers(
+    visibility: str,
+    namespace_type: str,
+    current_user_id: str | None,
+    namespace_role: str | None,
+) -> None:
+    assert_skill_content_access(
+        skill_download_access_row(visibility, namespace_type),
+        current_user_id,
+        namespace_role,
+    )
+
+
+@pytest.mark.parametrize(
+    ("visibility", "namespace_type", "current_user_id", "namespace_role"),
+    [
+        ("PUBLIC", "GLOBAL", None, None),
+        ("PUBLIC", "GLOBAL", "", None),
+        ("PUBLIC", "TEAM", None, None),
+        ("NAMESPACE_ONLY", "GLOBAL", None, None),
+        ("NAMESPACE_ONLY", "TEAM", "ordinary-user", None),
+        ("PRIVATE", "TEAM", None, None),
+        ("PRIVATE", "TEAM", "ordinary-user", "MEMBER"),
+    ],
+)
+def test_skill_download_access_rejects_unauthorized_callers(
+    visibility: str,
+    namespace_type: str,
+    current_user_id: str | None,
+    namespace_role: str | None,
+) -> None:
+    with pytest.raises(SkillResolveError, match="error.skill.access.denied") as exc_info:
+        assert_skill_content_access(
+            skill_download_access_row(visibility, namespace_type),
+            current_user_id,
+            namespace_role,
+        )
+
+    assert exc_info.value.status_code == 403
 
 
 def test_clawhub_download_path_latest_redirects_to_portal_latest() -> None:
@@ -54,6 +130,18 @@ def test_clawhub_download_path_explicit_version_redirects_to_portal_version() ->
 
     assert response.status_code == 302
     assert response.headers["location"] == "/api/v1/skills/team-ai/demo/versions/1.2.0/download"
+
+
+def test_clawhub_download_redirect_cannot_return_package_anonymously() -> None:
+    app = create_app()
+    app.state.skill_download_latest_reader = lambda *args: pytest.fail(
+        "anonymous redirect must be rejected before package resolution"
+    )
+
+    response = TestClient(app).get("/api/v1/download/demo")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
 
 
 def test_clawhub_download_query_redirects_through_legacy_coordinate_resolution() -> None:
@@ -87,6 +175,28 @@ def test_clawhub_download_query_forwards_current_user_to_coordinate_reader() -> 
     assert response.status_code == 302
     assert response.headers["location"] == "/api/v1/skills/team-ai/demo/versions/1.0.0/download"
     assert seen == [("demo", "local-user")]
+
+
+def test_clawhub_download_query_forwards_bearer_user_to_coordinate_reader() -> None:
+    seen: list[tuple[str, str | None]] = []
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: session_principal("token-user") if token == "sk_valid" else None
+
+    def reader(slug: str, current_user_id: str | None) -> tuple[str, str]:
+        seen.append((slug, current_user_id))
+        return "team-ai", slug
+
+    app.state.clawhub_download_coordinate_reader = reader
+
+    response = TestClient(app, follow_redirects=False).get(
+        "/api/v1/download",
+        params={"slug": "demo", "version": "1.0.0"},
+        headers={"Authorization": "Bearer sk_valid"},
+    )
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "/api/v1/skills/team-ai/demo/versions/1.0.0/download"
+    assert seen == [("demo", "token-user")]
 
 
 def test_sanitize_download_filename_matches_java_safe_name_style() -> None:
@@ -213,9 +323,11 @@ def test_assert_download_access_allows_published_without_manager() -> None:
     assert_download_access({"status": "PUBLISHED"}, can_manage=False)
 
 
-def test_assert_download_access_allows_java_public_preview_statuses() -> None:
-    assert_download_access({"status": "PENDING_REVIEW"}, can_manage=False)
-    assert_download_access({"status": "UPLOADED"}, can_manage=False)
+def test_assert_download_access_rejects_preview_statuses_without_manager_access() -> None:
+    with pytest.raises(SkillResolveError, match="error.skill.version.notDownloadable"):
+        assert_download_access({"status": "PENDING_REVIEW"}, can_manage=False)
+    with pytest.raises(SkillResolveError, match="error.skill.version.notDownloadable"):
+        assert_download_access({"status": "UPLOADED"}, can_manage=False)
 
 
 def test_assert_download_access_allows_uploaded_or_pending_for_manager() -> None:
@@ -233,6 +345,78 @@ def test_assert_installable_download_access_requires_ready_published_not_yanked(
         assert_installable_download_access({"status": "PENDING_REVIEW", "download_ready": True, "yanked_at": None})
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/skills/global/demo/download",
+        "/api/web/skills/global/demo/download",
+        "/api/v1/skills/global/demo/versions/1.0.0/download",
+        "/api/web/skills/global/demo/versions/1.0.0/download",
+        "/api/cli/v1/skills/global/demo/download",
+        "/api/cli/v1/skills/global/demo/versions/1.0.0/download",
+        "/api/v1/skills/global/demo/tags/latest/download",
+        "/api/web/skills/global/demo/tags/latest/download",
+    ],
+)
+def test_download_routes_require_authentication(path: str) -> None:
+    app = create_app()
+    result = DownloadResult(content=b"bundle", content_type="application/zip", filename="Demo-1.0.0.zip")
+    app.state.skill_download_latest_reader = lambda namespace, slug, current_user_id: result
+    app.state.skill_download_version_reader = lambda namespace, slug, version, current_user_id: result
+    app.state.skill_download_tag_reader = lambda namespace, slug, tag, current_user_id: result
+
+    response = TestClient(app).get(path)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/skills/global/demo/download",
+        "/api/web/skills/global/demo/download",
+        "/api/v1/skills/global/demo/versions/1.0.0/download",
+        "/api/web/skills/global/demo/versions/1.0.0/download",
+        "/api/cli/v1/skills/global/demo/download",
+        "/api/cli/v1/skills/global/demo/versions/1.0.0/download",
+        "/api/v1/skills/global/demo/tags/latest/download",
+        "/api/web/skills/global/demo/tags/latest/download",
+    ],
+)
+def test_download_routes_reject_mock_header_without_session(path: str) -> None:
+    app = create_app()
+    result = DownloadResult(content=b"bundle", content_type="application/zip", filename="Demo-1.0.0.zip")
+    app.state.skill_download_latest_reader = lambda namespace, slug, current_user_id: result
+    app.state.skill_download_version_reader = lambda namespace, slug, version, current_user_id: result
+    app.state.skill_download_tag_reader = lambda namespace, slug, tag, current_user_id: result
+
+    response = TestClient(app).get(path, headers={"X-Mock-User-Id": "docker-admin"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+def test_download_route_accepts_bearer_principal() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: session_principal("token-user") if token == "sk_valid" else None
+
+    def reader(namespace: str, slug: str, current_user_id: str | None) -> DownloadResult:
+        seen.append(current_user_id)
+        return DownloadResult(content=b"bundle", content_type="application/zip", filename="Demo-1.0.0.zip")
+
+    app.state.skill_download_latest_reader = reader
+
+    response = TestClient(app).get(
+        "/api/v1/skills/global/demo/download",
+        headers={"Authorization": "Bearer sk_valid"},
+    )
+
+    assert response.status_code == 200
+    assert seen == ["token-user"]
+
+
 def test_portal_latest_download_route_streams_bytes_and_headers() -> None:
     app = create_app()
     app.state.skill_download_latest_reader = lambda namespace, slug, current_user_id: DownloadResult(
@@ -241,7 +425,7 @@ def test_portal_latest_download_route_streams_bytes_and_headers() -> None:
         filename="Demo-1.0.0.zip",
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get("/api/v1/skills/global/demo/download")
 
     assert response.status_code == 200
@@ -259,7 +443,7 @@ def test_web_latest_download_alias_streams_bytes_and_headers() -> None:
         filename="Demo-1.0.0.zip",
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get("/api/web/skills/global/demo/download")
 
     assert response.status_code == 200
@@ -277,11 +461,8 @@ def test_portal_version_download_route_forwards_params_and_current_user() -> Non
 
     app.state.skill_download_version_reader = reader
 
-    client = TestClient(app)
-    response = client.get(
-        "/api/v1/skills/team-ai/demo/versions/1.1.0/download",
-        headers={"X-Mock-User-Id": " local-user "},
-    )
+    client = authenticated_client(app)
+    response = client.get("/api/v1/skills/team-ai/demo/versions/1.1.0/download")
 
     assert response.status_code == 200
     assert response.content == b"version"
@@ -298,11 +479,8 @@ def test_web_version_download_alias_forwards_params_and_current_user() -> None:
 
     app.state.skill_download_version_reader = reader
 
-    client = TestClient(app)
-    response = client.get(
-        "/api/web/skills/team-ai/demo/versions/1.1.0/download",
-        headers={"X-Mock-User-Id": " local-user "},
-    )
+    client = authenticated_client(app)
+    response = client.get("/api/web/skills/team-ai/demo/versions/1.1.0/download")
 
     assert response.status_code == 200
     assert response.content == b"web-version"
@@ -336,7 +514,7 @@ def test_portal_tag_download_route_streams_bytes() -> None:
         filename="Demo-1.0.0.zip",
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get("/api/v1/skills/global/demo/tags/stable/download")
 
     assert response.status_code == 200
@@ -351,7 +529,7 @@ def test_web_tag_download_alias_streams_bytes() -> None:
         filename="Demo-1.0.0.zip",
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get("/api/web/skills/global/demo/tags/stable/download")
 
     assert response.status_code == 200
@@ -385,7 +563,7 @@ def test_portal_download_route_maps_reader_error_to_http_status() -> None:
 
     app.state.skill_download_latest_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get("/api/v1/skills/global/demo/download")
 
     assert response.status_code == 404
@@ -455,6 +633,55 @@ class FakeDownloadEngine:
 
 
 @pytest.mark.anyio
+async def test_download_version_rejects_anonymous_team_public_before_package_side_effects(tmp_path) -> None:
+    bundle = tmp_path / "packages" / "7" / "42" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"published-bundle")
+    connection = FakeDownloadConnection(
+        [
+            FakeDbResult(
+                row={
+                    "id": 7,
+                    "owner_id": "owner-user",
+                    "namespace_id": 10,
+                    "namespace_type": "TEAM",
+                    "visibility": "PUBLIC",
+                    "latest_version_id": 42,
+                    "slug": "published-demo",
+                    "display_name": "Published Demo",
+                }
+            ),
+            FakeDbResult(
+                row={
+                    "id": 42,
+                    "version": "1.0.0",
+                    "status": "PUBLISHED",
+                    "download_ready": True,
+                    "yanked_at": None,
+                }
+            ),
+            FakeDbResult(rows=[]),
+            FakeDbResult(),
+            FakeDbResult(),
+        ]
+    )
+
+    with pytest.raises(SkillResolveError, match="error.skill.access.denied") as exc_info:
+        await read_skill_download_version(
+            FakeDownloadEngine(connection),
+            str(tmp_path),
+            "team-ai",
+            "published-demo",
+            "1.0.0",
+            None,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(connection.statements) == 1
+    assert not any("UPDATE skill SET download_count" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
 async def test_download_version_allows_private_skill_for_namespace_manager(tmp_path) -> None:
     file_path = tmp_path / "skills" / "7" / "42" / "SKILL.md"
     file_path.parent.mkdir(parents=True)
@@ -466,6 +693,9 @@ async def test_download_version_allows_private_skill_for_namespace_manager(tmp_p
                     "id": 7,
                     "owner_id": "owner-user",
                     "namespace_id": 10,
+                    "namespace_type": "TEAM",
+                    "visibility": "PRIVATE",
+                    "latest_version_id": 42,
                     "slug": "private-demo",
                     "display_name": "Private Demo",
                 }
@@ -504,6 +734,9 @@ async def test_published_download_records_local_download_event(tmp_path) -> None
                     "id": 7,
                     "owner_id": "owner-user",
                     "namespace_id": 10,
+                    "namespace_type": "TEAM",
+                    "visibility": "PUBLIC",
+                    "latest_version_id": 42,
                     "slug": "published-demo",
                     "display_name": "Published Demo",
                 }
@@ -563,6 +796,9 @@ async def test_preview_download_does_not_record_local_download_event(tmp_path) -
                     "id": 7,
                     "owner_id": "owner-user",
                     "namespace_id": 10,
+                    "namespace_type": "TEAM",
+                    "visibility": "PRIVATE",
+                    "latest_version_id": 42,
                     "slug": "preview-demo",
                     "display_name": "Preview Demo",
                 }
@@ -623,8 +859,8 @@ def test_download_routes_pass_local_download_event_source(monkeypatch, path: str
 
     monkeypatch.setattr(skills_api, "read_skill_download_latest", fake_read_skill_download_latest)
 
-    client = TestClient(app)
-    response = client.get(path, headers={"X-Mock-User-Id": " local-user "})
+    client = authenticated_client(app)
+    response = client.get(path)
 
     assert response.status_code == 200
     assert len(seen) == 1

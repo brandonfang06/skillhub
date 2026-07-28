@@ -23,11 +23,11 @@ Set the SkillHub registry address in your OpenClaw configuration:
 export CLAWHUB_REGISTRY=https://skillhub.your-company.com
 ```
 
-### 2. Authentication (Optional)
+### 2. Authentication (Required for Downloads)
 
-For **global namespace (@global) PUBLIC skills**, no login is required to download. Authentication is required for:
+Every skill package download requires authentication, including PUBLIC skills
+in the global namespace. Authentication is also required for:
 
-- Team namespace skills (regardless of visibility)
 - NAMESPACE_ONLY or PRIVATE skills
 - Write operations like publishing, starring, etc.
 
@@ -147,9 +147,8 @@ Notes:
 - Internally, compat responses should map from the unified lifecycle projection's `publishedVersion` rather than inferring an ad hoc "current version"
 
 \* Download endpoint authentication requirements:
-- **Global namespace (@global) PUBLIC skills**: No authentication required
-- **All team namespace skills**: Authentication required
-- **NAMESPACE_ONLY and PRIVATE skills**: Authentication required
+- **All skills and namespaces**: Authentication required
+- **NAMESPACE_ONLY and PRIVATE skills**: Additional namespace or owner authorization is required
 
 ## Skill Visibility Levels
 
@@ -157,8 +156,7 @@ SkillHub supports three visibility levels with the following download permission
 
 ### PUBLIC
 - ✅ Anyone can search and view
-- ✅ **Global namespace (@global)**: No login required to download
-- 🔒 **Team namespaces**: Authentication required to download
+- 🔒 Login required to download in every namespace
 - 📍 Suitable for organization-wide, publicly shareable skills
 
 ### NAMESPACE_ONLY
@@ -172,8 +170,8 @@ SkillHub supports three visibility levels with the following download permission
 - 📍 Suitable for skills under personal development
 
 **Important Notes**:
-- Global namespace (`@global`) PUBLIC skills support anonymous downloads for wide distribution within the organization
-- All team namespace skills (including PUBLIC) require authentication to ensure team boundary security
+- All package downloads require authentication, including global PUBLIC skills
+- Raw skill file content also requires authentication
 
 ## Canonical Slug Mapping
 
@@ -239,7 +237,7 @@ curl https://skillhub.your-company.com/api/v1/whoami \
   -H "Authorization: Bearer YOUR_NEW_TOKEN"
 ```
 
-**Tip**: Global namespace (@global) PUBLIC skills can be downloaded anonymously without authentication.
+**Tip**: Log in before installing or downloading any skill package.
 
 ### Q: How do I see all skills I have access to?
 

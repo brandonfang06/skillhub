@@ -74,6 +74,11 @@ async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
     return str(user["userId"])
 
 
+async def _require_content_user_id(request: Request, authorization: str | None) -> str:
+    user = await resolve_current_user_or_401(request, None, authorization)
+    return str(user["userId"])
+
+
 def _validate_review_file_path(path: str | None) -> str:
     if path is None or path.strip() == "" or ".." in path or path.startswith("/"):
         raise HTTPException(status_code=400)
@@ -342,9 +347,9 @@ async def get_review_detail(
 async def get_review_skill_detail(
     request: Request,
     review_task_id: int,
-    mock_user_id: str | None,
+    authorization: str | None,
 ) -> dict[str, Any]:
-    user_id = await _require_user_id(request, mock_user_id)
+    user_id = await _require_content_user_id(request, authorization)
     reader = getattr(request.app.state, "review_skill_detail_reader", None)
     try:
         if reader is not None:
@@ -372,9 +377,9 @@ async def get_review_file_content(
     request: Request,
     review_task_id: int,
     file_path: str | None,
-    mock_user_id: str | None,
+    authorization: str | None,
 ) -> Response:
-    user_id = await _require_user_id(request, mock_user_id)
+    user_id = await _require_content_user_id(request, authorization)
     normalized_path = _validate_review_file_path(file_path)
     reader = getattr(request.app.state, "review_file_reader", None)
     try:
@@ -415,9 +420,9 @@ def _build_review_download_response(result: ReviewDownloadResult) -> Response:
 async def get_review_download(
     request: Request,
     review_task_id: int,
-    mock_user_id: str | None,
+    authorization: str | None,
 ) -> Response:
-    user_id = await _require_user_id(request, mock_user_id)
+    user_id = await _require_content_user_id(request, authorization)
     reader = getattr(request.app.state, "review_download_reader", None)
     try:
         if reader is not None:
@@ -483,9 +488,9 @@ async def list_my_submissions_route(
 async def get_review_skill_detail_route(
     request: Request,
     review_task_id: int,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    return await get_review_skill_detail(request, review_task_id, mock_user_id)
+    return await get_review_skill_detail(request, review_task_id, authorization)
 
 
 @router.get("/api/v1/reviews/{review_task_id}/file")
@@ -494,9 +499,9 @@ async def get_review_file_route(
     request: Request,
     review_task_id: int,
     path: str | None = Query(default=None),
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
-    return await get_review_file_content(request, review_task_id, path, mock_user_id)
+    return await get_review_file_content(request, review_task_id, path, authorization)
 
 
 @router.get("/api/v1/reviews/{review_task_id}/download")
@@ -504,9 +509,9 @@ async def get_review_file_route(
 async def get_review_download_route(
     request: Request,
     review_task_id: int,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
-    return await get_review_download(request, review_task_id, mock_user_id)
+    return await get_review_download(request, review_task_id, authorization)
 
 
 @router.get("/api/v1/reviews/{review_task_id}")
