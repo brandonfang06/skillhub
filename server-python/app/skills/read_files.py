@@ -122,7 +122,9 @@ def read_bundle_or_build_fallback_zip(
 
 def assert_download_access(version_row: dict[str, Any], can_manage: bool) -> None:
     status = str(version_row["status"])
-    if status in {"PUBLISHED", "UPLOADED", "PENDING_REVIEW"}:
+    if status == "PUBLISHED":
+        return
+    if can_manage and status in {"UPLOADED", "PENDING_REVIEW"}:
         return
     raise SkillResolveError("error.skill.version.notDownloadable")
 

@@ -36,10 +36,10 @@ def mock_user(user_id: str) -> dict[str, object]:
     }
 
 
-def test_cli_mock_user_can_search_resolve_download_validate_and_publish() -> None:
+def test_cli_bearer_user_can_search_resolve_download_validate_and_publish() -> None:
     app = create_app()
     flow: list[tuple[object, ...]] = []
-    app.state.auth_me_reader = mock_user
+    app.state.auth_bearer_reader = lambda token: mock_user("cli-user") if token == "sk_valid" else None
     app.state.settings = SimpleNamespace(
         storage_base_path="C:/tmp/skillhub-cli-flow-test-storage",
         security_scanner_enabled=False,
@@ -152,7 +152,7 @@ def test_cli_mock_user_can_search_resolve_download_validate_and_publish() -> Non
     app.state.publish_write_reader = write_reader
 
     client = TestClient(app)
-    headers = {"X-Mock-User-Id": "cli-user"}
+    headers = {"Authorization": "Bearer sk_valid"}
 
     search = client.get("/api/cli/v1/skills/search?q=cli&limit=10", headers=headers)
     assert search.status_code == 200

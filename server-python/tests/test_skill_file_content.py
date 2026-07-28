@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,28 @@ from app.api import skills
 from app.api.skills import SkillResolveError, read_local_storage_bytes
 from app.main import create_app
 from app.skills import read_repository as skill_repository
+
+
+def session_principal(user_id: str = "local-user") -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+
+
+def authenticated_client(app: Any, user_id: str = "local-user") -> TestClient:
+    app.state.local_auth_login = lambda payload: session_principal(user_id)
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/auth/local/login",
+        json={"username": user_id, "password": "Abcd123!"},
+    )
+    assert response.status_code == 200
+    return client
 
 
 class _FakeMappings:
@@ -76,6 +99,30 @@ class _TagFileContentConnection:
         raise AssertionError(f"unexpected SQL: {sql}")
 
 
+class _AnonymousPublicFileContentConnection:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+
+    async def execute(self, statement: object, params: dict[str, object] | None = None) -> _FakeResult:
+        sql = str(statement)
+        self.statements.append(sql)
+        if "FROM skill s" in sql:
+            return _FakeResult(
+                {
+                    "id": 11,
+                    "owner_id": "owner-1",
+                    "namespace_id": 7,
+                    "visibility": "PUBLIC",
+                    "latest_version_id": 101,
+                }
+            )
+        if "FROM skill_version" in sql:
+            return _FakeResult({"id": 101, "status": "PUBLISHED"})
+        if "FROM skill_file" in sql:
+            return _FakeResult({"file_path": "SKILL.md", "storage_key": "objects/skill"})
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+
 class _FakeConnectionContext:
     def __init__(self, connection: object) -> None:
         self.connection = connection
@@ -101,7 +148,7 @@ def test_skill_version_file_content_route_returns_raw_bytes() -> None:
         lambda namespace, slug, version, file_path, current_user_id: b"version bytes"
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get(
         "/api/v1/skills/global/demo/versions/1.0.0/file",
         params={"path": "SKILL.md"},
@@ -118,7 +165,7 @@ def test_skill_version_file_content_web_alias_returns_raw_bytes() -> None:
         lambda namespace, slug, version, file_path, current_user_id: b"web version bytes"
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get(
         "/api/web/skills/global/demo/versions/1.0.0/file",
         params={"path": "SKILL.md"},
@@ -135,7 +182,7 @@ def test_skill_tag_file_content_route_returns_raw_bytes() -> None:
         lambda namespace, slug, tag, file_path, current_user_id: b"tag bytes"
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get(
         "/api/v1/skills/global/demo/tags/stable/file",
         params={"path": "README.md"},
@@ -152,7 +199,7 @@ def test_skill_tag_file_content_web_alias_returns_raw_bytes() -> None:
         lambda namespace, slug, tag, file_path, current_user_id: b"web tag bytes"
     )
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get(
         "/api/web/skills/global/demo/tags/stable/file",
         params={"path": "README.md"},
@@ -179,11 +226,10 @@ def test_skill_version_file_content_route_forwards_params_and_current_user() -> 
 
     app.state.skill_version_file_content_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app, "owner-1")
     response = client.get(
         "/api/v1/skills/team/demo/versions/1.1.0/file",
         params={"path": "src/app.py"},
-        headers={"X-Mock-User-Id": " owner-1 "},
     )
 
     assert response.status_code == 200
@@ -206,11 +252,10 @@ def test_skill_version_file_content_web_alias_forwards_params_and_current_user()
 
     app.state.skill_version_file_content_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app, "owner-1")
     response = client.get(
         "/api/web/skills/team/demo/versions/1.1.0/file",
         params={"path": "src/app.py"},
-        headers={"X-Mock-User-Id": " owner-1 "},
     )
 
     assert response.status_code == 200
@@ -268,11 +313,10 @@ def test_skill_tag_file_content_route_forwards_params_and_current_user() -> None
 
     app.state.skill_tag_file_content_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app, "local-admin")
     response = client.get(
         "/api/v1/skills/team/demo/tags/stable/file",
         params={"path": "docs/guide.md"},
-        headers={"X-Mock-User-Id": " local-admin "},
     )
 
     assert response.status_code == 200
@@ -295,18 +339,103 @@ def test_skill_tag_file_content_web_alias_forwards_params_and_current_user() -> 
 
     app.state.skill_tag_file_content_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app, "local-admin")
     response = client.get(
         "/api/web/skills/team/demo/tags/stable/file",
         params={"path": "docs/guide.md"},
-        headers={"X-Mock-User-Id": " local-admin "},
     )
 
     assert response.status_code == 200
     assert seen == [("team", "demo", "stable", "docs/guide.md", "local-admin")]
 
 
-def test_skill_file_content_route_forwards_blank_current_user_as_none() -> None:
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/skills/global/demo/versions/1.0.0/file?path=SKILL.md",
+        "/api/web/skills/global/demo/versions/1.0.0/file?path=SKILL.md",
+        "/api/v1/skills/global/demo/tags/stable/file?path=SKILL.md",
+        "/api/web/skills/global/demo/tags/stable/file?path=SKILL.md",
+    ],
+)
+def test_skill_file_content_routes_require_authentication(path: str) -> None:
+    app = create_app()
+    app.state.skill_version_file_content_reader = (
+        lambda namespace, slug, version, file_path, current_user_id: b"version bytes"
+    )
+    app.state.skill_tag_file_content_reader = (
+        lambda namespace, slug, tag, file_path, current_user_id: b"tag bytes"
+    )
+
+    response = TestClient(app).get(path)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/skills/global/demo/versions/1.0.0/file?path=SKILL.md",
+        "/api/web/skills/global/demo/versions/1.0.0/file?path=SKILL.md",
+        "/api/v1/skills/global/demo/tags/stable/file?path=SKILL.md",
+        "/api/web/skills/global/demo/tags/stable/file?path=SKILL.md",
+    ],
+)
+def test_skill_file_content_routes_reject_mock_header_without_session(path: str) -> None:
+    app = create_app()
+    app.state.skill_version_file_content_reader = (
+        lambda namespace, slug, version, file_path, current_user_id: b"version bytes"
+    )
+    app.state.skill_tag_file_content_reader = (
+        lambda namespace, slug, tag, file_path, current_user_id: b"tag bytes"
+    )
+
+    response = TestClient(app).get(path, headers={"X-Mock-User-Id": "docker-admin"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+def test_skill_tag_file_content_route_accepts_bearer_principal() -> None:
+    seen: list[str | None] = []
+    app = create_app()
+    app.state.auth_bearer_reader = lambda token: (
+        {
+            "userId": "token-user",
+            "displayName": "Token User",
+            "email": "token@example.test",
+            "avatarUrl": "",
+            "oauthProvider": "api_token",
+            "platformRoles": ["USER"],
+        }
+        if token == "sk_valid"
+        else None
+    )
+
+    def reader(
+        namespace: str,
+        slug: str,
+        tag: str,
+        file_path: str,
+        current_user_id: str | None,
+    ) -> bytes:
+        seen.append(current_user_id)
+        return b"tag bytes"
+
+    app.state.skill_tag_file_content_reader = reader
+
+    response = TestClient(app).get(
+        "/api/v1/skills/global/demo/tags/stable/file",
+        params={"path": "SKILL.md"},
+        headers={"Authorization": "Bearer sk_valid"},
+    )
+
+    assert response.status_code == 200
+    assert seen == ["token-user"]
+
+
+def test_skill_file_content_route_rejects_blank_current_user() -> None:
     seen: list[str | None] = []
     app = create_app()
 
@@ -329,8 +458,9 @@ def test_skill_file_content_route_forwards_blank_current_user_as_none() -> None:
         headers={"X-Mock-User-Id": "   "},
     )
 
-    assert response.status_code == 200
-    assert seen == [None]
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+    assert seen == []
 
 
 def test_skill_file_content_route_maps_reader_error_to_bad_request() -> None:
@@ -347,7 +477,7 @@ def test_skill_file_content_route_maps_reader_error_to_bad_request() -> None:
 
     app.state.skill_version_file_content_reader = reader
 
-    client = TestClient(app)
+    client = authenticated_client(app)
     response = client.get(
         "/api/v1/skills/team/demo/versions/1.0.0/file",
         params={"path": "missing.md"},
@@ -444,3 +574,49 @@ def test_read_skill_tag_file_content_does_not_hardcode_public_skill_visibility(m
     )
 
     assert result == b"tag"
+
+
+def test_read_skill_version_file_content_rejects_anonymous_public_before_file_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = _AnonymousPublicFileContentConnection()
+    monkeypatch.setattr(skill_repository, "read_file_content_from_row", lambda storage_base_path, file_row: b"leak")
+
+    with pytest.raises(SkillResolveError, match="error.skill.access.denied") as exc_info:
+        asyncio.run(
+            skills.read_skill_version_file_content(
+                _FakeEngine(connection),
+                "unused",
+                "global",
+                "demo",
+                "1.0.0",
+                "SKILL.md",
+                None,
+            )
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(connection.statements) == 1
+
+
+def test_read_skill_tag_file_content_rejects_anonymous_public_before_file_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = _AnonymousPublicFileContentConnection()
+    monkeypatch.setattr(skill_repository, "read_file_content_from_row", lambda storage_base_path, file_row: b"leak")
+
+    with pytest.raises(SkillResolveError, match="error.skill.access.denied") as exc_info:
+        asyncio.run(
+            skills.read_skill_tag_file_content(
+                _FakeEngine(connection),
+                "unused",
+                "global",
+                "demo",
+                "latest",
+                "SKILL.md",
+                None,
+            )
+        )
+
+    assert exc_info.value.status_code == 403
+    assert len(connection.statements) == 1
