@@ -109,6 +109,30 @@ async function changeVisibility(page: Page, label: string): Promise<void> {
   await expect(page.getByText('Visibility updated')).toBeVisible()
 }
 
+async function expectVisibilityControlsInsidePanel(page: Page): Promise<void> {
+  const panel = page.getByTestId('skill-visibility-panel')
+  const select = page.getByRole('combobox', { name: 'Skill visibility' })
+  const saveButton = page.getByRole('button', { name: /Save visibility|Saving/ })
+  const [panelBox, selectBox, buttonBox] = await Promise.all([
+    panel.boundingBox(),
+    select.boundingBox(),
+    saveButton.boundingBox(),
+  ])
+
+  expect(panelBox).not.toBeNull()
+  expect(selectBox).not.toBeNull()
+  expect(buttonBox).not.toBeNull()
+
+  if (!panelBox || !selectBox || !buttonBox) {
+    return
+  }
+
+  for (const controlBox of [selectBox, buttonBox]) {
+    expect(controlBox.x).toBeGreaterThanOrEqual(panelBox.x)
+    expect(controlBox.x + controlBox.width).toBeLessThanOrEqual(panelBox.x + panelBox.width)
+  }
+}
+
 test.describe('Rejected publish and lifecycle visibility (Real API)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     await setEnglishLocale(page)
@@ -208,6 +232,7 @@ test.describe('Rejected publish and lifecycle visibility (Real API)', () => {
       await page.goto(`/space/${namespace.slug}/${skill.slug}`)
       await expect(page.getByRole('heading', { name: skillName }).first()).toBeVisible()
       await expect(page.getByRole('combobox', { name: 'Skill visibility' })).toContainText('Public')
+      await expectVisibilityControlsInsidePanel(page)
       await changeVisibility(page, 'Private')
       await expect(page.getByRole('combobox', { name: 'Skill visibility' })).toContainText('Private')
 
@@ -227,6 +252,7 @@ test.describe('Rejected publish and lifecycle visibility (Real API)', () => {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.reload()
       await expect(page.getByRole('combobox', { name: 'Skill visibility' })).toContainText('Private')
+      await expectVisibilityControlsInsidePanel(page)
       await changeVisibility(page, 'Namespace Only')
       await expect(page.getByRole('combobox', { name: 'Skill visibility' })).toContainText('Namespace Only')
 

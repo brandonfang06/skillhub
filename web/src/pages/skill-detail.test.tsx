@@ -477,6 +477,15 @@ describe('SkillDetailPage', () => {
     expect(screen.queryByLabelText('skillDetail.visibilityLabel')).toBeNull()
   })
 
+  it('keeps visibility controls stacked within the narrow lifecycle sidebar', () => {
+    render(<SkillDetailPage />)
+
+    const controls = screen.getByTestId('skill-visibility-controls')
+    expect(controls.className).toContain('grid-cols-1')
+    expect(controls.className).not.toContain('sm:flex-row')
+    expect(screen.getByText('skillDetail.saveVisibility').closest('button')?.className).toContain('w-full')
+  })
+
   it('updates visibility without triggering publish or review transitions', async () => {
     render(<SkillDetailPage />)
 

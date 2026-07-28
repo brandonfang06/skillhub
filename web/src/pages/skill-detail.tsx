@@ -1382,7 +1382,10 @@ export function SkillDetailPage() {
                 ? t('skillDetail.archivedPublishHint')
                 : t('skillDetail.lifecycleHint')}
             </p>
-            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3 space-y-3">
+            <div
+              data-testid="skill-visibility-panel"
+              className="rounded-xl border border-border/60 bg-secondary/20 p-3 space-y-3"
+            >
               <div>
                 <div className="text-sm font-semibold text-foreground">
                   {t('skillDetail.visibilityLabel')}
@@ -1391,7 +1394,10 @@ export function SkillDetailPage() {
                   {t('skillDetail.visibilityHint')}
                 </p>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div
+                data-testid="skill-visibility-controls"
+                className="grid min-w-0 grid-cols-1 gap-2"
+              >
                 <Select
                   value={visibilityDraft}
                   onValueChange={(value) => {
@@ -1400,7 +1406,10 @@ export function SkillDetailPage() {
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('skillDetail.visibilityLabel')} className="flex-1">
+                  <SelectTrigger
+                    aria-label={t('skillDetail.visibilityLabel')}
+                    className="min-w-0 max-w-full"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1411,6 +1420,7 @@ export function SkillDetailPage() {
                 </Select>
                 <Button
                   variant="outline"
+                  className="h-auto min-h-10 w-full min-w-0 whitespace-normal py-2"
                   onClick={handleUpdateVisibility}
                   disabled={updateVisibilityMutation.isPending || visibilityDraft === skill.visibility}
                 >
