@@ -113,8 +113,43 @@ describe('install-command', () => {
     expect(getCliRegistryUrl()).toBe('http://app.example.com')
   })
 
+  it('preserves and normalizes a valid registry path prefix', () => {
+    setMockWindow({
+      appBaseUrl: 'https://app.example.com',
+      cliRegistryUrl: ' https://app.example.com/registry/ ',
+    })
+
+    expect(getCliRegistryUrl()).toBe('https://app.example.com/registry')
+  })
+
+  it('returns the parsed registry URL with unsafe path characters encoded', () => {
+    setMockWindow({
+      appBaseUrl: 'https://app.example.com',
+      cliRegistryUrl: 'https://app.example.com/team registry/',
+    })
+
+    expect(getCliRegistryUrl()).toBe('https://app.example.com/team%20registry')
+  })
+
   it.each(['', 'not-a-url', 'ftp://app.example.com'])(
     'falls back to the app base URL for invalid CLI registry URL %j',
+    (cliRegistryUrl) => {
+      setMockWindow({
+        appBaseUrl: 'https://app.example.com',
+        cliRegistryUrl,
+      })
+
+      expect(getCliRegistryUrl()).toBe('https://app.example.com')
+    },
+  )
+
+  it.each([
+    'https://user@app.example.com/registry',
+    'https://:secret@app.example.com/registry',
+    'https://app.example.com/registry?channel=internal',
+    'https://app.example.com/registry#install',
+  ])(
+    'falls back to the app base URL for unsupported CLI registry URL %j',
     (cliRegistryUrl) => {
       setMockWindow({
         appBaseUrl: 'https://app.example.com',

@@ -42,10 +42,16 @@ export function getCliRegistryUrl(): string {
 
   try {
     const parsedUrl = new URL(configuredUrl)
-    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    if (
+      (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:')
+      || parsedUrl.username
+      || parsedUrl.password
+      || parsedUrl.search
+      || parsedUrl.hash
+    ) {
       return fallbackUrl
     }
-    return configuredUrl.replace(/\/+$/, '')
+    return parsedUrl.toString().replace(/\/+$/, '')
   } catch {
     return fallbackUrl
   }
