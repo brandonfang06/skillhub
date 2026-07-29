@@ -159,8 +159,9 @@ https://skills.example.com/login/oauth2/code/keycloak
 | `skillhub-config/cli-registry-url` | `SKILLHUB_WEB_CLI_REGISTRY_URL` | 否 | `http://skills.example.com` | frontend-only install command override，只調整 Skill 頁面複製的 CLI 指令。 |
 
 請填完整的 absolute HTTP/HTTPS URL，且不要加 trailing slash。留空時會
-fallback 到 `skillhub-config/public-base-url` / `SKILLHUB_PUBLIC_BASE_URL`；
-瀏覽器 API 與 OAuth 仍走 HTTPS public base。HTTP 會讓 CLI Bearer token
+fallback 到既有 frontend app URL；目前 K8s manifests 的該值是 browser
+origin。`public-base-url` 仍控制 backend OAuth callback 與 public-link
+行為；browser API/OAuth traffic 不受影響。HTTP 會讓 CLI Bearer token
 在沒有 TLS 的情況下以明文傳輸。CLI credential 與 installed-skill
 inventory 依 exact registry URL 分開，因此 HTTP 與 HTTPS 是不同 scope；
 切換到 HTTP 後必須對該 HTTP registry 執行 `skillhub login --registry

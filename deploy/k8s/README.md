@@ -138,13 +138,15 @@ Edit these common ConfigMap values:
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
 
 Set `cli-registry-url` to a full absolute HTTP or HTTPS URL without a trailing
-slash. It changes only the copied CLI install command; browser API and OAuth
-traffic still use `public-base-url`. When blank, it falls back to
-`SKILLHUB_PUBLIC_BASE_URL`. HTTP sends the CLI Bearer token in plaintext without
-TLS. CLI credentials and installed-skill inventory are scoped by the exact
-registry URL, so HTTP and HTTPS are separate: run `skillhub login --registry
-http://host --token <token>` or set `SKILLHUB_TOKEN` after switching. The HTTP
-endpoint must not redirect the CLI back to HTTPS.
+slash. It changes only the copied CLI install command. When blank, it falls back
+to the existing frontend app URL; in the current K8s manifests that is browser
+origin. `public-base-url` still controls backend OAuth callbacks and generated
+public links, while browser API and OAuth traffic are unchanged. HTTP sends the
+CLI Bearer token in plaintext without TLS. CLI credentials and installed-skill
+inventory are scoped by the exact registry URL, so HTTP and HTTPS are separate:
+run `skillhub login --registry http://host --token <token>` or set
+`SKILLHUB_TOKEN` after switching. The HTTP endpoint must not redirect the CLI
+back to HTTPS.
 
 For the full environment variable manual, see
 [environment-variables.zh.md](environment-variables.zh.md).

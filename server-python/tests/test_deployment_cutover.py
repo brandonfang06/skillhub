@@ -152,6 +152,7 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
         "SKILLHUB_WEB_CLI_REGISTRY_URL: ${SKILLHUB_WEB_CLI_REGISTRY_URL:-}"
         in web_service
     )
+    assert "SKILLHUB_PUBLIC_BASE_URL" in web_service
     assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in server_service
     assert 'cliRegistryUrl: "${SKILLHUB_WEB_CLI_REGISTRY_URL}"' in runtime_template
     assert ': "${SKILLHUB_WEB_CLI_REGISTRY_URL:=}"' in entrypoint
@@ -164,6 +165,7 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
     assert 'cli-registry-url: ""' in plain_config
     for frontend in (base_frontend, plain_frontend):
         assert cli_registry_env in frontend
+        assert "SKILLHUB_PUBLIC_BASE_URL" not in frontend
     assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in base_backend
     assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in plain_backend
 
@@ -172,19 +174,58 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
     assert "SKILLHUB_PUBLIC_BASE_URL" in release_compose
     assert "SKILLHUB_PUBLIC_BASE_URL" in runtime_template
 
-    for document in (readme, env_manual):
-        normalized_document = " ".join(document.split())
-        assert "SKILLHUB_WEB_CLI_REGISTRY_URL" in normalized_document
-        assert "cli-registry-url" in normalized_document
-        assert "SKILLHUB_PUBLIC_BASE_URL" in normalized_document
-        assert "public-base-url" in normalized_document
-        assert "HTTP" in normalized_document
-        assert "HTTPS" in normalized_document
-        assert "Bearer token" in normalized_document
-        assert "exact registry URL" in normalized_document
-        assert "SKILLHUB_TOKEN" in normalized_document
-        assert "login" in normalized_document.lower()
-        assert "redirect" in normalized_document.lower()
+    normalized_readme = " ".join(readme.split())
+    assert (
+        "Optional frontend-only registry override used in copied CLI install commands."
+        in normalized_readme
+    )
+    assert "full absolute HTTP or HTTPS URL without a trailing slash" in normalized_readme
+    assert (
+        "When blank, it falls back to the existing frontend app URL; in the current "
+        "K8s manifests that is browser origin."
+    ) in normalized_readme
+    assert (
+        "`public-base-url` still controls backend OAuth callbacks and generated public "
+        "links, while browser API and OAuth traffic are unchanged."
+    ) in normalized_readme
+    assert "HTTP sends the CLI Bearer token in plaintext without TLS." in normalized_readme
+    assert (
+        "CLI credentials and installed-skill inventory are scoped by the exact registry URL"
+        in normalized_readme
+    )
+    assert "skillhub login --registry http://host --token <token>" in normalized_readme
+    assert "SKILLHUB_TOKEN" in normalized_readme
+    assert "HTTP endpoint must not redirect the CLI back to HTTPS." in normalized_readme
+
+    normalized_manual = " ".join(env_manual.split())
+    assert (
+        "frontend-only install command override，只調整 Skill 頁面複製的 CLI 指令。"
+        in normalized_manual
+    )
+    assert "完整的 absolute HTTP/HTTPS URL，且不要加 trailing slash" in normalized_manual
+    assert (
+        "留空時會 fallback 到既有 frontend app URL；目前 K8s manifests 的該值是 "
+        "browser origin。"
+    ) in normalized_manual
+    assert (
+        "`public-base-url` 仍控制 backend OAuth callback 與 public-link 行為；"
+        "browser API/OAuth traffic 不受影響。"
+    ) in normalized_manual
+    assert (
+        "HTTP 會讓 CLI Bearer token 在沒有 TLS 的情況下以明文傳輸。"
+        in normalized_manual
+    )
+    assert (
+        "CLI credential 與 installed-skill inventory 依 exact registry URL 分開"
+        in normalized_manual
+    )
+    assert "skillhub login --registry http://host --token <token>" in normalized_manual
+    assert "SKILLHUB_TOKEN" in normalized_manual
+    assert "HTTP endpoint 不可 redirect CLI 回 HTTPS。" in normalized_manual
+
+    assert "# Blank falls back to SKILLHUB_PUBLIC_BASE_URL." in release_env
+    for document in (readme, env_manual, release_env):
+        assert "NODE_TLS_REJECT_UNAUTHORIZED=0" not in document
 
 
 def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:
