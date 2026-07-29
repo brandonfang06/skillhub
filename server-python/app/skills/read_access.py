@@ -70,9 +70,27 @@ def assert_skill_row_access(
         raise SkillResolveError("error.skill.access.denied", status_code=403)
 
 
+def assert_skill_content_access(
+    row: dict[str, Any],
+    current_user_id: str | None,
+    namespace_role: str | None,
+    *,
+    platform_read_override: bool = False,
+) -> None:
+    if current_user_id is None or current_user_id.strip() == "":
+        raise SkillResolveError("error.skill.access.denied", status_code=403)
+    assert_skill_row_access(
+        row,
+        current_user_id,
+        namespace_role,
+        platform_read_override=platform_read_override,
+    )
+
+
 __all__ = [
     "LIFECYCLE_LIST_PRIORITY",
     "LIFECYCLE_MANAGER_STATUSES",
+    "assert_skill_content_access",
     "assert_skill_row_access",
     "can_access_skill_row",
     "can_manage_lifecycle_for_row",

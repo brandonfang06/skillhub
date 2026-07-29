@@ -15,6 +15,24 @@ from app.review import query as review_query_module
 from app.review.query import ReviewDownloadResult, read_review_download_package
 
 
+def authenticated_client(app: Any, user_id: str = "team-admin") -> TestClient:
+    app.state.local_auth_login = lambda payload: {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": "local",
+        "platformRoles": ["USER"],
+    }
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/auth/local/login",
+        json={"username": user_id, "password": "Abcd123!"},
+    )
+    assert response.status_code == 200
+    return client
+
+
 @dataclass
 class FakeResult:
     row: dict[str, Any] | None = None
@@ -249,12 +267,8 @@ def test_review_download_route_returns_attachment_response() -> None:
     app.state.review_download_reader = reader
     app.state.db_engine = object()
     app.state.settings = SimpleNamespace(storage_base_path="C:/tmp/review-download-test-storage")
-    client = TestClient(app)
-
-    response = client.get(
-        "/api/web/reviews/801/download",
-        headers={"X-Mock-User-Id": "team-admin"},
-    )
+    client = authenticated_client(app)
+    response = client.get("/api/web/reviews/801/download")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
@@ -264,10 +278,37 @@ def test_review_download_route_returns_attachment_response() -> None:
     assert seen == [(801, "team-admin", "C:/tmp/review-download-test-storage")]
 
 
-def test_review_download_route_requires_mock_user() -> None:
+def test_review_download_route_requires_authentication() -> None:
     app = create_app()
     client = TestClient(app)
 
     response = client.get("/api/v1/reviews/801/download")
 
     assert response.status_code == 401
+
+
+def test_review_download_route_rejects_mock_header_without_session() -> None:
+    app = create_app()
+    seen: list[str] = []
+
+    async def reader(
+        engine: object,
+        storage_base_path: str,
+        *,
+        review_task_id: int,
+        user_id: str,
+    ) -> ReviewDownloadResult:
+        seen.append(user_id)
+        return ReviewDownloadResult(content=b"zip", content_type="application/zip", filename="Review.zip")
+
+    app.state.review_download_reader = reader
+    app.state.settings = SimpleNamespace(storage_base_path="C:/tmp/unused")
+
+    response = TestClient(app).get(
+        "/api/v1/reviews/801/download",
+        headers={"X-Mock-User-Id": "docker-admin"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+    assert seen == []

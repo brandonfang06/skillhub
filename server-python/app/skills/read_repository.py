@@ -32,6 +32,7 @@ from app.skills.read_compat import (
 from app.skills.read_access import (
     LIFECYCLE_LIST_PRIORITY,
     LIFECYCLE_MANAGER_STATUSES,
+    assert_skill_content_access,
     assert_skill_row_access,
     can_access_skill_row,
     can_manage_lifecycle_for_row,
@@ -1217,7 +1218,7 @@ async def read_skill_version_compare(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_content_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_rows = (
             await connection.execute(
@@ -1701,7 +1702,7 @@ async def read_skill_version_file_content(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(
+        assert_skill_content_access(
             dict(skill_row),
             current_user_id,
             namespace_role,
@@ -1782,7 +1783,7 @@ async def read_skill_tag_file_content(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
-        assert_skill_row_access(dict(skill_row), current_user_id, namespace_role)
+        assert_skill_content_access(dict(skill_row), current_user_id, namespace_role)
         skill_id = skill_row["id"]
         if tag_name.lower() == "latest":
             version_id = skill_row["latest_version_id"]
@@ -1858,7 +1859,14 @@ async def read_skill_download_version(
             await connection.execute(
                 text(
                     """
-                    SELECT s.id, s.owner_id, s.namespace_id, s.slug, s.display_name
+                    SELECT s.id,
+                           s.owner_id,
+                           s.namespace_id,
+                           s.slug,
+                           s.display_name,
+                           s.visibility,
+                           s.latest_version_id,
+                           n.type AS namespace_type
                     FROM skill s
                     JOIN namespace n ON n.id = s.namespace_id
                     WHERE n.slug = :namespace
@@ -1879,6 +1887,7 @@ async def read_skill_download_version(
             raise SkillResolveError("error.skill.notFound")
 
         namespace_role = await read_namespace_role(connection, int(skill_row["namespace_id"]), current_user_id)
+        assert_skill_content_access(dict(skill_row), current_user_id, namespace_role)
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         version_row = (
             await connection.execute(

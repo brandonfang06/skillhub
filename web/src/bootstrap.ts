@@ -5,6 +5,10 @@
  * that config or a safe fallback object before importing the main entry.
  */
 import './legacy-polyfills'
+import { installPreloadErrorRecovery } from './app/preload-error-recovery'
+
+installPreloadErrorRecovery()
+
 async function loadRuntimeConfig() {
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')

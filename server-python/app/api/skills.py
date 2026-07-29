@@ -6,6 +6,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
+from app.auth.context import resolve_current_user_or_401
 from app.core.response import ok
 from app.download_analytics.repository import DownloadEventContext, DownloadSource
 from app.skills.read_repository import *  # noqa: F403
@@ -46,6 +47,14 @@ def _download_event_context(request: Request, user_id: str | None) -> DownloadEv
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+
+
+async def _required_skill_content_identity(
+    request: Request,
+    authorization: str | None,
+) -> tuple[str, bool]:
+    user = await resolve_current_user_or_401(request, None, authorization)
+    return str(user["userId"]), platform_skill_read_override(user)  # noqa: F405
 
 
 async def resolve_clawhub_download_coordinate(
@@ -97,8 +106,9 @@ async def download_clawhub_skill_by_query(
     slug: str,
     version: str | None = "latest",
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> RedirectResponse:
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
     try:
         namespace, skill_slug = await resolve_clawhub_download_coordinate(request, slug, current_user_id)
     except SkillResolveError as exc:
@@ -438,7 +448,11 @@ async def get_skill_detail(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_detail_reader", None)
-    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
+    current_user_id, platform_read_override = await _skill_read_identity(
+        request,
+        mock_user_id,
+        authorization,
+    )
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, current_user_id))
@@ -494,10 +508,10 @@ async def compare_skill_versions(
     request: Request,
     from_version: str = Query(alias="from"),
     to_version: str = Query(alias="to"),
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
     reader = getattr(request.app.state, "skill_version_compare_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             data = await _resolve_reader_result(reader(namespace, slug, from_version, to_version, current_user_id))
@@ -751,11 +765,13 @@ async def get_skill_version_file_content(
     version: str,
     request: Request,
     path: str = Query(...),
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_version_file_content_reader", None)
-    current_user_id, platform_read_override = await _skill_read_identity(request, mock_user_id, authorization)
+    current_user_id, platform_read_override = await _required_skill_content_identity(
+        request,
+        authorization,
+    )
     try:
         if reader is not None:
             content = await _resolve_reader_result(reader(namespace, slug, version, path, current_user_id))
@@ -783,10 +799,10 @@ async def get_skill_tag_file_content(
     tagName: str,
     request: Request,
     path: str = Query(...),
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_tag_file_content_reader", None)
-    current_user_id = normalized_current_user_id(mock_user_id)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             content = await _resolve_reader_result(reader(namespace, slug, tagName, path, current_user_id))
@@ -811,10 +827,10 @@ async def download_skill_latest(
     namespace: str,
     slug: str,
     request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_latest_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, current_user_id))
@@ -839,10 +855,10 @@ async def download_skill_version(
     slug: str,
     version: str,
     request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_version_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -866,11 +882,10 @@ async def download_cli_skill_latest(
     namespace: str,
     slug: str,
     request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_latest_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, current_user_id))
@@ -895,11 +910,10 @@ async def download_cli_skill_version(
     slug: str,
     version: str,
     request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_version_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, version, current_user_id))
@@ -926,10 +940,10 @@ async def download_skill_tag(
     slug: str,
     tagName: str,
     request: Request,
-    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     reader = getattr(request.app.state, "skill_download_tag_reader", None)
-    current_user_id = await optional_current_user_id(request, mock_user_id)
+    current_user_id, _ = await _required_skill_content_identity(request, authorization)
     try:
         if reader is not None:
             result = await _resolve_reader_result(reader(namespace, slug, tagName, current_user_id))

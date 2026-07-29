@@ -1,0 +1,22 @@
+name: scanner-adapter
+
+services:
+  skill-scanner:
+    image: ${SKILL_SCANNER_IMAGE:-ghcr.io/iflytek/skillhub-scanner:latest}
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${SCANNER_BIND_ADDRESS:-127.0.0.1}:${SCANNER_PORT:-8000}:8000"
+    environment:
+      SKILL_SCANNER_LLM_API_KEY: ${SKILL_SCANNER_LLM_API_KEY:-}
+      SKILL_SCANNER_LLM_BASE_URL: ${SKILL_SCANNER_LLM_BASE_URL:-}
+      SKILL_SCANNER_LLM_MODEL: ${SKILL_SCANNER_LLM_MODEL:-}
+      AI_DEFENSE_API_KEY: ${AI_DEFENSE_API_KEY:-}
+      AI_DEFENSE_API_URL: ${AI_DEFENSE_API_URL:-}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

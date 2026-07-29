@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skill-scanner-config
+data:
+  SKILL_SCANNER_LLM_BASE_URL: ""
+  SKILL_SCANNER_LLM_MODEL: ""
+  AI_DEFENSE_API_URL: ""
