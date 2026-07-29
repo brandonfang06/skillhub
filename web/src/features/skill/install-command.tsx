@@ -29,6 +29,28 @@ export function getBaseUrl(): string {
   return `${window.location.protocol}//${window.location.host}`
 }
 
+export function getCliRegistryUrl(): string {
+  const fallbackUrl = getBaseUrl()
+  if (typeof window === 'undefined') {
+    return fallbackUrl
+  }
+
+  const configuredUrl = window.__SKILLHUB_RUNTIME_CONFIG__?.cliRegistryUrl?.trim()
+  if (!configuredUrl) {
+    return fallbackUrl
+  }
+
+  try {
+    const parsedUrl = new URL(configuredUrl)
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return fallbackUrl
+    }
+    return configuredUrl.replace(/\/+$/, '')
+  } catch {
+    return fallbackUrl
+  }
+}
+
 export function buildInstallCommand(namespace: string, slug: string, baseUrl: string): string {
   const installTarget = buildInstallTarget(namespace, slug)
   return `npx clawhub install ${installTarget} --registry ${baseUrl}`
@@ -82,8 +104,11 @@ function CommandBlock({ command }: CommandBlockProps) {
 
 export function InstallCommand({ namespace, slug }: InstallCommandProps) {
   const { t } = useTranslation()
-  const baseUrl = useMemo(() => getBaseUrl(), [])
-  const skillhubCommand = useMemo(() => buildSkillhubInstallCommand(namespace, slug, baseUrl), [baseUrl, namespace, slug])
+  const registryUrl = useMemo(() => getCliRegistryUrl(), [])
+  const skillhubCommand = useMemo(
+    () => buildSkillhubInstallCommand(namespace, slug, registryUrl),
+    [namespace, registryUrl, slug],
+  )
 
   return (
     <Tabs defaultValue="skillhub" className="space-y-3">

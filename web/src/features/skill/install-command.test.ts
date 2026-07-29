@@ -7,6 +7,7 @@ import {
   buildInstallTarget,
   buildSkillhubInstallCommand,
   getBaseUrl,
+  getCliRegistryUrl,
 } from './install-command'
 
 vi.mock('react-i18next', () => ({
@@ -18,7 +19,10 @@ vi.mock('react-i18next', () => ({
 describe('install-command', () => {
   const originalWindow = globalThis.window
 
-  function setMockWindow(appBaseUrl?: string) {
+  function setMockWindow(runtimeConfig: {
+    appBaseUrl?: string
+    cliRegistryUrl?: string
+  } = {}) {
     const location = {
       protocol: 'https:',
       host: 'fallback.example.com',
@@ -28,15 +32,14 @@ describe('install-command', () => {
       configurable: true,
       writable: true,
       value: {
-        __SKILLHUB_RUNTIME_CONFIG__: {
-          appBaseUrl,
-        },
+        __SKILLHUB_RUNTIME_CONFIG__: runtimeConfig,
         location,
       } satisfies {
         location: Pick<Location, 'protocol' | 'host'>
       } & {
         __SKILLHUB_RUNTIME_CONFIG__: {
           appBaseUrl?: string
+          cliRegistryUrl?: string
         }
       },
     })
@@ -81,7 +84,7 @@ describe('install-command', () => {
   })
 
   it('uses the runtime app base url when available', () => {
-    setMockWindow('https://app.example.com')
+    setMockWindow({ appBaseUrl: 'https://app.example.com' })
 
     expect(getBaseUrl()).toBe('https://app.example.com')
   })
@@ -92,17 +95,38 @@ describe('install-command', () => {
   })
 
   it('falls back to browser origin when app base url is localhost', () => {
-    setMockWindow('http://localhost')
+    setMockWindow({ appBaseUrl: 'http://localhost' })
     expect(getBaseUrl()).toBe('https://fallback.example.com')
   })
 
   it('falls back to browser origin when app base url contains localhost', () => {
-    setMockWindow('http://localhost:8080')
+    setMockWindow({ appBaseUrl: 'http://localhost:8080' })
     expect(getBaseUrl()).toBe('https://fallback.example.com')
   })
 
+  it('uses a normalized runtime CLI registry URL when configured', () => {
+    setMockWindow({
+      appBaseUrl: 'https://app.example.com',
+      cliRegistryUrl: ' http://app.example.com/ ',
+    })
+
+    expect(getCliRegistryUrl()).toBe('http://app.example.com')
+  })
+
+  it.each(['', 'not-a-url', 'ftp://app.example.com'])(
+    'falls back to the app base URL for invalid CLI registry URL %j',
+    (cliRegistryUrl) => {
+      setMockWindow({
+        appBaseUrl: 'https://app.example.com',
+        cliRegistryUrl,
+      })
+
+      expect(getCliRegistryUrl()).toBe('https://app.example.com')
+    },
+  )
+
   it('renders the install command in a more compact code block', () => {
-    setMockWindow('http://localhost:3000')
+    setMockWindow({ appBaseUrl: 'http://localhost:3000' })
 
     const html = renderToStaticMarkup(createElement(InstallCommand, { namespace: 'global', slug: 'meeting-minutes-generator' }))
 
@@ -112,7 +136,7 @@ describe('install-command', () => {
   })
 
   it('renders install method tabs with only a short active underline', () => {
-    setMockWindow('https://app.example.com')
+    setMockWindow({ appBaseUrl: 'https://app.example.com' })
 
     const html = renderToStaticMarkup(createElement(InstallCommand, {
       namespace: 'global',
@@ -126,7 +150,10 @@ describe('install-command', () => {
   })
 
   it('renders only the SkillHub CLI install method', () => {
-    setMockWindow('https://app.example.com')
+    setMockWindow({
+      appBaseUrl: 'https://app.example.com',
+      cliRegistryUrl: 'http://app.example.com',
+    })
 
     const html = renderToStaticMarkup(createElement(InstallCommand, {
       namespace: 'team-alpha',
@@ -134,8 +161,9 @@ describe('install-command', () => {
     }))
 
     expect(html).toContain('skillDetail.installMethodSkillhub')
-    expect(html).toContain('npx @astron-team/skillhub@latest install meeting-minutes-generator --namespace team-alpha --registry https://app.example.com')
+    expect(html).toContain('npx @astron-team/skillhub@latest install meeting-minutes-generator --namespace team-alpha --registry http://app.example.com')
+    expect(html).not.toContain('--registry https://app.example.com')
     expect(html).not.toContain('skillDetail.installMethodClawhub')
-    expect(html).not.toContain('npx clawhub install team-alpha--meeting-minutes-generator --registry https://app.example.com')
+    expect(html).not.toContain('npx clawhub install team-alpha--meeting-minutes-generator --registry http://app.example.com')
   })
 })
