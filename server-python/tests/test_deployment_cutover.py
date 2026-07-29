@@ -122,6 +122,71 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "/actuator/health" not in release_compose
 
 
+def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
+    release_env = read(".env.release.example")
+    release_compose = read("compose.release.yml")
+    runtime_template = read("web/runtime-config.js.template")
+    entrypoint = read("web/docker-entrypoint.d/30-runtime-config.sh")
+    base_config = read("deploy/k8s/base/configmap.yaml")
+    plain_config = read("deploy/k8s/plain/backend/config.yaml")
+    base_frontend = read("deploy/k8s/base/frontend-deployment.yaml")
+    plain_frontend = read("deploy/k8s/plain/frontend/deployment.yaml")
+    base_backend = read("deploy/k8s/base/backend-deployment.yaml")
+    plain_backend = read("deploy/k8s/plain/backend/deployment.yaml")
+    readme = read("deploy/k8s/README.md")
+    env_manual = read("deploy/k8s/environment-variables.zh.md")
+
+    server_service = release_compose.partition("\n  server:\n")[2].partition("\n  web:\n")[0]
+    web_service = release_compose.partition("\n  web:\n")[2].partition("\nvolumes:\n")[0]
+    cli_registry_env = """            - name: SKILLHUB_WEB_CLI_REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: cli-registry-url
+                  optional: true"""
+
+    assert server_service
+    assert web_service
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL=" in release_env
+    assert (
+        "SKILLHUB_WEB_CLI_REGISTRY_URL: ${SKILLHUB_WEB_CLI_REGISTRY_URL:-}"
+        in web_service
+    )
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in server_service
+    assert 'cliRegistryUrl: "${SKILLHUB_WEB_CLI_REGISTRY_URL}"' in runtime_template
+    assert ': "${SKILLHUB_WEB_CLI_REGISTRY_URL:=}"' in entrypoint
+    runtime_substitution = entrypoint.partition("# Generate runtime-config.js")[2].partition(
+        "# Generate registry/skill.md"
+    )[0]
+    assert "${SKILLHUB_WEB_CLI_REGISTRY_URL}" in runtime_substitution
+
+    assert 'cli-registry-url: ""' in base_config
+    assert 'cli-registry-url: ""' in plain_config
+    for frontend in (base_frontend, plain_frontend):
+        assert cli_registry_env in frontend
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in base_backend
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in plain_backend
+
+    assert "public-base-url:" in base_config
+    assert "public-base-url:" in plain_config
+    assert "SKILLHUB_PUBLIC_BASE_URL" in release_compose
+    assert "SKILLHUB_PUBLIC_BASE_URL" in runtime_template
+
+    for document in (readme, env_manual):
+        normalized_document = " ".join(document.split())
+        assert "SKILLHUB_WEB_CLI_REGISTRY_URL" in normalized_document
+        assert "cli-registry-url" in normalized_document
+        assert "SKILLHUB_PUBLIC_BASE_URL" in normalized_document
+        assert "public-base-url" in normalized_document
+        assert "HTTP" in normalized_document
+        assert "HTTPS" in normalized_document
+        assert "Bearer token" in normalized_document
+        assert "exact registry URL" in normalized_document
+        assert "SKILLHUB_TOKEN" in normalized_document
+        assert "login" in normalized_document.lower()
+        assert "redirect" in normalized_document.lower()
+
+
 def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:
     readme = read("deploy/k8s/README.md")
 

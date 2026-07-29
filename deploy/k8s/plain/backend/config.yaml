@@ -28,6 +28,7 @@ data:
   redis-connect-timeout: PT5S
   redis-timeout: PT5S
   public-base-url: ""
+  cli-registry-url: ""
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000
   security-scanner-mode: upload

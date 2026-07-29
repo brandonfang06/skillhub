@@ -152,6 +152,21 @@ Keycloak client redirect URI 請設定：
 https://skills.example.com/login/oauth2/code/keycloak
 ```
 
+## CLI Registry URL
+
+| K8s key | Pod env | 必填 | 範例 | 說明 |
+| --- | --- | --- | --- | --- |
+| `skillhub-config/cli-registry-url` | `SKILLHUB_WEB_CLI_REGISTRY_URL` | 否 | `http://skills.example.com` | frontend-only install command override，只調整 Skill 頁面複製的 CLI 指令。 |
+
+請填完整的 absolute HTTP/HTTPS URL，且不要加 trailing slash。留空時會
+fallback 到 `skillhub-config/public-base-url` / `SKILLHUB_PUBLIC_BASE_URL`；
+瀏覽器 API 與 OAuth 仍走 HTTPS public base。HTTP 會讓 CLI Bearer token
+在沒有 TLS 的情況下以明文傳輸。CLI credential 與 installed-skill
+inventory 依 exact registry URL 分開，因此 HTTP 與 HTTPS 是不同 scope；
+切換到 HTTP 後必須對該 HTTP registry 執行 `skillhub login --registry
+http://host --token <token>`，或設定 `SKILLHUB_TOKEN`。HTTP endpoint
+不可 redirect CLI 回 HTTPS。
+
 ## Backend 呼叫 Scanner
 
 這些 env 是 **backend** 用來決定怎麼呼叫 scanner；不是 scanner container 的 LLM API key。
