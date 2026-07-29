@@ -122,13 +122,23 @@ describe('install-command', () => {
     expect(getCliRegistryUrl()).toBe('https://app.example.com/registry')
   })
 
-  it('returns the parsed registry URL with unsafe path characters encoded', () => {
+  it.each([
+    'https://app.example.com/registry&whoami',
+    'https://app.example.com/registry;whoami',
+    'https://app.example.com/registry|whoami',
+    'https://app.example.com/registry$(whoami)',
+    'https://app.example.com/registry`whoami`',
+    'https://app.example.com/team%20registry',
+    'https://app.example.com/team registry',
+    'https://app.example.com/registry<input',
+    'https://app.example.com/registry>output',
+  ])('falls back to the app base URL for unsafe CLI registry path %j', (cliRegistryUrl) => {
     setMockWindow({
       appBaseUrl: 'https://app.example.com',
-      cliRegistryUrl: 'https://app.example.com/team registry/',
+      cliRegistryUrl,
     })
 
-    expect(getCliRegistryUrl()).toBe('https://app.example.com/team%20registry')
+    expect(getCliRegistryUrl()).toBe('https://app.example.com')
   })
 
   it.each(['', 'not-a-url', 'ftp://app.example.com'])(

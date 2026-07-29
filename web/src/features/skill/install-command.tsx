@@ -48,6 +48,7 @@ export function getCliRegistryUrl(): string {
       || parsedUrl.password
       || parsedUrl.search
       || parsedUrl.hash
+      || !/^\/[A-Za-z0-9._~/-]*$/.test(parsedUrl.pathname)
     ) {
       return fallbackUrl
     }
