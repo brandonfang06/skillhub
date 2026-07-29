@@ -82,4 +82,3 @@ Tests must prove:
   changing `SKILLHUB_PUBLIC_BASE_URL`;
 - frontend typecheck, lint, focused tests, Kustomize rendering, Compose config,
   and `git diff --check` pass.
-
