@@ -122,6 +122,27 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "/actuator/health" not in release_compose
 
 
+def test_web_dockerfile_normalizes_runtime_entrypoint_line_endings() -> None:
+    dockerfile = read("web/Dockerfile")
+    copy_entrypoint = (
+        "COPY docker-entrypoint.d/30-runtime-config.sh "
+        "/docker-entrypoint.d/30-runtime-config.sh"
+    )
+    normalize_entrypoint = (
+        "RUN sed -i 's/\\r$//' /docker-entrypoint.d/30-runtime-config.sh"
+    )
+    chmod_entrypoint = "RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh"
+
+    assert copy_entrypoint in dockerfile
+    assert normalize_entrypoint in dockerfile
+    assert chmod_entrypoint in dockerfile
+    assert (
+        dockerfile.index(copy_entrypoint)
+        < dockerfile.index(normalize_entrypoint)
+        < dockerfile.index(chmod_entrypoint)
+    )
+
+
 def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
     release_env = read(".env.release.example")
     release_compose = read("compose.release.yml")
