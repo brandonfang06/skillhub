@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skill-scanner
+  labels:
+    app.kubernetes.io/name: skill-scanner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skill-scanner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skill-scanner
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scanner
+          image: ghcr.io/iflytek/skillhub-scanner:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: skill-scanner-config
+            - secretRef:
+                name: skill-scanner-secrets
+                optional: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: scanner-tmp
+              mountPath: /tmp
+      volumes:
+        - name: scanner-tmp
+          emptyDir:
+            sizeLimit: 512Mi
