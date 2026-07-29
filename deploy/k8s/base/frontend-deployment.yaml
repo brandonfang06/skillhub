@@ -21,6 +21,12 @@ spec:
           env:
             - name: SKILLHUB_API_UPSTREAM
               value: http://skillhub-server:8080
+            - name: SKILLHUB_WEB_CLI_REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: cli-registry-url
+                  optional: true
             - name: SKILLHUB_LOCAL_REGISTRATION_ENABLED
               valueFrom:
                 configMapKeyRef:

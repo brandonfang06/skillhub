@@ -30,6 +30,8 @@ data:
   # Public URL used for OAuth callback construction. Set this to the external
   # HTTPS origin when ingress is configured, for example https://skills.example.com.
   public-base-url: ""
+  # Optional frontend-only override used in copied CLI install commands.
+  cli-registry-url: ""
 
   # Scanner integration
   publish-allowed-file-extensions: ""

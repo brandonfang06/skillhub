@@ -132,9 +132,21 @@ Edit these common ConfigMap values:
 | `storage-s3-public-endpoint` | `SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT` | Optional public endpoint used for generated object URLs. |
 | `storage-s3-bucket` | `SKILLHUB_STORAGE_S3_BUCKET` | Bucket for skill package bundles. |
 | `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | External HTTPS origin used for OAuth callbacks and generated links. |
+| `cli-registry-url` | `SKILLHUB_WEB_CLI_REGISTRY_URL` | Optional frontend-only registry override used in copied CLI install commands. |
 | `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
 | `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
+
+Set `cli-registry-url` to a full absolute HTTP or HTTPS URL without a trailing
+slash. It changes only the copied CLI install command. When blank, it falls back
+to the existing frontend app URL; in the current K8s manifests that is browser
+origin. `public-base-url` still controls backend OAuth callbacks and generated
+public links, while browser API and OAuth traffic are unchanged. HTTP sends the
+CLI Bearer token in plaintext without TLS. CLI credentials and installed-skill
+inventory are scoped by the exact registry URL, so HTTP and HTTPS are separate:
+run `skillhub login --registry http://host --token <token>` or set
+`SKILLHUB_TOKEN` after switching. The HTTP endpoint must not redirect the CLI
+back to HTTPS.
 
 For the full environment variable manual, see
 [environment-variables.zh.md](environment-variables.zh.md).

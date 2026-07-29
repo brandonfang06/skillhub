@@ -122,6 +122,133 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "/actuator/health" not in release_compose
 
 
+def test_web_dockerfile_normalizes_runtime_entrypoint_line_endings() -> None:
+    dockerfile = read("web/Dockerfile")
+    copy_entrypoint = (
+        "COPY docker-entrypoint.d/30-runtime-config.sh "
+        "/docker-entrypoint.d/30-runtime-config.sh"
+    )
+    normalize_entrypoint = (
+        "RUN sed -i 's/\\r$//' /docker-entrypoint.d/30-runtime-config.sh"
+    )
+    chmod_entrypoint = "RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh"
+
+    assert copy_entrypoint in dockerfile
+    assert normalize_entrypoint in dockerfile
+    assert chmod_entrypoint in dockerfile
+    assert (
+        dockerfile.index(copy_entrypoint)
+        < dockerfile.index(normalize_entrypoint)
+        < dockerfile.index(chmod_entrypoint)
+    )
+
+
+def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
+    release_env = read(".env.release.example")
+    release_compose = read("compose.release.yml")
+    runtime_template = read("web/runtime-config.js.template")
+    entrypoint = read("web/docker-entrypoint.d/30-runtime-config.sh")
+    base_config = read("deploy/k8s/base/configmap.yaml")
+    plain_config = read("deploy/k8s/plain/backend/config.yaml")
+    base_frontend = read("deploy/k8s/base/frontend-deployment.yaml")
+    plain_frontend = read("deploy/k8s/plain/frontend/deployment.yaml")
+    base_backend = read("deploy/k8s/base/backend-deployment.yaml")
+    plain_backend = read("deploy/k8s/plain/backend/deployment.yaml")
+    readme = read("deploy/k8s/README.md")
+    env_manual = read("deploy/k8s/environment-variables.zh.md")
+
+    server_service = release_compose.partition("\n  server:\n")[2].partition("\n  web:\n")[0]
+    web_service = release_compose.partition("\n  web:\n")[2].partition("\nvolumes:\n")[0]
+    cli_registry_env = """            - name: SKILLHUB_WEB_CLI_REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: cli-registry-url
+                  optional: true"""
+
+    assert server_service
+    assert web_service
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL=" in release_env
+    assert (
+        "SKILLHUB_WEB_CLI_REGISTRY_URL: ${SKILLHUB_WEB_CLI_REGISTRY_URL:-}"
+        in web_service
+    )
+    assert "SKILLHUB_PUBLIC_BASE_URL" in web_service
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in server_service
+    assert 'cliRegistryUrl: "${SKILLHUB_WEB_CLI_REGISTRY_URL}"' in runtime_template
+    assert ': "${SKILLHUB_WEB_CLI_REGISTRY_URL:=}"' in entrypoint
+    runtime_substitution = entrypoint.partition("# Generate runtime-config.js")[2].partition(
+        "# Generate registry/skill.md"
+    )[0]
+    assert "${SKILLHUB_WEB_CLI_REGISTRY_URL}" in runtime_substitution
+
+    assert 'cli-registry-url: ""' in base_config
+    assert 'cli-registry-url: ""' in plain_config
+    for frontend in (base_frontend, plain_frontend):
+        assert cli_registry_env in frontend
+        assert "SKILLHUB_PUBLIC_BASE_URL" not in frontend
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in base_backend
+    assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in plain_backend
+
+    assert "public-base-url:" in base_config
+    assert "public-base-url:" in plain_config
+    assert "SKILLHUB_PUBLIC_BASE_URL" in release_compose
+    assert "SKILLHUB_PUBLIC_BASE_URL" in runtime_template
+
+    normalized_readme = " ".join(readme.split())
+    assert (
+        "Optional frontend-only registry override used in copied CLI install commands."
+        in normalized_readme
+    )
+    assert "full absolute HTTP or HTTPS URL without a trailing slash" in normalized_readme
+    assert (
+        "When blank, it falls back to the existing frontend app URL; in the current "
+        "K8s manifests that is browser origin."
+    ) in normalized_readme
+    assert (
+        "`public-base-url` still controls backend OAuth callbacks and generated public "
+        "links, while browser API and OAuth traffic are unchanged."
+    ) in normalized_readme
+    assert "HTTP sends the CLI Bearer token in plaintext without TLS." in normalized_readme
+    assert (
+        "CLI credentials and installed-skill inventory are scoped by the exact registry URL"
+        in normalized_readme
+    )
+    assert "skillhub login --registry http://host --token <token>" in normalized_readme
+    assert "SKILLHUB_TOKEN" in normalized_readme
+    assert "HTTP endpoint must not redirect the CLI back to HTTPS." in normalized_readme
+
+    normalized_manual = " ".join(env_manual.split())
+    assert (
+        "frontend-only install command override，只調整 Skill 頁面複製的 CLI 指令。"
+        in normalized_manual
+    )
+    assert "完整的 absolute HTTP/HTTPS URL，且不要加 trailing slash" in normalized_manual
+    assert (
+        "留空時會 fallback 到既有 frontend app URL；目前 K8s manifests 的該值是 "
+        "browser origin。"
+    ) in normalized_manual
+    assert (
+        "`public-base-url` 仍控制 backend OAuth callback 與 public-link 行為；"
+        "browser API/OAuth traffic 不受影響。"
+    ) in normalized_manual
+    assert (
+        "HTTP 會讓 CLI Bearer token 在沒有 TLS 的情況下以明文傳輸。"
+        in normalized_manual
+    )
+    assert (
+        "CLI credential 與 installed-skill inventory 依 exact registry URL 分開"
+        in normalized_manual
+    )
+    assert "skillhub login --registry http://host --token <token>" in normalized_manual
+    assert "SKILLHUB_TOKEN" in normalized_manual
+    assert "HTTP endpoint 不可 redirect CLI 回 HTTPS。" in normalized_manual
+
+    assert "# Blank falls back to SKILLHUB_PUBLIC_BASE_URL." in release_env
+    for document in (readme, env_manual, release_env):
+        assert "NODE_TLS_REJECT_UNAUTHORIZED=0" not in document
+
+
 def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:
     readme = read("deploy/k8s/README.md")
 
