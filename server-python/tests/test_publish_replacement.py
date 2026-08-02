@@ -8,7 +8,6 @@ import pytest
 
 from app.publish import replacement as replacement_module
 from app.publish.replacement import (
-    RejectedVersionReuseError,
     ReplaceableVersion,
     find_replaceable_version,
     StorageDeleteCompensationInput,
@@ -40,9 +39,17 @@ class FakeConnection:
         results: list[FakeResult] | None = None,
         *,
         current_status: str = "UPLOADED",
+        rejected_review: dict[str, Any] | None = None,
+        file_rows: list[dict[str, Any]] | None = None,
+        scanner_rows: list[dict[str, Any]] | None = None,
+        locked_row: dict[str, Any] | None = None,
     ) -> None:
         self.results = results or []
         self.current_status = current_status
+        self.rejected_review = rejected_review
+        self.file_rows = file_rows
+        self.scanner_rows = scanner_rows or []
+        self.locked_row = locked_row
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -50,9 +57,28 @@ class FakeConnection:
         sql = str(statement)
         self.statements.append(sql)
         self.params.append(params or {})
-        if "SELECT status" in sql and "FROM skill_version" in sql:
-            return FakeResult(row={"status": self.current_status})
-        if self.results and ("SELECT storage_key" in sql or "FROM skill s" in sql):
+        if "FOR UPDATE OF s, sv" in sql:
+            return FakeResult(
+                row=self.locked_row
+                or {
+                    "status": self.current_status,
+                    "version": "1.0.0",
+                    "skill_id": 7,
+                    "slug": "agent-helper",
+                    "owner_id": "local-user",
+                    "skill_status": "ACTIVE",
+                    "namespace_slug": "global",
+                    "namespace_status": "ACTIVE",
+                    "has_pending_review": False,
+                }
+            )
+        if "FROM review_task rt" in sql:
+            return FakeResult(row=self.rejected_review)
+        if "FROM skill_file" in sql and self.file_rows is not None:
+            return FakeResult(rows=self.file_rows)
+        if "FROM security_audit" in sql:
+            return FakeResult(rows=self.scanner_rows)
+        if self.results and ("FROM skill_file" in sql or "FROM skill s" in sql):
             return self.results.pop(0)
         return FakeResult()
 
@@ -82,26 +108,121 @@ async def test_cleanup_rejects_published_version() -> None:
 
 
 @pytest.mark.anyio
-async def test_cleanup_rejects_rejected_version_before_running_sql() -> None:
-    connection = FakeConnection()
+async def test_cleanup_archives_rejected_version_before_deleting_active_rows() -> None:
+    connection = FakeConnection(
+        current_status="REJECTED",
+        file_rows=[
+            {
+                "file_path": "SKILL.md",
+                "file_size": 42,
+                "content_type": "text/markdown",
+                "sha256": "abc123",
+                "storage_key": "skills/7/42/SKILL.md",
+            }
+        ],
+        rejected_review={
+            "review_task_id": 91,
+            "namespace_id": 10,
+            "submitted_by": "local-user",
+            "reviewed_by": "reviewer-1",
+            "review_comment": "Fix the metadata",
+            "submitted_at": datetime(2026, 6, 7, 10, 0, tzinfo=UTC),
+            "reviewed_at": datetime(2026, 6, 7, 11, 0, tzinfo=UTC),
+            "parsed_metadata_json": {"name": "Agent Helper", "version": "1.0.0"},
+            "manifest_json": [{"path": "SKILL.md", "size": 42}],
+            "original_request_id": "reject-request",
+        },
+        scanner_rows=[
+            {
+                "scanner_type": "STATIC",
+                "verdict": "PASS",
+                "max_severity": "LOW",
+                "findings_count": 0,
+                "findings": [],
+                "created_at": datetime(2026, 6, 7, 10, 30, tzinfo=UTC),
+            }
+        ],
+    )
 
-    with pytest.raises(RejectedVersionReuseError, match="error.skill.publish.rejectedVersionReuse"):
-        await cleanup_replaceable_version(connection, replaceable_version(status="REJECTED"))
+    result = await cleanup_replaceable_version(connection, replaceable_version(status="REJECTED"))
 
-    assert connection.statements == []
+    assert result.archived_review is not None
+    assert result.archived_review.original_review_task_id == 91
+    assert result.archived_review.original_skill_version_id == 42
+    assert result.archived_review.review_comment == "Fix the metadata"
+    assert result.archived_review.files == [
+        {
+            "path": "SKILL.md",
+            "size": 42,
+            "contentType": "text/markdown",
+            "sha256": "abc123",
+        }
+    ]
+    assert result.archived_review.scanner_summary[0]["scannerType"] == "STATIC"
+    review_delete = next(sql for sql in connection.statements if "DELETE FROM review_task" in sql)
+    assert "status = 'PENDING'" not in review_delete
+    assert "DELETE FROM skill_version" in connection.statements[-1]
 
 
 @pytest.mark.anyio
-async def test_cleanup_rechecks_status_inside_transaction_before_deleting() -> None:
-    connection = FakeConnection(current_status="REJECTED")
+@pytest.mark.parametrize(
+    ("current_status", "message"),
+    [
+        ("PUBLISHED", "Version already published: 1.0.0"),
+        ("YANKED", "Version cannot be replaced from status YANKED"),
+        ("PENDING_REVIEW", "Version cannot be replaced from status PENDING_REVIEW"),
+    ],
+)
+async def test_cleanup_rechecks_ineligible_status_inside_transaction_before_deleting(
+    current_status: str,
+    message: str,
+) -> None:
+    connection = FakeConnection(current_status=current_status)
 
-    with pytest.raises(RejectedVersionReuseError, match="error.skill.publish.rejectedVersionReuse"):
+    with pytest.raises(ValueError, match=message):
         await cleanup_replaceable_version(connection, replaceable_version(status="UPLOADED"))
 
     assert len(connection.statements) == 1
-    assert "SELECT status" in connection.statements[0]
-    assert "FOR UPDATE" in connection.statements[0]
+    assert "FOR UPDATE OF s, sv" in connection.statements[0]
     assert connection.params[0] == {"version_id": 42}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("locked_override", "message"),
+    [
+        ({"owner_id": "other-user"}, "Replacement owner changed"),
+        ({"slug": "other-skill"}, "Replacement coordinates changed"),
+        ({"namespace_slug": "other-namespace"}, "Replacement coordinates changed"),
+        ({"version": "2.0.0"}, "Replacement coordinates changed"),
+        ({"skill_status": "ARCHIVED"}, "Skill is not writable"),
+        ({"namespace_status": "FROZEN"}, "Namespace is not writable"),
+        ({"has_pending_review": True}, "Skill already has a pending review"),
+    ],
+)
+async def test_cleanup_rechecks_rejected_replacement_invariants_before_deleting(
+    locked_override: dict[str, Any],
+    message: str,
+) -> None:
+    locked_row = {
+        "status": "REJECTED",
+        "version": "1.0.0",
+        "skill_id": 7,
+        "slug": "agent-helper",
+        "owner_id": "local-user",
+        "skill_status": "ACTIVE",
+        "namespace_slug": "global",
+        "namespace_status": "ACTIVE",
+        "has_pending_review": False,
+        **locked_override,
+    }
+    connection = FakeConnection(current_status="REJECTED", locked_row=locked_row)
+
+    with pytest.raises(ValueError, match=message):
+        await cleanup_replaceable_version(connection, replaceable_version(status="REJECTED"))
+
+    assert len(connection.statements) == 1
+    assert not any(statement.lstrip().startswith("DELETE") for statement in connection.statements)
 
 
 @pytest.mark.anyio
@@ -143,6 +264,7 @@ async def test_cleanup_deletes_review_files_security_audits_and_version() -> Non
     assert any("DELETE FROM skill_file" in statement for statement in connection.statements)
     assert any("UPDATE security_audit" in statement and "deleted_at" in statement for statement in connection.statements)
     assert "DELETE FROM skill_version" in connection.statements[-1]
+    assert result.archived_review is None
 
 
 def test_delete_local_storage_objects_removes_existing_files(tmp_path) -> None:

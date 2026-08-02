@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -145,6 +146,23 @@ async def _read_translations_for_labels(connection: Any, label_ids: list[int]) -
     return grouped
 
 
+async def _read_label_skill_ids(connection: Any, label_id: int) -> list[int]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT skill_id
+                FROM skill_label
+                WHERE label_id = :label_id
+                ORDER BY skill_id ASC
+                """
+            ),
+            {"label_id": label_id},
+        )
+    ).mappings().all()
+    return [int(row["skill_id"]) for row in rows]
+
+
 async def _replace_translations(connection: Any, label_id: int, translations: list[dict[str, str]]) -> None:
     await connection.execute(text("DELETE FROM label_translation WHERE label_id = :label_id"), {"label_id": label_id})
     for item in translations:
@@ -283,11 +301,13 @@ async def update_label_definition(
     request_id: str | None,
     client_ip: str | None,
     user_agent: str | None,
+    search_refresher: Callable[[Any, list[int]], Awaitable[None]] | None = None,
 ) -> dict[str, Any]:
     _require_super_admin(platform_roles)
     normalized_translations = _normalize_translations(translations)
     async with engine.begin() as connection:
         existing = await _read_label_by_slug(connection, slug)
+        affected_skill_ids = await _read_label_skill_ids(connection, int(existing["id"]))
         row = (
             await connection.execute(
                 text(
@@ -308,6 +328,8 @@ async def update_label_definition(
         await _replace_translations(connection, int(label["id"]), normalized_translations)
         await _write_audit(connection, actor_user_id=actor_user_id, action="LABEL_UPDATE", target_id=int(label["id"]), request_id=request_id, client_ip=client_ip, user_agent=user_agent, detail={"slug": label["slug"]})
         translations_rows = await _read_translations(connection, int(label["id"]))
+    if search_refresher is not None:
+        await search_refresher(engine, affected_skill_ids)
     return _label_response(label, translations_rows)
 
 
@@ -320,12 +342,16 @@ async def delete_label_definition(
     request_id: str | None,
     client_ip: str | None,
     user_agent: str | None,
+    search_refresher: Callable[[Any, list[int]], Awaitable[None]] | None = None,
 ) -> dict[str, str]:
     _require_super_admin(platform_roles)
     async with engine.begin() as connection:
         label = await _read_label_by_slug(connection, slug)
+        affected_skill_ids = await _read_label_skill_ids(connection, int(label["id"]))
         await connection.execute(text("DELETE FROM label_definition WHERE id = :label_id"), {"label_id": int(label["id"])})
         await _write_audit(connection, actor_user_id=actor_user_id, action="LABEL_DELETE", target_id=int(label["id"]), request_id=request_id, client_ip=client_ip, user_agent=user_agent, detail={"slug": label["slug"]})
+    if search_refresher is not None:
+        await search_refresher(engine, affected_skill_ids)
     return {"message": "Label deleted"}
 
 

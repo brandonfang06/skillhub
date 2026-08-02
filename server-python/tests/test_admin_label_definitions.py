@@ -40,13 +40,16 @@ class FakeResult:
 
 
 class FakeTransaction:
-    def __init__(self, connection: "FakeLabelConnection") -> None:
-        self.connection = connection
+    def __init__(self, engine: "FakeEngine") -> None:
+        self.engine = engine
+        self.connection = engine.connection
 
     async def __aenter__(self) -> "FakeLabelConnection":
+        self.engine.transaction_active = True
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.engine.transaction_active = False
         return None
 
 
@@ -57,12 +60,13 @@ class FakeConnect(FakeTransaction):
 class FakeEngine:
     def __init__(self, connection: "FakeLabelConnection") -> None:
         self.connection = connection
+        self.transaction_active = False
 
     def begin(self) -> FakeTransaction:
-        return FakeTransaction(self.connection)
+        return FakeTransaction(self)
 
     def connect(self) -> FakeConnect:
-        return FakeConnect(self.connection)
+        return FakeConnect(self)
 
 
 class FakeLabelConnection:
@@ -75,6 +79,7 @@ class FakeLabelConnection:
         self.audit_rows: list[dict[str, Any]] = []
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
+        self.label_skill_ids: dict[int, list[int]] = {}
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -127,6 +132,13 @@ class FakeLabelConnection:
             return FakeResult(rows=rows)
         if "FROM label_translation" in sql and "label_id = :label_id" in sql:
             return FakeResult(rows=list(self.translations.get(int(bound["label_id"]), [])))
+        if "FROM skill_label" in sql:
+            return FakeResult(
+                rows=[
+                    {"skill_id": skill_id}
+                    for skill_id in self.label_skill_ids.get(int(bound["label_id"]), [])
+                ]
+            )
         if "DELETE FROM label_definition" in sql:
             row = self._label_by_id(int(bound["label_id"]))
             self.labels.pop(str(row["slug"]), None)
@@ -282,6 +294,36 @@ async def test_update_delete_and_sort_order_match_java_contract() -> None:
 
 
 @pytest.mark.anyio
+async def test_update_label_refreshes_affected_skills_after_commit() -> None:
+    connection = FakeLabelConnection({"featured": label_row(id=1, slug="featured")})
+    connection.label_skill_ids[1] = [100, 101]
+    engine = FakeEngine(connection)
+    refreshed: list[int] = []
+
+    async def refresh(search_engine: FakeEngine, skill_ids: list[int]) -> None:
+        assert search_engine is engine
+        assert search_engine.transaction_active is False
+        refreshed.extend(skill_ids)
+
+    await update_label_definition(
+        engine,
+        slug="featured",
+        type="RECOMMENDED",
+        visible_in_filter=True,
+        sort_order=1,
+        translations=[{"locale": "en", "displayName": "Featured Updated"}],
+        actor_user_id="admin",
+        platform_roles=["SUPER_ADMIN"],
+        request_id="update-label-search",
+        client_ip=None,
+        user_agent="pytest",
+        search_refresher=refresh,
+    )
+
+    assert refreshed == [100, 101]
+
+
+@pytest.mark.anyio
 async def test_list_label_definitions_sorts_and_includes_translations() -> None:
     connection = FakeLabelConnection(
         {
@@ -381,7 +423,8 @@ def test_admin_label_routes_reject_api_token_principals_as_unsupported() -> None
 
     unsupported = client.get("/api/v1/admin/labels", headers={"Authorization": "Bearer sk_valid"})
     assert unsupported.status_code == 403
-    assert unsupported.json()["detail"] == "API token cannot access endpoint: /api/v1/admin/labels"
+    assert unsupported.json()["msg"] == "error.apiToken.endpoint.unsupported"
+    assert unsupported.json()["data"]["args"] == ["/api/v1/admin/labels"]
 
     invalid = client.get("/api/v1/admin/labels", headers={"Authorization": "Bearer sk_missing"})
     assert invalid.status_code == 401

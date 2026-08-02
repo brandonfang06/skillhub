@@ -9,6 +9,13 @@ NAMESPACE_MANAGER_ROLES = {"OWNER", "ADMIN"}
 NAMESPACE_MEMBER_ROLES = {"OWNER", "ADMIN", "MEMBER"}
 
 
+class ApiTokenAccessDenied(HTTPException):
+    def __init__(self, message_code: str, *message_args: str) -> None:
+        super().__init__(status_code=403, detail=message_code)
+        self.message_code = message_code
+        self.message_args = tuple(message_args)
+
+
 def is_api_token_principal(user: dict[str, Any]) -> bool:
     return user.get("oauthProvider") == "api_token"
 
@@ -63,9 +70,9 @@ def require_api_token_scope(user: dict[str, Any], scope: str) -> None:
     if not is_api_token_principal(user):
         return
     if scope not in {str(value) for value in user.get("tokenScopes") or []}:
-        raise HTTPException(status_code=403, detail=f"Missing API token scope: {scope}")
+        raise ApiTokenAccessDenied("error.apiToken.scope.missing", scope)
 
 
 def reject_api_token_principal_for_route(user: dict[str, Any], path: str) -> None:
     if is_api_token_principal(user):
-        raise HTTPException(status_code=403, detail=f"API token cannot access endpoint: {path}")
+        raise ApiTokenAccessDenied("error.apiToken.endpoint.unsupported", path)

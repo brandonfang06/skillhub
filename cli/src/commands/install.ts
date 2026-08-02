@@ -5,7 +5,7 @@ import { installSkill } from '../services/install-service'
 import { resolveInstallTargets } from '../agents/resolver'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
-import { parseSkillName } from '../shared/skill-name-parser'
+import { resolveSkillName } from '../shared/skill-name-parser'
 
 export interface InstallCommandOptions {
   namespace?: string | undefined
@@ -94,9 +94,7 @@ export async function installCommand(
   const registry = resolveRegistry(options, process.env, await configStore.read())
   const token = resolveToken(options, process.env, await credentialsStore.getToken(registry))
 
-  const parsed = parseSkillName(skillNameArg)
-  const namespace = options.namespace ?? parsed.namespace
-  const slug = parsed.slug
+  const { namespace, slug } = resolveSkillName(skillNameArg, options.namespace)
 
   const resolveTargets = deps.resolveInstallTargets ?? resolveInstallTargets
   const targets = await resolveTargets({

@@ -159,7 +159,7 @@ describe('publish --dry-run', () => {
     expect(result.stderr).toContain('authentication')
   })
 
-  test('--dry-run reports scope error on 403', async () => {
+  test('--dry-run surfaces the public message and request ID on a structured 403', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({ token: 'sk_ok', failures: { validate: 'forbidden' } })
     await login(env, registry.url)
@@ -172,5 +172,25 @@ describe('publish --dry-run', () => {
 
     expect(result.exitCode).toBe(2)
     expect(result.stderr).toContain('scope')
+    expect(result.stderr).toContain('Request ID: req-test-forbidden')
+  })
+
+  test('--dry-run does not leak an unstructured 403 body', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      failures: { validate: 'forbidden_unstructured' },
+    })
+    await login(env, registry.url)
+
+    const dir = await makeTempDir(['SKILL.md', '---\nname: test\ndescription: test\n---\n'])
+    const result = await runCli(['publish', dir, '--dry-run', '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home,
+    })
+
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain('access denied')
+    expect(result.stderr).not.toContain('sensitive proxy denial')
   })
 })

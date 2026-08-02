@@ -23,6 +23,11 @@ spec:
           env:
             - name: SKILLHUB_API_UPSTREAM
               value: http://skillhub-server:8080
+            - name: SKILLHUB_TRUST_FORWARDED_PROTO
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: trust-forwarded-proto
             - name: SKILLHUB_WEB_CLI_REGISTRY_URL
               valueFrom:
                 configMapKeyRef:

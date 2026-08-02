@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -150,28 +151,60 @@ def test_shared_principal_resolver_preserves_mock_header_with_stub_engine() -> N
 
 
 def test_api_token_scope_policy_rejects_missing_scope_only_for_api_tokens() -> None:
-    from app.auth.policy import require_api_token_scope
+    from app.auth.policy import ApiTokenAccessDenied, require_api_token_scope
 
     api_token_user = {"oauthProvider": "api_token", "tokenScopes": ["skill:read"]}
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ApiTokenAccessDenied) as exc:
         require_api_token_scope(api_token_user, "skill:publish")
 
     assert exc.value.status_code == 403
-    assert exc.value.detail == "Missing API token scope: skill:publish"
+    assert exc.value.detail == "error.apiToken.scope.missing"
+    assert exc.value.message_args == ("skill:publish",)
 
 
 def test_admin_policy_rejects_api_token_principal_but_not_mock_or_session() -> None:
-    from app.auth.policy import reject_api_token_principal_for_route
+    from app.auth.policy import ApiTokenAccessDenied, reject_api_token_principal_for_route
 
     reject_api_token_principal_for_route({"oauthProvider": "mock"}, "/api/v1/admin/users")
     reject_api_token_principal_for_route({"oauthProvider": "local"}, "/api/v1/admin/users")
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ApiTokenAccessDenied) as exc:
         reject_api_token_principal_for_route({"oauthProvider": "api_token"}, "/api/v1/admin/users")
 
     assert exc.value.status_code == 403
-    assert exc.value.detail == "API token cannot access endpoint: /api/v1/admin/users"
+    assert exc.value.detail == "error.apiToken.endpoint.unsupported"
+    assert exc.value.message_args == ("/api/v1/admin/users",)
+
+
+def test_api_token_denial_uses_standard_safe_envelope_with_request_id() -> None:
+    from app.auth.policy import require_api_token_scope
+    from app.main import create_app
+
+    app = create_app()
+
+    @app.get("/test/api-token-denial")
+    async def denied() -> None:
+        require_api_token_scope(
+            {"oauthProvider": "api_token", "tokenScopes": ["skill:read"]},
+            "skill:publish",
+        )
+
+    client = TestClient(app)
+    response = client.get(
+        "/test/api-token-denial",
+        headers={"X-Request-Id": "scope-denial-request"},
+    )
+
+    assert response.status_code == 403
+    assert response.headers["X-Request-Id"] == "scope-denial-request"
+    assert response.json() == {
+        "code": 403,
+        "msg": "error.apiToken.scope.missing",
+        "data": {"args": ["skill:publish"]},
+        "timestamp": response.json()["timestamp"],
+        "requestId": "scope-denial-request",
+    }
 
 
 def test_platform_role_helpers_normalize_roles_and_preserve_route_error_details() -> None:

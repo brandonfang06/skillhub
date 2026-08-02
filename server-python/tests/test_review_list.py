@@ -31,9 +31,16 @@ class FakeResult:
 
 
 class FakeReviewListConnection:
-    def __init__(self, *, platform_roles: list[str] | None = None, namespace_role: str | None = "ADMIN") -> None:
+    def __init__(
+        self,
+        *,
+        platform_roles: list[str] | None = None,
+        namespace_role: str | None = "ADMIN",
+        archived_history: bool = False,
+    ) -> None:
         self.platform_roles = platform_roles or []
         self.namespace_role = namespace_role
+        self.archived_history = archived_history
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.task_rows = [
@@ -70,8 +77,37 @@ class FakeReviewListConnection:
             return FakeResult(rows=[{"namespace_id": 20, "role": self.namespace_role}])
         if "FROM namespace" in sql:
             return FakeResult(row={"id": 20, "type": "TEAM", "status": "ACTIVE"})
+        if "COUNT(*)" in sql and "FROM review_attempt_archive raa" in sql:
+            return FakeResult(scalar=1 if self.archived_history else 0)
         if "COUNT(*)" in sql and "FROM review_task rt" in sql:
             return FakeResult(scalar=42)
+        if "UNION ALL" in sql and self.archived_history:
+            return FakeResult(
+                rows=[
+                    {
+                        "id": 900,
+                        "skill_version_id": 500,
+                        "namespace_id": 20,
+                        "status": "REJECTED",
+                        "submitted_by": "submitter-a",
+                        "submitted_by_name": "Submitter A",
+                        "reviewed_by": "reviewer",
+                        "reviewed_by_name": "Reviewer",
+                        "review_comment": "Fix it",
+                        "submitted_at": datetime(2026, 6, 8, 10, 0, tzinfo=UTC),
+                        "reviewed_at": datetime(2026, 6, 8, 11, 0, tzinfo=UTC),
+                        "namespace_slug": "team-a",
+                        "namespace_type": "TEAM",
+                        "skill_slug": "agent-helper",
+                        "version_name": "1.0.0",
+                        "version_status": "REJECTED",
+                        "superseded": True,
+                        "replacement_version_id": 501,
+                        "replacement_review_task_id": 1001,
+                        "archived_at": datetime(2026, 6, 9, 9, 0, tzinfo=UTC),
+                    }
+                ]
+            )
         if "FROM review_task rt" in sql:
             return FakeResult(rows=self.task_rows)
 
@@ -144,6 +180,31 @@ async def test_list_pending_reviews_uses_namespace_permission_and_pending_status
     page_index = next(index for index, sql in enumerate(connection.statements) if "FROM review_task rt" in sql and "ORDER BY" in sql)
     assert connection.params[page_index]["namespace_id"] == 20
     assert connection.params[page_index]["status"] == "PENDING"
+
+
+@pytest.mark.anyio
+async def test_list_rejected_reviews_includes_archived_attempts_in_total_and_page() -> None:
+    connection = FakeReviewListConnection(namespace_role="ADMIN", archived_history=True)
+
+    response = await list_review_tasks(
+        FakeEngine(connection),
+        ReviewListQuery(
+            status="REJECTED",
+            namespace_id=20,
+            page=0,
+            size=20,
+            sort_direction="DESC",
+            user_id="team-admin",
+        ),
+    )
+
+    assert response["total"] == 43
+    assert response["items"][0]["id"] == 900
+    assert response["items"][0]["superseded"] is True
+    assert response["items"][0]["artifactAvailable"] is False
+    assert response["items"][0]["replacementReviewTaskId"] == 1001
+    history_sql = next(sql for sql in connection.statements if "UNION ALL" in sql)
+    assert "ORDER BY reviewed_at DESC, id DESC" in history_sql
 
 
 @pytest.mark.anyio

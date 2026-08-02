@@ -1,90 +1,61 @@
-import { describe, test, expect } from 'bun:test'
-import { parseSkillName } from '../../../src/shared/skill-name-parser'
+import { describe, expect, test } from 'bun:test'
+import { parseSkillName, resolveSkillName } from '../../../src/shared/skill-name-parser'
+import { EXIT } from '../../../src/shared/constants'
+import { CliError } from '../../../src/shared/errors'
+
+function expectUsageError(callback: () => unknown): void {
+  let error: unknown
+  try {
+    callback()
+  } catch (caught) {
+    error = caught
+  }
+  expect(error).toBeInstanceOf(CliError)
+  expect((error as CliError).exitCode).toBe(EXIT.usage)
+}
 
 describe('parseSkillName', () => {
-  describe('with namespace--slug format', () => {
-    test('should parse namespace and slug separated by double dash', () => {
-      const result = parseSkillName('astroclaw--api-gateway')
-      expect(result).toEqual({
-        namespace: 'astroclaw',
-        slug: 'api-gateway'
-      })
-    })
-
-    test('should handle namespace and slug with single dashes', () => {
-      const result = parseSkillName('my-org--my-skill-name')
-      expect(result).toEqual({
-        namespace: 'my-org',
-        slug: 'my-skill-name'
-      })
-    })
-
-    test('should handle multiple double dashes by using first as separator', () => {
-      const result = parseSkillName('namespace--slug--with--dashes')
-      expect(result).toEqual({
-        namespace: 'namespace',
-        slug: 'slug--with--dashes'
-      })
-    })
+  test.each([
+    ['my-skill', { namespace: 'global', slug: 'my-skill' }],
+    ['team/my-skill', { namespace: 'team', slug: 'my-skill' }],
+    ['@team/my-skill', { namespace: 'team', slug: 'my-skill' }],
+    ['team--my-skill', { namespace: 'team', slug: 'my-skill' }]
+  ])('parses %s', (skillName, expected) => {
+    expect(parseSkillName(skillName)).toEqual(expected)
   })
 
-  describe('with slug only format', () => {
-    test('should use default namespace when no separator present', () => {
-      const result = parseSkillName('api-gateway')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: 'api-gateway'
-      })
-    })
-
-    test('should use custom default namespace when provided', () => {
-      const result = parseSkillName('api-gateway', 'myorg')
-      expect(result).toEqual({
-        namespace: 'myorg',
-        slug: 'api-gateway'
-      })
-    })
-
-    test('should handle slug with single dashes', () => {
-      const result = parseSkillName('my-skill-name')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: 'my-skill-name'
-      })
-    })
+  test('preserves a custom default namespace for a bare slug', () => {
+    expect(parseSkillName('my-skill', 'team')).toEqual({ namespace: 'team', slug: 'my-skill' })
   })
 
-  describe('edge cases', () => {
-    test('should handle separator at start', () => {
-      const result = parseSkillName('--api-gateway')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: 'api-gateway'
-      })
-    })
+  test.each([
+    '',
+    '@team',
+    'team/',
+    '/my-skill',
+    '--my-skill',
+    'team--',
+    'team/my-skill/extra',
+    '@team/my-skill/extra',
+    'team--my-skill/extra'
+  ])('rejects malformed coordinate %p', skillName => {
+    expectUsageError(() => parseSkillName(skillName))
+  })
+})
 
-    test('should handle separator at end', () => {
-      const result = parseSkillName('astroclaw--')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: 'astroclaw'
-      })
-    })
+describe('resolveSkillName', () => {
+  test('uses --namespace for a bare slug', () => {
+    expect(resolveSkillName('my-skill', 'team')).toEqual({ namespace: 'team', slug: 'my-skill' })
+  })
 
-    test('should handle empty string', () => {
-      const result = parseSkillName('')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: ''
-      })
-    })
+  test.each(['team/my-skill', '@team/my-skill', 'team--my-skill'])(
+    'accepts matching --namespace for %s',
+    skillName => {
+      expect(resolveSkillName(skillName, 'team')).toEqual({ namespace: 'team', slug: 'my-skill' })
+    }
+  )
 
-    test('should handle just separator', () => {
-      const result = parseSkillName('--')
-      expect(result).toEqual({
-        namespace: 'global',
-        slug: ''
-      })
-    })
+  test('rejects conflicting embedded and option namespaces', () => {
+    expectUsageError(() => resolveSkillName('@team/my-skill', 'other'))
   })
 })

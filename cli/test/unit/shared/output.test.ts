@@ -24,6 +24,15 @@ describe('renderError', () => {
       'Next: check network or pass --registry'
     ].join('\n'))
   })
+
+  test('renders a public request ID for support correlation', () => {
+    const error = new CliError('access denied', 2, {
+      registry: 'https://registry.example.com',
+      requestId: 'req-403'
+    })
+
+    expect(renderError(error, false)).toContain('Request ID: req-403')
+  })
 })
 
 describe('printResult', () => {

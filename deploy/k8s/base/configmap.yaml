@@ -32,6 +32,9 @@ data:
   public-base-url: ""
   # Optional frontend-only override used in copied CLI install commands.
   cli-registry-url: ""
+  # Enable only when a trusted ingress replaces X-Forwarded-Proto and direct
+  # access to the web pod is blocked.
+  trust-forwarded-proto: "false"
 
   # Scanner integration
   publish-allowed-file-extensions: ""

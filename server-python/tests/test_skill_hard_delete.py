@@ -298,7 +298,10 @@ def test_skill_hard_delete_routes_enforce_bearer_delete_scope(tmp_path: Path) ->
 
     missing_scope = client.delete("/api/v1/skills/team/demo", headers={"Authorization": "Bearer read-token"})
     assert missing_scope.status_code == 403
-    assert missing_scope.json()["detail"] == "Missing API token scope: skill:delete"
+    missing_scope_payload = missing_scope.json()
+    assert missing_scope_payload["msg"] == "error.apiToken.scope.missing"
+    assert missing_scope_payload["data"]["args"] == ["skill:delete"]
+    assert missing_scope_payload["requestId"] == missing_scope.headers["X-Request-Id"]
     assert len(seen) == 1
 
     unknown = client.delete("/api/v1/skills/team/demo", headers={"Authorization": "Bearer bad-token"})
@@ -306,7 +309,10 @@ def test_skill_hard_delete_routes_enforce_bearer_delete_scope(tmp_path: Path) ->
 
     web_unsupported = client.delete("/api/web/skills/team/demo", headers={"Authorization": "Bearer delete-token"})
     assert web_unsupported.status_code == 403
-    assert web_unsupported.json()["detail"] == "API token cannot access endpoint: /api/web/skills/team/demo"
+    web_unsupported_payload = web_unsupported.json()
+    assert web_unsupported_payload["msg"] == "error.apiToken.endpoint.unsupported"
+    assert web_unsupported_payload["data"]["args"] == ["/api/web/skills/team/demo"]
+    assert web_unsupported_payload["requestId"] == web_unsupported.headers["X-Request-Id"]
 
     mock_precedence = client.delete(
         "/api/v1/skills/team/demo",
@@ -425,7 +431,10 @@ def test_cli_skill_delete_route_enforces_bearer_delete_scope(tmp_path: Path) -> 
 
     missing_scope = client.delete("/api/cli/v1/skills/team/demo", headers={"Authorization": "Bearer read-token"})
     assert missing_scope.status_code == 403
-    assert missing_scope.json()["detail"] == "Missing API token scope: skill:delete"
+    missing_scope_payload = missing_scope.json()
+    assert missing_scope_payload["msg"] == "error.apiToken.scope.missing"
+    assert missing_scope_payload["data"]["args"] == ["skill:delete"]
+    assert missing_scope_payload["requestId"] == missing_scope.headers["X-Request-Id"]
     assert len(seen) == 1
 
     unknown = client.delete("/api/cli/v1/skills/team/demo", headers={"Authorization": "Bearer bad-token"})

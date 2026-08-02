@@ -40,22 +40,26 @@ class FakeResult:
 
 
 class FakeTransaction:
-    def __init__(self, connection: "FakeSkillLabelConnection") -> None:
-        self.connection = connection
+    def __init__(self, engine: "FakeEngine") -> None:
+        self.engine = engine
+        self.connection = engine.connection
 
     async def __aenter__(self) -> "FakeSkillLabelConnection":
+        self.engine.transaction_active = True
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.engine.transaction_active = False
         return None
 
 
 class FakeEngine:
     def __init__(self, connection: "FakeSkillLabelConnection") -> None:
         self.connection = connection
+        self.transaction_active = False
 
     def begin(self) -> FakeTransaction:
-        return FakeTransaction(self.connection)
+        return FakeTransaction(self)
 
 
 class FakeSkillLabelConnection:
@@ -152,6 +156,34 @@ async def test_attach_skill_label_inserts_label_and_writes_java_audit_detail() -
     assert connection.audit_logs[-1]["target_type"] == "SKILL"
     assert connection.audit_logs[-1]["target_id"] == 100
     assert json.loads(connection.audit_logs[-1]["detail_json"]) == {"labelSlug": " Featured "}
+
+
+@pytest.mark.anyio
+async def test_attach_skill_label_refreshes_search_after_commit() -> None:
+    connection = FakeSkillLabelConnection()
+    engine = FakeEngine(connection)
+    refreshed: list[int] = []
+
+    async def refresh(search_engine: FakeEngine, skill_ids: list[int]) -> None:
+        assert search_engine is engine
+        assert search_engine.transaction_active is False
+        assert connection.audit_logs[-1]["action"] == "SKILL_LABEL_ATTACH"
+        refreshed.extend(skill_ids)
+
+    await attach_skill_label(
+        engine,
+        namespace="global",
+        slug="demo",
+        label_slug="featured",
+        actor_user_id="owner",
+        platform_roles=["USER"],
+        request_id="refresh-search",
+        client_ip=None,
+        user_agent="pytest",
+        search_refresher=refresh,
+    )
+
+    assert refreshed == [100]
 
 
 @pytest.mark.anyio

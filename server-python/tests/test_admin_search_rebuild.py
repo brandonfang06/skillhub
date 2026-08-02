@@ -170,7 +170,10 @@ def test_admin_search_rebuild_rejects_api_token_principals_as_unsupported() -> N
 
     unsupported = client.post("/api/v1/admin/search/rebuild", headers={"Authorization": "Bearer sk_valid"})
     assert unsupported.status_code == 403
-    assert unsupported.json()["detail"] == "API token cannot access endpoint: /api/v1/admin/search/rebuild"
+    payload = unsupported.json()
+    assert payload["msg"] == "error.apiToken.endpoint.unsupported"
+    assert payload["data"]["args"] == ["/api/v1/admin/search/rebuild"]
+    assert payload["requestId"] == unsupported.headers["X-Request-Id"]
 
     invalid = client.post("/api/v1/admin/search/rebuild", headers={"Authorization": "Bearer sk_missing"})
     assert invalid.status_code == 401

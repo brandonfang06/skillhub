@@ -32,12 +32,14 @@ from app.api.social import router as social_router
 from app.api.tokens import router as tokens_router
 from app.api.user_profile import router as user_profile_router
 from app.api.well_known import router as well_known_router
+from app.auth.policy import ApiTokenAccessDenied
 from app.bootstrap import initialize_bootstrap_admin
 from app.builtin_skills import synchronize_builtin_skills
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
 from app.core.redis import create_redis_client
 from app.core.request_id import RequestIdMiddleware
+from app.core.response import api_token_access_denied_response
 from app.download_analytics import prune_expired_download_events
 from app.notifications.fanout import NotificationFanoutManager
 from app.publish.scan_daemon import create_scan_consumer_daemon
@@ -115,6 +117,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="SkillHub Python Backend", lifespan=lifespan)
+    app.add_exception_handler(ApiTokenAccessDenied, api_token_access_denied_response)
     app.add_middleware(RequestIdMiddleware)
     app.include_router(account_merge_router)
     app.include_router(admin_audit_logs_router)

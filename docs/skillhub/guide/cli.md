@@ -83,6 +83,10 @@ skillhub login --token sk_xxx --registry https://skillhub.example.com
 
 `login` 会验证 token 有效性，然后将 token 存储到 `~/.skillhub/credentials.json`，同时将 registry 写入 `~/.skillhub/config.json`。
 
+API Token 请求被拒绝时，CLI 会显示服务端提供的安全原因与 `Request ID`，
+排查时可用该 ID 对照服务端日志。非结构化授权失败只显示通用错误，不会输出
+原始 response body。
+
 ### 查看当前身份
 
 ```bash
@@ -123,15 +127,24 @@ skillhub search pdf --json
 
 ## 安装技能
 
+安装坐标支持裸 slug（默认解析到 `global`）以及 `team/my-skill`、
+`@team/my-skill`、`team--my-skill` 三种等价形式。若同时传入
+`--namespace`，两者必须一致。
+
 ```bash
 # 安装到自动探测的 Agent 目录
 skillhub install pdf-parser
+
+# 等价的 namespace 坐标
+skillhub install team/my-skill
+skillhub install @team/my-skill
+skillhub install team--my-skill
 
 # 显式指定安装范围
 skillhub install pdf-parser --scope user
 skillhub install pdf-parser --scope project --agent codex
 
-# 指定 namespace（默认 global）
+# 为裸 slug 指定 namespace
 skillhub install pdf-parser --namespace myspace
 
 # 指定版本
@@ -241,8 +254,14 @@ skillhub list --json
 ### 删除技能
 
 ```bash
-# 删除所有本地安装目标
+# 裸 slug 删除所有 namespace 中的同名本地安装
 skillhub remove pdf-parser
+
+# 显式 namespace 只删除该 namespace
+skillhub remove myspace/pdf-parser
+skillhub remove @myspace/pdf-parser
+skillhub remove myspace--pdf-parser
+skillhub remove pdf-parser --namespace myspace
 
 # 只删除指定 Agent 的安装
 skillhub remove pdf-parser --agent codex
@@ -475,12 +494,12 @@ skillhub search <query> [--registry <url>] [--limit <n>] [--json]
 ### install
 
 ```bash
-skillhub install <slug> [options]
+skillhub install <coordinate> [options]
 ```
 
 选项：
 - `--scope <user|project>` — 安装范围（不传时：TTY 模式下交互式询问，非 TTY 模式沿用现有探测逻辑）
-- `--namespace <slug>` — namespace（默认 `global`）
+- `--namespace <slug>` — 为裸 slug 指定 namespace
 - `--version <v>` — 版本（默认最新版本）
 - `--agent <profile>` — Agent 配置（可重复）
 - `--dir <path>` — 自定义安装目录（与 `--scope`、`--agent` 互斥）
@@ -504,7 +523,7 @@ skillhub list [options]
 ### remove
 
 ```bash
-skillhub remove <slug> [options]
+skillhub remove <coordinate> [options]
 ```
 
 选项：
@@ -512,10 +531,13 @@ skillhub remove <slug> [options]
 - `--all` — 删除所有目标
 - `--remote` — 删除远程技能
 - `--hard` — 跳过远程删除确认
-- `--namespace <slug>` — 远程删除的 namespace
+- `--namespace <slug>` — 本地或远程删除的 namespace
 - `--registry <url>` — Registry URL
 - `--token <token>` — API token
 - `--json` — JSON 输出
+
+显式 namespace 坐标或 `--namespace` 只删除该 namespace 的本地安装。为保持
+兼容，裸 slug 会删除当前 registry 下所有 namespace 的同名安装。
 
 ### doctor
 

@@ -242,6 +242,30 @@ describe('NamespaceReviewsPage', () => {
     expect(paginationProps[0]?.totalPages).toBe(2)
   })
 
+  it('marks superseded review attempts in history', () => {
+    useReviewListMock.mockImplementation((status: string, _namespaceId: unknown, page: number, _size: number, _sortDirection: string, enabled: boolean) => {
+      if (!enabled || status !== 'PENDING') {
+        return { data: null, isLoading: false }
+      }
+      return {
+        data: {
+          items: [{ ...createReviewItem(3), superseded: true }],
+          totalElements: 1,
+          totalPages: 1,
+          page,
+          size: 10,
+          total: 1,
+        },
+        isLoading: false,
+      }
+    })
+
+    const html = renderToStaticMarkup(createElement(NamespaceReviewsPage))
+
+    expect(html).toContain('data-superseded-review="true"')
+    expect(html).toContain('review.supersededBadge')
+  })
+
   it('does not render pagination when there is only one page', () => {
     useReviewListMock.mockImplementation((status: string, _namespaceId: unknown, page: number, _size: number, _sortDirection: string, enabled: boolean) => {
       if (!enabled || status !== 'PENDING') {

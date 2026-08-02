@@ -57,7 +57,10 @@ def test_admin_routes_reject_api_token_principals_as_unsupported(method: str, pa
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == f"API token cannot access endpoint: {path}"
+    payload = response.json()
+    assert payload["msg"] == "error.apiToken.endpoint.unsupported"
+    assert payload["data"]["args"] == [path]
+    assert payload["requestId"] == response.headers["X-Request-Id"]
 
 
 def test_admin_routes_keep_invalid_bearer_unauthorized_and_mock_user_precedence() -> None:

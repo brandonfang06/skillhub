@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.review.query import read_review_skill_detail
+from app.review.query import ReviewQueryError, read_review_skill_detail
 
 
 @dataclass
@@ -71,6 +71,36 @@ class FakeReviewSkillDetailConnection:
                     "namespace_type": self.namespace_type,
                     "skill_slug": "agent-helper",
                     "version_name": "1.0.0",
+                }
+            )
+        if "FROM review_attempt_archive raa" in sql:
+            if not self.missing_task:
+                return FakeResult(row=None)
+            return FakeResult(
+                row={
+                    "id": 801,
+                    "skill_version_id": 52,
+                    "namespace_id": 20,
+                    "status": "REJECTED",
+                    "submitted_by": self.submitted_by,
+                    "submitted_by_name": "Submitter",
+                    "reviewed_by": "reviewer",
+                    "reviewed_by_name": "Reviewer",
+                    "review_comment": "Fix it",
+                    "submitted_at": datetime(2026, 6, 9, 10, 0, tzinfo=UTC),
+                    "reviewed_at": datetime(2026, 6, 9, 11, 0, tzinfo=UTC),
+                    "namespace_slug": "team-a",
+                    "namespace_type": self.namespace_type,
+                    "skill_slug": "agent-helper",
+                    "version_name": "1.0.0",
+                    "version_status": "REJECTED",
+                    "parsed_metadata_json": {},
+                    "manifest_json": [],
+                    "files_json": [],
+                    "scanner_summary_json": [],
+                    "replacement_version_id": 53,
+                    "replacement_review_task_id": 802,
+                    "archived_at": datetime(2026, 6, 10, 9, 0, tzinfo=UTC),
                 }
             )
         if "FROM user_role_binding" in sql:
@@ -297,6 +327,25 @@ async def test_read_review_skill_detail_returns_not_found_for_missing_snapshot(t
             review_task_id=801,
             user_id="team-admin",
         )
+
+
+@pytest.mark.anyio
+async def test_read_review_skill_detail_rejects_archived_artifact(tmp_path: Path) -> None:
+    connection = FakeReviewSkillDetailConnection(
+        submitted_by="local-user",
+        namespace_role=None,
+        missing_task=True,
+    )
+
+    with pytest.raises(ReviewQueryError, match="review.artifact.unavailable") as exc_info:
+        await read_review_skill_detail(
+            FakeEngine(connection),
+            storage_base_path=str(tmp_path),
+            review_task_id=801,
+            user_id="local-user",
+        )
+
+    assert exc_info.value.status_code == 410
 
 
 def test_review_skill_detail_route_returns_java_read_envelope() -> None:

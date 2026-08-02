@@ -295,3 +295,11 @@ SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=https://keycloak.exam
 SKILLHUB_SCANNER_USE_LLM=true
 SKILL_SCANNER_LLM_API_KEY=change-me
 ```
+
+## Trusted Forwarded Protocol
+
+`skillhub-config/trust-forwarded-proto` 對應 web pod 的
+`SKILLHUB_TRUST_FORWARDED_PROTO`，預設為 `false`。只有在可信任的 ingress
+會覆寫 `X-Forwarded-Proto`，而且外部無法直接連到 web pod 時，才能設為
+`true`。未啟用時，web nginx 會忽略 client 自帶的 forwarded protocol，
+避免偽造 HTTPS 來源。

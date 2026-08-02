@@ -211,6 +211,14 @@ type ApiErrorEnvelope<T> = Partial<ApiEnvelope<T>> & {
   detail?: unknown
 }
 
+function getErrorMessageArgs(data: unknown): string[] {
+  if (!data || typeof data !== 'object' || !('args' in data)) {
+    return []
+  }
+  const args = (data as { args?: unknown }).args
+  return Array.isArray(args) ? args.filter((arg): arg is string => typeof arg === 'string') : []
+}
+
 type RequestWithTimeout = RequestInit & {
   timeoutMs?: number
 }
@@ -275,7 +283,14 @@ export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestWithT
   if (!response.ok || json.code !== 0) {
     const detail = typeof json.detail === 'string' ? json.detail : undefined
     const message = json.msg || detail || `HTTP ${response.status}`
-    throw new ApiError(message, response.status, json.msg || detail, json.msg || detail)
+    throw new ApiError(
+      message,
+      response.status,
+      json.msg || detail,
+      json.msg || detail,
+      json.requestId,
+      getErrorMessageArgs(json.data),
+    )
   }
 
   return json.data as T

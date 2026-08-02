@@ -18,9 +18,18 @@ describe('ApiError', () => {
   it('keeps the provided server message key', async () => {
     const { ApiError } = await import('./api-error')
 
-    const error = new ApiError('apiError.unknown', 400, 'server message', 'error.server.key')
+    const error = new ApiError(
+      'apiError.unknown',
+      400,
+      'server message',
+      'error.server.key',
+      'request-123',
+      ['arg-1'],
+    )
 
     expect(error.serverMessageKey).toBe('error.server.key')
+    expect(error.requestId).toBe('request-123')
+    expect(error.serverMessageArgs).toEqual(['arg-1'])
   })
 })
 
@@ -55,6 +64,41 @@ describe('handleApiError', () => {
     handleApiError(new ApiError('apiError.unknown', 422, 'Server said no'))
 
     expect(errorSpy).toHaveBeenLastCalledWith('Server said no')
+  })
+
+  it('shows a localized API-token scope denial with its request ID', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError(
+      'error.apiToken.scope.missing',
+      403,
+      'error.apiToken.scope.missing',
+      'error.apiToken.scope.missing',
+      'scope-request',
+      ['skill:publish'],
+    ))
+
+    expect(errorSpy).toHaveBeenLastCalledWith(
+      expect.stringContaining('skill:publish'),
+      expect.stringContaining('scope-request'),
+    )
+  })
+
+  it('does not expose unknown server text for forbidden responses', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError(
+      'database policy details',
+      403,
+      'database policy details',
+      'database policy details',
+      'forbidden-request',
+    ))
+
+    expect(errorSpy).toHaveBeenLastCalledWith(
+      i18n.t('apiError.forbidden'),
+      expect.stringContaining('forbidden-request'),
+    )
   })
 
   it('shows network error message when status is 0 (network disconnected)', async () => {

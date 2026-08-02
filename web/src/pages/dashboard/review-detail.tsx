@@ -50,7 +50,10 @@ function ReviewDetailScreen({
     data: reviewSkillDetail,
     isLoading: isLoadingReviewSkillDetail,
     error: reviewSkillDetailError,
-  } = useReviewSkillDetail(taskId)
+  } = useReviewSkillDetail(
+    taskId,
+    Boolean(review && review.artifactAvailable !== false),
+  )
   const approveMutation = useApproveReview({
     onSuccess: () => {
       toast.success(t('review.approveSuccess'))
@@ -178,6 +181,11 @@ function ReviewDetailScreen({
     (version) => version.version === reviewSkillDetail.activeVersion
   )
   const isApprovalBlockedByScanning = activeReviewVersion?.status === 'SCANNING'
+  const replacementReviewPath = review.replacementReviewTaskId
+    ? review.namespace === 'global'
+      ? `/dashboard/reviews/${review.replacementReviewTaskId}`
+      : buildNamespaceReviewDetailPath(review.namespace, review.replacementReviewTaskId)
+    : null
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
@@ -252,6 +260,44 @@ function ReviewDetailScreen({
           </div>
         )}
       </Card>
+
+      {review.superseded && (
+        <Card data-archived-review className="border-amber-500/35 bg-amber-500/5 p-6 space-y-5">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold font-heading">{t('review.supersededTitle')}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t('review.supersededDescription')}
+            </p>
+          </div>
+
+          {replacementReviewPath && (
+            <Button
+              variant="outline"
+              onClick={() => navigate({ to: replacementReviewPath })}
+            >
+              {t('review.openReplacementReview')}
+            </Button>
+          )}
+
+          {review.archivedSnapshot?.files.length ? (
+            <div className="space-y-3">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                {t('review.archivedFileHashes')}
+              </Label>
+              <div className="divide-y divide-border/60 rounded-xl border border-border/70 bg-background/60">
+                {review.archivedSnapshot.files.map((file) => (
+                  <div key={file.path} className="space-y-1 px-4 py-3">
+                    <p className="font-mono text-sm text-foreground">{file.path}</p>
+                    <p className="break-all font-mono text-xs text-muted-foreground">
+                      SHA-256 {file.sha256}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </Card>
+      )}
 
       {review.status === 'PENDING' && (
         <Card className="p-8 space-y-6">
@@ -329,17 +375,19 @@ function ReviewDetailScreen({
         const versionId =
           reviewSkillDetail?.versions?.find((v) => v.version === review.version)?.id ??
           review.skillVersionId
-        return skillId && versionId ? (
+        return !review.superseded && skillId && versionId ? (
           <SecurityAuditSection skillId={skillId} versionId={versionId} versionStatus={activeReviewVersion?.status} />
         ) : null
       })()}
 
-      <ReviewSkillDetailSection
-        detail={reviewSkillDetail}
-        isLoading={isLoadingReviewSkillDetail}
-        hasError={Boolean(reviewSkillDetailError)}
-        reviewId={taskId}
-      />
+      {!review.superseded && (
+        <ReviewSkillDetailSection
+          detail={reviewSkillDetail}
+          isLoading={isLoadingReviewSkillDetail}
+          hasError={Boolean(reviewSkillDetailError)}
+          reviewId={taskId}
+        />
+      )}
 
       <ConfirmDialog
         open={approveDialog}

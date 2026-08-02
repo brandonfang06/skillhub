@@ -8,12 +8,12 @@ from app.db.unit_of_work import transaction_connection
 from app.object_storage import ObjectStorage, object_storage_for_base_path
 
 from app.publish.package import PackageEntry, SkillMetadata
-from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
     delete_local_storage_objects_or_record_compensation,
     cleanup_replaceable_version,
+    VersionReplacementConflict,
 )
 from app.publish.side_effects import PublishSideEffectInput, PublishSideEffectResult, apply_publish_side_effects
 from app.publish.storage import StoredPackageResult, write_package_objects
@@ -30,6 +30,7 @@ from app.review.notifications import (
     read_review_submission_recipients,
     write_review_submitted_notifications,
 )
+from app.review.archive import ReviewAttemptArchiveInput, archive_review_attempt
 
 
 @dataclass(frozen=True)
@@ -96,16 +97,21 @@ async def execute_publish_write(
     notification_fanout: NotificationFanout | None = None,
     after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
+    if request.replacement is not None and request.replacement.status == "REJECTED":
+        if request.auto_publish or request.visibility == "PRIVATE":
+            raise VersionReplacementConflict("Rejected version resubmission requires review")
+
     replacement_storage_keys: list[str] = []
+    replacement_cleanup = None
     notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         if request.replacement is not None:
-            await auto_withdraw_pending_review_versions(
-                connection,
-                skill_id=request.replacement.skill_id,
-            )
             replacement_cleanup = await cleanup_replaceable_version(connection, request.replacement)
             replacement_storage_keys = replacement_cleanup.storage_keys
+            if replacement_cleanup.archived_review is not None and (
+                request.auto_publish or request.visibility == "PRIVATE"
+            ):
+                raise VersionReplacementConflict("Rejected version resubmission requires review")
 
         prepared = await prepare_publish_db_records(
             connection,
@@ -174,6 +180,22 @@ async def execute_publish_write(
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
+        if replacement_cleanup is not None and replacement_cleanup.archived_review is not None:
+            if side_effects.review_task_id is None:
+                raise ValueError("Rejected version resubmission must create a review task")
+            await archive_review_attempt(
+                connection,
+                ReviewAttemptArchiveInput(
+                    attempt=replacement_cleanup.archived_review,
+                    replacement_version_id=prepared.version_id,
+                    replacement_review_task_id=side_effects.review_task_id,
+                    actor_user_id=request.publisher_id,
+                    request_id=request.request_id,
+                    client_ip=request.client_ip,
+                    user_agent=request.user_agent,
+                    archived_at=request.now,
+                ),
+            )
         if side_effects.review_task_id is not None:
             notification_rows = await write_review_submitted_notifications(
                 connection,

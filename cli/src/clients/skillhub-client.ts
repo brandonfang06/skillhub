@@ -52,6 +52,13 @@ export interface DryRunResponse {
   resolvedVersion: string | null
 }
 
+interface PublicErrorFields {
+  msg?: string
+  requestId?: string
+}
+
+type ErrorResponseKind = 'json' | 'download'
+
 export class SkillHubClient {
   constructor(
     readonly registry: string,
@@ -88,14 +95,8 @@ export class SkillHubClient {
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
-    if (response.status === 401 || response.status === 403) {
-      throw new CliError('authentication failed', EXIT.auth, { registry: this.registry, next: 'run `skillhub login`' })
-    }
-    if (response.status === 404) {
-      throw new CliError('skill or version not found', EXIT.generic, { registry: this.registry })
-    }
     if (!response.ok) {
-      throw new CliError(`download failed with status ${response.status}`, EXIT.generic, { registry: this.registry })
+      throw await this.createResponseError(response, 'download')
     }
     return response
   }
@@ -151,25 +152,61 @@ export class SkillHubClient {
   }
 
   private async handleJsonResponse<T>(response: Response): Promise<T> {
-    if (response.status === 401) {
-      throw new CliError('authentication failed', EXIT.auth, { registry: this.registry, next: 'run `skillhub login`' })
-    }
-    if (response.status === 403) {
-      throw new CliError('access denied — token may lack required scope', EXIT.auth, { registry: this.registry, next: 'regenerate token with required scopes or run `skillhub login`' })
-    }
-    if (response.status === 404) {
-      throw new CliError('resource not found', EXIT.generic, { registry: this.registry })
-    }
-    // 502/503 indicate network-level failures (connection refused, service unavailable)
-    if (response.status === 502 || response.status === 503) {
-      throw new CliError(`registry returned ${response.status}`, EXIT.network, { registry: this.registry })
-    }
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new CliError(`registry returned ${response.status}`, EXIT.generic, { registry: this.registry, detail: text })
+      throw await this.createResponseError(response, 'json')
     }
     const body = await response.json()
     return body.data as T
+  }
+
+  private async createResponseError(response: Response, kind: ErrorResponseKind): Promise<CliError> {
+    const publicFields = await this.readPublicErrorFields(response)
+    const details: Record<string, unknown> = { registry: this.registry }
+    if (publicFields.requestId) {
+      details.requestId = publicFields.requestId
+    }
+
+    let fallback: string
+    let exitCode: number = EXIT.generic
+    if (response.status === 401) {
+      fallback = 'authentication failed'
+      exitCode = EXIT.auth
+      details.next = 'run `skillhub login`'
+    } else if (response.status === 403) {
+      fallback = 'access denied'
+      exitCode = EXIT.auth
+    } else if (response.status === 404) {
+      fallback = kind === 'download' ? 'skill or version not found' : 'resource not found'
+    } else if (response.status === 502 || response.status === 503) {
+      fallback = kind === 'download'
+        ? `download failed with status ${response.status}`
+        : `registry returned ${response.status}`
+      exitCode = EXIT.network
+    } else {
+      fallback = kind === 'download'
+        ? `download failed with status ${response.status}`
+        : `registry returned ${response.status}`
+    }
+    return new CliError(publicFields.msg ?? fallback, exitCode, details)
+  }
+
+  private async readPublicErrorFields(response: Response): Promise<PublicErrorFields> {
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      return {}
+    }
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return {}
+    }
+    const record = body as Record<string, unknown>
+    const msg = typeof record.msg === 'string' ? record.msg.trim() : ''
+    const requestId = typeof record.requestId === 'string' ? record.requestId.trim() : ''
+    return {
+      ...(msg ? { msg } : {}),
+      ...(requestId ? { requestId } : {})
+    }
   }
 
   private headers(): HeadersInit {

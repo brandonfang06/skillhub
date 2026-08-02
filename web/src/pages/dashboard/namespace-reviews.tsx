@@ -213,7 +213,11 @@ function ReviewListSection({
           </div>
         ) : null}
         {list.map((review) => (
-          <div key={review.id} className="p-5">
+          <div
+            key={review.id}
+            className="p-5"
+            data-superseded-review={review.superseded ? 'true' : undefined}
+          >
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {status === 'PENDING' ? (
@@ -232,8 +236,15 @@ function ReviewListSection({
                   />
                 ) : null}
                 <div className="min-w-0">
-                <div className="font-semibold font-heading">{review.namespace}/{review.skillSlug}</div>
-                <div className="text-sm text-muted-foreground">{t('nsReviews.version', { version: review.version })}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-semibold font-heading">{review.namespace}/{review.skillSlug}</div>
+                    {review.superseded ? (
+                      <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                        {t('review.supersededBadge')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{t('nsReviews.version', { version: review.version })}</div>
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">

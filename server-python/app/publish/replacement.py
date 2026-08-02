@@ -9,7 +9,7 @@ from app.object_storage import object_storage_for_base_path
 from sqlalchemy import text
 
 
-class RejectedVersionReuseError(ValueError):
+class VersionReplacementConflict(ValueError):
     pass
 
 
@@ -27,8 +27,31 @@ class ReplaceableVersion:
 
 
 @dataclass(frozen=True)
+class ArchivedReviewAttempt:
+    original_review_task_id: int
+    original_skill_version_id: int
+    skill_id: int
+    namespace_id: int
+    namespace_slug: str
+    skill_slug: str
+    version: str
+    status: str
+    submitted_by: str
+    reviewed_by: str | None
+    review_comment: str | None
+    submitted_at: datetime
+    reviewed_at: datetime | None
+    parsed_metadata_json: Any
+    manifest_json: Any
+    files: list[dict[str, Any]]
+    scanner_summary: list[dict[str, Any]]
+    original_request_id: str | None
+
+
+@dataclass(frozen=True)
 class ReplacementCleanupResult:
     storage_keys: list[str]
+    archived_review: ArchivedReviewAttempt | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +72,149 @@ class StorageDeleteResult:
 
 def bundle_storage_key(skill_id: int, version_id: int) -> str:
     return f"packages/{skill_id}/{version_id}/bundle.zip"
+
+
+REPLACEABLE_VERSION_STATUSES = {"DRAFT", "SCAN_FAILED", "UPLOADED", "REJECTED"}
+
+
+def _assert_replaceable_status(status: str, version: str) -> None:
+    if status == "PUBLISHED":
+        raise VersionReplacementConflict(f"Version already published: {version}")
+    if status not in REPLACEABLE_VERSION_STATUSES:
+        raise VersionReplacementConflict(f"Version cannot be replaced from status {status}")
+
+
+def _assert_locked_replacement(row: dict[str, Any], version: ReplaceableVersion) -> None:
+    if int(row["skill_id"]) != version.skill_id or str(row["owner_id"]) != version.publisher_id:
+        raise VersionReplacementConflict("Replacement owner changed")
+    if (
+        str(row["namespace_slug"]) != version.namespace
+        or str(row["slug"]) != version.slug
+        or str(row["version"]) != version.version
+    ):
+        raise VersionReplacementConflict("Replacement coordinates changed")
+    if str(row["skill_status"]) != "ACTIVE":
+        raise VersionReplacementConflict("Skill is not writable")
+    if str(row["namespace_status"]) != "ACTIVE":
+        raise VersionReplacementConflict("Namespace is not writable")
+    if str(row["status"]) == "REJECTED" and bool(row["has_pending_review"]):
+        raise VersionReplacementConflict("Skill already has a pending review")
+
+
+async def _read_rejected_review_attempt(
+    connection: Any,
+    version: ReplaceableVersion,
+) -> ArchivedReviewAttempt:
+    review_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT rt.id AS review_task_id,
+                       rt.namespace_id,
+                       rt.submitted_by,
+                       rt.reviewed_by,
+                       rt.review_comment,
+                       rt.submitted_at,
+                       rt.reviewed_at,
+                       sv.parsed_metadata_json,
+                       sv.manifest_json,
+                       (
+                           SELECT al.request_id
+                           FROM audit_log al
+                           WHERE al.target_type = 'REVIEW_TASK'
+                             AND al.target_id = rt.id
+                             AND al.action = 'REVIEW_REJECT'
+                           ORDER BY al.created_at DESC, al.id DESC
+                           LIMIT 1
+                       ) AS original_request_id
+                FROM review_task rt
+                JOIN skill_version sv ON sv.id = rt.skill_version_id
+                WHERE rt.skill_version_id = :version_id
+                  AND rt.status = 'REJECTED'
+                ORDER BY rt.reviewed_at DESC NULLS LAST, rt.id DESC
+                LIMIT 1
+                FOR UPDATE OF rt
+                """
+            ),
+            {"version_id": version.version_id},
+        )
+    ).mappings().one_or_none()
+    if review_row is None:
+        raise ValueError("Rejected version is missing completed review task")
+
+    file_rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT file_path, file_size, content_type, sha256, storage_key
+                FROM skill_file
+                WHERE version_id = :version_id
+                ORDER BY id ASC
+                """
+            ),
+            {"version_id": version.version_id},
+        )
+    ).mappings().all()
+    scanner_rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT scanner_type, verdict, max_severity, findings_count,
+                       findings, scanned_at, created_at
+                FROM security_audit
+                WHERE skill_version_id = :version_id
+                  AND deleted_at IS NULL
+                ORDER BY created_at ASC, id ASC
+                """
+            ),
+            {"version_id": version.version_id},
+        )
+    ).mappings().all()
+
+    files = [
+        {
+            "path": str(row["file_path"]),
+            "size": int(row["file_size"]),
+            "contentType": row.get("content_type"),
+            "sha256": str(row["sha256"]),
+        }
+        for row in file_rows
+    ]
+    scanner_summary = [
+        {
+            "scannerType": str(row["scanner_type"]),
+            "verdict": str(row["verdict"]),
+            "maxSeverity": row.get("max_severity"),
+            "findingsCount": int(row.get("findings_count") or 0),
+            "findings": row.get("findings") or [],
+            "scannedAt": row.get("scanned_at"),
+            "createdAt": row.get("created_at"),
+        }
+        for row in scanner_rows
+    ]
+
+    return ArchivedReviewAttempt(
+        original_review_task_id=int(review_row["review_task_id"]),
+        original_skill_version_id=version.version_id,
+        skill_id=version.skill_id,
+        namespace_id=int(review_row["namespace_id"]),
+        namespace_slug=version.namespace,
+        skill_slug=version.slug,
+        version=version.version,
+        status="REJECTED",
+        submitted_by=str(review_row["submitted_by"]),
+        reviewed_by=str(review_row["reviewed_by"]) if review_row.get("reviewed_by") is not None else None,
+        review_comment=str(review_row["review_comment"]) if review_row.get("review_comment") is not None else None,
+        submitted_at=review_row["submitted_at"],
+        reviewed_at=review_row.get("reviewed_at"),
+        parsed_metadata_json=review_row.get("parsed_metadata_json"),
+        manifest_json=review_row.get("manifest_json"),
+        files=files,
+        scanner_summary=scanner_summary,
+        original_request_id=(
+            str(review_row["original_request_id"]) if review_row.get("original_request_id") is not None else None
+        ),
+    )
 
 
 async def find_replaceable_version(
@@ -105,29 +271,49 @@ async def find_replaceable_version(
 
 
 async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersion) -> ReplacementCleanupResult:
-    if version.status == "REJECTED":
-        raise RejectedVersionReuseError("error.skill.publish.rejectedVersionReuse")
-    if version.status == "PUBLISHED":
-        raise ValueError(f"Version already published: {version.version}")
+    _assert_replaceable_status(version.status, version.version)
 
-    status_row = (
+    locked_row = (
         await connection.execute(
             text(
                 """
-                SELECT status
-                FROM skill_version
-                WHERE id = :version_id
-                FOR UPDATE
+                SELECT sv.status,
+                       sv.version,
+                       s.id AS skill_id,
+                       s.slug,
+                       s.owner_id,
+                       s.status AS skill_status,
+                       n.slug AS namespace_slug,
+                       n.status AS namespace_status,
+                       EXISTS (
+                           SELECT 1
+                           FROM review_task pending_rt
+                           JOIN skill_version pending_sv ON pending_sv.id = pending_rt.skill_version_id
+                           WHERE pending_sv.skill_id = s.id
+                             AND pending_rt.status = 'PENDING'
+                       ) AS has_pending_review
+                FROM skill_version sv
+                JOIN skill s ON s.id = sv.skill_id
+                JOIN namespace n ON n.id = s.namespace_id
+                WHERE sv.id = :version_id
+                FOR UPDATE OF s, sv
                 """
             ),
             {"version_id": version.version_id},
         )
     ).mappings().one_or_none()
-    current_status = str(status_row["status"]) if status_row is not None else version.status
-    if current_status == "REJECTED":
-        raise RejectedVersionReuseError("error.skill.publish.rejectedVersionReuse")
-    if current_status == "PUBLISHED":
-        raise ValueError(f"Version already published: {version.version}")
+    if locked_row is None:
+        raise VersionReplacementConflict("Replacement version no longer exists")
+    locked_row = dict(locked_row)
+    _assert_locked_replacement(locked_row, version)
+    current_status = str(locked_row["status"])
+    _assert_replaceable_status(current_status, version.version)
+
+    archived_review = (
+        await _read_rejected_review_attempt(connection, version)
+        if current_status == "REJECTED"
+        else None
+    )
 
     now = normalized_now(version.now)
     if version.latest_version_id == version.version_id:
@@ -149,7 +335,6 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
             """
             DELETE FROM review_task
             WHERE skill_version_id = :version_id
-              AND status = 'PENDING'
             """
         ),
         {"version_id": version.version_id},
@@ -159,7 +344,7 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
         await connection.execute(
             text(
                 """
-                SELECT storage_key
+                SELECT file_path, file_size, content_type, sha256, storage_key
                 FROM skill_file
                 WHERE version_id = :version_id
                 ORDER BY id ASC
@@ -205,7 +390,10 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
         {"version_id": version.version_id},
     )
 
-    return ReplacementCleanupResult(storage_keys=storage_keys)
+    return ReplacementCleanupResult(
+        storage_keys=storage_keys,
+        archived_review=archived_review,
+    )
 
 
 def delete_local_storage_objects(storage_base_path: str, storage_keys: list[str]) -> list[str]:

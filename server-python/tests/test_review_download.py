@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.review import query as review_query_module
-from app.review.query import ReviewDownloadResult, read_review_download_package
+from app.review.query import ReviewDownloadResult, ReviewQueryError, read_review_download_package
 
 
 def authenticated_client(app: Any, user_id: str = "team-admin") -> TestClient:
@@ -56,17 +56,21 @@ class FakeReviewDownloadConnection:
         namespace_role: str | None = "ADMIN",
         platform_roles: list[str] | None = None,
         display_name: str | None = "Review Download Skill",
+        archived_task: bool = False,
     ) -> None:
         self.submitted_by = submitted_by
         self.namespace_role = namespace_role
         self.platform_roles = platform_roles or []
         self.display_name = display_name
+        self.archived_task = archived_task
         self.statements: list[str] = []
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
         self.statements.append(sql)
         if "FROM review_task rt" in sql:
+            if self.archived_task:
+                return FakeResult(row=None)
             return FakeResult(
                 row={
                     "id": 801,
@@ -84,6 +88,19 @@ class FakeReviewDownloadConnection:
                     "namespace_type": "TEAM",
                     "skill_slug": "agent-helper",
                     "version_name": "1.0.0",
+                }
+            )
+        if "FROM review_attempt_archive raa" in sql:
+            if not self.archived_task:
+                return FakeResult(row=None)
+            return FakeResult(
+                row={
+                    "id": 801,
+                    "skill_version_id": 52,
+                    "namespace_id": 20,
+                    "status": "REJECTED",
+                    "submitted_by": self.submitted_by,
+                    "namespace_type": "TEAM",
                 }
             )
         if "FROM user_role_binding" in sql:
@@ -244,6 +261,26 @@ async def test_read_review_download_returns_bundle_not_found_when_no_available_c
             review_task_id=801,
             user_id="team-admin",
         )
+
+
+@pytest.mark.anyio
+async def test_read_review_download_rejects_archived_artifact(tmp_path: Path) -> None:
+    connection = FakeReviewDownloadConnection(
+        submitted_by="local-user",
+        namespace_role=None,
+        archived_task=True,
+    )
+
+    with pytest.raises(ReviewQueryError, match="review.artifact.unavailable") as exc_info:
+        await read_review_download_package(
+            FakeEngine(connection),
+            storage_base_path=str(tmp_path),
+            review_task_id=801,
+            user_id="local-user",
+        )
+
+    assert exc_info.value.status_code == 410
+    assert not any("FROM skill_file" in statement for statement in connection.statements)
 
 
 def test_review_download_route_returns_attachment_response() -> None:

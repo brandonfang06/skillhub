@@ -15,6 +15,7 @@ function isPathUnder(child: string, parent: string): boolean {
 
 export interface RemoveLocalOptions {
   registry: string
+  namespace?: string | undefined
   slug: string
   agents?: string[] | undefined
   all?: boolean | undefined
@@ -29,7 +30,11 @@ export async function removeLocalSkill(options: RemoveLocalOptions): Promise<Rem
   const store = new InventoryStore(options.home)
   const inventory = await store.read()
 
-  const items = inventory.items.filter(i => i.registry === options.registry && i.slug === options.slug)
+  const items = inventory.items.filter(item =>
+    item.registry === options.registry &&
+    item.slug === options.slug &&
+    (options.namespace === undefined || item.namespace === options.namespace)
+  )
   if (items.length === 0) {
     throw new CliError(`skill not found locally: ${options.slug}`, EXIT.generic, {
       next: 'run `skillhub list` to see installed skills'

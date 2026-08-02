@@ -26,6 +26,75 @@ afterEach(() => {
   registry = undefined
 })
 
+describe('install command namespace coordinates', () => {
+  test.each(['team/my-skill', '@team/my-skill', 'team--my-skill'])(
+    '%s resolves the namespaced registry path',
+    async (coordinate) => {
+      const env = await createTempHome()
+      registry = await startFakeRegistry({
+        token: 'sk_ok',
+        skills: [{
+          namespace: 'team',
+          slug: 'my-skill',
+          version: '1.0.0',
+          zipBytes: makeSkillZip(),
+        }],
+      })
+      const installDir = join(env.cwd, 'skills-coordinate')
+      await mkdir(installDir, { recursive: true })
+
+      const result = await runCli(
+        [
+          'install', coordinate,
+          '--dir', installDir,
+          '--registry', registry.url,
+          '--token', 'sk_ok',
+          '--json',
+        ],
+        { HOME: env.home, USERPROFILE: env.home },
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: true,
+        namespace: 'team',
+        slug: 'my-skill',
+      })
+      expect(registry.received.resolve).toMatchObject({
+        namespace: 'team',
+        slug: 'my-skill',
+      })
+    },
+  )
+
+  test('conflicting --namespace fails before registry access', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      skills: [{
+        namespace: 'team',
+        slug: 'my-skill',
+        version: '1.0.0',
+        zipBytes: makeSkillZip(),
+      }],
+    })
+
+    const result = await runCli(
+      [
+        'install', '@team/my-skill',
+        '--namespace', 'other',
+        '--registry', registry.url,
+        '--token', 'sk_ok',
+        '--json',
+      ],
+      { HOME: env.home, USERPROFILE: env.home },
+    )
+
+    expect(result.exitCode).toBe(5)
+    expect(registry.received.resolve).toBeNull()
+  })
+})
+
 // ---------------------------------------------------------------------------
 // P0 — Happy-path install: metadata.json + inventory.json
 // ---------------------------------------------------------------------------

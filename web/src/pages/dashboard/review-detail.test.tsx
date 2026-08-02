@@ -62,7 +62,7 @@ const useReviewDetailMock = vi.fn<() => unknown>(() => ({
   isLoading: false,
 }))
 
-const useReviewSkillDetailMock = vi.fn<() => unknown>(() => ({
+const useReviewSkillDetailMock = vi.fn<(...args: [number, boolean?]) => unknown>(() => ({
   data: {
     skill: {
       id: 1,
@@ -105,7 +105,7 @@ const useReviewSkillDetailMock = vi.fn<() => unknown>(() => ({
 
 vi.mock('@/features/review/use-review-detail', () => ({
   useReviewDetail: () => useReviewDetailMock(),
-  useReviewSkillDetail: () => useReviewSkillDetailMock(),
+  useReviewSkillDetail: (taskId: number, enabled?: boolean) => useReviewSkillDetailMock(taskId, enabled),
   useApproveReview: () => ({
     mutate: vi.fn(),
     isPending: false,
@@ -337,5 +337,54 @@ describe('ReviewDetailPage', () => {
 
     expect(html).toContain('review.approveDisabledScanning')
     expect(html).toContain('disabled=""')
+  })
+
+  it('renders archived feedback without requesting or exposing artifact actions', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        skillVersionId: 9,
+        namespace: 'global',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'REJECTED',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: 'reviewer',
+        reviewedByName: 'Reviewer',
+        reviewedAt: '2026-03-19T01:00:00Z',
+        reviewComment: 'Fix the manifest',
+        superseded: true,
+        artifactAvailable: false,
+        replacementVersionId: 10,
+        replacementReviewTaskId: 14,
+        archivedSnapshot: {
+          metadata: { name: 'Demo Skill' },
+          manifest: [{ path: 'SKILL.md', size: 12 }],
+          files: [
+            {
+              path: 'SKILL.md',
+              size: 12,
+              contentType: 'text/markdown',
+              sha256: 'archived-sha',
+            },
+          ],
+          scannerSummary: [],
+        },
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(useReviewSkillDetailMock).toHaveBeenCalledWith(13, false)
+    expect(html).toContain('data-archived-review')
+    expect(html).toContain('review.supersededTitle')
+    expect(html).toContain('Fix the manifest')
+    expect(html).toContain('archived-sha')
+    expect(html).toContain('review.openReplacementReview')
+    expect(html).not.toContain('review.downloadSkillZip')
+    expect(html).not.toContain('review.skillDetailTitle')
   })
 })

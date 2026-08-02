@@ -10,6 +10,16 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml;
     gzip_min_length 1000;
 
+    # Ignore client-supplied forwarded proto unless a sanitizing upstream proxy is trusted.
+    set $proxy_x_forwarded_proto $scheme;
+    set $forwarded_proto_source "${SKILLHUB_TRUST_FORWARDED_PROTO}:$http_x_forwarded_proto";
+    if ($forwarded_proto_source ~* "^true:https$") {
+        set $proxy_x_forwarded_proto https;
+    }
+    if ($forwarded_proto_source ~* "^true:http$") {
+        set $proxy_x_forwarded_proto http;
+    }
+
     location / {
         add_header Cache-Control "no-cache, must-revalidate";
         try_files $uri $uri/ /index.html;
@@ -20,27 +30,31 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
     }
 
     location /oauth2/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
     }
 
     location /login/oauth2/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
     }
 
     location /.well-known/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
     }
 
     location /assets/ {

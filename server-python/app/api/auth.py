@@ -78,6 +78,12 @@ def _authorization_url(registration_id: str, return_to: str | None) -> str:
     return f"{base_url}?returnTo={quote_plus(sanitized_return_to)}"
 
 
+def _catalog_oauth_registration(registration: dict[str, object]) -> bool:
+    client_id = str(registration.get("clientId") or "").strip()
+    normalized = client_id.lower()
+    return bool(client_id) and "placeholder" not in normalized and not normalized.startswith("replace-with-")
+
+
 def build_auth_providers(oauth_registrations: list[dict[str, object]], return_to: str | None = None) -> list[dict[str, str]]:
     return [
         {
@@ -86,6 +92,7 @@ def build_auth_providers(oauth_registrations: list[dict[str, object]], return_to
             "authorizationUrl": _authorization_url(_registration_id(registration), return_to),
         }
         for registration in sorted(oauth_registrations, key=_registration_id)
+        if _catalog_oauth_registration(registration)
     ]
 
 

@@ -36,13 +36,31 @@ describe('SkillHubClient', () => {
     await err.toHaveProperty('exitCode', EXIT.auth)
   })
 
-  test('download() throws auth error on 403', async () => {
+  test('download() uses a neutral auth error on an unstructured 403', async () => {
     const fetchImpl = (async () => new Response(null, { status: 403 })) as unknown as typeof fetch
     const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
     const err = expect(client.download('ns', 'slug')).rejects
     await err.toBeInstanceOf(CliError)
-    await err.toHaveProperty('message', 'authentication failed')
+    await err.toHaveProperty('message', 'access denied')
     await err.toHaveProperty('exitCode', EXIT.auth)
+  })
+
+  test('download() preserves a structured denial and request ID', async () => {
+    const fetchImpl = (async () => Response.json({
+      code: 403,
+      msg: 'error.apiToken.scope.missing',
+      requestId: 'req-download'
+    }, { status: 403 })) as unknown as typeof fetch
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+
+    await expect(client.download('ns', 'slug')).rejects.toMatchObject({
+      message: 'error.apiToken.scope.missing',
+      exitCode: EXIT.auth,
+      details: {
+        registry: 'http://registry.test',
+        requestId: 'req-download'
+      }
+    })
   })
 
   test('download() throws not-found error on 404', async () => {

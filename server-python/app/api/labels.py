@@ -1,13 +1,14 @@
-from collections import defaultdict
-from collections.abc import Awaitable
-from inspect import isawaitable
 import json
+from collections import defaultdict
+from collections.abc import Awaitable, Callable
+from inspect import isawaitable
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.admin.search_refresh import refresh_skill_search_documents
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, platform_roles
 from app.core.response import ok
@@ -327,9 +328,12 @@ async def attach_skill_label(
     request_id: str | None,
     client_ip: str | None,
     user_agent: str | None,
+    search_refresher: Callable[[Any, list[int]], Awaitable[None]] | None = None,
 ) -> dict[str, str]:
+    skill_id: int
     async with engine.begin() as connection:
         skill = await _read_skill_for_label_mutation(connection, namespace, slug)
+        skill_id = int(skill["id"])
         label = await _read_label_definition_for_mutation(connection, label_slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), actor_user_id)
         _assert_can_manage_skill_label(
@@ -362,7 +366,10 @@ async def attach_skill_label(
             client_ip=client_ip,
             user_agent=user_agent,
         )
-        return await _skill_label_response_for_definition(connection, label)
+        response = await _skill_label_response_for_definition(connection, label)
+    if search_refresher is not None:
+        await search_refresher(engine, [skill_id])
+    return response
 
 
 async def detach_skill_label(
@@ -376,9 +383,12 @@ async def detach_skill_label(
     request_id: str | None,
     client_ip: str | None,
     user_agent: str | None,
+    search_refresher: Callable[[Any, list[int]], Awaitable[None]] | None = None,
 ) -> dict[str, str]:
+    skill_id: int
     async with engine.begin() as connection:
         skill = await _read_skill_for_label_mutation(connection, namespace, slug)
+        skill_id = int(skill["id"])
         label = await _read_label_definition_for_mutation(connection, label_slug)
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), actor_user_id)
         _assert_can_manage_skill_label(
@@ -411,6 +421,8 @@ async def detach_skill_label(
             client_ip=client_ip,
             user_agent=user_agent,
         )
+    if search_refresher is not None:
+        await search_refresher(engine, [skill_id])
     return {"message": "Label detached"}
 
 
@@ -582,6 +594,7 @@ async def attach_skill_label_route(
                 request_id=meta["request_id"],
                 client_ip=meta["client_ip"],
                 user_agent=meta["user_agent"],
+                search_refresher=refresh_skill_search_documents,
             )
         )
     except SkillLabelMutationError as exc:
@@ -615,6 +628,7 @@ async def detach_skill_label_route(
                 request_id=meta["request_id"],
                 client_ip=meta["client_ip"],
                 user_agent=meta["user_agent"],
+                search_refresher=refresh_skill_search_documents,
             )
         )
     except SkillLabelMutationError as exc:

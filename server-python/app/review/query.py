@@ -88,7 +88,8 @@ def _java_instant(value: Any) -> str | None:
 
 
 def _task_response(row: dict[str, Any]) -> dict[str, Any]:
-    return {
+    superseded = bool(row.get("superseded"))
+    response = {
         "id": int(row["id"]),
         "skillVersionId": int(row["skill_version_id"]),
         "namespace": str(row["namespace_slug"]),
@@ -103,7 +104,34 @@ def _task_response(row: dict[str, Any]) -> dict[str, Any]:
         "reviewComment": row.get("review_comment"),
         "submittedAt": _java_instant(row.get("submitted_at")),
         "reviewedAt": _java_instant(row.get("reviewed_at")),
+        "superseded": superseded,
+        "artifactAvailable": not superseded,
     }
+    if superseded:
+        response["replacementVersionId"] = row.get("replacement_version_id")
+        response["replacementReviewTaskId"] = row.get("replacement_review_task_id")
+        response["archivedAt"] = _java_instant(row.get("archived_at"))
+    return response
+
+
+def _archived_task_response(row: dict[str, Any]) -> dict[str, Any]:
+    response = _task_response(row)
+    response.update(
+        {
+            "superseded": True,
+            "artifactAvailable": False,
+            "replacementVersionId": row.get("replacement_version_id"),
+            "replacementReviewTaskId": row.get("replacement_review_task_id"),
+            "archivedAt": _java_instant(row.get("archived_at")),
+            "archivedSnapshot": {
+                "metadata": row.get("parsed_metadata_json"),
+                "manifest": row.get("manifest_json"),
+                "files": row.get("files_json") or [],
+                "scannerSummary": row.get("scanner_summary_json") or [],
+            },
+        }
+    )
+    return response
 
 
 def _lifecycle_version(row: dict[str, Any]) -> dict[str, Any]:
@@ -429,6 +457,36 @@ async def _count_review_tasks(
     )
 
 
+async def _count_archived_review_attempts(
+    connection: Any,
+    *,
+    namespace_id: int | None,
+    submitted_by: str | None,
+) -> int:
+    filters = ["raa.status = 'REJECTED'"]
+    params: dict[str, Any] = {}
+    if namespace_id is not None:
+        filters.append("raa.namespace_id = :namespace_id")
+        params["namespace_id"] = namespace_id
+    if submitted_by is not None:
+        filters.append("raa.submitted_by = :submitted_by")
+        params["submitted_by"] = submitted_by
+    return int(
+        (
+            await connection.execute(
+                text(
+                    f"""
+                    SELECT COUNT(*)
+                    FROM review_attempt_archive raa
+                    WHERE {" AND ".join(filters)}
+                    """
+                ),
+                params,
+            )
+        ).scalar_one()
+    )
+
+
 async def _read_review_task_rows(
     connection: Any,
     *,
@@ -454,6 +512,81 @@ async def _read_review_task_rows(
 
     where_clause = " AND ".join(filters)
     order_clause = _order_clause(status, sort_direction)
+    if status == "REJECTED":
+        archive_filters = ["raa.status = :status"]
+        if namespace_id is not None:
+            archive_filters.append("raa.namespace_id = :namespace_id")
+        if submitted_by is not None:
+            archive_filters.append("raa.submitted_by = :submitted_by")
+        rows = (
+            await connection.execute(
+                text(
+                    f"""
+                    SELECT *
+                    FROM (
+                        SELECT rt.id,
+                               rt.skill_version_id,
+                               rt.namespace_id,
+                               rt.status,
+                               rt.submitted_by,
+                               submitter.display_name AS submitted_by_name,
+                               rt.reviewed_by,
+                               reviewer.display_name AS reviewed_by_name,
+                               rt.review_comment,
+                               rt.submitted_at,
+                               rt.reviewed_at,
+                               n.slug AS namespace_slug,
+                               n.type AS namespace_type,
+                               s.slug AS skill_slug,
+                               sv.version AS version_name,
+                               sv.status AS version_status,
+                               FALSE AS superseded,
+                               NULL::BIGINT AS replacement_version_id,
+                               NULL::BIGINT AS replacement_review_task_id,
+                               NULL::TIMESTAMPTZ AS archived_at
+                        FROM review_task rt
+                        JOIN namespace n ON n.id = rt.namespace_id
+                        JOIN skill_version sv ON sv.id = rt.skill_version_id
+                        JOIN skill s ON s.id = sv.skill_id
+                        LEFT JOIN user_account submitter ON submitter.id = rt.submitted_by
+                        LEFT JOIN user_account reviewer ON reviewer.id = rt.reviewed_by
+                        WHERE {where_clause}
+                        UNION ALL
+                        SELECT raa.original_review_task_id AS id,
+                               raa.original_skill_version_id AS skill_version_id,
+                               raa.namespace_id,
+                               raa.status,
+                               raa.submitted_by,
+                               submitter.display_name AS submitted_by_name,
+                               raa.reviewed_by,
+                               reviewer.display_name AS reviewed_by_name,
+                               raa.review_comment,
+                               raa.submitted_at,
+                               raa.reviewed_at,
+                               raa.namespace_slug,
+                               n.type AS namespace_type,
+                               raa.skill_slug,
+                               raa.version AS version_name,
+                               raa.status AS version_status,
+                               TRUE AS superseded,
+                               raa.replacement_version_id,
+                               raa.replacement_review_task_id,
+                               raa.archived_at
+                        FROM review_attempt_archive raa
+                        LEFT JOIN namespace n ON n.id = raa.namespace_id
+                        LEFT JOIN user_account submitter ON submitter.id = raa.submitted_by
+                        LEFT JOIN user_account reviewer ON reviewer.id = raa.reviewed_by
+                        WHERE {" AND ".join(archive_filters)}
+                    ) review_history
+                    ORDER BY reviewed_at {sort_direction}, id {sort_direction}
+                    LIMIT :limit OFFSET :offset
+                    """
+                ),
+                params,
+            )
+        ).mappings().all()
+        return [dict(row) for row in rows]
+
     rows = (
         await connection.execute(
             text(
@@ -527,6 +660,58 @@ async def _read_review_task_row(connection: Any, review_task_id: int) -> dict[st
     if row is None:
         raise ReviewQueryError("review_task.not_found", status_code=404)
     return dict(row)
+
+
+async def _read_archived_review_task_row(connection: Any, review_task_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT raa.original_review_task_id AS id,
+                       raa.original_skill_version_id AS skill_version_id,
+                       raa.namespace_id,
+                       raa.status,
+                       raa.submitted_by,
+                       submitter.display_name AS submitted_by_name,
+                       raa.reviewed_by,
+                       reviewer.display_name AS reviewed_by_name,
+                       raa.review_comment,
+                       raa.submitted_at,
+                       raa.reviewed_at,
+                       raa.namespace_slug,
+                       n.type AS namespace_type,
+                       raa.skill_slug,
+                       raa.version AS version_name,
+                       raa.status AS version_status,
+                       raa.parsed_metadata_json,
+                       raa.manifest_json,
+                       raa.files_json,
+                       raa.scanner_summary_json,
+                       raa.replacement_version_id,
+                       raa.replacement_review_task_id,
+                       raa.archived_at
+                FROM review_attempt_archive raa
+                LEFT JOIN namespace n ON n.id = raa.namespace_id
+                LEFT JOIN user_account submitter ON submitter.id = raa.submitted_by
+                LEFT JOIN user_account reviewer ON reviewer.id = raa.reviewed_by
+                WHERE raa.original_review_task_id = :review_task_id
+                """
+            ),
+            {"review_task_id": review_task_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise ReviewQueryError("review_task.not_found", status_code=404)
+    return dict(row)
+
+
+async def _read_review_artifact_task_row(connection: Any, review_task_id: int) -> tuple[dict[str, Any], bool]:
+    try:
+        return await _read_review_task_row(connection, review_task_id), True
+    except ReviewQueryError as exc:
+        if exc.status_code != 404:
+            raise
+        return await _read_archived_review_task_row(connection, review_task_id), False
 
 
 async def _read_review_skill_snapshot(connection: Any, skill_version_id: int) -> dict[str, Any]:
@@ -678,6 +863,12 @@ async def _build_page_response(
     sort_direction: str,
 ) -> dict[str, Any]:
     total = await _count_review_tasks(connection, status=status, namespace_id=namespace_id, submitted_by=submitted_by)
+    if status == "REJECTED":
+        total += await _count_archived_review_attempts(
+            connection,
+            namespace_id=namespace_id,
+            submitted_by=submitted_by,
+        )
     rows = await _read_review_task_rows(
         connection,
         status=status,
@@ -759,12 +950,19 @@ async def list_my_review_submissions(engine: Any, *, page: int, size: int, user_
 
 async def read_review_detail(engine: Any, *, review_task_id: int, user_id: str) -> dict[str, Any]:
     async with engine.connect() as connection:
-        row = await _read_review_task_row(connection, review_task_id)
+        try:
+            row = await _read_review_task_row(connection, review_task_id)
+            response_builder = _task_response
+        except ReviewQueryError as exc:
+            if exc.status_code != 404:
+                raise
+            row = await _read_archived_review_task_row(connection, review_task_id)
+            response_builder = _archived_task_response
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
         if not _can_view_review(row, user_id, namespace_roles, platform_roles):
             raise ReviewQueryError("review.no_permission", status_code=403)
-        return _task_response(row)
+        return response_builder(row)
 
 
 async def read_review_skill_detail(
@@ -775,11 +973,13 @@ async def read_review_skill_detail(
     user_id: str,
 ) -> dict[str, Any]:
     async with engine.connect() as connection:
-        task = await _read_review_task_row(connection, review_task_id)
+        task, artifact_available = await _read_review_artifact_task_row(connection, review_task_id)
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
         if not _can_view_review(task, user_id, namespace_roles, platform_roles):
             raise ReviewQueryError("review.no_permission", status_code=403)
+        if not artifact_available:
+            raise ReviewQueryError("review.artifact.unavailable", status_code=410)
 
         snapshot = await _read_review_skill_snapshot(connection, int(task["skill_version_id"]))
         versions = await _read_review_skill_versions(connection, int(snapshot["id"]))
@@ -809,11 +1009,13 @@ async def read_review_file_content(
     user_id: str,
 ) -> bytes:
     async with engine.connect() as connection:
-        task = await _read_review_task_row(connection, review_task_id)
+        task, artifact_available = await _read_review_artifact_task_row(connection, review_task_id)
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
         if not _can_view_review(task, user_id, namespace_roles, platform_roles):
             raise ReviewQueryError("review.no_permission", status_code=403)
+        if not artifact_available:
+            raise ReviewQueryError("review.artifact.unavailable", status_code=410)
 
         files = await _read_review_skill_files(connection, int(task["skill_version_id"]), storage_base_path)
         file_row = next((file for file in files if str(file["file_path"]) == file_path), None)
@@ -830,11 +1032,13 @@ async def read_review_download_package(
     user_id: str,
 ) -> ReviewDownloadResult:
     async with engine.connect() as connection:
-        task = await _read_review_task_row(connection, review_task_id)
+        task, artifact_available = await _read_review_artifact_task_row(connection, review_task_id)
         platform_roles = await _read_platform_roles(connection, user_id)
         namespace_roles = await _read_namespace_roles(connection, user_id)
         if not _can_view_review(task, user_id, namespace_roles, platform_roles):
             raise ReviewQueryError("review.no_permission", status_code=403)
+        if not artifact_available:
+            raise ReviewQueryError("review.artifact.unavailable", status_code=410)
 
         version_row = await _read_review_download_version_row(connection, int(task["skill_version_id"]))
         file_rows = await _read_review_download_file_rows(connection, int(version_row["version_id"]))

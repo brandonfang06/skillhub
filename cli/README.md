@@ -126,15 +126,25 @@ Output format: `namespace/slug  version  summary`
 
 ## 📥 Install Skills
 
+The install coordinate accepts a bare slug or any equivalent namespaced form:
+`team/my-skill`, `@team/my-skill`, or `team--my-skill`. A bare slug resolves
+to `global` unless `--namespace` is provided. If both forms specify a
+namespace, they must match.
+
 ```bash
 # Install to auto-detected Agent directory
 skillhub install pdf-parser
+
+# Equivalent namespaced coordinates
+skillhub install team/my-skill
+skillhub install @team/my-skill
+skillhub install team--my-skill
 
 # Choose install scope explicitly
 skillhub install pdf-parser --scope user
 skillhub install pdf-parser --scope project --agent codex
 
-# Specify namespace (default: global)
+# Specify namespace for a bare slug (default: global)
 skillhub install pdf-parser --namespace myspace
 
 # Specify version
@@ -244,8 +254,16 @@ skillhub list --json
 ### Remove Skills
 
 ```bash
-# Remove all local installation targets
+# A bare slug removes matching local installations across namespaces
 skillhub remove pdf-parser
+
+# A namespaced coordinate removes only that namespace
+skillhub remove myspace/pdf-parser
+skillhub remove @myspace/pdf-parser
+skillhub remove myspace--pdf-parser
+
+# Equivalent precise local removal
+skillhub remove pdf-parser --namespace myspace
 
 # Remove only specific Agent's installation
 skillhub remove pdf-parser --agent codex
@@ -342,9 +360,9 @@ Update mechanism:
 | `skillhub logout [--registry <url>] [--json]` | Remove token for specified registry |
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
-| `skillhub install <slug> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
+| `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
-| `skillhub remove <slug> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
+| `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |
 | `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
 | `skillhub update [--check] [--json]` | Check or execute CLI self-update |
@@ -368,6 +386,11 @@ skillhub whoami
 # Re-login
 skillhub login --token sk_xxx
 ```
+
+For structured registry failures, the CLI prints the server's public message
+and `Request ID`. Include that ID when asking an operator to investigate. An
+unstructured 403 uses the neutral `access denied` fallback and never prints
+the raw response body.
 
 ### Network Error
 

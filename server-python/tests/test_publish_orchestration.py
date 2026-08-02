@@ -9,7 +9,12 @@ import pytest
 
 from app.publish.orchestration import PublishWriteInput, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata
-from app.publish.replacement import ReplaceableVersion
+from app.publish.replacement import (
+    ArchivedReviewAttempt,
+    ReplaceableVersion,
+    ReplacementCleanupResult,
+    VersionReplacementConflict,
+)
 
 
 def package_entries() -> list[PackageEntry]:
@@ -73,8 +78,20 @@ class FakeConnection:
         self.statements.append(str(statement))
         self.params.append(params or {})
         sql = str(statement)
-        if "SELECT status" in sql and "FROM skill_version" in sql:
-            return FakeResult(row={"status": "UPLOADED"})
+        if "FOR UPDATE OF s, sv" in sql:
+            return FakeResult(
+                row={
+                    "status": "UPLOADED",
+                    "version": "1.0.0",
+                    "skill_id": 7,
+                    "slug": "agent-helper",
+                    "owner_id": "local-user",
+                    "skill_status": "ACTIVE",
+                    "namespace_slug": "global",
+                    "namespace_status": "ACTIVE",
+                    "has_pending_review": False,
+                }
+            )
         if "status = 'PENDING_REVIEW'" in sql:
             return FakeResult(rows=[])
         if "FROM namespace_member nm" in sql and "notification_preference" in sql:
@@ -432,6 +449,121 @@ async def test_execute_publish_write_deletes_replacement_storage_after_commit(tm
     insert_new_version_index = next(index for index, statement in enumerate(write_connection.statements) if "INSERT INTO skill_version" in statement)
     assert update_skill_index < delete_old_version_index < insert_new_version_index
     assert cleanup_connection.statements == []
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_archives_rejected_attempt_with_new_review_link(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    archived_attempt = ArchivedReviewAttempt(
+        original_review_task_id=91,
+        original_skill_version_id=41,
+        skill_id=7,
+        namespace_id=10,
+        namespace_slug="global",
+        skill_slug="agent-helper",
+        version="1.0.0",
+        status="REJECTED",
+        submitted_by="local-user",
+        reviewed_by="reviewer-1",
+        review_comment="Fix metadata",
+        submitted_at=datetime(2026, 6, 7, 10, 0, tzinfo=UTC),
+        reviewed_at=datetime(2026, 6, 7, 11, 0, tzinfo=UTC),
+        parsed_metadata_json={"name": "Agent Helper", "version": "1.0.0"},
+        manifest_json=[{"path": "SKILL.md", "size": 42}],
+        files=[{"path": "SKILL.md", "size": 42, "contentType": "text/markdown", "sha256": "abc123"}],
+        scanner_summary=[],
+        original_request_id="reject-request",
+    )
+
+    async def cleanup_rejected(_connection: Any, _version: ReplaceableVersion) -> ReplacementCleanupResult:
+        return ReplacementCleanupResult(storage_keys=[], archived_review=archived_attempt)
+
+    monkeypatch.setattr("app.publish.orchestration.cleanup_replaceable_version", cleanup_rejected)
+
+    request = replace(
+        publish_input(str(tmp_path)),
+        request_id="resubmit-request",
+        client_ip="127.0.0.1",
+        user_agent="pytest",
+    ).with_replacement(
+        ReplaceableVersion(
+            skill_id=7,
+            namespace="global",
+            slug="agent-helper",
+            version_id=41,
+            version="1.0.0",
+            status="REJECTED",
+            publisher_id="local-user",
+            now=datetime(2026, 6, 8, 18, 19, 20, tzinfo=UTC),
+        )
+    )
+
+    result = await execute_publish_write(FakeEngine([connection]), request)
+
+    assert result.version_id == 42
+    assert result.side_effects.review_task_id == 900
+    archive_index = next(
+        index for index, statement in enumerate(connection.statements) if "INSERT INTO review_attempt_archive" in statement
+    )
+    audit_index = next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if "INSERT INTO audit_log" in statement
+        and connection.params[index].get("action") == "REJECTED_VERSION_RESUBMIT"
+    )
+    notification_index = next(index for index, statement in enumerate(connection.statements) if "INSERT INTO notification" in statement)
+    assert archive_index < audit_index < notification_index
+    assert connection.params[archive_index]["original_review_task_id"] == 91
+    assert connection.params[archive_index]["replacement_version_id"] == 42
+    assert connection.params[archive_index]["replacement_review_task_id"] == 900
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("visibility", "auto_publish"),
+    [
+        ("PRIVATE", False),
+        ("PUBLIC", True),
+    ],
+)
+async def test_execute_publish_write_rejected_resubmission_must_create_new_review(
+    tmp_path,
+    visibility: str,
+    auto_publish: bool,
+) -> None:
+    request = replace(
+        publish_input(str(tmp_path), visibility=visibility),
+        auto_publish=auto_publish,
+    ).with_replacement(
+        ReplaceableVersion(
+            skill_id=7,
+            namespace="global",
+            slug="agent-helper",
+            version_id=41,
+            version="1.0.0",
+            status="REJECTED",
+            publisher_id="local-user",
+        )
+    )
+    engine = FakeEngine([])
+
+    with pytest.raises(VersionReplacementConflict, match="Rejected version resubmission requires review"):
+        await execute_publish_write(engine, request)
+
+    assert engine.entered_connections == []
 
 
 @pytest.mark.anyio

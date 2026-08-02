@@ -274,7 +274,10 @@ def test_api_token_routes_reject_bearer_without_token_manage_scope() -> None:
     response = client.get("/api/v1/tokens", headers={"Authorization": "Bearer sk_readonly"})
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Missing API token scope: token:manage"
+    payload = response.json()
+    assert payload["msg"] == "error.apiToken.scope.missing"
+    assert payload["data"]["args"] == ["token:manage"]
+    assert payload["requestId"] == response.headers["X-Request-Id"]
 
 
 def test_api_token_routes_keep_mock_precedence_over_bearer_scope() -> None:

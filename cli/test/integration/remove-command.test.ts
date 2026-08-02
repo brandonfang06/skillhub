@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, writeFile } from 'node:fs/promises'
 import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
@@ -25,6 +25,15 @@ async function seedInventory(home: string, items: object[]) {
 /** Create the install directory on disk so the remove service finds it. */
 async function createInstallDir(path: string) {
   await mkdir(path, { recursive: true })
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Build a minimal inventory item with one target. */
@@ -426,5 +435,46 @@ describe('remove command — local remove (P1)', () => {
     }
     const slugs = inv.items.map(i => i.slug).sort()
     expect(slugs).toEqual(['dup-slug-B'])
+  })
+
+  test('@namespace/slug removes only the matching same-slug installation', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok' })
+    const rootDir = `${env.home}/agents`
+    const teamDir = `${rootDir}/codex/skills/shared-skill`
+    const otherDir = `${rootDir}/cursor/skills/shared-skill`
+    await createInstallDir(teamDir)
+    await createInstallDir(otherDir)
+    await seedInventory(env.home, [
+      makeItem({
+        registry: registry.url,
+        namespace: 'team',
+        slug: 'shared-skill',
+        agent: 'codex',
+        rootDir: `${rootDir}/codex`,
+        installDir: teamDir,
+      }),
+      makeItem({
+        registry: registry.url,
+        namespace: 'other',
+        slug: 'shared-skill',
+        agent: 'cursor',
+        rootDir: `${rootDir}/cursor`,
+        installDir: otherDir,
+      }),
+    ])
+
+    const result = await runCli(
+      ['remove', '@team/shared-skill', '--registry', registry.url, '--json'],
+      { HOME: env.home, USERPROFILE: env.home },
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(await pathExists(teamDir)).toBe(false)
+    expect(await pathExists(otherDir)).toBe(true)
+    const inventory = JSON.parse(await Bun.file(`${env.home}/.skillhub/inventory.json`).text()) as {
+      items: Array<{ namespace: string }>
+    }
+    expect(inventory.items.map(item => item.namespace)).toEqual(['other'])
   })
 })

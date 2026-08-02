@@ -51,6 +51,46 @@ describe('removeLocalSkill', () => {
     expect((await store.read()).items).toEqual([])
   })
 
+  test('namespace filter preserves same-slug installs in other namespaces', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-home-'))
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-remove-root-'))
+    const globalDir = join(root, 'codex', 'demo')
+    const teamDir = join(root, 'claude', 'demo')
+    await mkdir(globalDir, { recursive: true })
+    await mkdir(teamDir, { recursive: true })
+    const store = new InventoryStore(home)
+    await store.write({
+      items: [
+        {
+          registry: 'https://skill.xfyun.cn',
+          namespace: 'global',
+          slug: 'demo',
+          version: '1.0.0',
+          targets: [{ agent: 'codex', rootDir: join(root, 'codex'), installDir: globalDir, installedAt: '2026-04-20T00:00:00Z' }]
+        },
+        {
+          registry: 'https://skill.xfyun.cn',
+          namespace: 'team',
+          slug: 'demo',
+          version: '1.0.0',
+          targets: [{ agent: 'claude-code', rootDir: join(root, 'claude'), installDir: teamDir, installedAt: '2026-04-20T00:00:00Z' }]
+        }
+      ]
+    })
+
+    const result = await removeLocalSkill({
+      registry: 'https://skill.xfyun.cn',
+      namespace: 'team',
+      slug: 'demo',
+      home
+    })
+
+    expect(result.removed.map(item => item.namespace)).toEqual(['team'])
+    expect(await exists(globalDir)).toBe(true)
+    expect(await exists(teamDir)).toBe(false)
+    expect((await store.read()).items.map(item => item.namespace)).toEqual(['global'])
+  })
+
   test('throws on path traversal in installDir', async () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-traversal-'))
 

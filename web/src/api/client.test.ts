@@ -24,11 +24,22 @@ vi.mock('@/shared/lib/api-error', () => ({
     status: number
     serverMessage?: string
     serverMessageKey?: string
-    constructor(message: string, status: number, serverMessage?: string, serverMessageKey?: string) {
+    requestId?: string
+    serverMessageArgs: string[]
+    constructor(
+      message: string,
+      status: number,
+      serverMessage?: string,
+      serverMessageKey?: string,
+      requestId?: string,
+      serverMessageArgs: string[] = [],
+    ) {
       super(message)
       this.status = status
       this.serverMessage = serverMessage
       this.serverMessageKey = serverMessageKey
+      this.requestId = requestId
+      this.serverMessageArgs = serverMessageArgs
     }
   },
   handleApiError: vi.fn(),
@@ -38,6 +49,7 @@ import {
   WEB_API_PREFIX,
   adminApi,
   buildApiUrl,
+  fetchJson,
   fetchText,
   getDirectAuthRuntimeConfig,
   getLocalRegistrationRuntimeConfig,
@@ -191,6 +203,30 @@ describe('namespaceApi.delete', () => {
         headers: expect.any(Headers),
       }),
     )
+  })
+})
+
+describe('fetchJson errors', () => {
+  it('preserves structured denial arguments and request ID', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({
+        code: 403,
+        msg: 'error.apiToken.scope.missing',
+        data: { args: ['skill:publish'] },
+        timestamp: '2026-07-30T00:00:00Z',
+        requestId: 'scope-request',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchJson('/api/v1/skills')).rejects.toMatchObject({
+      status: 403,
+      serverMessageKey: 'error.apiToken.scope.missing',
+      requestId: 'scope-request',
+      serverMessageArgs: ['skill:publish'],
+    })
   })
 })
 

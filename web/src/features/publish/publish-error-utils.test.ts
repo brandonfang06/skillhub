@@ -4,7 +4,6 @@ import {
   isFrontmatterFailureMessage,
   isPrecheckConfirmationMessage,
   isPrecheckFailureMessage,
-  isRejectedVersionReuseMessage,
   isVersionExistsMessage,
 } from './publish-error-utils'
 
@@ -35,7 +34,4 @@ describe('publish-error-utils', () => {
     expect(isFrontmatterFailureMessage('Invalid SKILL.md frontmatter')).toBe(true)
   })
 
-  it('detects rejected version reuse by its stable error code', () => {
-    expect(isRejectedVersionReuseMessage('error.skill.publish.rejectedVersionReuse')).toBe(true)
-  })
 })

@@ -1435,8 +1435,6 @@
     "timeoutDescription": "本次发布等待时间过长，请稍后到技能列表确认结果，或重新尝试发布。",
     "versionExistsTitle": "版本号已存在",
     "versionExistsDescription": "当前技能版本已经发布过，请修改 SKILL.md 中的 version 后重新打包上传。",
-    "rejectedVersionReuseTitle": "无法重用已拒绝的版本",
-    "rejectedVersionReuseDescription": "请依照审核结果调整 skill，并更新 SKILL.md 中的 version 后重新发布。",
     "precheckFailedTitle": "发布前校验未通过",
     "precheckFailedDescription": "技能包中包含疑似密钥、令牌或密码内容。请将真实凭证替换为占位符后再重试。",
     "warningConfirmTitle": "发布前风险提醒",
@@ -1499,7 +1497,12 @@
     "skillDetailError": "技能详情加载失败，请稍后重试。",
     "activeReviewVersion": "当前审核版本",
     "downloadSkillZip": "下载技能 ZIP",
-    "noDocumentation": "当前待审核版本未提供可读的说明文档。"
+    "noDocumentation": "当前待审核版本未提供可读的说明文档。",
+    "supersededBadge": "已归档尝试",
+    "supersededTitle": "此审核已被修正版取代",
+    "supersededDescription": "这是先前被拒绝版本的只读审核记录。原始包已安全移除，只保留审核意见与文件哈希供追溯。",
+    "openReplacementReview": "打开修正版审核",
+    "archivedFileHashes": "归档文件哈希"
   },
   "token": {
     "title": "API Tokens",
@@ -1577,6 +1580,12 @@
   "apiError": {
     "unauthorized": "登录已过期，请重新登录",
     "forbidden": "没有权限执行此操作",
+    "requestId": "请求 ID：{{requestId}}",
+    "apiToken": {
+      "scopeMissing": "此 API token 缺少必要 scope：{{scope}}",
+      "endpointUnsupported": "API token 无法访问此端点",
+      "unknownScope": "未知"
+    },
     "notFound": "请求的资源不存在",
     "serverError": "服务器错误，请稍后重试",
     "networkError": "网络连接失败，请检查网络",

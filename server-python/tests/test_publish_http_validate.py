@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.publish.orchestration import PublishWriteResult
-from app.publish.replacement import RejectedVersionReuseError, ReplaceableVersion
-from app.publish.dry_run import REJECTED_VERSION_REUSE_ERROR, PublishDryRunResult
+from app.publish.replacement import ReplaceableVersion, VersionReplacementConflict
+from app.publish.dry_run import PublishDryRunResult
 from app.publish.package import PackageEntry
 from app.publish.side_effects import PublishSideEffectResult
 from app.publish.storage import StoredPackageResult
@@ -251,7 +251,10 @@ def test_publish_routes_reject_bearer_without_publish_scope_before_service_call(
     for path, data, files in cases:
         response = client.post(path, headers=headers, data=data, files=files)
         assert response.status_code == 403
-        assert response.json()["detail"] == "Missing API token scope: skill:publish"
+        payload = response.json()
+        assert payload["msg"] == "error.apiToken.scope.missing"
+        assert payload["data"]["args"] == ["skill:publish"]
+        assert payload["requestId"] == response.headers["X-Request-Id"]
 
     response = client.post(
         "/api/v1/skills",
@@ -260,7 +263,10 @@ def test_publish_routes_reject_bearer_without_publish_scope_before_service_call(
         files=[("files", ("SKILL.md", b"---\nname: Agent Helper\ndescription: Helps\n---\n# Skill\n", "text/markdown"))],
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "Missing API token scope: skill:publish"
+    payload = response.json()
+    assert payload["msg"] == "error.apiToken.scope.missing"
+    assert payload["data"]["args"] == ["skill:publish"]
+    assert payload["requestId"] == response.headers["X-Request-Id"]
 
 
 def test_publish_routes_reject_bad_bearer() -> None:
@@ -460,9 +466,9 @@ def test_cli_publish_write_rejects_invalid_preflight_before_write() -> None:
     assert not writer_called
 
 
-def test_cli_publish_write_returns_conflict_for_rejected_version_preflight() -> None:
+def test_cli_publish_write_forces_rejected_version_resubmission_through_review() -> None:
     app = create_app()
-    app.state.auth_me_reader = lambda user_id: auth_user()
+    app.state.auth_me_reader = lambda user_id: auth_user(["SUPER_ADMIN"])
     replacement_called = False
     writer_called = False
 
@@ -474,25 +480,72 @@ def test_cli_publish_write_returns_conflict_for_rejected_version_preflight() -> 
         platform_roles: set[str],
     ) -> PublishDryRunResult:
         return PublishDryRunResult(
-            valid=False,
-            errors=[REJECTED_VERSION_REUSE_ERROR],
+            valid=True,
+            errors=[],
             warnings=[],
             resolved_slug="agent-helper",
             resolved_version="1.0.0",
         )
 
-    async def replacement_reader(*args: object, **kwargs: object) -> None:
+    async def replacement_reader(
+        namespace_id: int,
+        namespace: str,
+        slug: str,
+        version: str,
+        publisher_id: str,
+    ) -> ReplaceableVersion:
         nonlocal replacement_called
         replacement_called = True
+        return ReplaceableVersion(
+            skill_id=7,
+            namespace=namespace,
+            slug=slug,
+            version_id=41,
+            version=version,
+            status="REJECTED",
+            publisher_id=publisher_id,
+        )
 
-    async def write_reader(*args: object, **kwargs: object) -> PublishWriteResult:
+    async def write_reader(request: object) -> PublishWriteResult:
         nonlocal writer_called
         writer_called = True
-        raise AssertionError("write must not run")
+        assert getattr(request, "replacement").status == "REJECTED"
+        assert getattr(request, "auto_publish") is False
+        return PublishWriteResult(
+            skill_id=7,
+            version_id=42,
+            version_status="PENDING_REVIEW",
+            latest_version_updated=False,
+            stored_package=StoredPackageResult(
+                files=[],
+                bundle_key="packages/7/42/bundle.zip",
+                bundle_size=10,
+                file_count=2,
+                total_size=20,
+                bundle_ready=True,
+                download_ready=False,
+            ),
+            side_effects=PublishSideEffectResult(
+                review_task_id=900,
+                security_audit_id=None,
+                scan_task=None,
+                events=[],
+            ),
+            replacement_deleted_keys=["skills/7/41/SKILL.md", "packages/7/41/bundle.zip"],
+            replacement_compensation_recorded=False,
+        )
 
     app.state.publish_validate_reader = validate_reader
     app.state.publish_replacement_reader = replacement_reader
     app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -501,13 +554,13 @@ def test_cli_publish_write_returns_conflict_for_rejected_version_preflight() -> 
         files={"file": ("skill.zip", skill_zip(), "application/zip")},
     )
 
-    assert response.status_code == 409
-    assert response.json()["detail"] == REJECTED_VERSION_REUSE_ERROR
-    assert not replacement_called
-    assert not writer_called
+    assert response.status_code == 200
+    assert replacement_called
+    assert writer_called
+    assert response.json()["data"]["version"] == "1.0.0"
 
 
-def test_cli_publish_write_maps_rejected_version_race_to_conflict() -> None:
+def test_cli_publish_write_maps_ineligible_replacement_race_to_conflict() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user()
 
@@ -527,7 +580,7 @@ def test_cli_publish_write_maps_rejected_version_race_to_conflict() -> None:
         )
 
     async def write_reader(*args: object, **kwargs: object) -> PublishWriteResult:
-        raise RejectedVersionReuseError(REJECTED_VERSION_REUSE_ERROR)
+        raise VersionReplacementConflict("error.skill.version.exists")
 
     app.state.publish_validate_reader = validate_reader
     app.state.publish_write_reader = write_reader
@@ -548,7 +601,7 @@ def test_cli_publish_write_maps_rejected_version_race_to_conflict() -> None:
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == REJECTED_VERSION_REUSE_ERROR
+    assert response.json()["detail"] == "error.skill.version.exists"
 
 
 def test_cli_publish_write_logs_invalid_preflight_for_forensics(caplog) -> None:

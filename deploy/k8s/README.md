@@ -133,6 +133,7 @@ Edit these common ConfigMap values:
 | `storage-s3-bucket` | `SKILLHUB_STORAGE_S3_BUCKET` | Bucket for skill package bundles. |
 | `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | External HTTPS origin used for OAuth callbacks and generated links. |
 | `cli-registry-url` | `SKILLHUB_WEB_CLI_REGISTRY_URL` | Optional frontend-only registry override used in copied CLI install commands. |
+| `trust-forwarded-proto` | `SKILLHUB_TRUST_FORWARDED_PROTO` | Keep `false` unless a trusted ingress replaces `X-Forwarded-Proto` and blocks direct web-pod access. |
 | `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
 | `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |

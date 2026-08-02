@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   useMutation: vi.fn(),
+  useQuery: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', () => ({
   useMutation: mocks.useMutation,
-  useQuery: vi.fn(),
+  useQuery: mocks.useQuery,
   useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
 }))
 
@@ -20,7 +21,7 @@ vi.mock('@/api/client', () => ({
   },
 }))
 
-import { useApproveReview, useRejectReview } from './use-review-detail'
+import { useApproveReview, useRejectReview, useReviewSkillDetail } from './use-review-detail'
 
 type MutationOptions = {
   onSuccess: () => void
@@ -38,6 +39,7 @@ describe('use-review-detail mutations', () => {
   beforeEach(() => {
     mocks.invalidateQueries.mockReset()
     mocks.useMutation.mockReset()
+    mocks.useQuery.mockReset()
   })
 
   it('invalidates review, governance, and skill caches after approval', () => {
@@ -62,5 +64,16 @@ describe('use-review-detail mutations', () => {
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['governance'] })
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['skills'] })
     expect(onSuccess).toHaveBeenCalledOnce()
+  })
+
+  it('does not request artifact detail for an archived review', () => {
+    useReviewSkillDetail(91, false)
+
+    expect(mocks.useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['reviews', 91, 'skill-detail'],
+        enabled: false,
+      }),
+    )
   })
 })

@@ -139,7 +139,7 @@ test.describe('Rejected publish and lifecycle visibility (Real API)', () => {
     await registerSession(page, testInfo)
   })
 
-  test('shows dedicated guidance when a rejected version is uploaded again', async ({ browser, page }, testInfo) => {
+  test('resubmits a corrected rejected version and keeps archived review history', async ({ browser, page }, testInfo) => {
     const builder = new E2eTestDataBuilder(page, testInfo)
     await builder.init()
     let setup: ReviewableNamespaceSetup | null = null
@@ -178,21 +178,65 @@ test.describe('Rejected publish and lifecycle visibility (Real API)', () => {
       await page.getByRole('button', { name: 'Confirm Publish' }).click()
       const response = await responsePromise
 
-      expect(response.status()).toBe(409)
-      await expect(page.getByText('Unable to reuse rejected version')).toBeVisible()
-      await expect(page.getByText(/Update the skill based on the review result/)).toBeVisible()
-      await expect(page.getByText('Publish Failed')).toHaveCount(0)
+      expect(response.status()).toBe(200)
+      await expect(page.getByText('Submitted for Review', { exact: true })).toBeVisible()
+      const replacementReviewTaskId = await setup.adminBuilder.waitForPendingReview(
+        namespace.slug,
+        skill.slug,
+        skill.version,
+      )
+      expect(replacementReviewTaskId).not.toBe(reviewTaskId)
 
       const historyResponse = await adminPage.context().request.get(`/api/web/reviews/${reviewTaskId}`)
       const historyBody = await historyResponse.json() as ApiEnvelope<{
+        artifactAvailable: boolean
         reviewComment: string
+        replacementReviewTaskId: number
+        replacementVersionId: number
         status: string
+        superseded: boolean
         versionStatus: string
       }>
       expect(historyResponse.status()).toBe(200)
       expect(historyBody.data.status).toBe('REJECTED')
       expect(historyBody.data.versionStatus).toBe('REJECTED')
       expect(historyBody.data.reviewComment).toContain('reject by lifecycle visibility E2E')
+      expect(historyBody.data.superseded).toBe(true)
+      expect(historyBody.data.artifactAvailable).toBe(false)
+      expect(historyBody.data.replacementReviewTaskId).toBe(replacementReviewTaskId)
+      expect(historyBody.data.replacementVersionId).toBeGreaterThan(0)
+
+      const archivedDownloadResponse = await adminPage.context().request.get(
+        `/api/web/reviews/${reviewTaskId}/download`,
+      )
+      expect(archivedDownloadResponse.status()).toBe(410)
+
+      await adminPage.setViewportSize({ width: 1440, height: 900 })
+      await adminPage.goto(`/dashboard/namespaces/${namespace.slug}/reviews/${reviewTaskId}`)
+      await expect(adminPage.getByRole('heading', { name: 'Review Detail' })).toBeVisible()
+      await expect(adminPage.getByText('This review was superseded by a corrected submission')).toBeVisible()
+      await expect(adminPage.getByText('Archived file hashes')).toBeVisible()
+      await expect(adminPage.getByText(/reject by lifecycle visibility E2E/)).toBeVisible()
+      await expect(adminPage.getByRole('button', { name: 'Download Skill ZIP' })).toHaveCount(0)
+      await adminPage.getByRole('button', { name: 'Open corrected review' }).click()
+      await expect(adminPage).toHaveURL(
+        new RegExp(`/dashboard/namespaces/${namespace.slug}/reviews/${replacementReviewTaskId}$`),
+      )
+
+      for (const viewport of [
+        { width: 1440, height: 900 },
+        { width: 390, height: 844 },
+      ]) {
+        await adminPage.setViewportSize(viewport)
+        await adminPage.goto(`/dashboard/namespaces/${namespace.slug}/reviews`)
+        await adminPage.getByRole('tab', { name: 'Rejected' }).click()
+        await expect(adminPage.getByText(`${namespace.slug}/${skill.slug}`)).toBeVisible()
+        await expect(adminPage.getByText('Archived attempt')).toBeVisible()
+        const hasHorizontalOverflow = await adminPage.evaluate(
+          () => document.documentElement.scrollWidth > window.innerWidth,
+        )
+        expect(hasHorizontalOverflow).toBe(false)
+      }
     } finally {
       await builder.cleanup()
       await setup?.adminBuilder.cleanup()

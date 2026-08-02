@@ -104,6 +104,9 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_DOWNLOAD_REQUIRE_AUTH" not in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED:" in release_compose
+    assert 'test: ["CMD", "python", "-c"' in release_compose
+    assert "urllib.request.urlopen" in release_compose
+    assert 'test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/v1/health"]' not in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:" in release_compose
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI:" in release_compose
     assert "OAUTH2_GITHUB" not in release_compose
@@ -141,6 +144,27 @@ def test_web_dockerfile_normalizes_runtime_entrypoint_line_endings() -> None:
         < dockerfile.index(normalize_entrypoint)
         < dockerfile.index(chmod_entrypoint)
     )
+
+
+def test_trusted_forwarded_proto_is_opt_in_across_release_surfaces() -> None:
+    release_env = read(".env.release.example")
+    release_compose = read("compose.release.yml")
+    base_config = read("deploy/k8s/base/configmap.yaml")
+    plain_config = read("deploy/k8s/plain/backend/config.yaml")
+    base_frontend = read("deploy/k8s/base/frontend-deployment.yaml")
+    plain_frontend = read("deploy/k8s/plain/frontend/deployment.yaml")
+    readme = read("deploy/k8s/README.md")
+    env_manual = read("deploy/k8s/environment-variables.zh.md")
+
+    assert "SKILLHUB_TRUST_FORWARDED_PROTO=false" in release_env
+    assert "SKILLHUB_TRUST_FORWARDED_PROTO: ${SKILLHUB_TRUST_FORWARDED_PROTO:-false}" in release_compose
+    assert 'trust-forwarded-proto: "false"' in base_config
+    assert 'trust-forwarded-proto: "false"' in plain_config
+    for frontend in (base_frontend, plain_frontend):
+        assert "name: SKILLHUB_TRUST_FORWARDED_PROTO" in frontend
+        assert "key: trust-forwarded-proto" in frontend
+    assert "trust-forwarded-proto" in readme
+    assert "SKILLHUB_TRUST_FORWARDED_PROTO" in env_manual
 
 
 def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:

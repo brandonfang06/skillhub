@@ -124,7 +124,7 @@ describe('PublishPage', () => {
     expect(typeof PublishPage).toBe('function')
   })
 
-  it('shows dedicated guidance when a rejected version is reused', async () => {
+  it('does not tell users to increase a rejected version', async () => {
     publishMutationMock.mockRejectedValue(
       new ApiError(
         'Publish failed',
@@ -139,8 +139,8 @@ describe('PublishPage', () => {
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
-        'publish.rejectedVersionReuseTitle',
-        'publish.rejectedVersionReuseDescription',
+        'publish.error',
+        'Publish failed',
       )
     })
   })

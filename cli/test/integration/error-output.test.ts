@@ -67,7 +67,7 @@ describe('cli error output', () => {
 
     expect(result.exitCode).toBe(5)
     expect(result.stderr).toContain('Error: missing required argument')
-    expect(result.stderr).toContain('Usage:  skillhub install <slug>')
+    expect(result.stderr).toContain('Usage:  skillhub install <coordinate>')
     expect(result.stderr).toContain('Run "skillhub help install" for more information.')
   })
 

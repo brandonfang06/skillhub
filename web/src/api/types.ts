@@ -1,4 +1,5 @@
 import type { components } from './generated/schema'
+import type { components as reviewComponents } from './generated/reviews-schema'
 
 export interface PlaygroundCapability {
   token: string
@@ -418,7 +419,19 @@ export interface SkillDeleteResult {
   deleted?: boolean
 }
 
-export interface ReviewTask {
+type GeneratedReviewTask = reviewComponents['schemas']['ReviewTaskResponse']
+
+export type ReviewTask = Omit<
+  GeneratedReviewTask,
+  | 'id'
+  | 'skillVersionId'
+  | 'namespace'
+  | 'skillSlug'
+  | 'version'
+  | 'status'
+  | 'submittedBy'
+  | 'submittedAt'
+> & {
   id: number
   skillVersionId: number
   namespace: string
@@ -426,12 +439,7 @@ export interface ReviewTask {
   version: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   submittedBy: string
-  submittedByName?: string
-  reviewedBy?: string
-  reviewedByName?: string
-  reviewComment?: string
   submittedAt: string
-  reviewedAt?: string
 }
 
 export type ReviewBatchDecision = 'APPROVE' | 'REJECT'

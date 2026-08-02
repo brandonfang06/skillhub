@@ -92,6 +92,30 @@ def test_local_migration_files_include_download_event_extension() -> None:
     )
 
 
+def test_local_migration_files_include_review_attempt_archive_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    archive_migration = next(
+        (item for item in local_migrations if item.identifier == "20260730_01"),
+        None,
+    )
+
+    assert archive_migration is not None
+    assert archive_migration.path.name == "20260730_01__review_attempt_archive.sql"
+
+    sql = archive_migration.path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS review_attempt_archive" in sql
+    assert "original_review_task_id BIGINT NOT NULL UNIQUE" in sql
+    assert "files_json JSONB NOT NULL" in sql
+    assert "scanner_summary_json JSONB" in sql
+    assert "replacement_version_id BIGINT" in sql
+    assert "replacement_review_task_id BIGINT" in sql
+    assert "archived_at TIMESTAMPTZ NOT NULL" in sql
+    assert "idx_review_attempt_archive_skill_version" in sql
+    assert "idx_review_attempt_archive_namespace_status_reviewed" in sql
+    assert "idx_review_attempt_archive_replacement_review" in sql
+
+
 def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
     connection = FakeConnection(
         existing_tables={"user_account"},

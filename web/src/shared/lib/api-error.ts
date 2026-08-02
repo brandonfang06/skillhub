@@ -17,12 +17,32 @@ export class ApiError extends Error {
     public status: number,
     public serverMessage?: string,
     public serverMessageKey?: string,
+    public requestId?: string,
+    public serverMessageArgs: string[] = [],
   ) {
     super(resolveLocalizedMessage(message) || message)
     this.name = 'ApiError'
     this.serverMessage = resolveLocalizedMessage(serverMessage) || serverMessage
     this.serverMessageKey = serverMessageKey
   }
+}
+
+function getForbiddenMessage(error: ApiError): string {
+  if (error.serverMessageKey === 'error.apiToken.scope.missing') {
+    return i18n.t('apiError.apiToken.scopeMissing', {
+      scope: error.serverMessageArgs[0] ?? i18n.t('apiError.apiToken.unknownScope'),
+    })
+  }
+  if (error.serverMessageKey === 'error.apiToken.endpoint.unsupported') {
+    return i18n.t('apiError.apiToken.endpointUnsupported')
+  }
+  return i18n.t('apiError.forbidden')
+}
+
+function getRequestIdDescription(error: ApiError): string | undefined {
+  return error.requestId
+    ? i18n.t('apiError.requestId', { requestId: error.requestId })
+    : undefined
 }
 
 function isAccountDisabledError(error: ApiError): boolean {
@@ -68,7 +88,7 @@ export function handleApiError(error: unknown): void {
   }
 
   if (status === 403) {
-    toast.error(i18n.t('apiError.forbidden'))
+    toast.error(getForbiddenMessage(error), getRequestIdDescription(error))
     return
   }
 

@@ -57,6 +57,51 @@ class ReviewBatchDecisionRequest(BaseModel):
     comment: str | None = None
 
 
+class ArchivedReviewFileResponse(BaseModel):
+    path: str
+    size: int
+    contentType: str | None = None
+    sha256: str
+
+
+class ArchivedReviewSnapshotResponse(BaseModel):
+    metadata: dict[str, Any] | None = None
+    manifest: list[dict[str, Any]] | None = None
+    files: list[ArchivedReviewFileResponse]
+    scannerSummary: list[dict[str, Any]]
+
+
+class ReviewTaskResponse(BaseModel):
+    id: int | None = None
+    skillVersionId: int | None = None
+    namespace: str | None = None
+    skillSlug: str | None = None
+    version: str | None = None
+    status: str | None = None
+    submittedBy: str | None = None
+    submittedByName: str | None = None
+    reviewedBy: str | None = None
+    reviewedByName: str | None = None
+    reviewComment: str | None = None
+    submittedAt: str | None = None
+    reviewedAt: str | None = None
+    versionStatus: str | None = None
+    superseded: bool = False
+    artifactAvailable: bool = True
+    replacementVersionId: int | None = None
+    replacementReviewTaskId: int | None = None
+    archivedAt: str | None = None
+    archivedSnapshot: ArchivedReviewSnapshotResponse | None = None
+
+
+class ApiResponseReviewTaskResponse(BaseModel):
+    code: int
+    msg: str
+    data: ReviewTaskResponse
+    timestamp: str
+    requestId: str
+
+
 async def _resolve_approval_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
@@ -514,8 +559,14 @@ async def get_review_download_route(
     return await get_review_download(request, review_task_id, authorization)
 
 
-@router.get("/api/v1/reviews/{review_task_id}")
-@router.get("/api/web/reviews/{review_task_id}")
+@router.get(
+    "/api/v1/reviews/{review_task_id}",
+    response_model=ApiResponseReviewTaskResponse,
+)
+@router.get(
+    "/api/web/reviews/{review_task_id}",
+    response_model=ApiResponseReviewTaskResponse,
+)
 async def get_review_detail_route(
     request: Request,
     review_task_id: int,

@@ -14,6 +14,7 @@ from app.admin.labels import (
     update_label_definition,
     update_label_sort_order,
 )
+from app.admin.search_refresh import refresh_skill_search_documents
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles, require_platform_role
@@ -150,6 +151,7 @@ async def update_admin_label_route(
                 actor_user_id=str(user["userId"]),
                 platform_roles=platform_roles(user),
                 **_request_context(request),
+                search_refresher=refresh_skill_search_documents,
             )
         )
     except AdminLabelError as exc:
@@ -177,6 +179,7 @@ async def delete_admin_label_route(
                 actor_user_id=str(user["userId"]),
                 platform_roles=platform_roles(user),
                 **_request_context(request),
+                search_refresher=refresh_skill_search_documents,
             )
         )
     except AdminLabelError as exc:

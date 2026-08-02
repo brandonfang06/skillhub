@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,6 +13,7 @@ from app.auth.device import (
     DEVICE_CODE_PREFIX,
     USER_CODE_PREFIX,
     DeviceAuthError,
+    RedisDeviceStore,
     authorize_device_code,
     generate_device_code,
     poll_device_token,
@@ -151,6 +153,23 @@ def read_device_data(redis: FakeRedis, device_code: str) -> dict[str, Any]:
     return json.loads(raw)
 
 
+class FakeRawRedisClient:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
+    async def set(self, key: str, value: str, *, ex: int, nx: bool = False) -> bool:
+        if nx and key in self.values:
+            return False
+        self.values[key] = value
+        return True
+
+    async def delete(self, key: str) -> None:
+        self.values.pop(key, None)
+
+
 @pytest.mark.anyio
 async def test_generate_device_code_stores_pending_state_with_java_shape() -> None:
     redis = FakeRedis()
@@ -178,6 +197,24 @@ async def test_generate_device_code_stores_pending_state_with_java_shape() -> No
     assert redis.values[f"{USER_CODE_PREFIX}ABCD-2345"] == "device-code-1"
     assert redis.ttls[f"{DEVICE_CODE_PREFIX}device-code-1"] == 900
     assert redis.ttls[f"{USER_CODE_PREFIX}ABCD-2345"] == 900
+
+
+@pytest.mark.anyio
+async def test_redis_device_store_round_trips_json_serialized_state() -> None:
+    raw_client = FakeRawRedisClient()
+    redis = RedisDeviceStore(raw_client)
+
+    await generate_device_code(
+        redis,
+        device_code_generator=lambda: "device-code-1",
+        user_code_generator=lambda: "ABCD-2345",
+    )
+    await authorize_device_code(redis, user_code="ABCD-2345", user_id="user-1")
+
+    stored = json.loads(raw_client.values[f"{DEVICE_CODE_PREFIX}device-code-1"])
+    assert stored["deviceCode"] == "device-code-1"
+    assert stored["status"] == "AUTHORIZED"
+    assert stored["userId"] == "user-1"
 
 
 @pytest.mark.anyio
@@ -242,6 +279,46 @@ async def test_poll_device_token_returns_pending_then_redeems_once_and_rotates_c
 
     with pytest.raises(DeviceAuthError, match="error.deviceAuth.deviceCode.used"):
         await poll_device_token(redis, FakeEngine(connection), device_code="device-code-1")
+
+
+@pytest.mark.anyio
+async def test_concurrent_device_token_poll_creates_only_one_token() -> None:
+    redis = FakeRedis()
+    connection = FakeTokenConnection()
+    await generate_device_code(
+        redis,
+        device_code_generator=lambda: "device-code-1",
+        user_code_generator=lambda: "ABCD-2345",
+    )
+    await authorize_device_code(redis, user_code="ABCD-2345", user_id="user-1")
+
+    results = await asyncio.gather(
+        poll_device_token(
+            redis,
+            FakeEngine(connection),
+            device_code="device-code-1",
+            token_generator=lambda: "sk_new-token",
+        ),
+        poll_device_token(
+            redis,
+            FakeEngine(connection),
+            device_code="device-code-1",
+            token_generator=lambda: "sk_other-token",
+        ),
+        return_exceptions=True,
+    )
+
+    successes = [result for result in results if isinstance(result, dict)]
+    failures = [result for result in results if isinstance(result, DeviceAuthError)]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert str(failures[0]) == "error.deviceAuth.deviceCode.used"
+    active_cli_tokens = [
+        token
+        for token in connection.tokens
+        if token["name"] == "CLI Device Flow" and token["revoked_at"] is None
+    ]
+    assert len(active_cli_tokens) == 1
 
 
 def test_device_auth_routes_use_java_envelopes_and_mock_user_auth() -> None:
