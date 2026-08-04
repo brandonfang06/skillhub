@@ -24,6 +24,11 @@ wide summary to a useful subset without inspecting raw download events.
   rollup.
 - The requested page is a summary/portfolio view, not a replacement for the raw
   download-event audit page.
+- The in-progress `codex/subpath-deployment` worktree establishes
+  `SKILLHUB_WEB_BASE_PATH=/skillhub`, a TanStack Router `basepath`, base-aware
+  same-origin API URLs, and production-bundle subpath E2E coverage. That work is
+  complete in its worktree but was not yet committed or merged when this design
+  was updated.
 
 ## Initial Outcome
 
@@ -95,6 +100,9 @@ matching namespace rows without summing version records.
   browser.
 - Follow existing React, TanStack Query, generated API, localization, and
   admin-route patterns.
+- Preserve root and subpath deployments. Browser navigation, API calls, deep
+  links, reloads, and drill-down URLs must work with an empty base path and with
+  `/skillhub` without duplicating or escaping the prefix.
 
 ## Considered Approaches
 
@@ -131,7 +139,10 @@ counts. Reject this approach.
 ### Navigation and page
 
 - Add a `Namespace Analytics` item to the platform-admin menu.
-- Add the protected route `/admin/namespace-analytics`.
+- Add the protected logical route `/admin/namespace-analytics`. TanStack Router
+  applies the configured application base path, so its public URL is
+  `${basePath}/admin/namespace-analytics` and becomes
+  `/skillhub/admin/namespace-analytics` in the canonical deployment.
 - Keep `/admin/download-events` as the raw-event investigation page.
 - Restrict page navigation and its API to `SUPER_ADMIN` for the first release.
 
@@ -180,10 +191,12 @@ descending, and namespace slug ascending. The API must add a unique namespace
 ID or slug tie-breaker to every sort. Use server-side pagination with page sizes
 20, 50, and 100.
 
-`View events` opens `/admin/download-events` with namespace, selected start/end,
-and selected source encoded in the URL. The Download Events page must initialize
-its controls from those search parameters so the drill-down is reproducible and
-shareable.
+`View events` uses TanStack Router navigation to the logical
+`/admin/download-events` route with namespace, selected start/end, and selected
+source encoded as search parameters. The router must supply the configured base
+path; the feature must not construct a browser-root `/admin/...` URL. The
+Download Events page must initialize its controls from those search parameters
+so the drill-down is reproducible and shareable.
 
 ### States
 
@@ -285,8 +298,15 @@ remain visible with zero-valued metrics.
 - API: add the typed client contract through generated OpenAPI types; do not
   hand-edit generated files.
 - Router and platform-admin menu follow the current Download Events patterns.
+- Use the shared `buildApiUrl`/runtime-config contract from the subpath work for
+  every request. The backend endpoint remains logically
+  `/api/v1/admin/namespace-analytics`; its public same-origin request inherits
+  the configured base path.
 - Filters remain URL search parameters so refresh, back/forward navigation, and
   shared drill-down URLs preserve state.
+- Use TanStack `Link`/`navigate` for page and drill-down navigation. Do not use
+  `window.location`, hard-code `/skillhub`, or concatenate a browser-root
+  `/admin/...` URL.
 - Add English, Simplified Chinese, and Traditional Chinese translation keys.
 - Reuse existing Card, Input, Select, Table, Button, badge, pagination, date,
   and number-formatting patterns before creating any new shared component.
@@ -296,6 +316,31 @@ FastAPI exposes `/openapi.json`. Implementation must establish a focused,
 repeatable FastAPI OpenAPI export/generation path for this contract or repair
 the generic path without manually editing generated output. Broad unrelated
 generated-schema churn is outside this feature.
+
+## Subpath Compatibility And Integration Order
+
+The namespace analytics implementation must begin only after the
+`codex/subpath-deployment` changes are committed and integrated into the feature
+branch. Rebase or merge that baseline before editing overlapping frontend files,
+especially the router, API client, platform-admin menu, runtime configuration,
+and production Playwright suite. Do not copy or create a second base-path
+mechanism inside this feature.
+
+The contract is:
+
+- application routes remain logical root-relative paths inside TanStack Router;
+- the configured router `basepath` produces `/skillhub/...` browser URLs;
+- `buildApiUrl` produces `/skillhub/api/...` same-origin requests when no
+  separate API origin is configured;
+- the ingress may strip `/skillhub` before forwarding, so backend route
+  declarations remain `/api/...` and do not include the public prefix;
+- a direct refresh of `/skillhub/admin/namespace-analytics` must resolve the SPA
+  and reload its data without a root-path escape;
+- `View events` must stay under `/skillhub/admin/download-events` and preserve
+  encoded namespace, date, and source search parameters.
+
+If the subpath branch changes these shared contracts before merge, follow its
+merged helpers and tests rather than the provisional filenames in this design.
 
 ## Verification Design
 
@@ -327,6 +372,19 @@ Frontend coverage:
 - English, Simplified Chinese, and Traditional Chinese rendering;
 - desktop and narrow viewport smoke coverage.
 
+Subpath production-bundle coverage extends the existing subpath Playwright suite
+to verify:
+
+- direct navigation and reload at
+  `/skillhub/admin/namespace-analytics` render the protected page;
+- the request is sent to
+  `/skillhub/api/v1/admin/namespace-analytics`, with no `/api/...` root escape;
+- changing filters preserves the `/skillhub` prefix and URL search state;
+- `View events` reaches `/skillhub/admin/download-events` with the selected
+  namespace, date range, and source; and
+- the same analytics route still works for a root deployment with an empty base
+  path.
+
 Required implementation verification includes focused backend/frontend tests,
 the full backend suite, frontend typecheck/lint/test/build, an authenticated
 browser smoke path, generated API drift validation, and `git diff --check`.
@@ -344,6 +402,8 @@ browser smoke path, generated API drift validation, and `git diff --check`.
 - No changes to download recording, retention, public counters, namespace
   lifecycle, or skill lifecycle transitions.
 - No `SKILL_ADMIN` or `AUDITOR` access expansion in the first release.
+- No analytics-specific base-path, proxy, ingress, OAuth, cookie, or runtime
+  configuration mechanism; this feature consumes the shared subpath contract.
 - No Java, Maven, Spring Boot, or hybrid backend work.
 
 ## Decisions
@@ -381,3 +441,8 @@ browser smoke path, generated API drift validation, and `git diff --check`.
   recommended option. Select live server-side aggregation, a table-first UI,
   URL-backed filters, `SUPER_ADMIN`-only access, and no first-release charts or
   rollup persistence.
+- 2026-08-04: Account for the in-progress canonical `/skillhub` deployment by
+  keeping analytics routes logical and base-path-aware. Integrate the subpath
+  branch before feature implementation, use its shared router/API helpers, and
+  require production-bundle coverage for direct refresh, API traffic, filters,
+  and the Download Events drill-down under `/skillhub`.
