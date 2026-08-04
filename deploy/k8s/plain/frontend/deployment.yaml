@@ -28,6 +28,24 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: trust-forwarded-proto
+            - name: SKILLHUB_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: public-base-url
+                  optional: true
+            - name: SKILLHUB_WEB_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-base-path
+                  optional: true
+            - name: SKILLHUB_WEB_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: web-api-base-url
+                  optional: true
             - name: SKILLHUB_WEB_CLI_REGISTRY_URL
               valueFrom:
                 configMapKeyRef:

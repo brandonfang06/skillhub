@@ -58,6 +58,18 @@ describe('handleApiError', () => {
     expect(window.location.href).toBe('/login?reason=accountDisabled')
   })
 
+  it('keeps unauthorized redirects inside the runtime application base', async () => {
+    vi.stubGlobal('window', {
+      __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' },
+      location: { href: '' },
+    })
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError('apiError.unauthorized', 401))
+
+    expect(window.location.href).toBe('/skillhub/login')
+  })
+
   it('falls back to the server message for non-standard api errors', async () => {
     const { ApiError, handleApiError } = await import('./api-error')
 

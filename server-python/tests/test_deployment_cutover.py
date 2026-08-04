@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import shutil
+import subprocess
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -146,6 +151,76 @@ def test_web_dockerfile_normalizes_runtime_entrypoint_line_endings() -> None:
     )
 
 
+def test_web_image_generates_a_valid_runtime_base_path_document() -> None:
+    vite_config = read("web/vite.config.ts")
+    index_html = read("web/index.html")
+    dockerfile = read("web/Dockerfile")
+    runtime_template = read("web/runtime-config.js.template")
+    entrypoint = read("web/docker-entrypoint.d/30-runtime-config.sh")
+
+    assert "base: './'" in vite_config
+    assert '<base href="/" />' in index_html
+    assert 'href="./favicon.svg"' in index_html
+    assert (
+        "sed 's|<base href=\"/\" />|<base href=\"${SKILLHUB_WEB_BASE_HREF}\" />|'"
+        in dockerfile
+    )
+    assert "index.html.template" in dockerfile
+    assert ': "${SKILLHUB_WEB_BASE_PATH:=}"' in entrypoint
+    assert "Invalid SKILLHUB_WEB_BASE_PATH" in entrypoint
+    assert "SKILLHUB_WEB_BASE_HREF" in entrypoint
+    runtime_exports = entrypoint.partition("# Export runtime template variables")[2].partition(
+        "# Generate index.html"
+    )[0]
+    for variable in (
+        "SKILLHUB_WEB_BASE_HREF",
+        "SKILLHUB_WEB_API_BASE_URL",
+        "SKILLHUB_PUBLIC_BASE_URL",
+        "SKILLHUB_WEB_BASE_PATH",
+        "SKILLHUB_WEB_CLI_REGISTRY_URL",
+        "SKILLHUB_WEB_AUTH_DIRECT_ENABLED",
+        "SKILLHUB_WEB_AUTH_DIRECT_PROVIDER",
+        "SKILLHUB_LOCAL_REGISTRATION_ENABLED",
+        "SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED",
+        "SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER",
+        "SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO",
+        "SKILLHUB_WEB_PLAYGROUND_ENABLED",
+        "SKILLHUB_WEB_PLAYGROUND_BASE_URL",
+    ):
+        assert variable in runtime_exports
+    assert "index.html.template" in entrypoint
+    assert 'basePath: "${SKILLHUB_WEB_BASE_PATH}"' in runtime_template
+
+
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [
+        ("SKILLHUB_PUBLIC_BASE_URL", 'https://skills.example.com/";alert(1)//'),
+        ("SKILLHUB_WEB_CLI_REGISTRY_URL", "https://skills.example.com\\evil"),
+        ("SKILLHUB_WEB_AUTH_DIRECT_PROVIDER", "keycloak\nbroken"),
+    ],
+)
+def test_web_runtime_entrypoint_rejects_javascript_breaking_values(
+    variable: str,
+    value: str,
+) -> None:
+    shell = shutil.which("sh")
+    assert shell is not None
+    environment = {**os.environ, variable: value}
+
+    result = subprocess.run(
+        [shell, (ROOT / "web/docker-entrypoint.d/30-runtime-config.sh").as_posix()],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert f"Invalid runtime template value: {variable}" in result.stderr
+
+
 def test_trusted_forwarded_proto_is_opt_in_across_release_surfaces() -> None:
     release_env = read(".env.release.example")
     release_compose = read("compose.release.yml")
@@ -210,7 +285,7 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
     assert 'cli-registry-url: ""' in plain_config
     for frontend in (base_frontend, plain_frontend):
         assert cli_registry_env in frontend
-        assert "SKILLHUB_PUBLIC_BASE_URL" not in frontend
+        assert "SKILLHUB_PUBLIC_BASE_URL" in frontend
     assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in base_backend
     assert "SKILLHUB_WEB_CLI_REGISTRY_URL" not in plain_backend
 
@@ -230,8 +305,7 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
         "K8s manifests that is browser origin."
     ) in normalized_readme
     assert (
-        "`public-base-url` still controls backend OAuth callbacks and generated public "
-        "links, while browser API and OAuth traffic are unchanged."
+        "`public-base-url` controls backend OAuth callbacks and the frontend public app URL."
     ) in normalized_readme
     assert "HTTP sends the CLI Bearer token in plaintext without TLS." in normalized_readme
     assert (
@@ -253,8 +327,8 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
         "browser origin。"
     ) in normalized_manual
     assert (
-        "`public-base-url` 仍控制 backend OAuth callback 與 public-link 行為；"
-        "browser API/OAuth traffic 不受影響。"
+        "`public-base-url` 控制 backend OAuth callback 與 frontend public app URL，"
+        "但不會覆蓋 `cli-registry-url`。"
     ) in normalized_manual
     assert (
         "HTTP 會讓 CLI Bearer token 在沒有 TLS 的情況下以明文傳輸。"
@@ -271,6 +345,77 @@ def test_cli_registry_url_override_is_wired_only_to_frontend_runtime() -> None:
     assert "# Blank falls back to SKILLHUB_PUBLIC_BASE_URL." in release_env
     for document in (readme, env_manual, release_env):
         assert "NODE_TLS_REJECT_UNAUTHORIZED=0" not in document
+
+
+def test_subpath_runtime_contract_is_wired_across_release_and_kubernetes() -> None:
+    release_env = read(".env.release.example")
+    release_compose = read("compose.release.yml")
+    base_config = read("deploy/k8s/base/configmap.yaml")
+    plain_config = read("deploy/k8s/plain/backend/config.yaml")
+    base_frontend = read("deploy/k8s/base/frontend-deployment.yaml")
+    plain_frontend = read("deploy/k8s/plain/frontend/deployment.yaml")
+    base_backend = read("deploy/k8s/base/backend-deployment.yaml")
+    plain_backend = read("deploy/k8s/plain/backend/deployment.yaml")
+    readme = read("deploy/k8s/README.md")
+    env_manual = read("deploy/k8s/environment-variables.zh.md")
+    server_service = release_compose.partition("\n  server:\n")[2].partition("\n  web:\n")[0]
+
+    assert "SKILLHUB_WEB_BASE_PATH=" in release_env
+    assert "SKILLHUB_DEVICE_AUTH_VERIFICATION_URI=" in release_env
+    assert "SKILLHUB_WEB_BASE_PATH: ${SKILLHUB_WEB_BASE_PATH:-}" in release_compose
+    assert "SKILLHUB_WEB_BASE_PATH: ${SKILLHUB_WEB_BASE_PATH:-}" in server_service
+    assert "SKILLHUB_DEVICE_AUTH_VERIFICATION_URI: ${SKILLHUB_DEVICE_AUTH_VERIFICATION_URI:-}" in release_compose
+
+    for config in (base_config, plain_config):
+        assert 'web-base-path: ""' in config
+        assert 'web-api-base-url: ""' in config
+        assert 'device-auth-verification-uri: ""' in config
+
+    for frontend in (base_frontend, plain_frontend):
+        assert "name: SKILLHUB_PUBLIC_BASE_URL" in frontend
+        assert "key: public-base-url" in frontend
+        assert "name: SKILLHUB_WEB_BASE_PATH" in frontend
+        assert "key: web-base-path" in frontend
+        assert "name: SKILLHUB_WEB_API_BASE_URL" in frontend
+        assert "key: web-api-base-url" in frontend
+
+    for backend in (base_backend, plain_backend):
+        assert "name: SKILLHUB_WEB_BASE_PATH" in backend
+        assert "key: web-base-path" in backend
+        assert "name: SKILLHUB_DEVICE_AUTH_VERIFICATION_URI" in backend
+        assert "key: device-auth-verification-uri" in backend
+
+    for document in (readme, env_manual):
+        assert "https://ai-coding-platform.tsmc.com/skillhub" in document
+        assert "https://ai-coding-platform.tsmc.com/skillhub/login/oauth2/code/keycloak" in document
+        assert "https://ai-coding-platform.tsmc.com" in document
+        assert "Web Origins" in document
+        assert "VirtualService" in document
+        assert "CNAME" in document
+        assert "TLS SNI" in document
+        assert "HTTP Host" in document
+        assert "credentialName: ai-coding-platform-tls" in document
+        assert "skillhub-test.ftest.tsmc.com" in document
+        assert "patch fragment" in document
+
+
+def test_subpath_runtime_does_not_depend_on_the_organization_hostname() -> None:
+    runtime_sources = [
+        "server-python/app/core/public_url.py",
+        "server-python/app/core/config.py",
+        "web/src/shared/lib/runtime-config.ts",
+        "web/docker-entrypoint.d/30-runtime-config.sh",
+        "web/runtime-config.js.template",
+        "compose.release.yml",
+        "deploy/k8s/base/configmap.yaml",
+        "deploy/k8s/base/frontend-deployment.yaml",
+        "deploy/k8s/base/backend-deployment.yaml",
+    ]
+
+    for source in runtime_sources:
+        content = read(source)
+        assert "ai-coding-platform.tsmc.com" not in content
+        assert "skillhub-test.ftest.tsmc.com" not in content
 
 
 def test_kubernetes_readme_describes_three_python_cutover_deployments() -> None:

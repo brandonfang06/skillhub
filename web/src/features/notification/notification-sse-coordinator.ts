@@ -27,7 +27,10 @@ export function createNotificationSseConnection(
   url: string,
   eventSourceFactory: EventSourceFactory = (targetUrl) =>
     new EventSource(targetUrl, { withCredentials: true }),
-  timerApi: TimerApi = { setTimeout, clearTimeout },
+  timerApi: TimerApi = {
+    setTimeout: (...args) => globalThis.setTimeout(...args),
+    clearTimeout: (...args) => globalThis.clearTimeout(...args),
+  },
 ): NotificationSseConnection {
   return new ManagedNotificationSseConnection(url, eventSourceFactory, timerApi)
 }

@@ -368,6 +368,63 @@ def test_device_auth_routes_use_java_envelopes_and_mock_user_auth() -> None:
     assert audit_logs == [("user-1", {"userCode": "ABCD-2345"})]
 
 
+def test_device_code_route_uses_the_canonical_public_verification_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    monkeypatch.setenv("SKILLHUB_WEB_BASE_PATH", "/skillhub")
+    monkeypatch.setenv("SKILLHUB_SESSION_COOKIE_SECURE", "true")
+    monkeypatch.delenv("SKILLHUB_DEVICE_AUTH_VERIFICATION_URI", raising=False)
+    monkeypatch.delenv("DEVICE_AUTH_VERIFICATION_URI", raising=False)
+    app = create_app()
+    app.state.device_auth_redis = FakeRedis()
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/auth/device/code")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verificationUri"] == "https://skillhub.example/skillhub/cli/auth"
+
+
+def test_device_verification_url_prefers_the_canonical_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    monkeypatch.setenv("SKILLHUB_WEB_BASE_PATH", "/skillhub")
+    monkeypatch.setenv("SKILLHUB_SESSION_COOKIE_SECURE", "true")
+    monkeypatch.setenv("DEVICE_AUTH_VERIFICATION_URI", "https://legacy.example/device")
+    monkeypatch.setenv("SKILLHUB_DEVICE_AUTH_VERIFICATION_URI", "https://auth.example/verify")
+    app = create_app()
+
+    with TestClient(app):
+        assert app.state.settings.device_auth_verification_uri == "https://auth.example/verify"
+
+
+def test_device_verification_url_preserves_an_explicit_trailing_slash(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_DEVICE_AUTH_VERIFICATION_URI", "https://auth.example/verify/")
+    app = create_app()
+
+    with TestClient(app):
+        assert app.state.settings.device_auth_verification_uri == "https://auth.example/verify/"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "/skillhub/cli/auth",
+        "ftp://auth.example.com/verify",
+        "https://user:password@auth.example.com/verify",
+        "https://auth.example.com/verify?source=cli",
+        "https://auth.example.com/verify#device",
+    ],
+)
+def test_device_verification_url_rejects_invalid_absolute_urls(
+    monkeypatch: pytest.MonkeyPatch,
+    value: str,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_DEVICE_AUTH_VERIFICATION_URI", value)
+
+    with pytest.raises(ValueError, match="SKILLHUB_DEVICE_AUTH_VERIFICATION_URI"):
+        with TestClient(create_app()):
+            pass
+
+
 @pytest.mark.anyio
 async def test_record_device_authorize_audit_matches_java_fields() -> None:
     from app.api.device_auth import record_device_authorize_audit

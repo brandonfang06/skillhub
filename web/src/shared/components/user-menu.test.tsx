@@ -70,6 +70,29 @@ describe('user-menu module exports', () => {
   it('exports the UserMenu component', () => {
     expect(mod.UserMenu).toBeTypeOf('function')
   })
+
+  it('keeps post-logout navigation inside the runtime application base', () => {
+    const originalWindow = globalThis.window
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      writable: true,
+      value: { __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' } },
+    })
+
+    try {
+      expect(mod.getPostLogoutPath()).toBe('/skillhub/')
+    } finally {
+      if (originalWindow) {
+        Object.defineProperty(globalThis, 'window', {
+          configurable: true,
+          writable: true,
+          value: originalWindow,
+        })
+      } else {
+        Reflect.deleteProperty(globalThis, 'window')
+      }
+    }
+  })
 })
 
 describe('UserMenu security settings visibility', () => {

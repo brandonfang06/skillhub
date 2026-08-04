@@ -28,6 +28,9 @@ data:
   redis-connect-timeout: PT5S
   redis-timeout: PT5S
   public-base-url: ""
+  web-base-path: ""
+  web-api-base-url: ""
+  device-auth-verification-uri: ""
   cli-registry-url: ""
   trust-forwarded-proto: "false"
   security-scanner-enabled: "true"

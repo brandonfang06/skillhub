@@ -20,7 +20,7 @@ vi.mock('@/shared/lib/search-query', () => ({
   normalizeSearchQuery: (q: string) => q.trim(),
 }))
 
-import { ORIGINAL_URL_SEARCH, router } from './router'
+import { ORIGINAL_URL_SEARCH, createAppRouter, router } from './router'
 
 describe('ORIGINAL_URL_SEARCH', () => {
   it('is a string (captured from window.location.search at load time)', () => {
@@ -38,6 +38,29 @@ describe('router', () => {
     // The router instance exists and has the expected structure
     // In test environment, flatRoutes may not be populated until router is used
     expect(router.routeTree).toBeDefined()
+  })
+
+  it('uses the normalized runtime application base path', () => {
+    const originalWindow = globalThis.window
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      writable: true,
+      value: { __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub/' } },
+    })
+
+    try {
+      expect(createAppRouter().options.basepath).toBe('/skillhub')
+    } finally {
+      if (originalWindow) {
+        Object.defineProperty(globalThis, 'window', {
+          configurable: true,
+          writable: true,
+          value: originalWindow,
+        })
+      } else {
+        Reflect.deleteProperty(globalThis, 'window')
+      }
+    }
   })
 
   it('registers the skill version compare route', () => {

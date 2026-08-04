@@ -15,6 +15,7 @@ import { useMyStars } from '@/shared/hooks/use-user-queries'
 import { formatNamespaceSearchInput, normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
+import { buildReturnTo } from '@/shared/lib/auth-route'
 
 const PAGE_SIZE = 12
 
@@ -207,7 +208,11 @@ export function SearchPage() {
       navigate({
         to: '/login',
         search: {
-          returnTo: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+          returnTo: buildReturnTo({
+            pathname: window.location.pathname,
+            searchStr: window.location.search,
+            hash: window.location.hash,
+          }),
         },
       })
       return
@@ -217,7 +222,15 @@ export function SearchPage() {
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({ to: `/space/${namespace}/${encodeURIComponent(slug)}`, search: { returnTo: `${window.location.pathname}${window.location.search}` } })
+    navigate({
+      to: `/space/${namespace}/${encodeURIComponent(slug)}`,
+      search: {
+        returnTo: buildReturnTo({
+          pathname: window.location.pathname,
+          searchStr: window.location.search,
+        }),
+      },
+    })
   }
 
   const filteredStarredSkills = starredOnly

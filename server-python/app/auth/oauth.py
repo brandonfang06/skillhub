@@ -10,12 +10,13 @@ from typing import Any
 import httpx
 from sqlalchemy import text
 
+from app.core.public_url import resolve_public_base_url
+
 DEFAULT_USER_ROLE = "USER"
 
 
 def oauth_registrations_from_env() -> list[dict[str, object]]:
-    public_base_url = os.getenv("SKILLHUB_PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
-    return _spring_oidc_registrations(public_base_url)
+    return _spring_oidc_registrations(resolve_public_base_url())
 
 
 def _spring_oidc_registrations(public_base_url: str) -> list[dict[str, object]]:

@@ -6,6 +6,8 @@ import re
 import socket
 from urllib.parse import quote, urlsplit, urlunsplit
 
+from app.core.public_url import resolve_absolute_http_url, to_public_url, validate_deployment_url_contract
+
 DEFAULT_DATABASE_URL = "postgresql+asyncpg://skillhub:skillhub_dev@localhost:5432/skillhub"
 DEFAULT_STORAGE_BASE_PATH = str(Path(__file__).resolve().parents[3] / ".dev" / "java-storage")
 DEFAULT_REDIS_URL = "redis://localhost:6379"
@@ -53,6 +55,7 @@ class Settings:
     publish_allowed_file_extensions: set[str] | None
     download_analytics_retention_months: int
     local_registration_enabled: bool
+    device_auth_verification_uri: str
     security_scanner_enabled: bool
     security_scanner_mode: str
     redis_url: str
@@ -270,7 +273,18 @@ def redis_ssl_enabled() -> bool:
     return parse_bool(first_env("SPRING_DATA_REDIS_SSL_ENABLED", "SKILLHUB_REDIS_SSL_ENABLED"))
 
 
+def resolve_device_auth_verification_uri() -> str:
+    for variable_name in ("SKILLHUB_DEVICE_AUTH_VERIFICATION_URI", "DEVICE_AUTH_VERIFICATION_URI"):
+        value = os.getenv(variable_name)
+        if value is not None and value.strip() != "":
+            return resolve_absolute_http_url(value, variable_name)
+    return to_public_url("/cli/auth")
+
+
 def get_settings() -> Settings:
+    validate_deployment_url_contract(
+        session_cookie_secure=parse_bool(first_env("SKILLHUB_SESSION_COOKIE_SECURE", "SESSION_COOKIE_SECURE")),
+    )
     settings = Settings(
         database_url=resolve_database_url(),
         storage_provider=os.getenv("SKILLHUB_STORAGE_PROVIDER", DEFAULT_STORAGE_PROVIDER).strip().lower(),
@@ -307,6 +321,7 @@ def get_settings() -> Settings:
             DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS,
         ),
         local_registration_enabled=parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True),
+        device_auth_verification_uri=resolve_device_auth_verification_uri(),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),
         redis_url=resolve_redis_url(),

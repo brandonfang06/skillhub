@@ -144,13 +144,94 @@ Python backend 支援 Spring Boot OIDC env naming。Keycloak 建議沿用這組�
 | `skillhub-config/oauth2-keycloak-scope` | `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_SCOPE` | 是 | `openid,profile,email` |
 | `skillhub-config/oauth2-keycloak-client-name` | `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_NAME` | 是 | `Keycloak` |
 | `skillhub-config/oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | 是 | `https://keycloak.example.com/realms/skillhub` |
-| `skillhub-config/public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | 是 | `https://skills.example.com` |
+| `skillhub-config/public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | 是 | `https://ai-coding-platform.tsmc.com/skillhub` |
 
 Keycloak client redirect URI 請設定：
 
 ```text
-https://skills.example.com/login/oauth2/code/keycloak
+https://ai-coding-platform.tsmc.com/skillhub/login/oauth2/code/keycloak
 ```
+
+Keycloak `Root URL` / `Home URL` 設為
+`https://ai-coding-platform.tsmc.com/skillhub`；`Web Origins` 只接受 origin，
+因此應設為 `https://ai-coding-platform.tsmc.com`，不可包含 `/skillhub`。
+
+## 子路徑正式入口
+
+以 `https://ai-coding-platform.tsmc.com/skillhub` 作為唯一正式入口時：
+
+| K8s key | Pod env | 值 |
+| --- | --- | --- |
+| `skillhub-config/public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | `https://ai-coding-platform.tsmc.com/skillhub` |
+| `skillhub-config/web-base-path` | `SKILLHUB_WEB_BASE_PATH` | `/skillhub` |
+| `skillhub-config/web-api-base-url` | `SKILLHUB_WEB_API_BASE_URL` | 留空，自動使用 `/skillhub` |
+| `skillhub-config/device-auth-verification-uri` | `SKILLHUB_DEVICE_AUTH_VERIFICATION_URI` | 留空，自動產生正式入口下的 `/cli/auth` |
+| `skillhub-config/session-cookie-secure` | `SKILLHUB_SESSION_COOKIE_SECURE` | `true` |
+
+DNS CNAME `ai-coding-platform.tsmc.com -> skillhub-test.ftest.tsmc.com` 只讓兩個
+名稱到達同一個 load balancer，不會改寫 TLS SNI 或 HTTP Host；兩者仍會是
+`ai-coding-platform.tsmc.com`。因此只申請 CNAME 不足夠，既有 Gateway 與
+VirtualService 都必須接受 canonical hostname。
+
+憑證只需要涵蓋 hostname `ai-coding-platform.tsmc.com`，不包含 `/skillhub`。
+將 full certificate chain 與 private key 建成名為 `ai-coding-platform-tls` 的
+`kubernetes.io/tls` Secret，放在 ingress gateway workload 讀取 credential 的
+namespace；憑證與私鑰不可提交到 repository。以下只是 patch fragment，不能
+當成完整 Gateway manifest 直接 apply。請在既有 `spec.servers` 保留原本
+`skillhub-test.ftest.tsmc.com` 與其他 servers，另外加入 canonical HTTPS server：
+
+```yaml
+spec:
+  servers:
+    # 保留所有既有 server，包含 skillhub-test.ftest.tsmc.com
+    - port:
+        number: 443
+        name: https-ai-coding-platform
+        protocol: HTTPS
+      hosts:
+        - ai-coding-platform.tsmc.com
+      tls:
+        mode: SIMPLE
+        credentialName: ai-coding-platform-tls
+```
+
+Gateway `servers[].hosts` 是 hostname allowlist；VirtualService 的 `gateways`
+則是 Gateway resource reference，不是 hostname。canonical VirtualService 建議寫成：
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: skillhub-public
+  namespace: skillhub
+spec:
+  hosts:
+    - ai-coding-platform.tsmc.com
+  gateways:
+    - istio-system/organization-ingress # 替換成既有 Gateway reference
+  http:
+    - match:
+        - uri:
+            exact: /skillhub
+        - uri:
+            prefix: /skillhub/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: skillhub-web.skillhub.svc.cluster.local
+            port:
+              number: 80
+```
+
+這是內部 path rewrite，不是 browser redirect；使用者網址會持續保留
+`/skillhub`。舊 `skillhub-test.ftest.tsmc.com` VirtualService 可暫留維運用途，
+不要把它混入 canonical 規則。只有在 Istio gateway 會覆寫 forwarded-proto 且
+web Pod 不可被直接存取時，才將 `trust-forwarded-proto` 設為 `"true"`。
+
+上線前必須確認 Secret 位於正確 credential namespace、憑證 SAN 包含
+`ai-coding-platform.tsmc.com`、Gateway 沒有 invalid credential 錯誤，並驗證
+TLS SNI 與 HTTP Host 都能命中 canonical VirtualService。
 
 ## CLI Registry URL
 
@@ -160,8 +241,8 @@ https://skills.example.com/login/oauth2/code/keycloak
 
 請填完整的 absolute HTTP/HTTPS URL，且不要加 trailing slash。留空時會
 fallback 到既有 frontend app URL；目前 K8s manifests 的該值是 browser
-origin。`public-base-url` 仍控制 backend OAuth callback 與 public-link
-行為；browser API/OAuth traffic 不受影響。HTTP 會讓 CLI Bearer token
+origin。`public-base-url` 控制 backend OAuth callback 與 frontend public
+app URL，但不會覆蓋 `cli-registry-url`。HTTP 會讓 CLI Bearer token
 在沒有 TLS 的情況下以明文傳輸。CLI credential 與 installed-skill
 inventory 依 exact registry URL 分開，因此 HTTP 與 HTTPS 是不同 scope；
 切換到 HTTP 後必須對該 HTTP registry 執行 `skillhub login --registry
@@ -286,7 +367,10 @@ SKILLHUB_STORAGE_S3_ACCESS_KEY=skillhub
 SKILLHUB_STORAGE_S3_SECRET_KEY=change-me
 SKILLHUB_STORAGE_S3_REGION=us-east-1
 SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE=true
-SKILLHUB_PUBLIC_BASE_URL=https://skills.example.com
+SKILLHUB_PUBLIC_BASE_URL=https://ai-coding-platform.tsmc.com/skillhub
+SKILLHUB_WEB_BASE_PATH=/skillhub
+SKILLHUB_WEB_API_BASE_URL=
+SKILLHUB_DEVICE_AUTH_VERIFICATION_URI=
 SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS=12
 SKILLHUB_BUILTIN_SKILLS_ENABLED=true
 SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=skillhub-web
