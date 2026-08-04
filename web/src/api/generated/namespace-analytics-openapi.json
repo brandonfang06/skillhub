@@ -1,0 +1,481 @@
+{
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "NamespaceAnalyticsData": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NamespaceAnalyticsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "period": {
+            "$ref": "#/components/schemas/NamespaceAnalyticsPeriod"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/NamespaceAnalyticsSummary"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "summary",
+          "period",
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "title": "NamespaceAnalyticsData",
+        "type": "object"
+      },
+      "NamespaceAnalyticsEnvelope": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "$ref": "#/components/schemas/NamespaceAnalyticsData"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "timestamp",
+          "requestId"
+        ],
+        "title": "NamespaceAnalyticsEnvelope",
+        "type": "object"
+      },
+      "NamespaceAnalyticsItem": {
+        "properties": {
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "lifetimeDownloads": {
+            "title": "Lifetimedownloads",
+            "type": "integer"
+          },
+          "maintainerCount": {
+            "title": "Maintainercount",
+            "type": "integer"
+          },
+          "namespaceId": {
+            "title": "Namespaceid",
+            "type": "integer"
+          },
+          "periodDownloads": {
+            "title": "Perioddownloads",
+            "type": "integer"
+          },
+          "skillCount": {
+            "title": "Skillcount",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespaceId",
+          "slug",
+          "displayName",
+          "type",
+          "status",
+          "maintainerCount",
+          "skillCount",
+          "lifetimeDownloads",
+          "periodDownloads"
+        ],
+        "title": "NamespaceAnalyticsItem",
+        "type": "object"
+      },
+      "NamespaceAnalyticsPeriod": {
+        "properties": {
+          "endTime": {
+            "format": "date-time",
+            "title": "Endtime",
+            "type": "string"
+          },
+          "retentionMonths": {
+            "title": "Retentionmonths",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "startTime": {
+            "format": "date-time",
+            "title": "Starttime",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime",
+          "source",
+          "retentionMonths"
+        ],
+        "title": "NamespaceAnalyticsPeriod",
+        "type": "object"
+      },
+      "NamespaceAnalyticsSummary": {
+        "properties": {
+          "lifetimeDownloads": {
+            "title": "Lifetimedownloads",
+            "type": "integer"
+          },
+          "maintainerCount": {
+            "title": "Maintainercount",
+            "type": "integer"
+          },
+          "namespaceCount": {
+            "title": "Namespacecount",
+            "type": "integer"
+          },
+          "periodDownloads": {
+            "title": "Perioddownloads",
+            "type": "integer"
+          },
+          "skillCount": {
+            "title": "Skillcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "namespaceCount",
+          "maintainerCount",
+          "skillCount",
+          "lifetimeDownloads",
+          "periodDownloads"
+        ],
+        "title": "NamespaceAnalyticsSummary",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "SkillHub Namespace Analytics API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/admin/namespace-analytics": {
+      "get": {
+        "operationId": "list_namespace_analytics_route_api_v1_admin_namespace_analytics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "namespaceType",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "TEAM",
+                "GLOBAL"
+              ],
+              "title": "Namespacetype",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "namespaceStatus",
+            "required": false,
+            "schema": {
+              "default": "ACTIVE",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "FROZEN",
+                "ARCHIVED"
+              ],
+              "title": "Namespacestatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startTime",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Starttime"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endTime",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Endtime"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "web",
+                    "cli",
+                    "api"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "periodDownloads",
+              "enum": [
+                "namespace",
+                "maintainers",
+                "skills",
+                "lifetimeDownloads",
+                "periodDownloads"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Mock-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Mock-User-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceAnalyticsEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Namespace Analytics Route",
+        "tags": [
+          "Namespace Analytics"
+        ]
+      }
+    }
+  }
+}

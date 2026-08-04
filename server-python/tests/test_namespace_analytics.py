@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import create_app
 from app.namespace_analytics import repository as namespace_repository
 from app.namespace_analytics.repository import NamespaceAnalyticsError, resolve_period
+from scripts.export_namespace_analytics_openapi import build_openapi_schema
 
 
 class FakeMappings:
@@ -326,3 +330,135 @@ async def test_namespace_analytics_clamps_repository_pagination() -> None:
     assert result["period"]["retentionMonths"] == 0
     assert connection.params[1]["limit"] == 100
     assert connection.params[1]["offset"] == 0
+
+
+def auth_user(user_id: str, roles: list[str], *, provider: str = "mock") -> dict[str, object]:
+    return {
+        "userId": user_id,
+        "displayName": user_id,
+        "email": f"{user_id}@example.test",
+        "avatarUrl": "",
+        "oauthProvider": provider,
+        "platformRoles": roles,
+    }
+
+
+def namespace_analytics_app(roles: list[str]) -> object:
+    app = create_app()
+    app.state.db_engine = FakeNamespaceAnalyticsEngine(FakeNamespaceAnalyticsConnection())
+    app.state.settings = SimpleNamespace(download_analytics_retention_months=12)
+    app.state.auth_me_reader = lambda user_id: auth_user(user_id, roles)
+    return app
+
+
+def test_namespace_analytics_route_uses_envelope_request_id_and_defaults() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics",
+        headers={"X-Mock-User-Id": "platform-admin", "X-Request-Id": "analytics-test"},
+        params={"endTime": "2026-08-04T00:00:00Z"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 0
+    assert body["requestId"] == "analytics-test"
+    assert body["data"]["summary"]["namespaceCount"] == 2
+    assert body["data"]["period"]["startTime"] == "2026-07-05T00:00:00Z"
+    assert body["data"]["period"]["retentionMonths"] == 12
+
+
+def test_namespace_analytics_route_requires_authentication() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get("/api/v1/admin/namespace-analytics")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+@pytest.mark.parametrize("roles", [["USER"], ["SKILL_ADMIN"], ["AUDITOR"]])
+def test_namespace_analytics_route_requires_super_admin(roles: list[str]) -> None:
+    app = namespace_analytics_app(roles)
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics",
+        headers={"X-Mock-User-Id": "not-super-admin"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "error.admin.superAdminRequired"
+
+
+def test_namespace_analytics_route_rejects_bearer_api_token() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    app.state.auth_bearer_reader = lambda token: auth_user("token-admin", ["SUPER_ADMIN"], provider="api_token")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics",
+        headers={"Authorization": "Bearer valid"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["msg"] == "error.apiToken.endpoint.unsupported"
+    assert response.json()["data"]["args"] == ["/api/v1/admin/namespace-analytics"]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"namespaceType": "PERSONAL"},
+        {"namespaceStatus": "DELETED"},
+        {"source": "mobile"},
+        {"sort": "owner"},
+        {"direction": "sideways"},
+        {"page": "-1"},
+        {"size": "101"},
+    ],
+)
+def test_namespace_analytics_route_validates_query_boundary(params: dict[str, str]) -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics",
+        headers={"X-Mock-User-Id": "platform-admin"},
+        params=params,
+    )
+
+    assert response.status_code == 422
+
+
+def test_namespace_analytics_route_rejects_reversed_period() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics",
+        headers={"X-Mock-User-Id": "platform-admin"},
+        params={"startTime": "2026-08-04T00:00:00Z", "endTime": "2026-08-03T00:00:00Z"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "error.namespaceAnalytics.invalidTimeRange"
+
+
+def test_namespace_analytics_openapi_exposes_typed_contract() -> None:
+    schema = create_app().openapi()
+
+    operation = schema["paths"]["/api/v1/admin/namespace-analytics"]["get"]
+    success_schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert success_schema["$ref"].endswith("/NamespaceAnalyticsEnvelope")
+    assert "NamespaceAnalyticsData" in schema["components"]["schemas"]
+
+
+def test_focused_namespace_analytics_openapi_contains_only_analytics_route() -> None:
+    schema = build_openapi_schema()
+
+    assert list(schema["paths"]) == ["/api/v1/admin/namespace-analytics"]
+    assert schema["info"]["title"] == "SkillHub Namespace Analytics API"

@@ -16,6 +16,7 @@ from app.api.device_auth import router as device_auth_router
 from app.api.download_analytics import router as download_analytics_router
 from app.api.governance import router as governance_router
 from app.api.health import router as health_router
+from app.api.namespace_analytics import router as namespace_analytics_router
 from app.api.labels import router as labels_router
 from app.api.lifecycle import router as lifecycle_router
 from app.api.local_auth import router as local_auth_router
@@ -131,6 +132,7 @@ def create_app() -> FastAPI:
     app.include_router(download_analytics_router)
     app.include_router(governance_router)
     app.include_router(health_router)
+    app.include_router(namespace_analytics_router)
     app.include_router(labels_router)
     app.include_router(social_router)
     app.include_router(lifecycle_router)
