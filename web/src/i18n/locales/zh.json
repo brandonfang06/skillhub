@@ -755,6 +755,8 @@
     "sourceApi": "API",
     "clearFilters": "清除筛选",
     "retry": "重试",
+    "errorTitle": "无法加载命名空间分析",
+    "errorDescription": "筛选条件已保留。服务恢复后请重试。",
     "emptyTitle": "没有符合筛选条件的命名空间",
     "emptyDescription": "清除或调整筛选条件以查看目录维护与采用情况。",
     "colNamespace": "命名空间",

@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
+import { parseNamespaceAnalyticsSearch } from '@/features/admin/namespace-analytics-search'
 import { RoleGuard } from '@/shared/components/role-guard'
 import { createRequireAuth } from '@/shared/lib/auth-route'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
@@ -143,6 +144,11 @@ const AdminLabelsPage = createRoleProtectedRouteComponent(
 const DownloadEventsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/admin/download-events'),
   'DownloadEventsPage',
+  ['SUPER_ADMIN'],
+)
+const NamespaceAnalyticsPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/namespace-analytics'),
+  'NamespaceAnalyticsPage',
   ['SUPER_ADMIN'],
 )
 
@@ -462,6 +468,14 @@ const adminDownloadEventsRoute = createRoute({
   component: DownloadEventsPage,
 })
 
+const adminNamespaceAnalyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/namespace-analytics',
+  beforeLoad: requireAuth,
+  validateSearch: parseNamespaceAnalyticsSearch,
+  component: NamespaceAnalyticsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   skillsRoute,
@@ -500,6 +514,7 @@ const routeTree = rootRoute.addChildren([
   adminAuditLogRoute,
   adminLabelsRoute,
   adminDownloadEventsRoute,
+  adminNamespaceAnalyticsRoute,
 ])
 
 export const router = createRouter({

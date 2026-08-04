@@ -61,4 +61,10 @@ describe('router', () => {
     const childPaths = children.map((route) => route.fullPath ?? route.path)
     expect(childPaths).toContain('/admin/download-events')
   })
+
+  it('registers the super-admin namespace analytics route', () => {
+    const children = (router.routeTree.children ?? []) as Array<{ fullPath?: string; path?: string }>
+    const childPaths = children.map((route) => route.fullPath ?? route.path)
+    expect(childPaths).toContain('/admin/namespace-analytics')
+  })
 })

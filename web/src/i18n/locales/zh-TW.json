@@ -755,6 +755,8 @@
     "sourceApi": "API",
     "clearFilters": "清除篩選",
     "retry": "重試",
+    "errorTitle": "無法載入 Namespace Analytics",
+    "errorDescription": "篩選條件已保留，服務恢復後請重試。",
     "emptyTitle": "沒有符合篩選條件的 namespace",
     "emptyDescription": "清除或調整篩選條件以查看 catalog 維護與採用情況。",
     "colNamespace": "Namespace",

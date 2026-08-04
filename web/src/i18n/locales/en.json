@@ -768,6 +768,8 @@
     "sourceApi": "API",
     "clearFilters": "Clear filters",
     "retry": "Retry",
+    "errorTitle": "Namespace analytics could not be loaded",
+    "errorDescription": "Your filters are preserved. Retry the request when the service is available.",
     "emptyTitle": "No namespaces match these filters",
     "emptyDescription": "Clear or adjust the filters to see catalog ownership and adoption.",
     "colNamespace": "Namespace",

@@ -190,6 +190,24 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
               </Link>
             ) : null}
             {isSuperAdmin ? (
+              <Link
+                to="/admin/namespace-analytics"
+                search={{
+                  namespaceType: 'ALL',
+                  namespaceStatus: 'ACTIVE',
+                  period: '30d',
+                  sort: 'periodDownloads',
+                  direction: 'desc',
+                  page: 0,
+                  size: 20,
+                }}
+                className={menuItemClassName}
+                onClick={closeMenu}
+              >
+                {t('user.menu.namespaceAnalytics')}
+              </Link>
+            ) : null}
+            {isSuperAdmin ? (
               <Link to="/admin/download-events" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.downloadEvents')}
               </Link>
