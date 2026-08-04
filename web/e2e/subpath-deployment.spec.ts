@@ -265,6 +265,39 @@ async function installMockApi(
       return
     }
 
+    if (path === '/api/v1/admin/namespace-analytics') {
+      await fulfillJson(route, envelope({
+        summary: {
+          namespaceCount: 1,
+          maintainerCount: 2,
+          skillCount: 3,
+          lifetimeDownloads: 80,
+          periodDownloads: 12,
+        },
+        period: {
+          startTime: '2026-07-05T00:00:00Z',
+          endTime: '2026-08-04T00:00:00Z',
+          source: null,
+          retentionMonths: 12,
+        },
+        items: [{
+          namespaceId: 17,
+          slug: 'platform',
+          displayName: 'Platform',
+          type: 'TEAM',
+          status: 'ACTIVE',
+          maintainerCount: 2,
+          skillCount: 3,
+          lifetimeDownloads: 80,
+          periodDownloads: 12,
+        }],
+        page: 0,
+        size: 20,
+        total: 1,
+      }))
+      return
+    }
+
     if (path === '/api/v1/admin/download-events.csv') {
       observed.csvPaths.push(url.pathname)
       await route.fulfill({
@@ -483,6 +516,25 @@ test.describe('SkillHub production subpath deployment', () => {
     await expectNoHorizontalOverflow(page)
 
     expect(new URL(download.url()).pathname).toBe(`${basePath}/api/v1/admin/download-events.csv`)
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('loads namespace analytics and drills into events under the prefix', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: true }, observed)
+    const analyticsRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === `${basePath}/api/v1/admin/namespace-analytics`,
+    )
+
+    await page.goto(`${basePath}/admin/namespace-analytics`)
+    await expect(page.getByRole('heading', { name: 'Namespace Analytics', exact: true })).toBeVisible()
+    await analyticsRequest
+    await expect(page.getByText('@platform')).toBeVisible()
+
+    await page.getByRole('button', { name: 'View Events' }).click()
+    await expect(page).toHaveURL(/\/skillhub\/admin\/download-events\?.*namespace=platform/)
+    await expectNoHorizontalOverflow(page)
+
     expect(observed.apiRootEscapes).toEqual([])
   })
 })
