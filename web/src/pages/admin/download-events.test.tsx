@@ -1,5 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const useSearchMock = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useSearch: () => useSearchMock(),
+}))
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -14,6 +19,7 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/shared/lib/date-time', () => ({
   formatLocalDateTime: (value: string) => value,
+  toLocalDateTimeInputValue: (value: string) => value.slice(0, 16),
 }))
 
 vi.mock('@/shared/ui/card', () => ({
@@ -49,12 +55,16 @@ vi.mock('@/shared/ui/table', () => ({
 
 const useDownloadEventsMock = vi.fn()
 vi.mock('@/features/admin/use-download-events', () => ({
-  useDownloadEvents: () => useDownloadEventsMock(),
+  useDownloadEvents: (params: unknown) => useDownloadEventsMock(params),
 }))
 
 import { DownloadEventsPage } from './download-events'
 
 describe('DownloadEventsPage', () => {
+  beforeEach(() => {
+    useSearchMock.mockReturnValue({})
+  })
+
   it('renders the page title and empty state', () => {
     useDownloadEventsMock.mockReturnValue({
       data: { items: [], total: 0, page: 0, size: 20 },
@@ -101,5 +111,32 @@ describe('DownloadEventsPage', () => {
     expect(html).toContain('team-a/demo')
     expect(html).toContain('user-a')
     expect(html).toContain('skillhub-cli')
+  })
+
+  it('initializes drill-down filters from route search parameters', () => {
+    useSearchMock.mockReturnValue({
+      namespace: 'platform-tools',
+      source: 'cli',
+      startTime: '2026-07-05T00:00:00Z',
+      endTime: '2026-08-04T00:00:00Z',
+    })
+    useDownloadEventsMock.mockReturnValue({
+      data: { items: [], total: 0, page: 0, size: 20 },
+      isLoading: false,
+    })
+
+    renderToStaticMarkup(<DownloadEventsPage />)
+
+    expect(useDownloadEventsMock).toHaveBeenCalledWith({
+      namespace: 'platform-tools',
+      slug: undefined,
+      version: undefined,
+      userId: undefined,
+      source: 'cli',
+      startTime: new Date('2026-07-05T00:00').toISOString(),
+      endTime: new Date('2026-08-04T00:00').toISOString(),
+      page: 0,
+      size: 20,
+    })
   })
 })

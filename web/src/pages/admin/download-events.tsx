@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useSearch } from '@tanstack/react-router'
 import { adminApi } from '@/api/client'
-import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { formatLocalDateTime, toLocalDateTimeInputValue } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button, buttonVariants } from '@/shared/ui/button'
@@ -31,16 +32,38 @@ const SOURCE_OPTIONS = [
   { value: 'api', labelKey: 'downloadEvents.sourceApi' },
 ] as const
 
+interface DownloadEventsRouteSearch {
+  namespace?: string
+  slug?: string
+  version?: string
+  userId?: string
+  source?: string
+  startTime?: string
+  endTime?: string
+}
+
+function initialTextFilter(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function initialDateTimeFilter(value: unknown): string {
+  if (typeof value !== 'string' || Number.isNaN(new Date(value).getTime())) {
+    return ''
+  }
+  return toLocalDateTimeInputValue(value)
+}
+
 export function DownloadEventsPage() {
   const { t, i18n } = useTranslation()
+  const routeSearch = useSearch({ strict: false }) as DownloadEventsRouteSearch
   const allSourceFilterValue = '__all_sources__'
-  const [namespaceFilter, setNamespaceFilter] = useState('')
-  const [slugFilter, setSlugFilter] = useState('')
-  const [versionFilter, setVersionFilter] = useState('')
-  const [userIdFilter, setUserIdFilter] = useState('')
-  const [sourceFilter, setSourceFilter] = useState('')
-  const [startTimeFilter, setStartTimeFilter] = useState('')
-  const [endTimeFilter, setEndTimeFilter] = useState('')
+  const [namespaceFilter, setNamespaceFilter] = useState(() => initialTextFilter(routeSearch.namespace))
+  const [slugFilter, setSlugFilter] = useState(() => initialTextFilter(routeSearch.slug))
+  const [versionFilter, setVersionFilter] = useState(() => initialTextFilter(routeSearch.version))
+  const [userIdFilter, setUserIdFilter] = useState(() => initialTextFilter(routeSearch.userId))
+  const [sourceFilter, setSourceFilter] = useState(() => initialTextFilter(routeSearch.source))
+  const [startTimeFilter, setStartTimeFilter] = useState(() => initialDateTimeFilter(routeSearch.startTime))
+  const [endTimeFilter, setEndTimeFilter] = useState(() => initialDateTimeFilter(routeSearch.endTime))
   const [page, setPage] = useState(0)
 
   const downloadEventParams = {
