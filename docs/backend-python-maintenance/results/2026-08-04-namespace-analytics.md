@@ -1,9 +1,10 @@
 # Namespace Analytics Implementation Result
 
 **Date:** 2026-08-04  
+**Pre-push review:** 2026-08-05
 **Branch:** `codex/namespace-analytics`  
 **Worktree:** `C:\Users\USER\projects\skillhub\.worktrees\namespace-analytics`  
-**Status:** Implemented and locally verified; not pushed or deployed
+**Status:** Implemented, code-reviewed, and fully verified
 
 ## Outcome
 
@@ -48,17 +49,30 @@ already populated.
 
 ## Verification
 
-Passed on 2026-08-04:
+The pre-push Standards and Specification reviews on 2026-08-05 confirmed the
+Python-only backend boundary and canonical `/skillhub` routing. Review fixes:
+
+- kept the historical Java-to-Python route registry unchanged;
+- localized namespace type and status values instead of rendering raw enums;
+- exposed and tested OpenAPI enums for namespace type, status, and source;
+- normalized invalid custom date ranges back to the visible 30-day preset;
+- preserved multi-word search text until blur or Enter;
+- validated Download Events drill-down search parameters;
+- displayed the selected period's resolved date range; and
+- expanded unit and production-bundle E2E coverage for filters, reloads,
+  sorting, pagination, localization, and drill-down parameters.
+
+Fresh full verification passed on 2026-08-05:
 
 ```text
 uv run --no-cache pytest tests -q
   1159 passed, 1 existing Starlette/httpx deprecation warning
 
-uv run --no-cache python -m compileall app
+uv run --no-cache python -m compileall -q app tests
   completed successfully
 
 corepack pnpm test
-  202 test files passed, 782 tests passed
+  203 test files passed, 786 tests passed
 
 corepack pnpm run generate-api:namespace-analytics
 git diff --exit-code -- src/api/generated/namespace-analytics-openapi.json src/api/generated/namespace-analytics-schema.d.ts
@@ -67,8 +81,11 @@ git diff --exit-code -- src/api/generated/namespace-analytics-openapi.json src/a
 corepack pnpm run lint
   completed with zero warnings and zero errors
 
+corepack pnpm run typecheck
+  completed successfully
+
 corepack pnpm run build
-  TypeScript build and Vite production build passed; 2394 modules transformed
+  TypeScript build and Vite production build passed; 2395 modules transformed
 
 .\node_modules\.bin\playwright.CMD test -c playwright.subpath.config.ts
   16 passed across desktop Chromium and mobile Chromium
@@ -76,9 +93,10 @@ corepack pnpm run build
 
 The production-bundle browser suite covers direct loading of
 `/skillhub/admin/namespace-analytics`, the prefixed analytics API request,
-rendered namespace metrics, no root API escapes, no horizontal overflow, and
-the prefixed Download Events drill-down. Existing subpath OAuth, SSE, CLI,
-download, logout, lazy-chunk, and CSV scenarios also remained green.
+rendered namespace metrics, reload, namespace-type filtering, no root API
+escapes, no horizontal overflow, and the prefixed Download Events drill-down
+with namespace, resolved date range, and source. Existing subpath OAuth, SSE,
+CLI, download, logout, lazy-chunk, and CSV scenarios also remained green.
 
 Vitest retains the existing jsdom `Not implemented: navigation to another
 Document` message. The production build retains the existing runtime-config
