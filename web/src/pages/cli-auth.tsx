@@ -6,9 +6,14 @@ import { Button } from '@/shared/ui/button'
 import { getCurrentUser, tokenApi } from '@/api/client'
 import type { User } from '@/api/types'
 import { ORIGINAL_URL_SEARCH } from '@/app/router'
+import { getCliRegistryUrl } from '@/shared/lib/runtime-config'
 
 // Parse the original URL params captured before TanStack Router rewrites
 const ORIGINAL_PARAMS = new URLSearchParams(ORIGINAL_URL_SEARCH)
+
+export function getCliAuthRegistryUrl(): string {
+  return getCliRegistryUrl()
+}
 
 function isValidRedirectUri(uri: string): boolean {
   try {
@@ -113,7 +118,7 @@ export function CliAuthPage() {
         setStatus('redirecting')
 
         // Construct redirect URL with token in hash fragment
-        const registryUrl = window.location.origin
+        const registryUrl = getCliAuthRegistryUrl()
         const hashParams = new URLSearchParams()
         hashParams.set('token', response.token)
         hashParams.set('registry', registryUrl)

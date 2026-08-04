@@ -1,4 +1,5 @@
 import { redirect } from '@tanstack/react-router'
+import { toAppRelativePath } from './runtime-config'
 
 export type RouteLocationLike = {
   pathname: string
@@ -7,7 +8,8 @@ export type RouteLocationLike = {
 }
 
 export function buildReturnTo(location: RouteLocationLike) {
-  return `${location.pathname}${location.searchStr ?? ''}${location.hash ?? ''}`
+  const target = `${location.pathname}${location.searchStr ?? ''}${location.hash ?? ''}`
+  return toAppRelativePath(target) ?? target
 }
 
 export function createRequireAuth(getCurrentUser: () => Promise<unknown>) {

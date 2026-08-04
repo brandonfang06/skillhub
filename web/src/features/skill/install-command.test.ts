@@ -21,6 +21,7 @@ describe('install-command', () => {
 
   function setMockWindow(runtimeConfig: {
     appBaseUrl?: string
+    basePath?: string
     cliRegistryUrl?: string
   } = {}) {
     const location = {
@@ -39,6 +40,7 @@ describe('install-command', () => {
       } & {
         __SKILLHUB_RUNTIME_CONFIG__: {
           appBaseUrl?: string
+          basePath?: string
           cliRegistryUrl?: string
         }
       },
@@ -92,6 +94,12 @@ describe('install-command', () => {
   it('falls back to the browser origin when the app base url is missing', () => {
     setMockWindow()
     expect(getBaseUrl()).toBe('https://fallback.example.com')
+  })
+
+  it('includes the runtime base path in the browser fallback', () => {
+    setMockWindow({ basePath: '/skillhub' })
+
+    expect(getBaseUrl()).toBe('https://fallback.example.com/skillhub')
   })
 
   it('falls back to browser origin when app base url is localhost', () => {

@@ -30,6 +30,13 @@ def test_cookie_secure_accepts_java_session_env(monkeypatch) -> None:
     assert _cookie_secure() is True
 
 
+def test_cookie_secure_ignores_a_blank_canonical_value_before_legacy_fallback(monkeypatch) -> None:
+    monkeypatch.setenv("SKILLHUB_SESSION_COOKIE_SECURE", "   ")
+    monkeypatch.setenv("SESSION_COOKIE_SECURE", "true")
+
+    assert _cookie_secure() is True
+
+
 def test_local_login_creates_session_cookie_used_by_auth_me() -> None:
     app = create_app()
     app.state.local_auth_login = lambda payload: principal()
@@ -45,6 +52,34 @@ def test_local_login_creates_session_cookie_used_by_auth_me() -> None:
     assert "SESSION" in client.cookies
     assert auth_me.status_code == 200
     assert auth_me.json()["data"] == auth_me_principal(can_change_password=True)
+
+
+def test_session_cookie_uses_the_public_base_path(monkeypatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    monkeypatch.setenv("SKILLHUB_SESSION_COOKIE_SECURE", "true")
+    app = create_app()
+    app.state.local_auth_login = lambda payload: principal()
+    client = TestClient(app)
+
+    login = client.post(
+        "/api/v1/auth/local/login",
+        json={"username": "session-user", "password": "Abcd123!"},
+    )
+
+    cookie = login.headers["set-cookie"]
+    assert "Path=/skillhub" in cookie
+    assert "Secure" in cookie
+
+
+def test_logout_clears_the_session_cookie_at_the_public_base_path(monkeypatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    app = create_app()
+    client = TestClient(app)
+
+    logout = client.post("/api/v1/auth/logout")
+
+    assert logout.status_code == 204
+    assert "Path=/skillhub" in logout.headers["set-cookie"]
 
 
 def test_local_register_creates_session_cookie_used_by_auth_me() -> None:

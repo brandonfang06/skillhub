@@ -48,6 +48,7 @@ vi.mock('@/shared/lib/api-error', () => ({
 import {
   WEB_API_PREFIX,
   adminApi,
+  authApi,
   buildApiUrl,
   fetchJson,
   fetchText,
@@ -148,6 +149,26 @@ describe('buildApiUrl', () => {
     window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: '/skill_hub' }
     const url = buildApiUrl('/api/v1/auth/me')
     expect(url).toBe('/skill_hub/api/v1/auth/me')
+  })
+})
+
+describe('authApi.logout', () => {
+  it('uses the runtime application base path', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { basePath: '/skillhub' }
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: { cookie: '' },
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ status: 204 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await authApi.logout()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/skillhub/api/v1/auth/logout',
+      expect.objectContaining({ method: 'POST' }),
+    )
   })
 })
 

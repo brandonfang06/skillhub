@@ -5,6 +5,7 @@ import secrets
 from typing import Any
 from urllib.parse import urlencode
 from urllib.parse import quote_plus
+from urllib.parse import unquote, urlsplit
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
@@ -26,6 +27,7 @@ from app.auth.context import (
     with_password_capability,
 )
 from app.auth.session import clear_session, establish_session
+from app.core.public_url import is_safe_app_path, public_base_path, to_public_path
 from app.core.response import ok
 
 router = APIRouter()
@@ -54,9 +56,11 @@ def sanitize_return_to(candidate: str | None) -> str | None:
     if candidate is None or candidate.strip() == "":
         return None
     trimmed = candidate.strip()
-    if not trimmed.startswith("/") or trimmed.startswith("//"):
+    if not is_safe_app_path(trimmed):
         return None
-    if "\r" in trimmed or "\n" in trimmed:
+    base_path = public_base_path()
+    candidate_path = unquote(urlsplit(trimmed).path)
+    if base_path and (candidate_path == base_path or candidate_path.startswith(f"{base_path}/")):
         return None
     return trimmed
 
@@ -71,7 +75,7 @@ def _registration_name(registration: dict[str, object]) -> str:
 
 
 def _authorization_url(registration_id: str, return_to: str | None) -> str:
-    base_url = f"/oauth2/authorization/{registration_id}"
+    base_url = to_public_path(f"/oauth2/authorization/{registration_id}")
     sanitized_return_to = sanitize_return_to(return_to)
     if sanitized_return_to is None:
         return base_url
@@ -347,7 +351,7 @@ async def oauth_callback(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=502, detail="error.auth.oauth.exchangeFailed") from exc
-    redirect = RedirectResponse(_consume_oauth_return_to(request, state))
+    redirect = RedirectResponse(to_public_path(_consume_oauth_return_to(request, state)))
     await establish_session(request, redirect, principal)
     return redirect
 

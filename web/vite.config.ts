@@ -26,6 +26,7 @@ function pythonBackendProxy() {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

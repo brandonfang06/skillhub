@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
-import os
 import secrets
 from typing import Any
 
 from fastapi import Request, Response
+
+from app.core.config import first_env, parse_bool
+from app.core.public_url import public_base_path
 
 SESSION_COOKIE_NAME = "SESSION"
 SESSION_TTL_SECONDS = 8 * 60 * 60
@@ -72,8 +74,11 @@ def _session_store(request: Request) -> Any:
 
 
 def _cookie_secure() -> bool:
-    value = os.getenv("SKILLHUB_SESSION_COOKIE_SECURE") or os.getenv("SESSION_COOKIE_SECURE")
-    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+    return parse_bool(first_env("SKILLHUB_SESSION_COOKIE_SECURE", "SESSION_COOKIE_SECURE"))
+
+
+def _cookie_path() -> str:
+    return public_base_path() or "/"
 
 
 async def establish_session(request: Request, response: Response, principal: dict[str, object]) -> None:
@@ -85,7 +90,7 @@ async def establish_session(request: Request, response: Response, principal: dic
         httponly=True,
         secure=_cookie_secure(),
         samesite="lax",
-        path="/",
+        path=_cookie_path(),
     )
 
 
@@ -100,4 +105,4 @@ async def clear_session(request: Request, response: Response) -> None:
     session_id = request.cookies.get(SESSION_COOKIE_NAME)
     if session_id is not None and session_id.strip() != "":
         await _session_store(request).delete(session_id)
-    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(SESSION_COOKIE_NAME, path=_cookie_path())

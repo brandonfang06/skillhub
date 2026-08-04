@@ -22,6 +22,34 @@ def test_sanitize_return_to_matches_java_relative_path_rules() -> None:
     assert sanitize_return_to("/safe\r\nX-Bad: 1") is None
 
 
+def test_sanitize_return_to_rejects_public_prefix_and_path_traversal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+
+    assert sanitize_return_to("/dashboard") == "/dashboard"
+    assert sanitize_return_to("/skillhub/dashboard") is None
+    assert sanitize_return_to("/%73killhub/dashboard") is None
+    assert sanitize_return_to("/../admin") is None
+    assert sanitize_return_to("/safe/../../admin") is None
+    assert sanitize_return_to("/%2e%2e/admin") is None
+
+
+def test_build_auth_providers_uses_the_public_base_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+
+    providers = build_auth_providers(
+        [{"id": "keycloak", "clientName": "Keycloak", "clientId": "keycloak-client"}],
+        return_to="/dashboard",
+    )
+
+    assert providers == [
+        {
+            "id": "keycloak",
+            "name": "Keycloak",
+            "authorizationUrl": "/skillhub/oauth2/authorization/keycloak?returnTo=%2Fdashboard",
+        }
+    ]
+
+
 def test_build_auth_providers_sorts_oauth_and_encodes_safe_return_to() -> None:
     providers = build_auth_providers(OAUTH_REGISTRATIONS, return_to="/dashboard/publish?tab=one two")
 

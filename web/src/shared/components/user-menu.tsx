@@ -8,6 +8,7 @@ import { buildGlobalReviewsPath, canAccessReviewCenter } from '@/features/review
 import { clearSessionScopedQueries } from '@/features/notification/notification-session'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { cn } from '@/shared/lib/utils'
+import { buildAppPath } from '@/shared/lib/runtime-config'
 
 interface User {
   displayName: string
@@ -20,6 +21,10 @@ interface User {
 interface UserMenuProps {
   user: User
   triggerClassName?: string
+}
+
+export function getPostLogoutPath(): string {
+  return buildAppPath('/')
 }
 
 export function UserMenu({ user, triggerClassName }: UserMenuProps) {
@@ -81,7 +86,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
       // Always clear cache and redirect, even if API call fails
       clearSessionScopedQueries(queryClient)
       queryClient.setQueryData(['auth', 'me'], null)
-      window.location.href = '/'
+      window.location.href = getPostLogoutPath()
     }
   }
 

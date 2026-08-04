@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
+import { getAppBasePath } from '@/shared/lib/runtime-config'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 import { parseNamespaceAnalyticsSearch } from '@/features/admin/namespace-analytics-search'
@@ -517,10 +518,15 @@ const routeTree = rootRoute.addChildren([
   adminNamespaceAnalyticsRoute,
 ])
 
-export const router = createRouter({
-  routeTree,
-  defaultNotFoundComponent: DefaultNotFound,
-})
+export function createAppRouter() {
+  return createRouter({
+    routeTree,
+    basepath: getAppBasePath() || undefined,
+    defaultNotFoundComponent: DefaultNotFound,
+  })
+}
+
+export const router = createAppRouter()
 
 declare module '@tanstack/react-router' {
   interface Register {

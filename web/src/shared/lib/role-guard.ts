@@ -1,3 +1,5 @@
+import { toAppRelativePath } from './runtime-config'
+
 export function canAccessRoute(userRoles: readonly string[] | undefined, requiredRoles: readonly string[]) {
   if (!userRoles || userRoles.length === 0) {
     return false
@@ -15,10 +17,11 @@ export function shouldRedirectToLogin(isLoading: boolean, user: object | null | 
 }
 
 export function buildLoginRedirect(pathname: string, search = '', hash = '') {
+  const target = `${pathname}${search}${hash}`
   return {
     to: '/login' as const,
     search: {
-      returnTo: `${pathname}${search}${hash}`,
+      returnTo: toAppRelativePath(target) ?? target,
     },
   }
 }

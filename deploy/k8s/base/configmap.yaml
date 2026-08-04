@@ -30,6 +30,13 @@ data:
   # Public URL used for OAuth callback construction. Set this to the external
   # HTTPS origin when ingress is configured, for example https://skills.example.com.
   public-base-url: ""
+  # Browser path prefix and optional explicit API base. Leave both blank for a
+  # root deployment; for subpath deployment set web-base-path to /skillhub and
+  # leave web-api-base-url blank to inherit it.
+  web-base-path: ""
+  web-api-base-url: ""
+  # Optional absolute device authorization page. Blank derives it from public-base-url.
+  device-auth-verification-uri: ""
   # Optional frontend-only override used in copied CLI install commands.
   cli-registry-url: ""
   # Enable only when a trusted ingress replaces X-Forwarded-Proto and direct

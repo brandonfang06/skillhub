@@ -51,6 +51,7 @@ import type {
   SkillResourceDiagnostics,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
+import { getApiBaseUrl, getRuntimeConfig } from '@/shared/lib/runtime-config'
 import i18n from '@/i18n/config'
 
 /**
@@ -62,37 +63,6 @@ import i18n from '@/i18n/config'
 export { ApiError }
 
 export const WEB_API_PREFIX = '/api/web'
-
-type RuntimeConfig = {
-  apiBaseUrl?: string
-  appBaseUrl?: string
-  cliRegistryUrl?: string
-  authDirectEnabled?: string
-  authDirectProvider?: string
-  localRegistrationEnabled?: string
-  authSessionBootstrapEnabled?: string
-  authSessionBootstrapProvider?: string
-  authSessionBootstrapAuto?: string
-  playgroundEnabled?: string
-  playgroundBaseUrl?: string
-}
-
-declare global {
-  interface Window {
-    __SKILLHUB_RUNTIME_CONFIG__?: RuntimeConfig
-  }
-}
-
-function getRuntimeConfig(): RuntimeConfig {
-  if (typeof window === 'undefined') {
-    return {}
-  }
-  return window.__SKILLHUB_RUNTIME_CONFIG__ ?? {}
-}
-
-function getApiBaseUrl(): string {
-  return getRuntimeConfig().apiBaseUrl ?? ''
-}
 
 function parseBooleanFlag(value: string | undefined): boolean {
   if (!value) {
@@ -479,7 +449,7 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    const response = await fetch('/api/v1/auth/logout', {
+    const response = await fetch(buildApiUrl('/api/v1/auth/logout'), {
       method: 'POST',
       headers: withCsrf(),
     })

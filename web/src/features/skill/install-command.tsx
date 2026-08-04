@@ -4,6 +4,10 @@ import { Check, Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
+import {
+  getBrowserAppUrl,
+  getCliRegistryUrl as getRuntimeCliRegistryUrl,
+} from '@/shared/lib/runtime-config'
 
 interface InstallCommandProps {
   namespace: string
@@ -16,46 +20,11 @@ export function buildInstallTarget(namespace: string, slug: string): string {
 }
 
 export function getBaseUrl(): string {
-  if (typeof window === 'undefined') {
-    return ''
-  }
-  const runtimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
-  const configuredUrl = runtimeConfig?.appBaseUrl
-  // Use configured URL only if it's set and not localhost
-  if (configuredUrl && !configuredUrl.includes('localhost')) {
-    return configuredUrl
-  }
-  // Fallback to current page origin
-  return `${window.location.protocol}//${window.location.host}`
+  return getBrowserAppUrl()
 }
 
 export function getCliRegistryUrl(): string {
-  const fallbackUrl = getBaseUrl()
-  if (typeof window === 'undefined') {
-    return fallbackUrl
-  }
-
-  const configuredUrl = window.__SKILLHUB_RUNTIME_CONFIG__?.cliRegistryUrl?.trim()
-  if (!configuredUrl) {
-    return fallbackUrl
-  }
-
-  try {
-    const parsedUrl = new URL(configuredUrl)
-    if (
-      (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:')
-      || parsedUrl.username
-      || parsedUrl.password
-      || parsedUrl.search
-      || parsedUrl.hash
-      || !/^\/[A-Za-z0-9._~/-]*$/.test(parsedUrl.pathname)
-    ) {
-      return fallbackUrl
-    }
-    return parsedUrl.toString().replace(/\/+$/, '')
-  } catch {
-    return fallbackUrl
-  }
+  return getRuntimeCliRegistryUrl()
 }
 
 export function buildInstallCommand(namespace: string, slug: string, baseUrl: string): string {

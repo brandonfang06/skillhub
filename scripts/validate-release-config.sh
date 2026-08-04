@@ -64,6 +64,161 @@ validate_url() {
   esac
 }
 
+validate_ipv6_literal() {
+  printf '%s\n' "$1" | awk '
+    function is_hextet(value) {
+      return value ~ /^[0-9A-Fa-f]+$/ && length(value) <= 4
+    }
+    function is_ipv4(value, octets, count, position) {
+      count = split(value, octets, ".")
+      if (count != 4) return 0
+      for (position = 1; position <= count; position++) {
+        if (octets[position] !~ /^[0-9]+$/ || length(octets[position]) > 3) return 0
+        if (length(octets[position]) > 1 && substr(octets[position], 1, 1) == "0") return 0
+        if (octets[position] + 0 > 255) return 0
+      }
+      return 1
+    }
+    {
+      address = $0
+      collapsed = address
+      compression_count = gsub(/::/, "", collapsed)
+      if (compression_count > 1 || address ~ /:::/) exit 1
+
+      has_compression = compression_count == 1
+      if (!has_compression && (address ~ /^:/ || address ~ /:$/)) exit 1
+
+      count = split(address, parts, ":")
+      units = 0
+      for (position = 1; position <= count; position++) {
+        if (parts[position] == "") continue
+        if (index(parts[position], ".")) {
+          if (position != count || !is_ipv4(parts[position])) exit 1
+          units += 2
+        } else {
+          if (!is_hextet(parts[position])) exit 1
+          units++
+        }
+      }
+
+      if (has_compression) {
+        if (units >= 8) exit 1
+      } else if (units != 8) {
+        exit 1
+      }
+    }
+  '
+}
+
+validate_absolute_http_url() {
+  var_name="$1"
+  label="$2"
+  eval "var_value=\${$var_name:-}"
+  if [ -z "$var_value" ]; then
+    return 0
+  fi
+
+  invalid=false
+  case "$var_value" in
+    http://*) remainder=${var_value#http://} ;;
+    https://*) remainder=${var_value#https://} ;;
+    *) invalid=true; remainder="" ;;
+  esac
+  authority=${remainder%%/*}
+  case "$authority" in
+    ""|*@*|*%*|*\\*|*[[:space:]]*) invalid=true ;;
+  esac
+  case "$var_value" in
+    *\?*|*\#*|*%*|*\\*|*[[:space:]]*) invalid=true ;;
+  esac
+
+  case "$authority" in
+    \[* )
+      if ! printf '%s' "$authority" | grep -Eq '^\[[0-9A-Fa-f:.]+\](:[0-9]{1,5})?$'; then
+        invalid=true
+      else
+        ipv6_literal=${authority#\[}
+        ipv6_literal=${ipv6_literal%%\]*}
+        if ! validate_ipv6_literal "$ipv6_literal"; then
+          invalid=true
+        fi
+      fi
+      ;;
+    *)
+      if ! printf '%s' "$authority" | grep -Eq '^[A-Za-z0-9.-]+(:[0-9]{1,5})?$'; then
+        invalid=true
+      fi
+      ;;
+  esac
+
+  case "$authority" in
+    \[*\]:*) port=${authority##*:} ;;
+    \[*\]) port="" ;;
+    *:*) port=${authority##*:} ;;
+    *) port="" ;;
+  esac
+  case "$port" in
+    "") ;;
+    *[!0-9]*) invalid=true ;;
+    *)
+      if [ "$port" -gt 65535 ]; then
+        invalid=true
+      fi
+      ;;
+  esac
+
+  path=${remainder#"$authority"}
+  if [ -n "$path" ] && ! printf '%s' "$path" | grep -Eq "^/[A-Za-z0-9._~!\$&'()*+,;=:@/-]*$"; then
+    invalid=true
+  fi
+  if [ -n "$path" ]; then
+    case "/${path#/}/" in
+      *"//"*|*"/./"*|*"/../"*) invalid=true ;;
+    esac
+  fi
+
+  if [ "$invalid" = "true" ]; then
+    error "$label must be an absolute HTTP/HTTPS URL without credentials, query, or fragment"
+  fi
+}
+
+normalized_web_base_path=""
+
+validate_web_base_path() {
+  value=${SKILLHUB_WEB_BASE_PATH:-}
+  case "$value" in
+    ""|"/")
+      normalized_web_base_path=""
+      ;;
+    /*)
+      if ! printf '%s' "$value" | grep -Eq '^/[A-Za-z0-9._~/-]+/?$'; then
+        error "SKILLHUB_WEB_BASE_PATH is invalid"
+        return 0
+      fi
+      normalized_web_base_path=${value%/}
+      case "/${normalized_web_base_path#/}/" in
+        *"//"*|*"/./"*|*"/../"*)
+          error "SKILLHUB_WEB_BASE_PATH is invalid"
+          ;;
+      esac
+      ;;
+    *)
+      error "SKILLHUB_WEB_BASE_PATH must be blank, /, or a root-relative path"
+      ;;
+  esac
+}
+
+validate_public_base_path_matches_web() {
+  public_without_scheme=${SKILLHUB_PUBLIC_BASE_URL#*://}
+  case "$public_without_scheme" in
+    */*) public_path=/${public_without_scheme#*/} ;;
+    *) public_path="" ;;
+  esac
+  if [ "$public_path" != "$normalized_web_base_path" ]; then
+    error "SKILLHUB_PUBLIC_BASE_URL path must match SKILLHUB_WEB_BASE_PATH"
+  fi
+}
+
 validate_no_trailing_slash() {
   var_name="$1"
   eval "var_value=\${$var_name:-}"
@@ -98,8 +253,10 @@ validate_port() {
 }
 
 require_non_empty SKILLHUB_PUBLIC_BASE_URL
-validate_url SKILLHUB_PUBLIC_BASE_URL
+validate_absolute_http_url SKILLHUB_PUBLIC_BASE_URL "SKILLHUB_PUBLIC_BASE_URL"
 validate_no_trailing_slash SKILLHUB_PUBLIC_BASE_URL
+validate_web_base_path
+validate_public_base_path_matches_web
 
 reject_values POSTGRES_PASSWORD "change-this-postgres-password" "skillhub_demo" "skillhub_dev"
 reject_values REDIS_PASSWORD "change-this-redis-password" "skillhub_demo" "skillhub_dev"
@@ -151,12 +308,17 @@ if [ -n "${SKILLHUB_WEB_API_BASE_URL:-}" ]; then
   validate_no_trailing_slash SKILLHUB_WEB_API_BASE_URL
 fi
 
-if [ -n "${DEVICE_AUTH_VERIFICATION_URI:-}" ]; then
-  validate_url DEVICE_AUTH_VERIFICATION_URI
+if [ -n "${SKILLHUB_DEVICE_AUTH_VERIFICATION_URI:-}" ]; then
+  validate_absolute_http_url SKILLHUB_DEVICE_AUTH_VERIFICATION_URI "device auth verification URI"
+elif [ -n "${DEVICE_AUTH_VERIFICATION_URI:-}" ]; then
+  validate_absolute_http_url DEVICE_AUTH_VERIFICATION_URI "device auth verification URI"
 fi
 
-if [ "${SESSION_COOKIE_SECURE:-true}" != "true" ]; then
-  warn "SESSION_COOKIE_SECURE is not true; only acceptable behind plain HTTP during temporary local verification"
+if [ "${SESSION_COOKIE_SECURE:-false}" != "true" ]; then
+  case "${SKILLHUB_PUBLIC_BASE_URL}" in
+    https://*) error "SESSION_COOKIE_SECURE must be true for an HTTPS public URL" ;;
+    *) warn "SESSION_COOKIE_SECURE is not true; only acceptable behind plain HTTP during temporary local verification" ;;
+  esac
 fi
 
 if [ "${POSTGRES_BIND_ADDRESS:-127.0.0.1}" != "127.0.0.1" ]; then

@@ -9,6 +9,10 @@ RUN pnpm build
 FROM nginx:alpine
 ENV SKILLHUB_TRUST_FORWARDED_PROTO=false
 COPY --from=build /app/dist /usr/share/nginx/html
+RUN sed 's|<base href="/" />|<base href="${SKILLHUB_WEB_BASE_HREF}" />|' \
+    /usr/share/nginx/html/index.html \
+    > /usr/share/nginx/html/index.html.template \
+    && rm /usr/share/nginx/html/index.html
 COPY --from=build /app/src/docs/skill.md.template /usr/share/nginx/html/registry/skill.md.template
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template

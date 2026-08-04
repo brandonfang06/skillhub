@@ -49,4 +49,22 @@ describe('buildLoginRedirect', () => {
       },
     })
   })
+
+  it('removes the configured application base from returnTo', () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' } },
+    })
+
+    try {
+      expect(buildLoginRedirect('/skillhub/dashboard/reviews/13', '?tab=pending', '#panel')).toEqual({
+        to: '/login',
+        search: {
+          returnTo: '/dashboard/reviews/13?tab=pending#panel',
+        },
+      })
+    } finally {
+      Reflect.deleteProperty(globalThis, 'window')
+    }
+  })
 })

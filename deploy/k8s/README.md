@@ -131,7 +131,10 @@ Edit these common ConfigMap values:
 | `storage-s3-proxy-endpoint` | `SKILLHUB_STORAGE_S3_PROXY_ENDPOINT` | Optional proxy endpoint used by the backend when it must reach MinIO through a proxy. |
 | `storage-s3-public-endpoint` | `SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT` | Optional public endpoint used for generated object URLs. |
 | `storage-s3-bucket` | `SKILLHUB_STORAGE_S3_BUCKET` | Bucket for skill package bundles. |
-| `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | External HTTPS origin used for OAuth callbacks and generated links. |
+| `public-base-url` | `SKILLHUB_PUBLIC_BASE_URL` | Complete external browser URL, including an optional path prefix, used for OAuth callbacks and generated links. |
+| `web-base-path` | `SKILLHUB_WEB_BASE_PATH` | Browser path prefix such as `/skillhub`; blank means root deployment. |
+| `web-api-base-url` | `SKILLHUB_WEB_API_BASE_URL` | Optional explicit frontend API base. Leave blank to inherit `web-base-path`. |
+| `device-auth-verification-uri` | `SKILLHUB_DEVICE_AUTH_VERIFICATION_URI` | Optional absolute CLI browser verification URL. Blank derives `${public-base-url}/cli/auth`. |
 | `cli-registry-url` | `SKILLHUB_WEB_CLI_REGISTRY_URL` | Optional frontend-only registry override used in copied CLI install commands. |
 | `trust-forwarded-proto` | `SKILLHUB_TRUST_FORWARDED_PROTO` | Keep `false` unless a trusted ingress replaces `X-Forwarded-Proto` and blocks direct web-pod access. |
 | `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
@@ -141,13 +144,119 @@ Edit these common ConfigMap values:
 Set `cli-registry-url` to a full absolute HTTP or HTTPS URL without a trailing
 slash. It changes only the copied CLI install command. When blank, it falls back
 to the existing frontend app URL; in the current K8s manifests that is browser
-origin. `public-base-url` still controls backend OAuth callbacks and generated
-public links, while browser API and OAuth traffic are unchanged. HTTP sends the
+origin. `public-base-url` controls backend OAuth callbacks and the frontend
+public app URL. It does not override `cli-registry-url`. HTTP sends the
 CLI Bearer token in plaintext without TLS. CLI credentials and installed-skill
 inventory are scoped by the exact registry URL, so HTTP and HTTPS are separate:
 run `skillhub login --registry http://host --token <token>` or set
 `SKILLHUB_TOKEN` after switching. The HTTP endpoint must not redirect the CLI
 back to HTTPS.
+
+## Subpath Deployment
+
+For the canonical organization entrypoint
+`https://ai-coding-platform.tsmc.com/skillhub`, configure:
+
+```yaml
+public-base-url: https://ai-coding-platform.tsmc.com/skillhub
+web-base-path: /skillhub
+web-api-base-url: ""
+device-auth-verification-uri: ""
+session-cookie-secure: "true"
+```
+
+The organization DNS entry is a CNAME from `ai-coding-platform.tsmc.com` to
+`skillhub-test.ftest.tsmc.com`. A CNAME selects the same load balancer, but it
+does not rewrite TLS SNI or the HTTP Host header: both still contain
+`ai-coding-platform.tsmc.com`. The existing Gateway and VirtualService must
+therefore explicitly accept the canonical hostname.
+
+The certificate covers the hostname `ai-coding-platform.tsmc.com`, not the
+`/skillhub` path. Store its full certificate chain and private key in a
+`kubernetes.io/tls` Secret named `ai-coding-platform-tls` in the namespace
+from which the ingress gateway workload reads credentials. Do not commit the
+certificate or key to this repository. The following is a patch fragment only,
+not a complete Gateway manifest: add this HTTPS server under the existing
+`spec.servers` list without replacing the server for
+`skillhub-test.ftest.tsmc.com`:
+
+```yaml
+spec:
+  servers:
+    # Preserve every existing server, including skillhub-test.ftest.tsmc.com.
+    - port:
+        number: 443
+        name: https-ai-coding-platform
+        protocol: HTTPS
+      hosts:
+        - ai-coding-platform.tsmc.com
+      tls:
+        mode: SIMPLE
+        credentialName: ai-coding-platform-tls
+```
+
+If the organization platform team owns the Gateway, provide the existing
+Gateway name/namespace, hostname, Secret name, certificate chain, and this
+patch fragment to that team. The
+Gateway `servers[].hosts` field is a hostname allowlist. The VirtualService
+`gateways` field below is instead a reference to the Gateway resource.
+
+Create or update the canonical VirtualService in the SkillHub namespace. Match
+both the exact path and slash-prefixed subtree, then strip the public prefix
+before forwarding to the existing web service:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: skillhub-public
+  namespace: skillhub
+spec:
+  hosts:
+    - ai-coding-platform.tsmc.com
+  gateways:
+    - istio-system/organization-ingress # Replace with the existing Gateway reference.
+  http:
+    - match:
+        - uri:
+            exact: /skillhub
+        - uri:
+            prefix: /skillhub/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: skillhub-web.skillhub.svc.cluster.local
+            port:
+              number: 80
+```
+
+The new URL is not an application redirect: users stay under `/skillhub` while
+Istio forwards rewritten requests internally. Keep the old
+`skillhub-test.ftest.tsmc.com` VirtualService operations-only during the
+transition instead of adding it to the canonical rule. Set
+`trust-forwarded-proto: "true"` only when the Istio gateway replaces the
+forwarded-proto header and direct web-pod access is blocked.
+
+Before rollout, verify the Secret exists in the gateway credential namespace,
+the Gateway reports no invalid credential analysis, the certificate SAN
+contains `ai-coding-platform.tsmc.com`, and both TLS SNI and HTTP Host routing
+reach this VirtualService. Changing only the CNAME is insufficient.
+
+Configure the Keycloak client with these exact browser values:
+
+```text
+Root URL / Home URL:
+https://ai-coding-platform.tsmc.com/skillhub
+
+Valid Redirect URI:
+https://ai-coding-platform.tsmc.com/skillhub/login/oauth2/code/keycloak
+
+Web Origins:
+https://ai-coding-platform.tsmc.com
+```
+
+`Web Origins` accepts an origin only, so it must not include `/skillhub`.
 
 For the full environment variable manual, see
 [environment-variables.zh.md](environment-variables.zh.md).

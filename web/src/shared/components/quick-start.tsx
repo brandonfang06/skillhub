@@ -2,19 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { Check, Copy, Settings, Download, Upload } from 'lucide-react'
 import { useMemo } from 'react'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
+import { getBrowserAppUrl } from '@/shared/lib/runtime-config'
 
 function getAppBaseUrl(): string {
   if (typeof window === 'undefined') {
     return 'https://skill.xfyun.cn'
   }
-  const runtimeConfig = (window as unknown as Record<string, unknown>).__SKILLHUB_RUNTIME_CONFIG__ as { appBaseUrl?: string } | undefined
-  const configuredUrl = runtimeConfig?.appBaseUrl
-  // Use configured URL only if it's set and not localhost
-  if (configuredUrl && !configuredUrl.includes('localhost')) {
-    return configuredUrl
-  }
-  // Fallback to current page origin
-  return `${window.location.protocol}//${window.location.host}`
+  return getBrowserAppUrl()
 }
 
 function CopyButton({ text }: { text: string }) {

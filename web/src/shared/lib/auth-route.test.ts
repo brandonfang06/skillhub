@@ -11,6 +11,33 @@ describe('auth-route', () => {
     })).toBe('/space/global/caldav-calendar?tab=files#readme')
   })
 
+  it('removes the runtime application base from browser return targets', () => {
+    const originalWindow = globalThis.window
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      writable: true,
+      value: { __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' } },
+    })
+
+    try {
+      expect(buildReturnTo({
+        pathname: '/skillhub/dashboard/reviews/13',
+        searchStr: '?tab=pending',
+        hash: '#panel',
+      })).toBe('/dashboard/reviews/13?tab=pending#panel')
+    } finally {
+      if (originalWindow) {
+        Object.defineProperty(globalThis, 'window', {
+          configurable: true,
+          writable: true,
+          value: originalWindow,
+        })
+      } else {
+        Reflect.deleteProperty(globalThis, 'window')
+      }
+    }
+  })
+
   it('createRequireAuth redirects unauthenticated users to login with returnTo', async () => {
     const requireAuth = createRequireAuth(async () => null)
 

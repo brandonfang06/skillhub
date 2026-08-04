@@ -218,7 +218,7 @@ def test_legacy_github_gitlab_env_is_not_advertised_by_default(monkeypatch: pyte
 
 
 def test_keycloak_registration_uses_spring_boot_oidc_env_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example")
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub/")
     monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID", "skillhub-web")
     monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET", "keycloak-secret")
     monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER", "keycloak")
@@ -242,7 +242,7 @@ def test_keycloak_registration_uses_spring_boot_oidc_env_contract(monkeypatch: p
     assert keycloak["authorizationUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/auth"
     assert keycloak["tokenUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/token"
     assert keycloak["userInfoUri"] == "https://id.example.test/realms/skillhub/protocol/openid-connect/userinfo"
-    assert keycloak["redirectUri"] == "https://skillhub.example/login/oauth2/code/keycloak"
+    assert keycloak["redirectUri"] == "https://skillhub.example/skillhub/login/oauth2/code/keycloak"
     assert keycloak["scopes"] == ["openid", "profile", "email"]
 
 
@@ -339,6 +339,30 @@ def test_oauth_callback_exchanges_code_binds_principal_and_creates_session() -> 
     assert auth_me.json()["data"] == principal()
     assert exchanged == [("github", "abc")]
     assert bound_claims == [{"subject": "12345", "providerLogin": "oauth-user", "email": "oauth-user@example.test"}]
+
+
+def test_oauth_callback_redirects_to_the_public_subpath(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    app = create_app()
+    app.state.auth_oauth_registrations = [oauth_registration()]
+    app.state.oauth_code_exchanger = lambda registration, code: {
+        "subject": "12345",
+        "providerLogin": "oauth-user",
+        "email": "oauth-user@example.test",
+    }
+    app.state.oauth_principal_binder = lambda registration, claims: principal()
+    client = TestClient(app)
+
+    authorization = client.get(
+        "/oauth2/authorization/github?returnTo=/skills/example",
+        follow_redirects=False,
+    )
+    state = parse_qs(urlparse(authorization.headers["location"]).query)["state"][0]
+
+    callback = client.get(f"/login/oauth2/code/github?code=abc&state={state}", follow_redirects=False)
+
+    assert callback.status_code == 307
+    assert callback.headers["location"] == "/skillhub/skills/example"
 
 
 def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_doubles() -> None:

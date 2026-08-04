@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { attachNotificationSseListeners } from './use-notification-sse'
+import { attachNotificationSseListeners, getNotificationSseUrl } from './use-notification-sse'
 
 function createFakeConnection() {
   const listeners = new Map<string, Array<(event: MessageEvent) => void>>()
@@ -22,6 +22,29 @@ function createFakeConnection() {
 }
 
 describe('attachNotificationSseListeners', () => {
+  it('builds the stream URL below the runtime API base', () => {
+    const originalWindow = globalThis.window
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      writable: true,
+      value: { __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' } },
+    })
+
+    try {
+      expect(getNotificationSseUrl()).toBe('/skillhub/api/web/notifications/sse')
+    } finally {
+      if (originalWindow) {
+        Object.defineProperty(globalThis, 'window', {
+          configurable: true,
+          writable: true,
+          value: originalWindow,
+        })
+      } else {
+        Reflect.deleteProperty(globalThis, 'window')
+      }
+    }
+  })
+
   it('does not refetch unread count when the sse connection opens or reconnects', () => {
     const queryClient = new QueryClient()
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
