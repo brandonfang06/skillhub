@@ -277,7 +277,7 @@ async function installMockApi(
         period: {
           startTime: '2026-07-05T00:00:00Z',
           endTime: '2026-08-04T00:00:00Z',
-          source: null,
+          source: 'cli',
           retentionMonths: 12,
         },
         items: [{
@@ -531,8 +531,30 @@ test.describe('SkillHub production subpath deployment', () => {
     await analyticsRequest
     await expect(page.getByText('@platform')).toBeVisible()
 
+    const reloadRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === `${basePath}/api/v1/admin/namespace-analytics`,
+    )
+    await page.reload()
+    await reloadRequest
+    await expect(page.getByRole('heading', { name: 'Namespace Analytics', exact: true })).toBeVisible()
+
+    const filteredRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return url.pathname === `${basePath}/api/v1/admin/namespace-analytics`
+        && url.searchParams.get('namespaceType') === 'GLOBAL'
+    })
+    await page.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: 'Global', exact: true }).click()
+    await filteredRequest
+    await expect(page).toHaveURL(/\/skillhub\/admin\/namespace-analytics\?.*namespaceType=GLOBAL/)
+
     await page.getByRole('button', { name: 'View Events' }).click()
-    await expect(page).toHaveURL(/\/skillhub\/admin\/download-events\?.*namespace=platform/)
+    await expect(page).toHaveURL(/\/skillhub\/admin\/download-events\?/)
+    const drillDownUrl = new URL(page.url())
+    expect(drillDownUrl.searchParams.get('namespace')).toBe('platform')
+    expect(drillDownUrl.searchParams.get('startTime')).toBe('2026-07-05T00:00:00Z')
+    expect(drillDownUrl.searchParams.get('endTime')).toBe('2026-08-04T00:00:00Z')
+    expect(drillDownUrl.searchParams.get('source')).toBe('cli')
     await expectNoHorizontalOverflow(page)
 
     expect(observed.apiRootEscapes).toEqual([])

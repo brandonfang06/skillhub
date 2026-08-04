@@ -129,25 +129,53 @@ describe('NamespaceAnalyticsPage', () => {
     expect(screen.getByText('namespaceAnalytics.summarySkills')).toBeTruthy()
     expect(screen.getByText('namespaceAnalytics.summaryLifetimeDownloads')).toBeTruthy()
     expect(screen.getByText('namespaceAnalytics.summaryPeriodDownloads')).toBeTruthy()
-    expect(screen.getByText('GLOBAL:GLOBAL')).toBeTruthy()
+    expect(screen.getByText('namespaceAnalytics.periodRange')).toBeTruthy()
+    expect(screen.getByText('GLOBAL:namespaceAnalytics.namespaceTypeGlobal')).toBeTruthy()
+    expect(screen.getAllByText('namespaceAnalytics.namespaceStatusActive')).toHaveLength(2)
     expect(screen.getByText('@global')).toBeTruthy()
     expect(screen.getByText('80')).toBeTruthy()
     expect(screen.getByText('12')).toBeTruthy()
   })
 
-  it('keeps filter changes in router search and resets pagination', () => {
+  it('lets users type a multi-word namespace query before committing it', () => {
     render(<NamespaceAnalyticsPage />)
 
-    fireEvent.change(screen.getByPlaceholderText('namespaceAnalytics.searchPlaceholder'), {
-      target: { value: 'platform' },
+    const input = screen.getByPlaceholderText('namespaceAnalytics.searchPlaceholder') as HTMLInputElement
+    fireEvent.change(input, {
+      target: { value: 'platform ' },
     })
+    expect(input.value).toBe('platform ')
+    expect(navigateMock).not.toHaveBeenCalled()
+
+    fireEvent.change(input, { target: { value: 'platform team' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(navigateMock).toHaveBeenCalledWith({
       search: expect.objectContaining({
         ...defaultSearch,
-        query: 'platform',
+        query: 'platform team',
         page: 0,
       }),
+    })
+  })
+
+  it('updates sorting and pagination through router search', () => {
+    useNamespaceAnalyticsMock.mockReturnValue({
+      data: { ...analyticsData, total: 40 },
+      isLoading: false,
+      isError: false,
+      refetch: refetchMock,
+    })
+    render(<NamespaceAnalyticsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.colSkills' }))
+    expect(navigateMock).toHaveBeenCalledWith({
+      search: expect.objectContaining({ sort: 'skills', direction: 'desc', page: 0 }),
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.nextPage' }))
+    expect(navigateMock).toHaveBeenCalledWith({
+      search: expect.objectContaining({ page: 1 }),
     })
   })
 

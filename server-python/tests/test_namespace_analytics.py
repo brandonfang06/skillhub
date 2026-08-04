@@ -455,6 +455,9 @@ def test_namespace_analytics_openapi_exposes_typed_contract() -> None:
     success_schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
     assert success_schema["$ref"].endswith("/NamespaceAnalyticsEnvelope")
     assert "NamespaceAnalyticsData" in schema["components"]["schemas"]
+    item_schema = schema["components"]["schemas"]["NamespaceAnalyticsItem"]
+    assert item_schema["properties"]["type"]["enum"] == ["GLOBAL", "TEAM"]
+    assert item_schema["properties"]["status"]["enum"] == ["ACTIVE", "FROZEN", "ARCHIVED"]
 
 
 def test_focused_namespace_analytics_openapi_contains_only_analytics_route() -> None:

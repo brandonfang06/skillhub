@@ -4,6 +4,7 @@ import { getAppBasePath } from '@/shared/lib/runtime-config'
 import { Layout } from './layout'
 import { getCurrentUser } from '@/api/client'
 import { parseNamespaceAnalyticsSearch } from '@/features/admin/namespace-analytics-search'
+import { parseDownloadEventsSearch } from '@/features/admin/download-events-search'
 import { RoleGuard } from '@/shared/components/role-guard'
 import { createRequireAuth } from '@/shared/lib/auth-route'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
@@ -466,6 +467,7 @@ const adminDownloadEventsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin/download-events',
   beforeLoad: requireAuth,
+  validateSearch: parseDownloadEventsSearch,
   component: DownloadEventsPage,
 })
 

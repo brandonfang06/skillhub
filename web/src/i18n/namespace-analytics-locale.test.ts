@@ -12,6 +12,7 @@ const REQUIRED_KEYS = [
   'summarySkills',
   'summaryLifetimeDownloads',
   'summaryPeriodDownloads',
+  'periodRange',
   'searchPlaceholder',
   'namespaceTypeAll',
   'namespaceTypeTeam',

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpDown } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +12,7 @@ import {
 } from '@/features/admin/namespace-analytics-search'
 import { useNamespaceAnalytics } from '@/features/admin/use-namespace-analytics'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
-import { toLocalDateTimeInputValue } from '@/shared/lib/date-time'
+import { formatLocalDateTime, toLocalDateTimeInputValue } from '@/shared/lib/date-time'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -78,11 +78,25 @@ function namespaceType(item: NamespaceAnalyticsItem): 'GLOBAL' | 'TEAM' {
   return item.type === 'GLOBAL' ? 'GLOBAL' : 'TEAM'
 }
 
+function namespaceTypeLabel(item: NamespaceAnalyticsItem): string {
+  return item.type === 'GLOBAL'
+    ? 'namespaceAnalytics.namespaceTypeGlobal'
+    : 'namespaceAnalytics.namespaceTypeTeam'
+}
+
+function namespaceStatusLabel(status: string): string {
+  if (status === 'FROZEN') return 'namespaceAnalytics.namespaceStatusFrozen'
+  if (status === 'ARCHIVED') return 'namespaceAnalytics.namespaceStatusArchived'
+  return 'namespaceAnalytics.namespaceStatusActive'
+}
+
 export function NamespaceAnalyticsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate({ from: '/admin/namespace-analytics' })
   const rawSearch = useSearch({ from: '/admin/namespace-analytics' }) as Record<string, unknown>
   const search = useMemo(() => parseNamespaceAnalyticsSearch(rawSearch), [rawSearch])
+  const [queryDraft, setQueryDraft] = useState(search.query ?? '')
+  useEffect(() => setQueryDraft(search.query ?? ''), [search.query])
   const stableNow = useMemo(() => new Date(), [])
   const selectedPeriod = useMemo(() => resolveAnalyticsPeriod(search, stableNow), [search, stableNow])
   const params: NamespaceAnalyticsParams = {
@@ -113,6 +127,16 @@ export function NamespaceAnalyticsPage() {
   const updateSort = (sort: NamespaceAnalyticsSort) => {
     const direction: NamespaceAnalyticsDirection = search.sort === sort && search.direction === 'desc' ? 'asc' : 'desc'
     updateSearch({ sort, direction })
+  }
+
+  const commitQuery = () => {
+    const query = queryDraft.trim() || undefined
+    if (query !== search.query) updateSearch({ query })
+  }
+
+  const clearFilters = () => {
+    setQueryDraft('')
+    navigate({ search: CLEAR_SEARCH })
   }
 
   const selectPeriod = (period: NamespaceAnalyticsSearch['period']) => {
@@ -171,6 +195,14 @@ export function NamespaceAnalyticsPage() {
                 <div className="mt-3 text-3xl font-semibold font-heading">
                   {numberFormatter.format(data.summary[field])}
                 </div>
+                {field === 'periodDownloads' ? (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {t('namespaceAnalytics.periodRange', {
+                      start: formatLocalDateTime(data.period.startTime, i18n.language),
+                      end: formatLocalDateTime(data.period.endTime, i18n.language),
+                    })}
+                  </div>
+                ) : null}
               </Card>
             ))}
           </div>
@@ -180,8 +212,12 @@ export function NamespaceAnalyticsPage() {
               <Input
                 className="xl:col-span-2"
                 placeholder={t('namespaceAnalytics.searchPlaceholder')}
-                value={search.query ?? ''}
-                onChange={(event) => updateSearch({ query: event.target.value.trim() || undefined })}
+                value={queryDraft}
+                onChange={(event) => setQueryDraft(event.target.value)}
+                onBlur={commitQuery}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') commitQuery()
+                }}
               />
               <Select value={search.namespaceType} onValueChange={(value) => updateSearch({
                 namespaceType: value as NamespaceAnalyticsSearch['namespaceType'],
@@ -245,7 +281,7 @@ export function NamespaceAnalyticsPage() {
               <p className="text-sm text-muted-foreground">
                 {t('namespaceAnalytics.retentionNote', { months: data.period.retentionMonths })}
               </p>
-              <Button variant="outline" size="sm" onClick={() => navigate({ search: CLEAR_SEARCH })}>
+              <Button variant="outline" size="sm" onClick={clearFilters}>
                 {t('namespaceAnalytics.clearFilters')}
               </Button>
             </div>
@@ -255,7 +291,7 @@ export function NamespaceAnalyticsPage() {
             <Card className="p-12 text-center">
               <h2 className="text-xl font-semibold">{t('namespaceAnalytics.emptyTitle')}</h2>
               <p className="mt-2 text-muted-foreground">{t('namespaceAnalytics.emptyDescription')}</p>
-              <Button className="mt-5" variant="outline" onClick={() => navigate({ search: CLEAR_SEARCH })}>
+              <Button className="mt-5" variant="outline" onClick={clearFilters}>
                 {t('namespaceAnalytics.clearFilters')}
               </Button>
             </Card>
@@ -284,9 +320,13 @@ export function NamespaceAnalyticsPage() {
                             <div className="font-medium">{item.displayName}</div>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-sm text-muted-foreground">@{item.slug}</span>
-                              <NamespaceBadge type={namespaceType(item)} name={item.type} className="px-2 py-0.5" />
+                              <NamespaceBadge
+                                type={namespaceType(item)}
+                                name={t(namespaceTypeLabel(item))}
+                                className="px-2 py-0.5"
+                              />
                               <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClassName(item.status)}`}>
-                                {item.status}
+                                {t(namespaceStatusLabel(item.status))}
                               </span>
                             </div>
                           </div>

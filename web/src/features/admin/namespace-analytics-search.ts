@@ -60,13 +60,21 @@ function optionalInstant(value: unknown): string | undefined {
 
 export function parseNamespaceAnalyticsSearch(search: Record<string, unknown>): NamespaceAnalyticsSearch {
   const normalizedQuery = typeof search.query === 'string' ? search.query.trim() : ''
+  const requestedPeriod = enumValue(search.period, PERIODS, '30d')
+  const requestedStartTime = optionalInstant(search.startTime)
+  const requestedEndTime = optionalInstant(search.endTime)
+  const validCustomRange = requestedPeriod === 'custom'
+    && requestedStartTime !== undefined
+    && requestedEndTime !== undefined
+    && new Date(requestedStartTime) <= new Date(requestedEndTime)
+  const period = requestedPeriod === 'custom' && !validCustomRange ? '30d' : requestedPeriod
   return {
     query: normalizedQuery || undefined,
     namespaceType: enumValue(search.namespaceType, NAMESPACE_TYPES, 'ALL'),
     namespaceStatus: enumValue(search.namespaceStatus, NAMESPACE_STATUSES, 'ACTIVE'),
-    period: enumValue(search.period, PERIODS, '30d'),
-    startTime: optionalInstant(search.startTime),
-    endTime: optionalInstant(search.endTime),
+    period,
+    startTime: period === 'custom' ? requestedStartTime : undefined,
+    endTime: period === 'custom' ? requestedEndTime : undefined,
     source: optionalEnumValue(search.source, SOURCES),
     sort: enumValue(search.sort, SORTS, 'periodDownloads'),
     direction: enumValue(search.direction, DIRECTIONS, 'desc'),

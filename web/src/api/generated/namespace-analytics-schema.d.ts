@@ -71,10 +71,16 @@ export interface components {
             skillCount: number;
             /** Slug */
             slug: string;
-            /** Status */
-            status: string;
-            /** Type */
-            type: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "GLOBAL" | "TEAM";
         };
         /** NamespaceAnalyticsPeriod */
         NamespaceAnalyticsPeriod: {
@@ -86,7 +92,7 @@ export interface components {
             /** Retentionmonths */
             retentionMonths: number;
             /** Source */
-            source: string | null;
+            source: ("web" | "cli" | "api") | null;
             /**
              * Starttime
              * Format: date-time

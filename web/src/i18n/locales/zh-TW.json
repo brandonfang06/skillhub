@@ -737,6 +737,7 @@
     "summarySkills": "Catalog Skills",
     "summaryLifetimeDownloads": "累計下載",
     "summaryPeriodDownloads": "期間下載",
+    "periodRange": "{{start}} 至 {{end}}",
     "searchPlaceholder": "搜尋 namespace 名稱或 slug...",
     "namespaceTypeAll": "全部類型",
     "namespaceTypeTeam": "Team",

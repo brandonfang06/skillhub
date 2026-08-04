@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -16,7 +17,7 @@ class NamespaceAnalyticsSummary(BaseModel):
 class NamespaceAnalyticsPeriod(BaseModel):
     startTime: datetime
     endTime: datetime
-    source: str | None
+    source: Literal["web", "cli", "api"] | None
     retentionMonths: int
 
 
@@ -24,8 +25,8 @@ class NamespaceAnalyticsItem(BaseModel):
     namespaceId: int
     slug: str
     displayName: str
-    type: str
-    status: str
+    type: Literal["GLOBAL", "TEAM"]
+    status: Literal["ACTIVE", "FROZEN", "ARCHIVED"]
     maintainerCount: int
     skillCount: int
     lifetimeDownloads: int

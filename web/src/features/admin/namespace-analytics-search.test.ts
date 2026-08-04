@@ -75,15 +75,18 @@ describe('namespace analytics search state', () => {
     })
   })
 
-  it('falls back to a thirty-day range for an invalid custom range', () => {
-    expect(resolveAnalyticsPeriod(
-      parseNamespaceAnalyticsSearch({
-        period: 'custom',
-        startTime: '2026-08-03T00:00:00Z',
-        endTime: '2026-08-01T00:00:00Z',
-      }),
-      new Date('2026-08-04T00:00:00Z'),
-    )).toEqual({
+  it.each([
+    [{ period: 'custom', startTime: '2026-08-03T00:00:00Z', endTime: '2026-08-01T00:00:00Z' }],
+    [{ period: 'custom', startTime: '2026-08-01T00:00:00Z' }],
+  ])('normalizes an invalid custom range to the visible thirty-day preset', (rawSearch) => {
+    const search = parseNamespaceAnalyticsSearch(rawSearch)
+
+    expect(search).toMatchObject({
+      period: '30d',
+      startTime: undefined,
+      endTime: undefined,
+    })
+    expect(resolveAnalyticsPeriod(search, new Date('2026-08-04T00:00:00Z'))).toEqual({
       startTime: '2026-07-05T00:00:00.000Z',
       endTime: '2026-08-04T00:00:00.000Z',
     })

@@ -32,16 +32,6 @@ const SOURCE_OPTIONS = [
   { value: 'api', labelKey: 'downloadEvents.sourceApi' },
 ] as const
 
-interface DownloadEventsRouteSearch {
-  namespace?: string
-  slug?: string
-  version?: string
-  userId?: string
-  source?: string
-  startTime?: string
-  endTime?: string
-}
-
 function initialTextFilter(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
@@ -55,7 +45,7 @@ function initialDateTimeFilter(value: unknown): string {
 
 export function DownloadEventsPage() {
   const { t, i18n } = useTranslation()
-  const routeSearch = useSearch({ strict: false }) as DownloadEventsRouteSearch
+  const routeSearch = useSearch({ from: '/admin/download-events' })
   const allSourceFilterValue = '__all_sources__'
   const [namespaceFilter, setNamespaceFilter] = useState(() => initialTextFilter(routeSearch.namespace))
   const [slugFilter, setSlugFilter] = useState(() => initialTextFilter(routeSearch.slug))

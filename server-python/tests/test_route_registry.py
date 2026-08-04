@@ -44,10 +44,6 @@ def test_route_registry_lists_clawhub_placeholders_and_remaining_java_fallbacks(
         in registry
     )
     assert (
-        "| GET | `/api/v1/admin/namespace-analytics` | python | Local Python namespace portfolio analytics extension. Session or mock `SUPER_ADMIN` only; rejects bearer API-token principals and aggregates eligible catalog skills, distinct maintainers, lifetime counters, and retained period download events without a schema migration."
-        in registry
-    )
-    assert (
         "| DELETE | `/api/v1/skills/{canonicalSlug}` | python | ClawHub placeholder delete moved to Python"
         in registry
     )

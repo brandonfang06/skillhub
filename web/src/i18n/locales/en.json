@@ -750,6 +750,7 @@
     "summarySkills": "Catalog Skills",
     "summaryLifetimeDownloads": "Lifetime Downloads",
     "summaryPeriodDownloads": "Period Downloads",
+    "periodRange": "{{start}} – {{end}}",
     "searchPlaceholder": "Search namespace name or slug...",
     "namespaceTypeAll": "All types",
     "namespaceTypeTeam": "Team",

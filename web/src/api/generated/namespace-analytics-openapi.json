@@ -116,10 +116,19 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "ACTIVE",
+              "FROZEN",
+              "ARCHIVED"
+            ],
             "title": "Status",
             "type": "string"
           },
           "type": {
+            "enum": [
+              "GLOBAL",
+              "TEAM"
+            ],
             "title": "Type",
             "type": "string"
           }
@@ -152,6 +161,11 @@
           "source": {
             "anyOf": [
               {
+                "enum": [
+                  "web",
+                  "cli",
+                  "api"
+                ],
                 "type": "string"
               },
               {
