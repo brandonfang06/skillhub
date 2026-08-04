@@ -446,3 +446,7 @@ browser smoke path, generated API drift validation, and `git diff --check`.
   branch before feature implementation, use its shared router/API helpers, and
   require production-bundle coverage for direct refresh, API traffic, filters,
   and the Download Events drill-down under `/skillhub`.
+- 2026-08-04: The user confirmed that the visual companion is clear and likes
+  the current UI direction. Preserve its summary-first information hierarchy,
+  consolidated filters, readable namespace table, and side-by-side lifetime and
+  selected-period download metrics during implementation.
