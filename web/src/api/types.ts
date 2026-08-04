@@ -1,5 +1,9 @@
 import type { components } from './generated/schema'
 import type { components as reviewComponents } from './generated/reviews-schema'
+import type {
+  components as namespaceAnalyticsComponents,
+  operations as namespaceAnalyticsOperations,
+} from './generated/namespace-analytics-schema'
 
 export interface PlaygroundCapability {
   token: string
@@ -233,6 +237,14 @@ export interface DownloadEventItem {
   userAgent?: string | null
   createdAt: string
 }
+
+export type NamespaceAnalyticsData = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsData']
+export type NamespaceAnalyticsItem = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsItem']
+export type NamespaceAnalyticsSummary = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsSummary']
+export type NamespaceAnalyticsPeriod = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsPeriod']
+export type NamespaceAnalyticsParams = NonNullable<
+  namespaceAnalyticsOperations['list_namespace_analytics_route_api_v1_admin_namespace_analytics_get']['parameters']['query']
+>
 
 export interface SkillLifecycleVersion {
   id: number
