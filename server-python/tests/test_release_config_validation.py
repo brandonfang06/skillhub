@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
-
 
 ROOT = Path(__file__).resolve().parents[2]
 VALID_CONFIG = {
@@ -44,6 +43,11 @@ def run_validator(tmp_path: Path, overrides: dict[str, str | None]) -> subproces
     "overrides",
     [
         {"SKILLHUB_PUBLIC_BASE_URL": "https://skills.example.com", "SKILLHUB_WEB_BASE_PATH": ""},
+        {
+            "SKILLHUB_PUBLIC_BASE_URL": "http://skillhub:8080",
+            "SKILLHUB_WEB_BASE_PATH": "",
+            "SESSION_COOKIE_SECURE": "false",
+        },
         {"SKILLHUB_PUBLIC_BASE_URL": "http://[::1]", "SKILLHUB_WEB_BASE_PATH": ""},
         {"SKILLHUB_PUBLIC_BASE_URL": "http://[::1]:8080", "SKILLHUB_WEB_BASE_PATH": ""},
         {
@@ -134,6 +138,12 @@ def test_release_validator_rejects_missing_secure_cookie_for_https_public_url(
     [
         "https://user:password@skills.example.com/skillhub",
         "https://skills.example.com:bad/skillhub",
+        "https://skills.example.com:0/skillhub",
+        "https://-/skillhub",
+        "https://.example.com/skillhub",
+        "https://example..com/skillhub",
+        "https://-skills.example.com/skillhub",
+        "https://skills-.example.com/skillhub",
         "https://[::1/skillhub",
         "https://[::::]/skillhub",
         "https://[1::2::3]/skillhub",
@@ -164,6 +174,9 @@ def test_release_validator_rejects_public_urls_the_backend_would_reject(
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com/verify?source=cli"},
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com/verify#device"},
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com:bad/verify"},
+        {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com:0/verify"},
+        {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://-/verify"},
+        {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth..example.com/verify"},
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://[::1/verify"},
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com/verify/../admin"},
         {"SKILLHUB_DEVICE_AUTH_VERIFICATION_URI": "https://auth.example.com/verify%2fadmin"},

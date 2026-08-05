@@ -39,7 +39,10 @@ ClawHub uses one slug segment:
 The double-dash split takes priority, so global skill slugs must not contain
 `--`.
 
-`/.well-known/clawhub.json` advertises `{ "apiBase": "/api/v1" }`.
+`/.well-known/clawhub.json` advertises the API base under the configured web
+base path. Root deployments return `{"apiBase":"/api/v1"}`. With
+`SKILLHUB_WEB_BASE_PATH=/skillhub`, it returns
+`{"apiBase":"/skillhub/api/v1"}`.
 
 ## FastAPI Boundaries
 

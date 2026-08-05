@@ -8,7 +8,12 @@ DEFAULT_PUBLIC_BASE_URL = "http://localhost:8080"
 _PUBLIC_PATH_PATTERN = re.compile(r"/[A-Za-z0-9._~!$&'()*+,;=:@/-]*")
 _WEB_BASE_PATH_PATTERN = re.compile(r"/[A-Za-z0-9._~/-]+/?")
 _PERCENT_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
-_PUBLIC_AUTHORITY_PATTERN = re.compile(r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?")
+_PUBLIC_AUTHORITY_PATTERN = re.compile(
+    r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?"
+)
+_PUBLIC_HOST_LABEL_PATTERN = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+)
 
 
 def resolve_public_base_url(value: str | None = None) -> str:
@@ -26,12 +31,15 @@ def resolve_absolute_http_url(value: str, variable_name: str) -> str:
     normalized = value.strip()
     try:
         parsed = urlsplit(normalized)
+        port = parsed.port
     except ValueError as exc:
         raise ValueError(f"Invalid {variable_name}") from exc
     if (
         parsed.scheme not in {"http", "https"}
         or parsed.hostname is None
+        or not _valid_public_hostname(parsed.hostname)
         or not _valid_public_netloc(parsed.netloc)
+        or (port is not None and port < 1)
         or parsed.username is not None
         or parsed.password is not None
         or parsed.query
@@ -39,10 +47,6 @@ def resolve_absolute_http_url(value: str, variable_name: str) -> str:
         or not _valid_public_base_path(parsed.path)
     ):
         raise ValueError(f"Invalid {variable_name}")
-    try:
-        parsed.port
-    except ValueError as exc:
-        raise ValueError(f"Invalid {variable_name}") from exc
 
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
@@ -127,3 +131,15 @@ def _valid_public_netloc(netloc: str) -> bool:
     if any(character.isspace() or ord(character) < 33 or ord(character) == 127 for character in netloc):
         return False
     return _PUBLIC_AUTHORITY_PATTERN.fullmatch(netloc) is not None
+
+
+def _valid_public_hostname(hostname: str) -> bool:
+    if ":" in hostname:
+        return True
+    normalized = hostname.removesuffix(".")
+    if not normalized or len(normalized) > 253:
+        return False
+    return all(
+        _PUBLIC_HOST_LABEL_PATTERN.fullmatch(label) is not None
+        for label in normalized.split(".")
+    )

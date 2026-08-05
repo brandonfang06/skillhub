@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -111,8 +112,21 @@ def test_python_backend_container_has_schema_migration_startup() -> None:
     assert "uv sync --frozen --no-dev" in dockerfile
     assert "COPY server/skillhub-app/src/main/resources/db/migration" not in dockerfile
     assert "COPY server-python/app ./app" in dockerfile
-    assert "python -m app.migrations upgrade" in dockerfile
-    assert "uvicorn app.main:app --host 0.0.0.0 --port 8080" in dockerfile
+    assert ".venv/bin/python -m app.migrations upgrade" in dockerfile
+    assert (
+        "exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"
+        in dockerfile
+    )
+    assert "uv run" not in dockerfile
+
+
+def test_python_backend_declares_http_client_as_a_runtime_dependency() -> None:
+    project = tomllib.loads(read("server-python/pyproject.toml"))
+    runtime_dependencies = project["project"]["dependencies"]
+    dev_dependencies = project["dependency-groups"]["dev"]
+
+    assert any(dependency.startswith("httpx") for dependency in runtime_dependencies)
+    assert not any(dependency.startswith("httpx") for dependency in dev_dependencies)
 
 
 def test_staging_smoke_test_targets_python_health_endpoints() -> None:

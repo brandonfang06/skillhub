@@ -135,8 +135,44 @@ The separate workspace audit inspected every local Docker container and found
 no mount source under `C:\Users\USER\OneDrive\Documents\skillhub`; the two
 SkillHub bind mounts found resolve under `C:\Users\USER\projects\skillhub`.
 
-`ruff` is not installed in the backend virtual environment, so no Ruff result
-is claimed. The complete backend suite and Python compilation passed.
+The original review run did not include Ruff or ShellCheck. The follow-up run
+installed both tools and records their scoped results below.
+
+## 2026-08-05 Review Follow-up
+
+A post-merge scenario review found and fixed seven additional gaps:
+
+1. Subpath login and logout now expire the legacy root `SESSION` cookie, prefer
+   the first valid path-ordered session, invalidate every duplicate session id
+   during logout, and rotate all request-provided sessions on login.
+2. `runtime.sh --public-url` now derives and persists
+   `SKILLHUB_WEB_BASE_PATH`, including normalization of a trailing slash.
+3. The subpath Playwright global setup now builds the current TypeScript/Vite
+   production bundle before importing the server that reads `dist`.
+4. Backend and shell release URL validation now reject port zero, empty DNS
+   labels, and labels with leading or trailing hyphens while retaining internal
+   single-label and IPv6 support.
+5. The ClawHub well-known agent and user documentation now describes both root
+   and configured subpath API bases.
+6. The backend image used `uv run` after building with `uv sync --no-dev`, so
+   container startup could contact the package registry and install dev
+   dependencies. Runtime now invokes the bundled virtual environment directly
+   and uses `exec` for the final Uvicorn process.
+7. The runtime imports `httpx` for OAuth and scanner calls, but `httpx` was
+   declared only in the dev dependency group. It is now a production
+   dependency, so the no-dev image imports the complete FastAPI application.
+
+Fresh follow-up verification passed: `1184` backend tests, `786` frontend
+tests, typecheck, ESLint, two shell syntax checks, `117` focused deployment
+tests, `16` production subpath Playwright tests, Kustomize rendering, Compose
+configuration, both production Docker image builds, and `git diff --check`.
+
+The final backend image also loaded the complete application and canonical URL
+settings with Docker networking disabled, proving startup imports do not need a
+runtime package download. The frontend image served its generated base tag,
+runtime config, real hashed JavaScript asset, and health endpoint using the
+documented VirtualService prefix-rewrite model. Scoped Ruff and ShellCheck
+checks passed after the tools were installed.
 
 ## Remaining Organization Runtime Gates
 

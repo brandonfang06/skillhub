@@ -17,4 +17,4 @@ COPY server-python/app ./app
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uv run python -m app.migrations upgrade && uv run uvicorn app.main:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", ".venv/bin/python -m app.migrations upgrade && exec .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"]

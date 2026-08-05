@@ -1,9 +1,15 @@
 import asyncio
 
-from fastapi.testclient import TestClient
-
-from app.auth.session import RedisSessionStore, _cookie_secure
+from app.auth.session import (
+    RedisSessionStore,
+    _cookie_secure,
+    clear_session,
+    establish_session,
+    read_session_principal,
+)
 from app.main import create_app
+from fastapi import Request, Response
+from fastapi.testclient import TestClient
 
 
 def principal(user_id: str = "session-user", *, provider: str = "local") -> dict[str, object]:
@@ -71,6 +77,63 @@ def test_session_cookie_uses_the_public_base_path(monkeypatch) -> None:
     assert "Secure" in cookie
 
 
+def test_subpath_login_expires_the_legacy_root_session_cookie(monkeypatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    monkeypatch.setenv("SKILLHUB_SESSION_COOKIE_SECURE", "true")
+    app = create_app()
+    app.state.local_auth_login = lambda payload: principal()
+    client = TestClient(app, base_url="https://testserver")
+    client.cookies.set("SESSION", "legacy-root-session", domain="testserver.local", path="/")
+
+    login = client.post(
+        "/api/v1/auth/local/login",
+        json={"username": "session-user", "password": "Abcd123!"},
+    )
+
+    session_cookies = [cookie for cookie in client.cookies.jar if cookie.name == "SESSION"]
+    assert login.status_code == 200
+    assert [cookie.path for cookie in session_cookies] == ["/skillhub"]
+    assert session_cookies[0].value != "legacy-root-session"
+
+
+def test_establish_session_invalidates_existing_cookie_sessions() -> None:
+    class FakeStore:
+        def __init__(self) -> None:
+            self.created: list[dict[str, object]] = []
+            self.deleted: list[str] = []
+            self.events: list[str] = []
+
+        async def create(self, value: dict[str, object]) -> str:
+            self.created.append(value)
+            self.events.append("create")
+            return "new-session"
+
+        async def delete(self, session_id: str) -> None:
+            self.deleted.append(session_id)
+            self.events.append(f"delete:{session_id}")
+
+    app = create_app()
+    store = FakeStore()
+    app.state.auth_session_store = store
+    request = Request(
+        {
+            "type": "http",
+            "app": app,
+            "headers": [(b"cookie", b"SESSION=scoped-session; SESSION=legacy-root-session")],
+        }
+    )
+
+    asyncio.run(establish_session(request, Response(), principal()))
+
+    assert store.deleted == ["scoped-session", "legacy-root-session"]
+    assert store.created == [principal()]
+    assert store.events == [
+        "create",
+        "delete:scoped-session",
+        "delete:legacy-root-session",
+    ]
+
+
 def test_logout_clears_the_session_cookie_at_the_public_base_path(monkeypatch) -> None:
     monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
     app = create_app()
@@ -80,6 +143,61 @@ def test_logout_clears_the_session_cookie_at_the_public_base_path(monkeypatch) -
 
     assert logout.status_code == 204
     assert "Path=/skillhub" in logout.headers["set-cookie"]
+
+
+def test_subpath_logout_expires_scoped_and_legacy_root_session_cookies(monkeypatch) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    app = create_app()
+    client = TestClient(app, base_url="https://testserver")
+    client.cookies.set("SESSION", "legacy-root-session", domain="testserver.local", path="/")
+    client.cookies.set("SESSION", "scoped-session", domain="testserver.local", path="/skillhub")
+
+    logout = client.post("/api/v1/auth/logout")
+
+    assert logout.status_code == 204
+    assert [cookie for cookie in client.cookies.jar if cookie.name == "SESSION"] == []
+
+
+def test_duplicate_session_cookies_prefer_the_scoped_session() -> None:
+    class FakeStore:
+        async def get(self, session_id: str) -> dict[str, object] | None:
+            return principal() if session_id == "scoped-session" else None
+
+    app = create_app()
+    app.state.auth_session_store = FakeStore()
+    request = Request(
+        {
+            "type": "http",
+            "app": app,
+            "headers": [(b"cookie", b"SESSION=scoped-session; SESSION=expired-root-session")],
+        }
+    )
+
+    assert asyncio.run(read_session_principal(request)) == principal()
+
+
+def test_logout_invalidates_every_session_id_from_duplicate_cookies() -> None:
+    class FakeStore:
+        def __init__(self) -> None:
+            self.deleted: list[str] = []
+
+        async def delete(self, session_id: str) -> None:
+            self.deleted.append(session_id)
+
+    app = create_app()
+    store = FakeStore()
+    app.state.auth_session_store = store
+    request = Request(
+        {
+            "type": "http",
+            "app": app,
+            "headers": [(b"cookie", b"SESSION=scoped-session; SESSION=legacy-root-session")],
+        }
+    )
+
+    asyncio.run(clear_session(request, Response()))
+
+    assert store.deleted == ["scoped-session", "legacy-root-session"]
 
 
 def test_local_register_creates_session_cookie_used_by_auth_me() -> None:

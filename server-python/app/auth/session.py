@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
 import secrets
+from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import Request, Response
@@ -81,8 +81,32 @@ def _cookie_path() -> str:
     return public_base_path() or "/"
 
 
-async def establish_session(request: Request, response: Response, principal: dict[str, object]) -> None:
-    session_id = await _session_store(request).create(principal)
+def _session_ids(request: Request) -> list[str]:
+    session_ids: list[str] = []
+    for cookie_header in request.headers.getlist("cookie"):
+        for cookie_pair in cookie_header.split(";"):
+            name, separator, value = cookie_pair.strip().partition("=")
+            session_id = value.strip().strip('"')
+            if (
+                separator
+                and name == SESSION_COOKIE_NAME
+                and session_id
+                and session_id not in session_ids
+            ):
+                session_ids.append(session_id)
+    return session_ids
+
+
+async def establish_session(
+    request: Request, response: Response, principal: dict[str, object]
+) -> None:
+    store = _session_store(request)
+    session_id = await store.create(principal)
+    for existing_session_id in _session_ids(request):
+        await store.delete(existing_session_id)
+    cookie_path = _cookie_path()
+    if cookie_path != "/":
+        response.delete_cookie(SESSION_COOKIE_NAME, path="/")
     response.set_cookie(
         SESSION_COOKIE_NAME,
         session_id,
@@ -90,19 +114,24 @@ async def establish_session(request: Request, response: Response, principal: dic
         httponly=True,
         secure=_cookie_secure(),
         samesite="lax",
-        path=_cookie_path(),
+        path=cookie_path,
     )
 
 
 async def read_session_principal(request: Request) -> dict[str, object] | None:
-    session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    if session_id is None or session_id.strip() == "":
-        return None
-    return await _session_store(request).get(session_id)
+    store = _session_store(request)
+    for session_id in _session_ids(request):
+        principal = await store.get(session_id)
+        if principal is not None:
+            return principal
+    return None
 
 
 async def clear_session(request: Request, response: Response) -> None:
-    session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    if session_id is not None and session_id.strip() != "":
-        await _session_store(request).delete(session_id)
-    response.delete_cookie(SESSION_COOKIE_NAME, path=_cookie_path())
+    store = _session_store(request)
+    for session_id in _session_ids(request):
+        await store.delete(session_id)
+    cookie_path = _cookie_path()
+    response.delete_cookie(SESSION_COOKIE_NAME, path=cookie_path)
+    if cookie_path != "/":
+        response.delete_cookie(SESSION_COOKIE_NAME, path="/")

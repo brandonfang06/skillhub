@@ -120,6 +120,12 @@ def test_deployment_url_contract_rejects_inconsistent_or_insecure_values(
         "https://skill hub.example/skillhub",
         "https://skill%20hub.example/skillhub",
         'https://skill"hub.example/skillhub',
+        "https://skills.example.com:0/skillhub",
+        "https://-/skillhub",
+        "https://.example.com/skillhub",
+        "https://example..com/skillhub",
+        "https://-skills.example.com/skillhub",
+        "https://skills-.example.com/skillhub",
         "https://[::::]/skillhub",
     ],
 )

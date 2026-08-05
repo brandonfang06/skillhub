@@ -13,6 +13,8 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
   case "$line" in
     ""|\#*) continue ;;
   esac
+  # The quoted line is a NAME=value assignment from the env file.
+  # shellcheck disable=SC2163
   export "$line"
 done < "$ENV_FILE"
 
@@ -110,6 +112,25 @@ validate_ipv6_literal() {
   '
 }
 
+validate_hostname() {
+  printf '%s\n' "$1" | awk '
+    {
+      hostname = $0
+      if (length(hostname) > 253) exit 1
+      if (substr(hostname, length(hostname), 1) == ".") {
+        hostname = substr(hostname, 1, length(hostname) - 1)
+      }
+      if (hostname == "") exit 1
+
+      count = split(hostname, labels, ".")
+      for (position = 1; position <= count; position++) {
+        label = labels[position]
+        if (label == "" || length(label) > 63 || label !~ /^[A-Za-z0-9-]+$/ || substr(label, 1, 1) == "-" || substr(label, length(label), 1) == "-") exit 1
+      }
+    }
+  '
+}
+
 validate_absolute_http_url() {
   var_name="$1"
   label="$2"
@@ -147,6 +168,14 @@ validate_absolute_http_url() {
     *)
       if ! printf '%s' "$authority" | grep -Eq '^[A-Za-z0-9.-]+(:[0-9]{1,5})?$'; then
         invalid=true
+      else
+        hostname=${authority%:*}
+        if [ "$hostname" = "$authority" ]; then
+          hostname=$authority
+        fi
+        if ! validate_hostname "$hostname"; then
+          invalid=true
+        fi
       fi
       ;;
   esac
@@ -161,7 +190,7 @@ validate_absolute_http_url() {
     "") ;;
     *[!0-9]*) invalid=true ;;
     *)
-      if [ "$port" -gt 65535 ]; then
+      if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
         invalid=true
       fi
       ;;

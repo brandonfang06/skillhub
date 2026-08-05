@@ -13,6 +13,7 @@ SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
 SKILLHUB_PUBLIC_BASE_URL_VALUE="${SKILLHUB_PUBLIC_BASE_URL:-}"
+SKILLHUB_WEB_BASE_PATH_VALUE="${SKILLHUB_WEB_BASE_PATH:-}"
 SKILLHUB_ALIYUN_REGISTRY="${SKILLHUB_ALIYUN_REGISTRY:-crpi-ptu2rqimrigtq0qx.cn-hangzhou.personal.cr.aliyuncs.com}"
 SKILLHUB_ALIYUN_NAMESPACE="${SKILLHUB_ALIYUN_NAMESPACE:-skill_hub}"
 SKILLHUB_MIRROR_REGISTRY_VALUE="${SKILLHUB_MIRROR_REGISTRY:-}"
@@ -99,7 +100,7 @@ Options:
   --mirror-registry <r> Use mirrored images from <registry>/<namespace>
   --home <dir>          Store runtime files in a specific directory
   --ref <git-ref>       Download runtime files from a specific Git ref
-  --public-url <url>    Public access URL (e.g. https://skill.example.com)
+  --public-url <url>    Public access URL; its path configures the web base path
   --server-image <img>  Override backend image repository
   --web-image <img>     Override frontend image repository
   --scanner-image <img> Override scanner image repository
@@ -178,6 +179,26 @@ get_env_value() {
   else
     printf '%s' "$default_value"
   fi
+}
+
+public_url_path() {
+  case "$1" in
+    http://*) remainder=${1#http://} ;;
+    https://*) remainder=${1#https://} ;;
+    *) printf '%s' ""; return 0 ;;
+  esac
+
+  case "$remainder" in
+    */*) path=/${remainder#*/} ;;
+    *) path="" ;;
+  esac
+  while [ "$path" != "/" ] && [ "${path%/}" != "$path" ]; do
+    path=${path%/}
+  done
+  if [ "$path" = "/" ]; then
+    path=""
+  fi
+  printf '%s' "$path"
 }
 
 wait_for_postgres_ready() {
@@ -279,6 +300,12 @@ prepare_runtime_files() {
 
   if [ -n "$SKILLHUB_PUBLIC_BASE_URL_VALUE" ]; then
     set_env_value "SKILLHUB_PUBLIC_BASE_URL" "$SKILLHUB_PUBLIC_BASE_URL_VALUE"
+    if [ -z "$SKILLHUB_WEB_BASE_PATH_VALUE" ]; then
+      SKILLHUB_WEB_BASE_PATH_VALUE="$(public_url_path "$SKILLHUB_PUBLIC_BASE_URL_VALUE")"
+    fi
+    set_env_value "SKILLHUB_WEB_BASE_PATH" "$SKILLHUB_WEB_BASE_PATH_VALUE"
+  elif [ -n "$SKILLHUB_WEB_BASE_PATH_VALUE" ]; then
+    set_env_value "SKILLHUB_WEB_BASE_PATH" "$SKILLHUB_WEB_BASE_PATH_VALUE"
   fi
 }
 

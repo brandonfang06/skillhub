@@ -51,10 +51,16 @@ Optional local check:
 curl ${SKILLHUB_PUBLIC_BASE_URL}/.well-known/clawhub.json
 ```
 
-Expected response:
+Expected response for a root deployment:
 
 ```json
 {"apiBase":"/api/v1"}
+```
+
+When `SKILLHUB_WEB_BASE_PATH=/skillhub`, the configured base path is included:
+
+```json
+{"apiBase":"/skillhub/api/v1"}
 ```
 
 ## Coordinate Rules - IMPORTANT

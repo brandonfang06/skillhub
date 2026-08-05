@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -397,6 +396,33 @@ def test_subpath_runtime_contract_is_wired_across_release_and_kubernetes() -> No
         assert "credentialName: ai-coding-platform-tls" in document
         assert "skillhub-test.ftest.tsmc.com" in document
         assert "patch fragment" in document
+
+
+def test_subpath_e2e_builds_the_current_production_bundle_before_startup() -> None:
+    package_json = read("web/package.json")
+    global_setup = read("web/e2e/helpers/subpath-global-setup.mjs")
+
+    assert (
+        '"test:e2e:subpath": "playwright test -c playwright.subpath.config.ts"'
+        in package_json
+    )
+    assert "node_modules/typescript/bin/tsc" in global_setup
+    assert "node_modules/vite/bin/vite.js" in global_setup
+    assert global_setup.index("await buildSubpathBundle()") < global_setup.index(
+        "await import('./subpath-server.mjs')"
+    )
+
+
+def test_well_known_docs_cover_root_and_subpath_api_bases() -> None:
+    documents = [
+        read(".agents/skills/api-and-namespace-design/SKILL.md"),
+        read("web/src/docs/skill.md.template"),
+    ]
+
+    for document in documents:
+        assert '"apiBase":"/api/v1"' in document
+        assert '"apiBase":"/skillhub/api/v1"' in document
+        assert "SKILLHUB_WEB_BASE_PATH" in document
 
 
 def test_subpath_runtime_does_not_depend_on_the_organization_hostname() -> None:
