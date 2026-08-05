@@ -35,6 +35,7 @@ vi.mock('@/shared/lib/api-error', () => ({
       serverMessageArgs: string[] = [],
     ) {
       super(message)
+      this.name = 'ApiError'
       this.status = status
       this.serverMessage = serverMessage
       this.serverMessageKey = serverMessageKey
@@ -189,6 +190,41 @@ describe('fetchText', () => {
         headers: expect.any(Headers),
       }),
     )
+  })
+
+  it('preserves structured error details for failed text requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        detail: 'error.auth.required',
+        requestId: 'readme-401',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchText('/api/web/skills/global/demo/versions/1.0.0/file?path=SKILL.md'))
+      .rejects.toMatchObject({
+        name: 'ApiError',
+        status: 401,
+        serverMessage: 'error.auth.required',
+        serverMessageKey: 'error.auth.required',
+        requestId: 'readme-401',
+      })
+  })
+
+  it('preserves the status when a failed text response is not JSON', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => {
+        throw new SyntaxError('not json')
+      },
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchText('/api/web/skills/global/demo/versions/1.0.0/file?path=SKILL.md'))
+      .rejects.toMatchObject({ name: 'ApiError', status: 503 })
   })
 })
 
