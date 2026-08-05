@@ -27,12 +27,12 @@ WITH filtered_namespaces AS (
            n.type,
            n.status
     FROM namespace n
-    WHERE (:namespace_type IS NULL OR n.type = :namespace_type)
-      AND (:namespace_status IS NULL OR n.status = :namespace_status)
+    WHERE (CAST(:namespace_type AS text) IS NULL OR n.type = CAST(:namespace_type AS text))
+      AND (CAST(:namespace_status AS text) IS NULL OR n.status = CAST(:namespace_status AS text))
       AND (
-          :query IS NULL
-          OR LOWER(n.slug) LIKE :query
-          OR LOWER(n.display_name) LIKE :query
+          CAST(:query AS text) IS NULL
+          OR LOWER(n.slug) LIKE CAST(:query AS text)
+          OR LOWER(n.display_name) LIKE CAST(:query AS text)
       )
 ),
 eligible_skills AS (
@@ -58,7 +58,7 @@ period_by_skill AS (
     JOIN eligible_skills es ON de.skill_id = es.skill_id
     WHERE de.created_at >= CAST(:start_time AS timestamptz)
       AND de.created_at <= CAST(:end_time AS timestamptz)
-      AND (:source IS NULL OR de.source = :source)
+      AND (CAST(:source AS text) IS NULL OR de.source = CAST(:source AS text))
     GROUP BY de.skill_id
 ),
 namespace_metrics AS (
