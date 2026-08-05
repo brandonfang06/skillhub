@@ -1,6 +1,6 @@
 # Anonymous Skill Detail Authentication Gating Design
 
-**Status:** Ready for user review
+**Status:** Approved and verified on the feature branch; pending merge
 **Date:** 2026-08-05
 
 ## Problem

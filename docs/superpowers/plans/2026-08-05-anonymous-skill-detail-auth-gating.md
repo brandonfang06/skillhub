@@ -481,3 +481,33 @@ Expected: no whitespace errors, no generated/schema/backend/deployment changes, 
 - [ ] **Step 5: Stop before merge**
 
 Report the branch, commits, exact automated results, live service health, browser observations, and any residual risks. Do not merge, push, or modify `dev` until the user explicitly accepts the completed feature.
+
+## Execution Record
+
+**Completed:** 2026-08-05
+
+**Branch:** `codex/anonymous-skill-detail-auth-gating`
+
+**Verified implementation commit:** `ce2326d1c0131e0f17c12356bb5a7b891a65dec7`
+
+- Full Vitest regression: 203 test files, 798 tests passed.
+- TypeScript `tsc --noEmit`: passed.
+- ESLint with zero warnings allowed: passed.
+- Fresh TypeScript/Vite production build: passed.
+- Production subpath Playwright suite: 18/18 desktop and mobile cases passed.
+- Real-API browser flow on the final production image: 1/1 passed at both
+  root path and `/skillhub`.
+- The real flow created and approved a PostgreSQL-backed public skill, proved
+  anonymous README/file requests and Star mutations were not sent, followed
+  filename and README login paths, returned to the exact Skill Detail route,
+  rendered authenticated README and file content, and survived reload.
+- PostgreSQL accepted connections; Redis returned `PONG`; MinIO, scanner,
+  Python backend, final root web, final `/skillhub` web, and both verification
+  proxies were healthy.
+- Standards and spec reviews both passed after the shared `buildReturnTo`
+  correction and expanded browser coverage.
+- `git diff --check dev...HEAD` passed and the feature worktree was clean.
+
+No backend, schema, generated API, deployment manifest, or environment-variable
+contract changed. The branch was intentionally kept unmerged and unpushed for
+user acceptance.
