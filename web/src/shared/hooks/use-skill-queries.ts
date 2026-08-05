@@ -100,6 +100,9 @@ export function useSkillReadme(namespace: string, slug: string, version?: string
     queryKey: ['skills', namespace, slug, 'versions', version, 'readme', path],
     queryFn: () => getSkillDocumentation(namespace, slug, version!, path!),
     enabled: enabled && !!namespace && !!slug && !!version && !!path,
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
   })
 }
 
@@ -115,6 +118,9 @@ export function useSkillFile(
     queryFn: () => getSkillDocumentation(namespace, slug, version!, filePath!),
     enabled: enabled && !!namespace && !!slug && !!version && !!filePath,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
   })
 }
 
