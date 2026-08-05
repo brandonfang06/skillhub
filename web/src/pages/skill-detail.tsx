@@ -1920,6 +1920,7 @@ export function SkillDetailPage() {
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
+        onRequireLogin={requireLogin}
         onLinkClick={handlePreviewLinkClick}
       />
     </div>
