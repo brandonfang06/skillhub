@@ -27,6 +27,7 @@ const {
   updateVisibilityMutationMock: vi.fn(),
 }))
 let playgroundEnabled = false
+let routerLocation = { pathname: '/space/global/demo-skill', searchStr: '', hash: '' }
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
   isLoading: boolean
@@ -40,7 +41,7 @@ let authState: {
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
-  useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
+  useRouterState: () => routerLocation,
   useSearch: () => ({ returnTo: '/dashboard/skills' }),
 }))
 
@@ -303,11 +304,13 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 describe('SkillDetailPage', () => {
   afterEach(() => {
     cleanup()
+    delete window.__SKILLHUB_RUNTIME_CONFIG__
   })
 
   beforeEach(() => {
     navigateMock.mockReset()
     playgroundEnabled = false
+    routerLocation = { pathname: '/space/global/demo-skill', searchStr: '', hash: '' }
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
     authState = {
       user: { userId: 'owner-1', platformRoles: ['USER'] },
@@ -519,6 +522,30 @@ describe('SkillDetailPage', () => {
       false,
     )
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('normalizes a browser-prefixed return target through the shared auth route helper', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { basePath: '/skillhub' }
+    routerLocation = {
+      pathname: '/skillhub/space/global/demo-skill',
+      searchStr: '?returnTo=%2Fsearch%3Fq%3Ddemo',
+      hash: '#readme',
+    }
+    authState = {
+      user: null,
+      isLoading: false,
+      hasRole: vi.fn(() => false),
+    }
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByText('skillDetail.signInToView'))
+
+    expect(navigateMock).toHaveBeenLastCalledWith({
+      to: '/login',
+      search: {
+        returnTo: '/space/global/demo-skill?returnTo=%2Fsearch%3Fq%3Ddemo#readme',
+      },
+    })
   })
 
   it('uses a neutral protected-content state while authentication is loading', () => {

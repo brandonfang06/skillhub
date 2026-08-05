@@ -30,6 +30,7 @@ import { adminApi, ApiError, buildApiUrl, getPlaygroundRuntimeConfig, WEB_API_PR
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { buildReturnTo } from '@/shared/lib/auth-route'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
@@ -444,7 +445,7 @@ export function SkillDetailPage() {
     navigate({
       to: '/login',
       search: {
-        returnTo: `${location.pathname}${location.searchStr}${location.hash}`,
+        returnTo: buildReturnTo(location),
       },
     })
   }
