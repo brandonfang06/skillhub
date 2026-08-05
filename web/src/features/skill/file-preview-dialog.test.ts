@@ -1,7 +1,10 @@
+/** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement, Fragment } from 'react'
 import type { ComponentProps, HTMLAttributes, ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '@/shared/lib/api-error'
 import { FilePreviewDialog } from './file-preview-dialog'
 import type { FileTreeNode } from './file-tree-builder'
 
@@ -64,6 +67,10 @@ function renderDialog(overrides: Partial<ComponentProps<typeof FilePreviewDialog
 }
 
 describe('FilePreviewDialog', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   it('renders nothing when the node is missing', () => {
     const html = renderDialog({ node: null })
 
@@ -93,6 +100,25 @@ describe('FilePreviewDialog', () => {
 
     expect(html).toContain('filePreview.loadError')
     expect(html).toContain('boom')
+  })
+
+  it('renders a sign-in action when the protected file session has expired', () => {
+    const onRequireLogin = vi.fn()
+
+    render(createElement(FilePreviewDialog, {
+      open: true,
+      onOpenChange: vi.fn(),
+      node: createNode({ name: 'expired.md', path: 'files/expired.md' }),
+      content: null,
+      isLoading: false,
+      error: new ApiError('error.auth.required', 401),
+      onDownload: vi.fn(),
+      onRequireLogin,
+    }))
+
+    expect(screen.getByText('skillDetail.sessionExpiredTitle')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.signInAgain' }))
+    expect(onRequireLogin).toHaveBeenCalledTimes(1)
   })
 
   it.each([

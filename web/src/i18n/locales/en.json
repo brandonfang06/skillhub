@@ -887,6 +887,13 @@
     "emptyDescription": "No skills have been published in this namespace yet"
   },
   "skillDetail": {
+    "readmeLoginRequiredTitle": "Sign in to view the README",
+    "readmeLoginRequiredDescription": "This skill's basic information is public. Sign in to view its README and file contents.",
+    "signInToView": "Sign in to view",
+    "filesLoginRequired": "Sign in to preview file contents.",
+    "sessionExpiredTitle": "Your session has expired",
+    "sessionExpiredDescription": "Sign in again to continue viewing protected skill content.",
+    "signInAgain": "Sign in again",
     "back": "Back",
     "notFound": "Skill not found",
     "notFoundDesc": "This skill may have been deleted or never existed",

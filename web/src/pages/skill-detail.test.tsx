@@ -9,6 +9,8 @@ const hasRoleMock = vi.fn<(role: string) => boolean>((role: string) => role === 
 const useSkillDetailMock = vi.fn()
 const useSkillLabelsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
+const useSkillReadmeMock = vi.fn()
+const useSkillFileMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
 const useResourceDiagnosticsMock = vi.fn()
 const {
@@ -25,18 +27,21 @@ const {
   updateVisibilityMutationMock: vi.fn(),
 }))
 let playgroundEnabled = false
+let routerLocation = { pathname: '/space/global/demo-skill', searchStr: '', hash: '' }
 let authState: {
   user: { userId: string; platformRoles: string[] } | null
+  isLoading: boolean
   hasRole: (role: string) => boolean
 } = {
   user: { userId: 'owner-1', platformRoles: ['USER'] },
+  isLoading: false,
   hasRole: hasRoleMock,
 }
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
-  useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
+  useRouterState: () => routerLocation,
   useSearch: () => ({ returnTo: '/dashboard/skills' }),
 }))
 
@@ -114,7 +119,14 @@ vi.mock('@/api/client', () => ({
     yankVersion: vi.fn(),
   },
   ApiError: class ApiError extends Error {
+    status: number
     serverMessageKey?: string
+
+    constructor(message: string, status: number) {
+      super(message)
+      this.name = 'ApiError'
+      this.status = status
+    }
   },
   buildApiUrl: (value: string) => value,
   WEB_API_PREFIX: '/api/web',
@@ -174,7 +186,30 @@ vi.mock('@/features/skill/file-preview-dialog', () => ({
 }))
 
 vi.mock('@/features/skill/file-tree', () => ({
-  FileTree: () => <div>files</div>,
+  FileTree: ({
+    onFileClick,
+  }: {
+    onFileClick?: (node: {
+      id: string
+      name: string
+      path: string
+      type: 'file'
+      depth: number
+    }) => void
+  }) => (
+    <button
+      type="button"
+      onClick={() => onFileClick?.({
+        id: 'SKILL.md',
+        name: 'SKILL.md',
+        path: 'SKILL.md',
+        type: 'file',
+        depth: 0,
+      })}
+    >
+      SKILL.md
+    </button>
+  ),
 }))
 
 vi.mock('@/features/skill/install-command', () => ({
@@ -206,8 +241,8 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
   useSkillVersionDetail: () => ({ data: undefined }),
   useSkillFiles: () => useSkillFilesMock(),
-  useSkillReadme: () => ({ data: '# Demo', error: null }),
-  useSkillFile: () => ({ data: null, isLoading: false, error: null }),
+  useSkillReadme: (...args: unknown[]) => useSkillReadmeMock(...args),
+  useSkillFile: (...args: unknown[]) => useSkillFileMock(...args),
   useArchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -234,6 +269,7 @@ vi.mock('@/shared/hooks/use-user-queries', () => ({
   useSubmitPromotion: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
+import { ApiError } from '@/api/client'
 import { SkillDetailPage } from './skill-detail'
 
 function createSkill(overrides: Record<string, unknown> = {}) {
@@ -268,14 +304,17 @@ function createSkill(overrides: Record<string, unknown> = {}) {
 describe('SkillDetailPage', () => {
   afterEach(() => {
     cleanup()
+    delete window.__SKILLHUB_RUNTIME_CONFIG__
   })
 
   beforeEach(() => {
     navigateMock.mockReset()
     playgroundEnabled = false
+    routerLocation = { pathname: '/space/global/demo-skill', searchStr: '', hash: '' }
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
     authState = {
       user: { userId: 'owner-1', platformRoles: ['USER'] },
+      isLoading: false,
       hasRole: hasRoleMock,
     }
     useSkillDetailMock.mockReturnValue({
@@ -302,6 +341,10 @@ describe('SkillDetailPage', () => {
       data: undefined,
     })
     useSkillFilesMock.mockReturnValue({ data: [] })
+    useSkillReadmeMock.mockReset()
+    useSkillReadmeMock.mockReturnValue({ data: '# Demo', isLoading: false, error: null })
+    useSkillFileMock.mockReset()
+    useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
     useResourceDiagnosticsMock.mockReturnValue({ data: undefined, isLoading: false, error: null })
     confirmPublishMutationMock.mockReset()
     confirmPublishMutationMock.mockResolvedValue(undefined)
@@ -338,6 +381,7 @@ describe('SkillDetailPage', () => {
   it('runs resource diagnostics only after a platform admin requests them', () => {
     authState = {
       user: { userId: 'platform-admin', platformRoles: ['SUPER_ADMIN'] },
+      isLoading: false,
       hasRole: (role: string) => role === 'SUPER_ADMIN',
     }
     useSkillDetailMock.mockReturnValue({
@@ -389,6 +433,7 @@ describe('SkillDetailPage', () => {
   it('renders public skill details for an anonymous viewer', () => {
     authState = {
       user: null,
+      isLoading: false,
       hasRole: vi.fn(() => false),
     }
 
@@ -402,13 +447,185 @@ describe('SkillDetailPage', () => {
       isFetching: false,
       error: null,
     })
+    useSkillFilesMock.mockReturnValue({
+      data: [{
+        id: 1,
+        filePath: 'SKILL.md',
+        fileSize: 128,
+        contentType: 'text/markdown',
+        sha256: 'readme',
+      }],
+    })
 
     const html = renderToStaticMarkup(<SkillDetailPage />)
 
     expect(html).toContain('Demo Skill')
     expect(html).toContain('install')
+    expect(html).toContain('skillDetail.readmeLoginRequiredTitle')
+    expect(html).toContain('skillDetail.signInToView')
     expect(html).not.toContain('skillDetail.loginRequired')
     expect(html).not.toContain('skillDetail.deleteSkill')
+    expect(html).not.toContain('markdown')
+    expect(useSkillReadmeMock).toHaveBeenCalledWith(
+      'global',
+      'demo-skill',
+      '1.0.0',
+      'SKILL.md',
+      false,
+    )
+  })
+
+  it('routes anonymous README and file actions to login with the exact return target', () => {
+    authState = {
+      user: null,
+      isLoading: false,
+      hasRole: vi.fn(() => false),
+    }
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ canManageLifecycle: false }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillFilesMock.mockReturnValue({
+      data: [{
+        id: 1,
+        filePath: 'SKILL.md',
+        fileSize: 128,
+        contentType: 'text/markdown',
+        sha256: 'readme',
+      }],
+    })
+
+    render(<SkillDetailPage />)
+
+    fireEvent.click(screen.getByText('skillDetail.signInToView'))
+    expect(navigateMock).toHaveBeenLastCalledWith({
+      to: '/login',
+      search: { returnTo: '/space/global/demo-skill' },
+    })
+
+    navigateMock.mockReset()
+    fireEvent.click(screen.getByRole('tab', { name: 'skillDetail.tabFiles' }))
+    expect(screen.getAllByText('skillDetail.filesLoginRequired').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: 'SKILL.md' })[0])
+
+    expect(navigateMock).toHaveBeenLastCalledWith({
+      to: '/login',
+      search: { returnTo: '/space/global/demo-skill' },
+    })
+    expect(useSkillFileMock).toHaveBeenLastCalledWith(
+      'global',
+      'demo-skill',
+      '1.0.0',
+      null,
+      false,
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('normalizes a browser-prefixed return target through the shared auth route helper', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { basePath: '/skillhub' }
+    routerLocation = {
+      pathname: '/skillhub/space/global/demo-skill',
+      searchStr: '?returnTo=%2Fsearch%3Fq%3Ddemo',
+      hash: '#readme',
+    }
+    authState = {
+      user: null,
+      isLoading: false,
+      hasRole: vi.fn(() => false),
+    }
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByText('skillDetail.signInToView'))
+
+    expect(navigateMock).toHaveBeenLastCalledWith({
+      to: '/login',
+      search: {
+        returnTo: '/space/global/demo-skill?returnTo=%2Fsearch%3Fq%3Ddemo#readme',
+      },
+    })
+  })
+
+  it('uses a neutral protected-content state while authentication is loading', () => {
+    authState = {
+      user: null,
+      isLoading: true,
+      hasRole: vi.fn(() => false),
+    }
+    useSkillFilesMock.mockReturnValue({
+      data: [{
+        id: 1,
+        filePath: 'SKILL.md',
+        fileSize: 128,
+        contentType: 'text/markdown',
+        sha256: 'readme',
+      }],
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByRole('heading', { name: 'Demo Skill' })).toBeTruthy()
+    expect(screen.queryByText('skillDetail.readmeLoginRequiredTitle')).toBeNull()
+    expect(screen.queryByText('markdown')).toBeNull()
+    expect(useSkillReadmeMock).toHaveBeenCalledWith(
+      'global',
+      'demo-skill',
+      '1.0.0',
+      'SKILL.md',
+      false,
+    )
+  })
+
+  it('keeps protected content available for authenticated viewers', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [{
+        id: 1,
+        filePath: 'SKILL.md',
+        fileSize: 128,
+        contentType: 'text/markdown',
+        sha256: 'readme',
+      }],
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByText('markdown')).toBeTruthy()
+    expect(useSkillReadmeMock).toHaveBeenCalledWith(
+      'global',
+      'demo-skill',
+      '1.0.0',
+      'SKILL.md',
+      true,
+    )
+  })
+
+  it('renders a local session-expired action for an authenticated README request', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [{
+        id: 1,
+        filePath: 'SKILL.md',
+        fileSize: 128,
+        contentType: 'text/markdown',
+        sha256: 'readme',
+      }],
+    })
+    useSkillReadmeMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new ApiError('error.auth.required', 401),
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByText('skillDetail.sessionExpiredTitle')).toBeTruthy()
+    fireEvent.click(screen.getByText('skillDetail.signInAgain'))
+    expect(navigateMock).toHaveBeenLastCalledWith({
+      to: '/login',
+      search: { returnTo: '/space/global/demo-skill' },
+    })
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it('hides Try in Playground when runtime config is disabled', () => {

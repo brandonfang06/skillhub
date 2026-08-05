@@ -292,7 +292,22 @@ export async function fetchText(input: RequestInfo | URL, init?: RequestInit): P
     headers: withRequestHeaders(init?.headers),
   })
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`)
+    let errorBody: ApiErrorEnvelope<unknown> | null = null
+    try {
+      errorBody = await response.json() as ApiErrorEnvelope<unknown>
+    } catch {
+      errorBody = null
+    }
+    const detail = typeof errorBody?.detail === 'string' ? errorBody.detail : undefined
+    const message = errorBody?.msg || detail || `HTTP ${response.status}`
+    throw new ApiError(
+      message,
+      response.status,
+      errorBody?.msg || detail,
+      errorBody?.msg || detail,
+      errorBody?.requestId,
+      getErrorMessageArgs(errorBody?.data),
+    )
   }
   return response.text()
 }

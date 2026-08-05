@@ -874,6 +874,13 @@
     "emptyDescription": "該命名空間下還沒有發佈任何技能"
   },
   "skillDetail": {
+    "readmeLoginRequiredTitle": "登入後查看 README",
+    "readmeLoginRequiredDescription": "此技能的基本資訊為公開內容。登入後可查看 README 與檔案內容。",
+    "signInToView": "登入查看",
+    "filesLoginRequired": "登入後可預覽檔案內容。",
+    "sessionExpiredTitle": "登入狀態已失效",
+    "sessionExpiredDescription": "請重新登入以繼續查看受保護的 Skill 內容。",
+    "signInAgain": "重新登入",
     "back": "返回上一頁",
     "notFound": "技能不存在",
     "notFoundDesc": "該技能可能已被刪除或從未存在",

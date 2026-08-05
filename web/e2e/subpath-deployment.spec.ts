@@ -32,6 +32,7 @@ type ObservedRequests = {
   csvPaths: string[]
   ssePaths: string[]
   tokenPaths: string[]
+  protectedContentPaths: string[]
 }
 
 function createObservedRequests(): ObservedRequests {
@@ -43,6 +44,7 @@ function createObservedRequests(): ObservedRequests {
     csvPaths: [],
     ssePaths: [],
     tokenPaths: [],
+    protectedContentPaths: [],
   }
 }
 
@@ -189,6 +191,10 @@ async function installMockApi(
     const path = url.pathname.startsWith(basePath)
       ? url.pathname.slice(basePath.length)
       : url.pathname
+
+    if (/\/api\/web\/skills\/[^/]+\/[^/]+\/versions\/[^/]+\/file$/.test(path)) {
+      observed.protectedContentPaths.push(url.pathname)
+    }
 
     if (path === '/api/v1/auth/me') {
       if (options.authenticated) {
@@ -443,6 +449,26 @@ test.describe('SkillHub production subpath deployment', () => {
     expect(observed.oauthPaths).toEqual([
       '/skillhub/oauth2/authorization/keycloak?returnTo=%2Fdashboard',
     ])
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('keeps anonymous public skill content gated under the prefix', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: false }, observed)
+
+    await page.goto(`${basePath}/space/global/subpath-skill`)
+    await expect(page.getByRole('heading', { name: 'Subpath Skill', exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Sign in to view the README')).toBeVisible()
+    await page.getByRole('tab', { name: 'Files' }).click()
+    await expect(page.getByText('Sign in to preview file contents.').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'SKILL.md' }).first()).toBeVisible()
+    expect(observed.protectedContentPaths).toEqual([])
+
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await page.getByRole('button', { name: 'Sign in to view' }).click()
+    await expect(page).toHaveURL(
+      /\/skillhub\/login\?returnTo=%2Fspace%2Fglobal%2Fsubpath-skill$/,
+    )
     expect(observed.apiRootEscapes).toEqual([])
   })
 

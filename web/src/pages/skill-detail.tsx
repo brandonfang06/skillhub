@@ -30,6 +30,7 @@ import { adminApi, ApiError, buildApiUrl, getPlaygroundRuntimeConfig, WEB_API_PR
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
+import { buildReturnTo } from '@/shared/lib/auth-route'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
@@ -166,7 +167,7 @@ export function SkillDetailPage() {
   const overviewSectionRef = useRef<HTMLDivElement | null>(null)
   const { namespace, slug } = useParams({ from: '/space/$namespace/$slug' })
   const playgroundRuntime = getPlaygroundRuntimeConfig()
-  const { user, hasRole } = useAuth()
+  const { user, isLoading: isAuthLoading, hasRole } = useAuth()
   const detailQueriesEnabled = isSkillDetailQueriesEnabled(skillDeleted)
   const qns = detailQueriesEnabled ? namespace : ''
   const qslug = detailQueriesEnabled ? slug : ''
@@ -177,6 +178,7 @@ export function SkillDetailPage() {
     Boolean(skill?.platformAdminOverride && resourceDiagnosticsRequested),
   )
   const skillReady = detailQueriesEnabled && Boolean(skill) && !isLoadingSkill && !isFetchingSkill && !skillError
+  const protectedContentEnabled = skillReady && !isAuthLoading && Boolean(user)
   const { data: versions } = useSkillVersions(qns, qslug, skillReady)
   const headlineVersion = skill ? getHeadlineVersion(skill) : null
   const publishedVersion = skill ? getPublishedVersion(skill) : null
@@ -185,13 +187,19 @@ export function SkillDetailPage() {
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
+  const { data: readme, error: readmeError } = useSkillReadme(
+    qns,
+    qslug,
+    selectedVersion,
+    documentationPath,
+    protectedContentEnabled,
+  )
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
     qns,
     qslug,
     selectedVersion,
     previewNode?.path || null,
-    previewDialogOpen && !!previewNode && skillReady
+    previewDialogOpen && !!previewNode && protectedContentEnabled
   )
   const { data: diffSourceDetail } = useSkillVersionDetail(qns, qslug, diffSourceVersion ?? undefined, skillReady)
   const { data: diffCompareDetail } = useSkillVersionDetail(qns, qslug, diffCompareVersion ?? undefined, skillReady)
@@ -199,8 +207,21 @@ export function SkillDetailPage() {
   const { data: diffCompareFiles } = useSkillFiles(qns, qslug, diffCompareVersion ?? undefined, skillReady)
   const diffSourceDocumentationPath = resolveDocumentationFilePath(diffSourceFiles)
   const diffCompareDocumentationPath = resolveDocumentationFilePath(diffCompareFiles)
-  const { data: diffSourceReadme } = useSkillReadme(qns, qslug, diffSourceVersion ?? undefined, diffSourceDocumentationPath, skillReady)
-  const { data: diffCompareReadme } = useSkillReadme(qns, qslug, diffCompareVersion ?? undefined, diffCompareDocumentationPath, skillReady)
+  const { data: diffSourceReadme } = useSkillReadme(
+    qns,
+    qslug,
+    diffSourceVersion ?? undefined,
+    diffSourceDocumentationPath,
+    protectedContentEnabled,
+  )
+  const { data: diffCompareReadme } = useSkillReadme(
+    qns,
+    qslug,
+    diffCompareVersion ?? undefined,
+    diffCompareDocumentationPath,
+    protectedContentEnabled,
+  )
+  const isReadmeUnauthorized = readmeError instanceof ApiError && readmeError.status === 401
   const governanceVisible = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const canHideSkill = hasRole('SUPER_ADMIN')
   const isPendingPreview = skill?.resolutionMode === 'OWNER_PREVIEW' && headlineVersion?.status === 'PENDING_REVIEW'
@@ -327,6 +348,13 @@ export function SkillDetailPage() {
 
   // File tree click handler: opens preview dialog for the selected file
   const handleFileClick = (node: FileTreeNode) => {
+    if (isAuthLoading) {
+      return
+    }
+    if (!user) {
+      requireLogin()
+      return
+    }
     setPreviewNode(node)
     setPreviewDialogOpen(true)
   }
@@ -417,7 +445,7 @@ export function SkillDetailPage() {
     navigate({
       to: '/login',
       search: {
-        returnTo: `${location.pathname}${location.searchStr}${location.hash}`,
+        returnTo: buildReturnTo(location),
       },
     })
   }
@@ -949,7 +977,39 @@ export function SkillDetailPage() {
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
-            {readme ? (
+            {isAuthLoading ? (
+              <Card className="p-8 space-y-4" aria-busy="true">
+                <div className="h-5 w-48 animate-shimmer rounded-md" />
+                <div className="h-4 w-full animate-shimmer rounded-md" />
+                <div className="h-4 w-3/4 animate-shimmer rounded-md" />
+              </Card>
+            ) : !user ? (
+              <Card className="p-8 text-center">
+                <Lock className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <div className="mt-4 text-base font-semibold text-foreground">
+                  {t('skillDetail.readmeLoginRequiredTitle')}
+                </div>
+                <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+                  {t('skillDetail.readmeLoginRequiredDescription')}
+                </p>
+                <Button className="mt-5" onClick={requireLogin}>
+                  {t('skillDetail.signInToView')}
+                </Button>
+              </Card>
+            ) : isReadmeUnauthorized ? (
+              <Card className="p-8 text-center">
+                <Lock className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <div className="mt-4 text-base font-semibold text-foreground">
+                  {t('skillDetail.sessionExpiredTitle')}
+                </div>
+                <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+                  {t('skillDetail.sessionExpiredDescription')}
+                </p>
+                <Button className="mt-5" onClick={requireLogin}>
+                  {t('skillDetail.signInAgain')}
+                </Button>
+              </Card>
+            ) : readme ? (
               <Card className="p-8 space-y-4">
                 {documentationPath ? (
                   <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -1016,7 +1076,15 @@ export function SkillDetailPage() {
 
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
-              <FileTree files={files} onFileClick={handleFileClick} />
+              <div className="space-y-3">
+                {!isAuthLoading && !user ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Lock className="h-4 w-4" aria-hidden="true" />
+                    <span>{t('skillDetail.filesLoginRequired')}</span>
+                  </div>
+                ) : null}
+                <FileTree files={files} onFileClick={handleFileClick} />
+              </div>
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
                 {t('skillDetail.noFiles')}
@@ -1153,8 +1221,16 @@ export function SkillDetailPage() {
               </span>
             </button>
             {fileBrowserOpen && (
-              <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
-                <FileTree files={files} onFileClick={handleFileClick} bare />
+              <div className="space-y-3">
+                {!isAuthLoading && !user ? (
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{t('skillDetail.filesLoginRequired')}</span>
+                  </div>
+                ) : null}
+                <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
+                  <FileTree files={files} onFileClick={handleFileClick} bare />
+                </div>
               </div>
             )}
           </Card>
@@ -1845,6 +1921,7 @@ export function SkillDetailPage() {
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
+        onRequireLogin={requireLogin}
         onLinkClick={handlePreviewLinkClick}
       />
     </div>

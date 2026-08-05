@@ -7,6 +7,7 @@ import { MarkdownRenderer } from './markdown-renderer'
 import { CodeRenderer } from './code-renderer'
 import { toast } from '@/shared/lib/toast'
 import { copyToClipboard } from '@/shared/lib/clipboard'
+import { ApiError } from '@/shared/lib/api-error'
 import { getFileTypeLabel, canPreviewFile, getLanguageForHighlight } from './file-type-utils'
 import type { FileTreeNode } from './file-tree-builder'
 
@@ -18,6 +19,7 @@ interface FilePreviewDialogProps {
   isLoading: boolean
   error: Error | null
   onDownload: () => void
+  onRequireLogin?: () => void
   onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
 }
 
@@ -34,6 +36,7 @@ export function FilePreviewDialog({
   isLoading,
   error,
   onDownload,
+  onRequireLogin,
   onLinkClick,
 }: FilePreviewDialogProps) {
   const { t } = useTranslation()
@@ -51,6 +54,7 @@ export function FilePreviewDialog({
   // Syntax highlighting threshold: 500KB
   const SYNTAX_HIGHLIGHT_THRESHOLD = 500 * 1024
   const shouldHighlight = language && fileSize <= SYNTAX_HIGHLIGHT_THRESHOLD
+  const requiresLogin = error instanceof ApiError && error.status === 401 && Boolean(onRequireLogin)
 
   /**
    * Copies file content to clipboard with animation feedback.
@@ -101,15 +105,17 @@ export function FilePreviewDialog({
                   : <Copy className={`h-4 w-4 transition-transform duration-300 ${copyState === 'spinning' ? 'animate-spin' : 'hover:rotate-180'}`} />}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
-              onClick={onDownload}
-              title={t('filePreview.downloadHint', { name: node.name })}
-            >
-              <Download className="h-4 w-4 transition-transform duration-200 hover:translate-y-0.5" />
-            </Button>
+            {!requiresLogin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
+                onClick={onDownload}
+                title={t('filePreview.downloadHint', { name: node.name })}
+              >
+                <Download className="h-4 w-4 transition-transform duration-200 hover:translate-y-0.5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -127,6 +133,16 @@ export function FilePreviewDialog({
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : requiresLogin ? (
+            <div className="text-center py-12">
+              <p className="text-sm font-medium text-foreground">{t('skillDetail.sessionExpiredTitle')}</p>
+              <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+                {t('skillDetail.sessionExpiredDescription')}
+              </p>
+              <Button className="mt-5" onClick={onRequireLogin}>
+                {t('skillDetail.signInAgain')}
+              </Button>
             </div>
           ) : error ? (
             <div className="text-center py-12">
