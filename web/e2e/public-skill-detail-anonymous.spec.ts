@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 import { getSearchCard, prepareSearchSeed, type PreparedSearchSeed } from './helpers/search-seed'
 
-const SEARCH_URL = (q: string) => `/search?q=${encodeURIComponent(q)}&sort=relevance&page=0&starredOnly=false`
+const SEARCH_URL = (q: string) => `./search?q=${encodeURIComponent(q)}&sort=relevance&page=0&starredOnly=false`
 
 function latestSeed(seed: PreparedSearchSeed) {
   return {
@@ -33,6 +33,13 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
 
   test('allows anonymous users to open a public skill detail and view install content', async ({ page }) => {
     const current = latestSeed(seeded!)
+    const protectedContentResponses: number[] = []
+    page.on('response', (response) => {
+      const url = new URL(response.url())
+      if (/\/versions\/[^/]+\/file$/.test(url.pathname)) {
+        protectedContentResponses.push(response.status())
+      }
+    })
 
     await page.goto(SEARCH_URL(seeded!.keyword))
     const card = getSearchCard(page, current.skillName)
@@ -43,22 +50,28 @@ test.describe('Public Skill Detail Anonymous Access (Real API)', () => {
     await expect(page).toHaveURL(new RegExp(`/space/${current.skill.namespace}/${current.skill.slug}(\\?|$)`))
     await expect(page).not.toHaveURL(/\/login\?returnTo=/)
     await expect(page.getByRole('heading', { name: current.skillName, exact: true })).toBeVisible()
+    await expect(page.getByText('Sign in to view the README')).toBeVisible()
     await expect(page.getByText('Install', { exact: true })).toBeVisible()
-    const clawhubTarget = current.skill.namespace === 'global'
-      ? current.skill.slug
-      : `${current.skill.namespace}--${current.skill.slug}`
     const skillhubNamespace = current.skill.namespace === 'global'
       ? ''
       : ` --namespace ${current.skill.namespace}`
 
-    await expect(page.getByRole('tab', { name: 'ClawHub CLI' })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByText(new RegExp(`npx clawhub install ${escapeRegExp(clawhubTarget)} --registry`))).toBeVisible()
-    await expect(page.getByRole('tab', { name: 'SkillHub CLI' })).toBeVisible()
-
-    await page.getByRole('tab', { name: 'SkillHub CLI' }).click()
-
     await expect(page.getByRole('tab', { name: 'SkillHub CLI' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText(new RegExp(`npx @astron-team/skillhub@latest install ${escapeRegExp(current.skill.slug)}${escapeRegExp(skillhubNamespace)} --registry`))).toBeVisible()
     await expect(page.getByRole('button', { name: 'Copy' }).first()).toBeVisible()
+
+    await page.getByRole('tab', { name: 'Files' }).click()
+    await expect(page.getByText('Sign in to preview file contents.').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'SKILL.md' }).first()).toBeVisible()
+    await expect(page.getByText('Operation failed')).toHaveCount(0)
+    expect(protectedContentResponses).toEqual([])
+
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    const detailUrl = new URL(page.url())
+    const skillPathStart = detailUrl.pathname.indexOf('/space/')
+    const expectedReturnTo = `${detailUrl.pathname.slice(skillPathStart)}${detailUrl.search}`
+    await page.getByRole('button', { name: 'Sign in to view' }).click()
+    await expect(page).toHaveURL(/\/login\?returnTo=/)
+    expect(new URL(page.url()).searchParams.get('returnTo')).toBe(expectedReturnTo)
   })
 })

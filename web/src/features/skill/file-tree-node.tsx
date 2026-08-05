@@ -51,21 +51,22 @@ export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
   // Render file node
   if (node.type === 'file') {
     return (
-      <div
-        className="flex items-center justify-between px-3 py-2 hover:bg-accent/10 cursor-pointer transition-colors group"
+      <button
+        type="button"
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-accent/10 cursor-pointer transition-colors group"
         style={{ paddingLeft: `${node.depth * 16 + 12}px` }}
         onClick={() => onFileClick(node)}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span className="flex items-center gap-2 min-w-0 flex-1">
           <IconComponent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="font-mono text-sm text-foreground truncate">{node.name}</span>
-        </div>
+        </span>
         {node.file && (
           <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
             {formatFileSize(node.file.fileSize)}
           </span>
         )}
-      </div>
+      </button>
     )
   }
 
