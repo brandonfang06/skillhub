@@ -116,10 +116,10 @@ validate_hostname() {
   printf '%s\n' "$1" | awk '
     {
       hostname = $0
-      if (length(hostname) > 253) exit 1
       if (substr(hostname, length(hostname), 1) == ".") {
         hostname = substr(hostname, 1, length(hostname) - 1)
       }
+      if (length(hostname) > 253) exit 1
       if (hostname == "") exit 1
 
       count = split(hostname, labels, ".")

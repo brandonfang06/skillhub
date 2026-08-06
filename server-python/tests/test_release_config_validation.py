@@ -75,6 +75,19 @@ def test_release_validator_accepts_supported_subpath_and_device_url_combinations
     assert result.returncode == 0, result.stderr
 
 
+def test_release_validator_accepts_a_max_length_fqdn_with_root_dot(
+    tmp_path: Path,
+) -> None:
+    hostname = ".".join(["a" * 63, "b" * 63, "c" * 63, "d" * 61]) + "."
+
+    result = run_validator(
+        tmp_path,
+        {"SKILLHUB_PUBLIC_BASE_URL": f"https://{hostname}/skillhub"},
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize(
     ("base_path", "expected_message"),
     [

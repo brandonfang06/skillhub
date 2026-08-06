@@ -174,6 +174,39 @@ runtime config, real hashed JavaScript asset, and health endpoint using the
 documented VirtualService prefix-rewrite model. Scoped Ruff and ShellCheck
 checks passed after the tools were installed.
 
+## 2026-08-07 Session Safety Follow-up
+
+A second post-merge review reproduced four session and validation risks that
+were not covered by the original happy-path tests:
+
+1. A subpath response could delete another same-host application's root
+   `SESSION` cookie. Root-cookie cleanup now requires exactly two raw,
+   path-ordered cookie slots and occurs only when the root candidate resolves
+   to a live SkillHub session. Three or more slots remain ambiguous and never
+   trigger root-cookie deletion.
+2. An untrusted request could provide an arbitrary number of duplicate
+   `SESSION` values and amplify one request into many sequential Redis calls.
+   Authentication reads at most the expected scoped/root pair. Login and
+   logout revoke at most three candidates in one bounded operation so an
+   ambiguous live root session cannot survive, and oversized ids never reach
+   Redis. A fourth candidate is rejected with a `400` before any session
+   mutation, registration, credential check, OAuth exchange, or identity
+   binding instead of reporting a successful login or logout.
+3. Login created a new Redis session before deleting old sessions, so a
+   partial failure could leave mixed state. Redis rotation now uses one
+   transactional pipeline, and logout uses one multi-key delete.
+4. Shell validation counted a trailing DNS root dot before applying the
+   253-character hostname limit while backend validation counted it after
+   normalization. Both now apply the limit to the normalized hostname.
+
+The follow-up passed `1205` backend tests with one environment-gated
+PostgreSQL test skipped, `138` focused
+auth/session/OAuth/release-validator tests, Ruff, ShellCheck, shell syntax,
+Kustomize rendering, Compose configuration, and `18` desktop/mobile production
+subpath Playwright tests. A real Redis 7 container verified transactional
+rotation, TTL retention, and multi-key deletion. The production backend image
+built successfully and loaded the complete app with networking disabled.
+
 ## Remaining Organization Runtime Gates
 
 The organization-only CNAME, certificate chain/trust, Gateway credential

@@ -5,13 +5,16 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Any
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 
 from app.core.config import first_env, parse_bool
 from app.core.public_url import public_base_path
 
 SESSION_COOKIE_NAME = "SESSION"
 SESSION_TTL_SECONDS = 8 * 60 * 60
+MAX_SESSION_LOOKUP_CANDIDATES = 2
+MAX_SESSION_MUTATION_CANDIDATES = 3
+MAX_SESSION_ID_LENGTH = 128
 
 
 @dataclass
@@ -29,6 +32,21 @@ class InMemorySessionStore:
 
     async def delete(self, session_id: str) -> None:
         self.sessions.pop(session_id, None)
+
+    async def rotate(
+        self,
+        principal: dict[str, object],
+        existing_session_ids: list[str],
+    ) -> str:
+        session_id = secrets.token_urlsafe(32)
+        for existing_session_id in existing_session_ids:
+            self.sessions.pop(existing_session_id, None)
+        self.sessions[session_id] = dict(principal)
+        return session_id
+
+    async def delete_many(self, session_ids: list[str]) -> None:
+        for session_id in session_ids:
+            self.sessions.pop(session_id, None)
 
 
 class RedisSessionStore:
@@ -63,6 +81,27 @@ class RedisSessionStore:
     async def delete(self, session_id: str) -> None:
         await self.redis_client.delete(self._key(session_id))
 
+    async def rotate(
+        self,
+        principal: dict[str, object],
+        existing_session_ids: list[str],
+    ) -> str:
+        session_id = secrets.token_urlsafe(32)
+        pipeline = self.redis_client.pipeline(transaction=True)
+        pipeline.setex(
+            self._key(session_id),
+            self.ttl_seconds,
+            json.dumps(principal),
+        )
+        if existing_session_ids:
+            pipeline.delete(*(self._key(value) for value in existing_session_ids))
+        await pipeline.execute()
+        return session_id
+
+    async def delete_many(self, session_ids: list[str]) -> None:
+        if session_ids:
+            await self.redis_client.delete(*(self._key(value) for value in session_ids))
+
 
 def _session_store(request: Request) -> Any:
     store = getattr(request.app.state, "auth_session_store", None)
@@ -81,31 +120,70 @@ def _cookie_path() -> str:
     return public_base_path() or "/"
 
 
-def _session_ids(request: Request) -> list[str]:
-    session_ids: list[str] = []
+def _session_cookie_candidates(request: Request) -> tuple[list[str], int, bool]:
+    candidates: list[str] = []
+    raw_candidate_count = 0
     for cookie_header in request.headers.getlist("cookie"):
         for cookie_pair in cookie_header.split(";"):
             name, separator, value = cookie_pair.strip().partition("=")
             session_id = value.strip().strip('"')
+            if not separator or name != SESSION_COOKIE_NAME or not session_id:
+                continue
+            raw_candidate_count += 1
+            if raw_candidate_count > MAX_SESSION_MUTATION_CANDIDATES:
+                return candidates, raw_candidate_count, True
             if (
-                separator
-                and name == SESSION_COOKIE_NAME
-                and session_id
-                and session_id not in session_ids
+                session_id not in candidates
+                and len(candidates) < MAX_SESSION_MUTATION_CANDIDATES
             ):
-                session_ids.append(session_id)
-    return session_ids
+                candidates.append(session_id)
+    return candidates, raw_candidate_count, False
+
+
+def validate_session_cookie_candidates(request: Request) -> tuple[list[str], int]:
+    candidates, raw_candidate_count, overflow = _session_cookie_candidates(request)
+    if overflow:
+        raise HTTPException(status_code=400, detail="error.auth.session.cookieOverflow")
+    return candidates, raw_candidate_count
+
+
+def _store_session_ids(candidates: list[str]) -> list[str]:
+    return [value for value in candidates if len(value) <= MAX_SESSION_ID_LENGTH]
+
+
+async def _owns_legacy_root_session(
+    store: Any,
+    candidates: list[str],
+    raw_candidate_count: int,
+    cookie_path: str,
+) -> bool:
+    if (
+        cookie_path == "/"
+        or raw_candidate_count != MAX_SESSION_LOOKUP_CANDIDATES
+        or len(candidates) != MAX_SESSION_LOOKUP_CANDIDATES
+    ):
+        return False
+    root_candidate = candidates[-1]
+    if len(root_candidate) > MAX_SESSION_ID_LENGTH:
+        return False
+    return await store.get(root_candidate) is not None
 
 
 async def establish_session(
     request: Request, response: Response, principal: dict[str, object]
 ) -> None:
+    candidates, raw_candidate_count = validate_session_cookie_candidates(request)
     store = _session_store(request)
-    session_id = await store.create(principal)
-    for existing_session_id in _session_ids(request):
-        await store.delete(existing_session_id)
+    existing_session_ids = _store_session_ids(candidates)
     cookie_path = _cookie_path()
-    if cookie_path != "/":
+    expire_root_cookie = await _owns_legacy_root_session(
+        store,
+        candidates,
+        raw_candidate_count,
+        cookie_path,
+    )
+    session_id = await store.rotate(principal, existing_session_ids)
+    if expire_root_cookie:
         response.delete_cookie(SESSION_COOKIE_NAME, path="/")
     response.set_cookie(
         SESSION_COOKIE_NAME,
@@ -120,7 +198,8 @@ async def establish_session(
 
 async def read_session_principal(request: Request) -> dict[str, object] | None:
     store = _session_store(request)
-    for session_id in _session_ids(request):
+    candidates, _, _ = _session_cookie_candidates(request)
+    for session_id in _store_session_ids(candidates[:MAX_SESSION_LOOKUP_CANDIDATES]):
         principal = await store.get(session_id)
         if principal is not None:
             return principal
@@ -128,10 +207,17 @@ async def read_session_principal(request: Request) -> dict[str, object] | None:
 
 
 async def clear_session(request: Request, response: Response) -> None:
+    candidates, raw_candidate_count = validate_session_cookie_candidates(request)
     store = _session_store(request)
-    for session_id in _session_ids(request):
-        await store.delete(session_id)
+    session_ids = _store_session_ids(candidates)
     cookie_path = _cookie_path()
+    expire_root_cookie = await _owns_legacy_root_session(
+        store,
+        candidates,
+        raw_candidate_count,
+        cookie_path,
+    )
+    await store.delete_many(session_ids)
     response.delete_cookie(SESSION_COOKIE_NAME, path=cookie_path)
-    if cookie_path != "/":
+    if expire_root_cookie:
         response.delete_cookie(SESSION_COOKIE_NAME, path="/")

@@ -8,7 +8,12 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
 from app.auth.context import resolve_current_user_or_401, with_password_capability
-from app.auth.local import LocalAuthError, change_local_password, login_local_user, register_local_user
+from app.auth.local import (
+    LocalAuthError,
+    change_local_password,
+    login_local_user,
+    register_local_user,
+)
 from app.auth.password_reset import (
     PasswordResetError,
     confirm_password_reset,
@@ -16,7 +21,7 @@ from app.auth.password_reset import (
     validate_password_reset_confirm,
     validate_password_reset_request,
 )
-from app.auth.session import establish_session
+from app.auth.session import establish_session, validate_session_cookie_candidates
 from app.core.config import parse_bool
 from app.core.response import ok
 
@@ -49,6 +54,7 @@ def _local_registration_enabled(request: Request) -> bool:
 
 @router.post("/api/v1/auth/local/register")
 async def register_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
+    validate_session_cookie_candidates(request)
     if not _local_registration_enabled(request):
         raise HTTPException(status_code=403, detail="error.auth.local.registrationDisabled")
 
@@ -73,6 +79,7 @@ async def register_local_account_route(request: Request, response: Response, pay
 
 @router.post("/api/v1/auth/local/login")
 async def login_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
+    validate_session_cookie_candidates(request)
     login = getattr(request.app.state, "local_auth_login", None)
     try:
         data = await _resolve_result(

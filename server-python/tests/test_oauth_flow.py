@@ -1,10 +1,13 @@
+import asyncio
+from typing import Self
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
 from app.auth.oauth import _claims_from_attributes, oauth_registrations_from_env
+from app.auth.session import InMemorySessionStore
+from app.main import create_app
 
 
 def oauth_registration() -> dict[str, object]:
@@ -164,7 +167,7 @@ class FakeOAuthHttpClient:
     def __init__(self) -> None:
         self.requests: list[tuple[str, str, dict[str, object]]] = []
 
-    async def __aenter__(self) -> "FakeOAuthHttpClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -363,6 +366,96 @@ def test_oauth_callback_redirects_to_the_public_subpath(monkeypatch: pytest.Monk
 
     assert callback.status_code == 307
     assert callback.headers["location"] == "/skillhub/skills/example"
+
+
+def test_oauth_callback_with_lone_scoped_session_does_not_delete_root_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    app = create_app()
+    app.state.auth_oauth_registrations = [oauth_registration()]
+    app.state.oauth_code_exchanger = lambda registration, code: {
+        "subject": "12345",
+        "providerLogin": "oauth-user",
+        "email": "oauth-user@example.test",
+    }
+    app.state.oauth_principal_binder = lambda registration, claims: principal()
+    store = InMemorySessionStore()
+    scoped_session_id = asyncio.run(store.create(principal()))
+    app.state.auth_session_store = store
+    client = TestClient(app)
+    authorization = client.get(
+        "/oauth2/authorization/github?returnTo=/dashboard",
+        follow_redirects=False,
+    )
+    state = parse_qs(urlparse(authorization.headers["location"]).query)["state"][0]
+
+    callback = client.get(
+        f"/login/oauth2/code/github?code=abc&state={state}",
+        headers={"cookie": f"SESSION={scoped_session_id}"},
+        follow_redirects=False,
+    )
+
+    assert callback.status_code == 307
+    assert not any(
+        "Path=/;" in header for header in callback.headers.get_list("set-cookie")
+    )
+
+
+def test_oauth_callback_rejects_cookie_overflow_before_session_rotation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example/skillhub")
+    app = create_app()
+    app.state.auth_oauth_registrations = [oauth_registration()]
+    exchanger_calls: list[tuple[dict[str, object], str]] = []
+    binder_calls: list[tuple[dict[str, object], dict[str, object]]] = []
+
+    def exchanger(registration: dict[str, object], code: str) -> dict[str, object]:
+        exchanger_calls.append((registration, code))
+        return {
+            "subject": "12345",
+            "providerLogin": "oauth-user",
+            "email": "oauth-user@example.test",
+        }
+
+    def binder(
+        registration: dict[str, object], claims: dict[str, object]
+    ) -> dict[str, object]:
+        binder_calls.append((registration, claims))
+        return principal()
+
+    app.state.oauth_code_exchanger = exchanger
+    app.state.oauth_principal_binder = binder
+    store = InMemorySessionStore()
+    scoped_session_id = asyncio.run(store.create(principal()))
+    root_session_id = asyncio.run(store.create(principal()))
+    app.state.auth_session_store = store
+    client = TestClient(app)
+    authorization = client.get(
+        "/oauth2/authorization/github?returnTo=/dashboard",
+        follow_redirects=False,
+    )
+    state = parse_qs(urlparse(authorization.headers["location"]).query)["state"][0]
+
+    callback = client.get(
+        f"/login/oauth2/code/github?code=abc&state={state}",
+        headers={
+            "cookie": (
+                "SESSION=more-1; SESSION=more-2; "
+                f"SESSION={scoped_session_id}; SESSION={root_session_id}"
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert callback.status_code == 400
+    assert callback.json()["detail"] == "error.auth.session.cookieOverflow"
+    assert callback.headers.get_list("set-cookie") == []
+    assert asyncio.run(store.get(scoped_session_id)) is not None
+    assert asyncio.run(store.get(root_session_id)) is not None
+    assert exchanger_calls == []
+    assert binder_calls == []
 
 
 def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_doubles() -> None:

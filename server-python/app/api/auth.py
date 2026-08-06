@@ -1,15 +1,20 @@
-from collections.abc import Awaitable
-from inspect import isawaitable
 import os
 import secrets
+from collections.abc import Awaitable
+from inspect import isawaitable
 from typing import Any
-from urllib.parse import urlencode
-from urllib.parse import quote_plus
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote_plus, unquote, urlencode, urlsplit
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
 
+from app.auth.context import (
+    attach_password_capability,
+    build_auth_me_response,  # noqa: F401
+    normalize_platform_roles,  # noqa: F401
+    resolve_current_user_or_401,
+    with_password_capability,
+)
 from app.auth.oauth import (
     bind_oauth_principal,
     configured_oauth_registration,
@@ -17,16 +22,11 @@ from app.auth.oauth import (
     exchange_oauth_code,
     oauth_registrations_from_env,
 )
-from app.auth.context import (
-    attach_password_capability,
-    build_auth_me_response,
-    normalize_platform_roles,
-    read_current_bearer_user,
-    read_current_mock_user,
-    resolve_current_user_or_401,
-    with_password_capability,
+from app.auth.session import (
+    clear_session,
+    establish_session,
+    validate_session_cookie_candidates,
 )
-from app.auth.session import clear_session, establish_session
 from app.core.public_url import is_safe_app_path, public_base_path, to_public_path
 from app.core.response import ok
 
@@ -319,6 +319,7 @@ async def oauth_callback(
     code: str | None = None,
     state: str | None = None,
 ) -> RedirectResponse:
+    validate_session_cookie_candidates(request)
     registration = _find_oauth_registration(request, registration_id)
     if registration is None:
         raise HTTPException(status_code=404, detail="error.auth.oauth.providerNotFound")
@@ -358,6 +359,7 @@ async def oauth_callback(
 
 @router.post("/api/v1/auth/direct/login")
 async def direct_login(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, object]:
+    validate_session_cookie_candidates(request)
     if not _direct_enabled(request):
         raise HTTPException(status_code=403, detail="error.auth.direct.disabled")
 
