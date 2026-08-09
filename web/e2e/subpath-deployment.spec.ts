@@ -304,6 +304,21 @@ async function installMockApi(
       return
     }
 
+    if (path === '/api/v1/admin/namespace-analytics.csv') {
+      observed.csvPaths.push(url.pathname)
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/csv; charset=utf-8',
+        headers: {
+          'Content-Disposition': 'attachment; filename="skillhub-namespace-analytics.csv"',
+          'X-SkillHub-Export-Truncated': 'false',
+          'X-SkillHub-Export-Row-Limit': '10000',
+        },
+        body: '\ufeffnamespace_id,namespace_slug,display_name\r\n17,platform,Platform\r\n',
+      })
+      return
+    }
+
     if (path === '/api/v1/admin/download-events.csv') {
       observed.csvPaths.push(url.pathname)
       await route.fulfill({
@@ -573,6 +588,22 @@ test.describe('SkillHub production subpath deployment', () => {
     await page.getByRole('option', { name: 'Global', exact: true }).click()
     await filteredRequest
     await expect(page).toHaveURL(/\/skillhub\/admin\/namespace-analytics\?.*namespaceType=GLOBAL/)
+
+    const exportRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === `${basePath}/api/v1/admin/namespace-analytics.csv`,
+    )
+    const downloadEvent = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export CSV' }).click()
+    const request = await exportRequest
+    const download = await downloadEvent
+    const exportUrl = new URL(request.url())
+    expect(exportUrl.searchParams.get('namespaceType')).toBe('GLOBAL')
+    expect(exportUrl.searchParams.get('source')).toBeNull()
+    expect(exportUrl.searchParams.has('page')).toBe(false)
+    expect(exportUrl.searchParams.has('size')).toBe(false)
+    expect(download.suggestedFilename()).toBe('skillhub-namespace-analytics.csv')
+    expect(observed.csvPaths).toEqual([`${basePath}/api/v1/admin/namespace-analytics.csv`])
+    await expectNoHorizontalOverflow(page)
 
     await page.getByRole('button', { name: 'View Events' }).click()
     await expect(page).toHaveURL(/\/skillhub\/admin\/download-events\?/)

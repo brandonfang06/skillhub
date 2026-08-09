@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -34,9 +36,10 @@ class FakeResult:
 
 
 class FakeNamespaceAnalyticsConnection:
-    def __init__(self) -> None:
+    def __init__(self, export_rows: list[dict[str, Any]] | None = None) -> None:
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
+        self.export_rows = export_rows
 
     async def execute(self, statement: object, params: dict[str, Any]) -> FakeResult:
         sql = str(statement)
@@ -57,6 +60,35 @@ class FakeNamespaceAnalyticsConnection:
         if "namespace-analytics-items" in sql:
             return FakeResult(
                 [
+                    {
+                        "namespace_id": 1,
+                        "slug": "global",
+                        "display_name": "Global",
+                        "type": "GLOBAL",
+                        "status": "ACTIVE",
+                        "maintainer_count": 2,
+                        "skill_count": 3,
+                        "lifetime_downloads": 80,
+                        "period_downloads": 12,
+                    },
+                    {
+                        "namespace_id": 2,
+                        "slug": "platform-tools",
+                        "display_name": "Platform Tools",
+                        "type": "TEAM",
+                        "status": "ACTIVE",
+                        "maintainer_count": 1,
+                        "skill_count": 2,
+                        "lifetime_downloads": 40,
+                        "period_downloads": 6,
+                    },
+                ]
+            )
+        if "namespace-analytics-export" in sql:
+            return FakeResult(
+                self.export_rows
+                if self.export_rows is not None
+                else [
                     {
                         "namespace_id": 1,
                         "slug": "global",
@@ -129,6 +161,89 @@ def test_resolve_period_rejects_reversed_range() -> None:
         resolve_period("2026-08-04T00:00:00Z", "2026-08-03T00:00:00Z")
 
     assert invalid.value.status_code == 400
+
+
+def test_render_namespace_analytics_csv_is_excel_safe_and_analysis_ready() -> None:
+    period = namespace_repository.ResolvedPeriod(
+        start_time=datetime(2026, 7, 5, tzinfo=UTC),
+        end_time=datetime(2026, 8, 4, 12, 30, tzinfo=UTC),
+    )
+    items = [
+        {
+            "namespaceId": 7,
+            "slug": "platform,tools",
+            "displayName": "=危險名稱",
+            "type": "TEAM",
+            "status": "ACTIVE",
+            "maintainerCount": 2,
+            "skillCount": 4,
+            "lifetimeDownloads": 30,
+            "periodDownloads": 8,
+        }
+    ]
+
+    csv_body = namespace_repository.render_namespace_analytics_csv(items, period, source="cli")
+
+    assert csv_body.startswith("\ufeffnamespace_id,namespace_slug,display_name,namespace_type")
+    rows = list(csv.DictReader(io.StringIO(csv_body.removeprefix("\ufeff"))))
+    assert rows == [
+        {
+            "namespace_id": "7",
+            "namespace_slug": "platform,tools",
+            "display_name": "'=危險名稱",
+            "namespace_type": "TEAM",
+            "namespace_status": "ACTIVE",
+            "maintainer_count": "2",
+            "skill_count": "4",
+            "lifetime_downloads": "30",
+            "period_downloads": "8",
+            "period_start_time": "2026-07-05T00:00:00+00:00",
+            "period_end_time": "2026-08-04T12:30:00+00:00",
+            "source": "cli",
+        }
+    ]
+
+
+@pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r", "\n"])
+def test_render_namespace_analytics_csv_neutralizes_formula_prefixes(prefix: str) -> None:
+    period = namespace_repository.ResolvedPeriod(
+        start_time=datetime(2026, 7, 5, tzinfo=UTC),
+        end_time=datetime(2026, 8, 4, tzinfo=UTC),
+    )
+
+    csv_body = namespace_repository.render_namespace_analytics_csv(
+        [
+            {
+                "namespaceId": 1,
+                "slug": f"{prefix}slug",
+                "displayName": f"{prefix}name",
+                "type": "TEAM",
+                "status": "ACTIVE",
+                "maintainerCount": 0,
+                "skillCount": 0,
+                "lifetimeDownloads": 0,
+                "periodDownloads": 0,
+            }
+        ],
+        period,
+        source=None,
+    )
+
+    row = next(csv.DictReader(io.StringIO(csv_body.removeprefix("\ufeff"))))
+    assert row["namespace_slug"] == f"'{prefix}slug"
+    assert row["display_name"] == f"'{prefix}name"
+    assert row["source"] == ""
+
+
+def test_render_namespace_analytics_csv_returns_header_for_empty_export() -> None:
+    period = namespace_repository.ResolvedPeriod(
+        start_time=datetime(2026, 7, 5, tzinfo=UTC),
+        end_time=datetime(2026, 8, 4, tzinfo=UTC),
+    )
+
+    csv_body = namespace_repository.render_namespace_analytics_csv([], period, source=None)
+
+    assert len(csv_body.removeprefix("\ufeff").splitlines()) == 1
 
 
 @pytest.mark.anyio
@@ -332,6 +447,74 @@ async def test_namespace_analytics_clamps_repository_pagination() -> None:
     assert connection.params[1]["offset"] == 0
 
 
+@pytest.mark.anyio
+async def test_export_namespace_analytics_csv_uses_all_filters_without_pagination() -> None:
+    connection = FakeNamespaceAnalyticsConnection()
+
+    csv_body, truncated = await namespace_repository.export_namespace_analytics_csv(
+        FakeNamespaceAnalyticsEngine(connection),
+        query=" platform ",
+        namespace_type="team",
+        namespace_status="all",
+        start_time="2026-07-05T00:00:00Z",
+        end_time="2026-08-04T00:00:00Z",
+        source="WEB",
+        sort="skills",
+        direction="ASC",
+    )
+
+    assert truncated is False
+    assert len(list(csv.DictReader(io.StringIO(csv_body.removeprefix("\ufeff"))))) == 2
+    assert len(connection.statements) == 1
+    assert "namespace-analytics-export" in connection.statements[0]
+    assert "skill_count ASC, slug ASC" in connection.statements[0]
+    assert connection.params[0] == {
+        "query": "%platform%",
+        "namespace_type": "TEAM",
+        "namespace_status": None,
+        "start_time": datetime(2026, 7, 5, tzinfo=UTC),
+        "end_time": datetime(2026, 8, 4, tzinfo=UTC),
+        "source": "web",
+        "limit": 10_001,
+    }
+
+
+@pytest.mark.anyio
+async def test_export_namespace_analytics_csv_caps_rows_and_reports_truncation() -> None:
+    export_rows = [
+        {
+            "namespace_id": index,
+            "slug": f"namespace-{index}",
+            "display_name": f"Namespace {index}",
+            "type": "TEAM",
+            "status": "ACTIVE",
+            "maintainer_count": 1,
+            "skill_count": 1,
+            "lifetime_downloads": index,
+            "period_downloads": index,
+        }
+        for index in range(10_001)
+    ]
+    connection = FakeNamespaceAnalyticsConnection(export_rows)
+
+    csv_body, truncated = await namespace_repository.export_namespace_analytics_csv(
+        FakeNamespaceAnalyticsEngine(connection),
+        query=None,
+        namespace_type="ALL",
+        namespace_status="ACTIVE",
+        start_time=None,
+        end_time=None,
+        source=None,
+        sort="periodDownloads",
+        direction="desc",
+        now=datetime(2026, 8, 4, tzinfo=UTC),
+    )
+
+    assert truncated is True
+    assert len(list(csv.DictReader(io.StringIO(csv_body.removeprefix("\ufeff"))))) == 10_000
+    assert connection.params[0]["limit"] == 10_001
+
+
 def auth_user(user_id: str, roles: list[str], *, provider: str = "mock") -> dict[str, object]:
     return {
         "userId": user_id,
@@ -448,6 +631,91 @@ def test_namespace_analytics_route_rejects_reversed_period() -> None:
     assert response.json()["detail"] == "error.namespaceAnalytics.invalidTimeRange"
 
 
+def test_namespace_analytics_csv_route_exports_filtered_rows_with_metadata() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics.csv",
+        headers={"X-Mock-User-Id": "platform-admin"},
+        params={
+            "query": "platform",
+            "namespaceType": "TEAM",
+            "namespaceStatus": "ALL",
+            "startTime": "2026-07-05T00:00:00Z",
+            "endTime": "2026-08-04T00:00:00Z",
+            "source": "web",
+            "sort": "skills",
+            "direction": "asc",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv; charset=utf-8")
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="skillhub-namespace-analytics.csv"'
+    )
+    assert response.headers["x-skillhub-export-truncated"] == "false"
+    assert response.headers["x-skillhub-export-row-limit"] == "10000"
+    assert response.content.startswith(b"\xef\xbb\xbfnamespace_id,namespace_slug")
+    rows = list(csv.DictReader(io.StringIO(response.text.removeprefix("\ufeff"))))
+    assert [row["namespace_slug"] for row in rows] == ["global", "platform-tools"]
+    assert {row["source"] for row in rows} == {"web"}
+
+
+def test_namespace_analytics_csv_route_requires_authentication() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get("/api/v1/admin/namespace-analytics.csv")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
+@pytest.mark.parametrize("roles", [["USER"], ["SKILL_ADMIN"], ["AUDITOR"]])
+def test_namespace_analytics_csv_route_requires_super_admin(roles: list[str]) -> None:
+    app = namespace_analytics_app(roles)
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics.csv",
+        headers={"X-Mock-User-Id": "not-super-admin"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "error.admin.superAdminRequired"
+
+
+def test_namespace_analytics_csv_route_rejects_bearer_api_token() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    app.state.auth_bearer_reader = lambda token: auth_user("token-admin", ["SUPER_ADMIN"], provider="api_token")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics.csv",
+        headers={"Authorization": "Bearer valid"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["msg"] == "error.apiToken.endpoint.unsupported"
+    assert response.json()["data"]["args"] == ["/api/v1/admin/namespace-analytics.csv"]
+
+
+def test_namespace_analytics_csv_route_rejects_reversed_period() -> None:
+    app = namespace_analytics_app(["SUPER_ADMIN"])
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/admin/namespace-analytics.csv",
+        headers={"X-Mock-User-Id": "platform-admin"},
+        params={"startTime": "2026-08-04T00:00:00Z", "endTime": "2026-08-03T00:00:00Z"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "error.namespaceAnalytics.invalidTimeRange"
+
+
 def test_namespace_analytics_openapi_exposes_typed_contract() -> None:
     schema = create_app().openapi()
 
@@ -463,5 +731,8 @@ def test_namespace_analytics_openapi_exposes_typed_contract() -> None:
 def test_focused_namespace_analytics_openapi_contains_only_analytics_route() -> None:
     schema = build_openapi_schema()
 
-    assert list(schema["paths"]) == ["/api/v1/admin/namespace-analytics"]
+    assert list(schema["paths"]) == [
+        "/api/v1/admin/namespace-analytics",
+        "/api/v1/admin/namespace-analytics.csv",
+    ]
     assert schema["info"]["title"] == "SkillHub Namespace Analytics API"

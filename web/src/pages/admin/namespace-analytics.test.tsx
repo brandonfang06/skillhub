@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
 const useSearchMock = vi.fn()
+const { translateMock } = vi.hoisted(() => ({
+  translateMock: vi.fn((key: string) => key),
+}))
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
   useSearch: () => useSearchMock(),
@@ -12,7 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: translateMock,
     i18n: { language: 'en' },
   }),
 }))
@@ -57,6 +60,22 @@ const refetchMock = vi.fn()
 const useNamespaceAnalyticsMock = vi.fn()
 vi.mock('@/features/admin/use-namespace-analytics', () => ({
   useNamespaceAnalytics: (params: unknown) => useNamespaceAnalyticsMock(params),
+}))
+
+const exportNamespaceAnalyticsCsvMock = vi.fn()
+vi.mock('@/features/admin/export-namespace-analytics', () => ({
+  exportNamespaceAnalyticsCsv: (params: unknown) => exportNamespaceAnalyticsCsvMock(params),
+}))
+
+const toastSuccessMock = vi.fn()
+const toastWarningMock = vi.fn()
+const toastErrorMock = vi.fn()
+vi.mock('@/shared/lib/toast', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccessMock(...args),
+    warning: (...args: unknown[]) => toastWarningMock(...args),
+    error: (...args: unknown[]) => toastErrorMock(...args),
+  },
 }))
 
 import { NamespaceAnalyticsPage } from './namespace-analytics'
@@ -111,6 +130,12 @@ describe('NamespaceAnalyticsPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     refetchMock.mockReset()
+    translateMock.mockClear()
+    exportNamespaceAnalyticsCsvMock.mockReset()
+    exportNamespaceAnalyticsCsvMock.mockResolvedValue({ truncated: false, rowLimit: 10_000 })
+    toastSuccessMock.mockReset()
+    toastWarningMock.mockReset()
+    toastErrorMock.mockReset()
     useSearchMock.mockReturnValue(defaultSearch)
     useNamespaceAnalyticsMock.mockReturnValue({
       data: analyticsData,
@@ -193,6 +218,89 @@ describe('NamespaceAnalyticsPage', () => {
         source: 'cli',
       },
     })
+  })
+
+  it('exports every row matching the current filters and sorting', async () => {
+    useSearchMock.mockReturnValue({
+      ...defaultSearch,
+      query: 'platform team',
+      namespaceType: 'TEAM',
+      namespaceStatus: 'ALL',
+      source: 'cli',
+      sort: 'skills',
+      direction: 'asc',
+      page: 3,
+      size: 50,
+    })
+    render(<NamespaceAnalyticsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.exportCsv' }))
+
+    await waitFor(() => expect(exportNamespaceAnalyticsCsvMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: 'platform team',
+        namespaceType: 'TEAM',
+        namespaceStatus: 'ALL',
+        source: 'cli',
+        sort: 'skills',
+        direction: 'asc',
+        page: 3,
+        size: 50,
+      }),
+    ))
+    expect(toastSuccessMock).toHaveBeenCalledWith('namespaceAnalytics.exportSuccess')
+    expect(toastWarningMock).not.toHaveBeenCalled()
+  })
+
+  it('exports the current query draft when users click export without pressing Enter', async () => {
+    render(<NamespaceAnalyticsPage />)
+    fireEvent.change(screen.getByPlaceholderText('namespaceAnalytics.searchPlaceholder'), {
+      target: { value: 'fresh report filter' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.exportCsv' }))
+
+    await waitFor(() => expect(exportNamespaceAnalyticsCsvMock).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'fresh report filter' }),
+    ))
+  })
+
+  it('disables duplicate exports and warns when the result is truncated', async () => {
+    let resolveExport: ((value: { truncated: boolean; rowLimit: number }) => void) | undefined
+    exportNamespaceAnalyticsCsvMock.mockReturnValue(new Promise((resolve) => {
+      resolveExport = resolve
+    }))
+    render(<NamespaceAnalyticsPage />)
+
+    const button = screen.getByRole('button', { name: 'namespaceAnalytics.exportCsv' })
+    fireEvent.click(button)
+
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true))
+    fireEvent.click(button)
+    expect(exportNamespaceAnalyticsCsvMock).toHaveBeenCalledOnce()
+
+    resolveExport?.({ truncated: true, rowLimit: 10_000 })
+    await waitFor(() => expect(toastWarningMock).toHaveBeenCalledWith(
+      'namespaceAnalytics.exportTruncatedTitle',
+      'namespaceAnalytics.exportTruncatedDescription',
+    ))
+    expect(translateMock).toHaveBeenCalledWith(
+      'namespaceAnalytics.exportTruncatedTitle',
+      { limit: 10_000 },
+    )
+  })
+
+  it('shows an export error without changing filters', async () => {
+    exportNamespaceAnalyticsCsvMock.mockRejectedValue(new Error('network unavailable'))
+    render(<NamespaceAnalyticsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.exportCsv' }))
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith(
+      'namespaceAnalytics.exportError',
+      'network unavailable',
+    ))
+    expect(navigateMock).not.toHaveBeenCalled()
   })
 
   it('shows the empty state and clears filters through router search', () => {

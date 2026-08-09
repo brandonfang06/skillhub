@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Download } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NamespaceAnalyticsItem, NamespaceAnalyticsParams } from '@/api/types'
@@ -10,9 +10,11 @@ import {
   parseNamespaceAnalyticsSearch,
   resolveAnalyticsPeriod,
 } from '@/features/admin/namespace-analytics-search'
+import { exportNamespaceAnalyticsCsv } from '@/features/admin/export-namespace-analytics'
 import { useNamespaceAnalytics } from '@/features/admin/use-namespace-analytics'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { formatLocalDateTime, toLocalDateTimeInputValue } from '@/shared/lib/date-time'
+import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -96,6 +98,7 @@ export function NamespaceAnalyticsPage() {
   const rawSearch = useSearch({ from: '/admin/namespace-analytics' }) as Record<string, unknown>
   const search = useMemo(() => parseNamespaceAnalyticsSearch(rawSearch), [rawSearch])
   const [queryDraft, setQueryDraft] = useState(search.query ?? '')
+  const [isExporting, setIsExporting] = useState(false)
   useEffect(() => setQueryDraft(search.query ?? ''), [search.query])
   const stableNow = useMemo(() => new Date(), [])
   const selectedPeriod = useMemo(() => resolveAnalyticsPeriod(search, stableNow), [search, stableNow])
@@ -162,6 +165,32 @@ export function NamespaceAnalyticsPage() {
         source: data.period.source ?? undefined,
       },
     })
+  }
+
+  const exportCsv = async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const result = await exportNamespaceAnalyticsCsv({
+        ...params,
+        query: queryDraft.trim() || undefined,
+      })
+      if (result.truncated) {
+        toast.warning(
+          t('namespaceAnalytics.exportTruncatedTitle', { limit: result.rowLimit }),
+          t('namespaceAnalytics.exportTruncatedDescription', { limit: result.rowLimit }),
+        )
+      } else {
+        toast.success(t('namespaceAnalytics.exportSuccess'))
+      }
+    } catch (error) {
+      toast.error(
+        t('namespaceAnalytics.exportError'),
+        error instanceof Error ? error.message : '',
+      )
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -281,9 +310,15 @@ export function NamespaceAnalyticsPage() {
               <p className="text-sm text-muted-foreground">
                 {t('namespaceAnalytics.retentionNote', { months: data.period.retentionMonths })}
               </p>
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                {t('namespaceAnalytics.clearFilters')}
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button variant="outline" size="sm" disabled={isExporting} onClick={exportCsv}>
+                  <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t(isExporting ? 'namespaceAnalytics.exportingCsv' : 'namespaceAnalytics.exportCsv')}
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  {t('namespaceAnalytics.clearFilters')}
+                </Button>
+              </div>
             </div>
           </Card>
 

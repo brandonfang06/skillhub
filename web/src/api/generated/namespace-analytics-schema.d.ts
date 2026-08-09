@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/namespace-analytics.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Namespace Analytics Csv Route */
+        get: operations["export_namespace_analytics_csv_route_api_v1_admin_namespace_analytics_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -164,6 +181,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NamespaceAnalyticsEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_namespace_analytics_csv_route_api_v1_admin_namespace_analytics_csv_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                namespaceType?: "ALL" | "TEAM" | "GLOBAL";
+                namespaceStatus?: "ALL" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+                startTime?: string | null;
+                endTime?: string | null;
+                source?: ("web" | "cli" | "api") | null;
+                sort?: "namespace" | "maintainers" | "skills" | "lifetimeDownloads" | "periodDownloads";
+                direction?: "asc" | "desc";
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

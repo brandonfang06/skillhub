@@ -2,7 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchJson } from '@/api/client'
 import type { NamespaceAnalyticsData, NamespaceAnalyticsParams } from '@/api/types'
 
-export function buildNamespaceAnalyticsUrl(params: NamespaceAnalyticsParams): string {
+export function buildNamespaceAnalyticsSearchParams(
+  params: NamespaceAnalyticsParams,
+  options: { includePagination: boolean },
+): URLSearchParams {
   const searchParams = new URLSearchParams()
   if (params.query) searchParams.set('query', params.query)
   if (params.namespaceType) searchParams.set('namespaceType', params.namespaceType)
@@ -12,8 +15,15 @@ export function buildNamespaceAnalyticsUrl(params: NamespaceAnalyticsParams): st
   if (params.source) searchParams.set('source', params.source)
   if (params.sort) searchParams.set('sort', params.sort)
   if (params.direction) searchParams.set('direction', params.direction)
-  searchParams.set('page', String(params.page ?? 0))
-  searchParams.set('size', String(params.size ?? 20))
+  if (options.includePagination) {
+    searchParams.set('page', String(params.page ?? 0))
+    searchParams.set('size', String(params.size ?? 20))
+  }
+  return searchParams
+}
+
+export function buildNamespaceAnalyticsUrl(params: NamespaceAnalyticsParams): string {
+  const searchParams = buildNamespaceAnalyticsSearchParams(params, { includePagination: true })
   return `/api/v1/admin/namespace-analytics?${searchParams.toString()}`
 }
 
