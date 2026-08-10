@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.auth.context import resolve_current_user_or_401
+from app.core.request_id import request_id_from_request
 from app.core.response import ok
 from app.user_profile import (
     UserProfileError,
@@ -15,7 +16,6 @@ from app.user_profile import (
     profile_machine_review_enabled,
     update_user_profile,
 )
-
 
 router = APIRouter()
 
@@ -52,7 +52,7 @@ def _client_ip(request: Request) -> str | None:
 
 def _request_meta(request: Request) -> dict[str, str | None]:
     return {
-        "request_id": request.headers.get("X-Request-Id"),
+        "request_id": request_id_from_request(request),
         "client_ip": _client_ip(request),
         "user_agent": request.headers.get("User-Agent"),
     }

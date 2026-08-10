@@ -19,10 +19,13 @@ from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
 from app.publish.replacement import (
+    ReplaceableVersion,
     StorageDeleteCompensationInput,
     bundle_storage_key,
     delete_local_storage_objects_or_record_compensation,
+    read_rejected_review_attempt,
 )
+from app.review.archive import ReviewAttemptArchiveInput, archive_review_attempt
 from app.review.notifications import (
     publish_review_notifications,
     read_review_submission_recipients,
@@ -447,20 +450,43 @@ async def _read_source_files(connection: Any, version_id: int) -> list[dict[str,
     return [dict(row) for row in rows]
 
 
-async def _read_version_count(connection: Any, skill_id: int) -> int:
-    row = (
+async def _read_versions_for_update(connection: Any, skill_id: int) -> list[dict[str, Any]]:
+    rows = (
         await connection.execute(
             text(
                 """
-                SELECT COUNT(*) AS version_count
+                SELECT id AS version_id,
+                       version,
+                       status
                 FROM skill_version
                 WHERE skill_id = :skill_id
+                ORDER BY id ASC
+                FOR UPDATE
                 """
             ),
             {"skill_id": skill_id},
         )
-    ).mappings().one_or_none()
-    return int(row["version_count"]) if row is not None else 0
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def _read_review_tasks_for_update(connection: Any, version_id: int) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                """
+                SELECT id AS review_task_id,
+                       status
+                FROM review_task
+                WHERE skill_version_id = :version_id
+                ORDER BY id ASC
+                FOR UPDATE
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
 
 
 async def _read_pending_review_task_count(connection: Any, version_id: int) -> int:
@@ -534,14 +560,56 @@ async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) ->
         _assert_can_manage(skill, request.user_id, namespace_role)
 
         skill_id = int(skill["skill_id"])
-        version = await _read_version(connection, skill_id, request.version)
+        versions = await _read_versions_for_update(connection, skill_id)
+        version = next((candidate for candidate in versions if str(candidate["version"]) == request.version), None)
+        if version is None:
+            raise SkillLifecycleError("error.skill.version.notFound", status_code=404)
         version_id = int(version["version_id"])
         version_name = str(version["version"])
         version_status = str(version["status"])
         if version_status not in DELETABLE_VERSION_STATUSES:
             raise SkillLifecycleError("error.skill.version.delete.unsupported")
-        if await _read_version_count(connection, skill_id) <= 1:
+        if len(versions) <= 1:
             raise SkillLifecycleError("error.skill.version.delete.lastVersion")
+
+        review_tasks = await _read_review_tasks_for_update(connection, version_id)
+        if any(str(task["status"]) == "PENDING" for task in review_tasks):
+            raise SkillLifecycleError("error.skill.version.delete.pendingReview", status_code=409)
+
+        if version_status == "REJECTED" and any(
+            str(task["status"]) == "REJECTED" for task in review_tasks
+        ):
+            archived_review = await read_rejected_review_attempt(
+                connection,
+                ReplaceableVersion(
+                    skill_id=skill_id,
+                    namespace=str(skill["namespace_slug"]),
+                    slug=str(skill["skill_slug"]),
+                    version_id=version_id,
+                    version=version_name,
+                    status=version_status,
+                    publisher_id=str(skill["owner_id"]),
+                    latest_version_id=(
+                        int(skill["latest_version_id"]) if skill.get("latest_version_id") is not None else None
+                    ),
+                    now=timestamp,
+                ),
+            )
+            await archive_review_attempt(
+                connection,
+                ReviewAttemptArchiveInput(
+                    attempt=archived_review,
+                    replacement_version_id=None,
+                    replacement_review_task_id=None,
+                    actor_user_id=request.user_id,
+                    request_id=request.request_id,
+                    client_ip=request.client_ip,
+                    user_agent=request.user_agent,
+                    archived_at=timestamp,
+                    archive_reason="REJECTED_VERSION_DELETE",
+                    audit_action="REJECTED_VERSION_DELETE",
+                ),
+            )
 
         storage_keys = await _read_storage_keys(connection, version_id, skill_id)
 
@@ -565,6 +633,15 @@ async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) ->
                 },
             )
 
+        await connection.execute(
+            text(
+                """
+                DELETE FROM review_task
+                WHERE skill_version_id = :version_id
+                """
+            ),
+            {"version_id": version_id},
+        )
         await connection.execute(
             text(
                 """
@@ -789,21 +866,27 @@ async def submit_skill_version_for_review(
         if await _read_pending_review_task_count(connection, version_id) > 0:
             raise SkillLifecycleError("review.submit.duplicate")
 
-        await connection.execute(
-            text(
-                """
-                UPDATE skill_version
-                SET status = :status,
-                    requested_visibility = :requested_visibility
-                WHERE id = :version_id
-                """
-            ),
-            {
-                "status": "PENDING_REVIEW",
-                "requested_visibility": request.target_visibility,
-                "version_id": version_id,
-            },
-        )
+        updated = (
+            await connection.execute(
+                text(
+                    """
+                    UPDATE skill_version
+                    SET status = :status,
+                        requested_visibility = :requested_visibility
+                    WHERE id = :version_id
+                      AND status IN ('DRAFT', 'UPLOADED')
+                    RETURNING 1
+                    """
+                ),
+                {
+                    "status": "PENDING_REVIEW",
+                    "requested_visibility": request.target_visibility,
+                    "version_id": version_id,
+                },
+            )
+        ).scalar_one_or_none()
+        if updated is None:
+            raise SkillLifecycleError("review.concurrent_update", status_code=409)
         review_task_row = (
             await connection.execute(
                 text(

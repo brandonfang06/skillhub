@@ -150,6 +150,131 @@ def test_web_dockerfile_normalizes_runtime_entrypoint_line_endings() -> None:
     )
 
 
+def run_web_base_path_router(
+    tmp_path: Path,
+    base_path: str,
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    shell = shutil.which("sh")
+    assert shell is not None
+    routing_config = tmp_path / "skillhub-base-path.conf"
+    environment = {
+        **os.environ,
+        "SKILLHUB_WEB_BASE_PATH": base_path,
+        "SKILLHUB_NGINX_BASE_PATH_CONFIG": routing_config.as_posix(),
+    }
+    result = subprocess.run(
+        [shell, (ROOT / "web/docker-entrypoint.d/20-base-path-routing.sh").as_posix()],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result, routing_config
+
+
+@pytest.mark.parametrize("base_path", ["", "/"])
+def test_web_base_path_router_keeps_root_deployment_unrewritten(
+    tmp_path: Path,
+    base_path: str,
+) -> None:
+    result, routing_config = run_web_base_path_router(tmp_path, base_path)
+
+    assert result.returncode == 0, result.stderr
+    generated = routing_config.read_text(encoding="utf-8")
+    assert "location" not in generated
+    assert "rewrite" not in generated
+
+
+@pytest.mark.parametrize("base_path", ["/skillhub", "/skillhub/"])
+def test_web_base_path_router_generates_exact_redirect_and_prefix_rewrite(
+    tmp_path: Path,
+    base_path: str,
+) -> None:
+    result, routing_config = run_web_base_path_router(tmp_path, base_path)
+
+    assert result.returncode == 0, result.stderr
+    generated = routing_config.read_text(encoding="utf-8")
+    assert "location = /skillhub" in generated
+    assert "absolute_redirect off;" in generated
+    assert "return 301 /skillhub/;" in generated
+    assert "location ^~ /skillhub/" in generated
+    assert "rewrite ^/skillhub/(.*)$ /$1 last;" in generated
+
+
+def test_web_image_installs_the_base_path_router_before_runtime_config() -> None:
+    dockerfile = read("web/Dockerfile")
+    nginx_config = read("web/nginx.conf.template")
+
+    routing_copy = (
+        "COPY docker-entrypoint.d/20-base-path-routing.sh "
+        "/docker-entrypoint.d/20-base-path-routing.sh"
+    )
+    runtime_copy = (
+        "COPY docker-entrypoint.d/30-runtime-config.sh "
+        "/docker-entrypoint.d/30-runtime-config.sh"
+    )
+    assert routing_copy in dockerfile
+    assert dockerfile.index(routing_copy) < dockerfile.index(runtime_copy)
+    assert "include /etc/nginx/skillhub-base-path*.conf;" in nginx_config
+
+
+def test_pr_workflow_runs_the_real_web_base_path_image_smoke_test() -> None:
+    workflow = read(".github/workflows/pr-scripts.yml")
+
+    assert "- 'web/**'" in workflow
+    assert "bash scripts/tests/web-base-path-nginx-smoke-test.sh" in workflow
+
+
+def test_operator_docs_preserve_existing_rewrite_and_root_deployment() -> None:
+    readme = read("deploy/k8s/README.md")
+    env_manual = read("deploy/k8s/environment-variables.zh.md")
+
+    assert "The existing VirtualService rewrite remains supported" in readme
+    assert "Root deployments remain unchanged" in readme
+    assert "既有 VirtualService rewrite 仍受支援" in env_manual
+    assert "root deployment 維持原行為" in env_manual
+
+
+@pytest.mark.parametrize("base_path", ["/api", "/assets/nested"])
+def test_web_runtime_entrypoint_rejects_reserved_first_segments(
+    base_path: str,
+) -> None:
+    shell = shutil.which("sh")
+    assert shell is not None
+    result = subprocess.run(
+        [shell, (ROOT / "web/docker-entrypoint.d/30-runtime-config.sh").as_posix()],
+        cwd=ROOT,
+        env={**os.environ, "SKILLHUB_WEB_BASE_PATH": base_path},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment" in result.stderr
+
+
+def test_web_runtime_entrypoint_rejects_misaligned_same_origin_api_base() -> None:
+    shell = shutil.which("sh")
+    assert shell is not None
+    result = subprocess.run(
+        [shell, (ROOT / "web/docker-entrypoint.d/30-runtime-config.sh").as_posix()],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "SKILLHUB_WEB_BASE_PATH": "/skillhub",
+            "SKILLHUB_WEB_API_BASE_URL": "/other",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "SKILLHUB_WEB_API_BASE_URL must match SKILLHUB_WEB_BASE_PATH" in result.stderr
+
+
 def test_web_image_generates_a_valid_runtime_base_path_document() -> None:
     vite_config = read("web/vite.config.ts")
     index_html = read("web/index.html")
@@ -159,6 +284,9 @@ def test_web_image_generates_a_valid_runtime_base_path_document() -> None:
 
     assert "base: './'" in vite_config
     assert '<base href="/" />' in index_html
+    assert '<html lang="zh-CN" translate="no" class="notranslate">' in index_html
+    assert '<div id="root" translate="no" class="notranslate"></div>' in index_html
+    assert '<div id="skillhub-portals" translate="no" class="notranslate"></div>' in index_html
     assert 'href="./favicon.svg"' in index_html
     assert (
         "sed 's|<base href=\"/\" />|<base href=\"${SKILLHUB_WEB_BASE_HREF}\" />|'"

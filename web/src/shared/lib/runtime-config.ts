@@ -19,6 +19,17 @@ declare global {
   }
 }
 
+const RESERVED_BASE_PATH_SEGMENTS = new Set([
+  'api',
+  'oauth2',
+  'login',
+  'assets',
+  'registry',
+  'nginx-health',
+  '.well-known',
+  'runtime-config.js',
+])
+
 export function getRuntimeConfig(): RuntimeConfig {
   if (typeof window === 'undefined') {
     return {}
@@ -45,7 +56,10 @@ export function normalizeBasePath(value: string | undefined): string {
 
   const withoutTrailingSlash = normalized.replace(/\/+$/, '')
   const segments = withoutTrailingSlash.slice(1).split('/')
-  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
+  if (
+    segments.some((segment) => segment === '' || segment === '.' || segment === '..')
+    || RESERVED_BASE_PATH_SEGMENTS.has(segments[0])
+  ) {
     throw new Error('Invalid SkillHub web base path')
   }
   return withoutTrailingSlash

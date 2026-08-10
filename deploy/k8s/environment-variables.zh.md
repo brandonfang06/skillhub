@@ -229,6 +229,12 @@ spec:
 不要把它混入 canonical 規則。只有在 Istio gateway 會覆寫 forwarded-proto 且
 web Pod 不可被直接存取時，才將 `trust-forwarded-proto` 設為 `"true"`。
 
+既有 VirtualService rewrite 仍受支援，也是組織首次升級時的建議做法。新版
+web image 也能直接接收 `/skillhub/...` 並在容器內移除設定的 prefix；未來只有
+在相同 image 與 browser 驗證通過後，才可考慮省略 VirtualService 的 `rewrite`。
+`web-base-path` 留空時 root deployment 維持原行為，本次 image 升級不要求移除
+既有 rewrite。
+
 上線前必須確認 Secret 位於正確 credential namespace、憑證 SAN 包含
 `ai-coding-platform.tsmc.com`、Gateway 沒有 invalid credential 錯誤，並驗證
 TLS SNI 與 HTTP Host 都能命中 canonical VirtualService。

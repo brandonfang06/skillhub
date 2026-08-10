@@ -6,10 +6,15 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from app.core.request_id import (
+    MESSAGE_REQUEST_ID_FIELD,
+    current_request_id,
+    is_valid_request_id,
+)
 from app.publish.side_effects import ScanTaskPayload
 
-
 DEFAULT_SCAN_STREAM_KEY = "skillhub:scan:requests"
+OWNED_TRANSPORT_FIELDS = {MESSAGE_REQUEST_ID_FIELD, "traceparent", "tracestate", "baggage"}
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -33,7 +38,14 @@ def build_scan_stream_fields(task: ScanTaskPayload) -> dict[str, str]:
         fields["skillPath"] = task.skill_path
     if task.bundle_key:
         fields["bundleKey"] = task.bundle_key
-    fields.update(task.metadata or {})
+    fields.update(
+        (key, value)
+        for key, value in (task.metadata or {}).items()
+        if key not in OWNED_TRANSPORT_FIELDS
+    )
+    request_id = current_request_id()
+    if is_valid_request_id(request_id):
+        fields[MESSAGE_REQUEST_ID_FIELD] = request_id
     return fields
 
 
@@ -125,7 +137,7 @@ class RedisScanTaskPublisher:
         if response is None:
             raise ValueError("Redis XADD returned null")
         logger.info(
-            "Enqueued scan task: stream=%s message_id=%s task_id=%s version_id=%s scanner_type=%s has_bundle=%s has_skill_path=%s",
+            "Enqueued scan task: stream=%s message_id=%s task_id=%s version_id=%s scanner_type=%s has_bundle=%s has_skill_path=%s request_id=%s",
             self.stream_key,
             response,
             task.task_id,
@@ -133,4 +145,5 @@ class RedisScanTaskPublisher:
             task.metadata.get("scannerType", "skill-scanner"),
             task.bundle_key is not None,
             task.skill_path is not None,
+            current_request_id(),
         )

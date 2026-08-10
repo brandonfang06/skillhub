@@ -101,7 +101,7 @@ def _assert_locked_replacement(row: dict[str, Any], version: ReplaceableVersion)
         raise VersionReplacementConflict("Skill already has a pending review")
 
 
-async def _read_rejected_review_attempt(
+async def read_rejected_review_attempt(
     connection: Any,
     version: ReplaceableVersion,
 ) -> ArchivedReviewAttempt:
@@ -310,7 +310,7 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
     _assert_replaceable_status(current_status, version.version)
 
     archived_review = (
-        await _read_rejected_review_attempt(connection, version)
+        await read_rejected_review_attempt(connection, version)
         if current_status == "REJECTED"
         else None
     )

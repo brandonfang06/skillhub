@@ -290,6 +290,7 @@ async def test_update_user_profile_validates_java_display_name_contract() -> Non
 
 def test_user_profile_routes_use_java_envelopes_and_auth_boundary() -> None:
     app = create_app()
+    captured_meta: list[dict[str, str | None]] = []
     app.state.auth_me_reader = lambda user_id: {
         "userId": user_id,
         "displayName": "User",
@@ -308,7 +309,7 @@ def test_user_profile_routes_use_java_envelopes_and_auth_boundary() -> None:
             "email": {"editable": False, "requiresReview": False},
         },
     }
-    app.state.user_profile_writer = lambda user_id, payload, meta: {
+    app.state.user_profile_writer = lambda user_id, payload, meta: captured_meta.append(meta) or {
         "status": "PENDING_REVIEW",
         "message": "response.profile.pendingReview",
     }
@@ -337,3 +338,12 @@ def test_user_profile_routes_use_java_envelopes_and_auth_boundary() -> None:
         "status": "PENDING_REVIEW",
         "message": "response.profile.pendingReview",
     }
+
+    unsafe_patch_response = client.patch(
+        "/api/v1/user/profile",
+        headers={"X-Mock-User-Id": "user-1", "X-Request-Id": "x" * 65},
+        json={"displayName": "New Name"},
+    )
+    assert unsafe_patch_response.status_code == 200
+    assert captured_meta[-1]["request_id"] == unsafe_patch_response.json()["requestId"]
+    assert captured_meta[-1]["request_id"] != "x" * 65

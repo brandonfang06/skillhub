@@ -46,8 +46,20 @@ case "${SKILLHUB_WEB_BASE_PATH}" in
     ;;
 esac
 
+if [ -n "${SKILLHUB_WEB_BASE_PATH}" ]; then
+  first_segment=${SKILLHUB_WEB_BASE_PATH#/}
+  first_segment=${first_segment%%/*}
+  case "$first_segment" in
+    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+      echo "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment: $first_segment" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 validate_runtime_template_value() {
   variable_name="$1"
+  variable_value=""
   eval "variable_value=\${$variable_name:-}"
   invalid=false
   case "$variable_value" in
@@ -81,6 +93,22 @@ do
   validate_runtime_template_value "$variable_name"
 done
 
+if [ -n "${SKILLHUB_WEB_API_BASE_URL}" ]; then
+  case "${SKILLHUB_WEB_API_BASE_URL}" in
+    http://*|https://*) ;;
+    /*)
+      if [ "${SKILLHUB_WEB_API_BASE_URL}" != "${SKILLHUB_WEB_BASE_PATH}" ]; then
+        echo "SKILLHUB_WEB_API_BASE_URL must match SKILLHUB_WEB_BASE_PATH for same-origin routing" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "SKILLHUB_WEB_API_BASE_URL must be an absolute HTTP/HTTPS URL or a root-relative path" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 # Export runtime template variables so envsubst sees shell-assigned defaults.
 export \
   SKILLHUB_WEB_BASE_HREF \
@@ -98,16 +126,20 @@ export \
   SKILLHUB_WEB_PLAYGROUND_BASE_URL
 
 # Generate index.html with the browser-visible application base.
+# envsubst requires literal variable names.
+# shellcheck disable=SC2016
 envsubst '${SKILLHUB_WEB_BASE_HREF}' \
   < /usr/share/nginx/html/index.html.template \
   > /usr/share/nginx/html/index.html
 
 # Generate runtime-config.js
+# shellcheck disable=SC2016
 envsubst '${SKILLHUB_WEB_API_BASE_URL} ${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WEB_BASE_PATH} ${SKILLHUB_WEB_CLI_REGISTRY_URL} ${SKILLHUB_WEB_AUTH_DIRECT_ENABLED} ${SKILLHUB_WEB_AUTH_DIRECT_PROVIDER} ${SKILLHUB_LOCAL_REGISTRATION_ENABLED} ${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED} ${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER} ${SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO} ${SKILLHUB_WEB_PLAYGROUND_ENABLED} ${SKILLHUB_WEB_PLAYGROUND_BASE_URL}' \
   < /usr/share/nginx/html/runtime-config.js.template \
   > /usr/share/nginx/html/runtime-config.js
 
 # Generate registry/skill.md with actual public URL
+# shellcheck disable=SC2016
 envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
   < /usr/share/nginx/html/registry/skill.md.template \
   > /usr/share/nginx/html/registry/skill.md

@@ -238,6 +238,13 @@ transition instead of adding it to the canonical rule. Set
 `trust-forwarded-proto: "true"` only when the Istio gateway replaces the
 forwarded-proto header and direct web-pod access is blocked.
 
+The existing VirtualService rewrite remains supported and is the safest
+initial organization rollout. The web image can also receive `/skillhub/...`
+unchanged and strip the configured prefix internally, so a later
+VirtualService may omit `rewrite` after that topology passes the same image and
+browser checks. Root deployments remain unchanged when `web-base-path` is
+blank; do not remove the current rewrite as part of the image upgrade.
+
 Before rollout, verify the Secret exists in the gateway credential namespace,
 the Gateway reports no invalid credential analysis, the certificate SAN
 contains `ai-coding-platform.tsmc.com`, and both TLS SNI and HTTP Host routing

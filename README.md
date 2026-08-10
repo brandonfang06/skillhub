@@ -377,6 +377,19 @@ Run it against a local backend:
 ./scripts/smoke-test.sh http://localhost:8080
 ```
 
+Admin label checks use dedicated smoke credentials and are skipped by default
+when they are not supplied. Bootstrap credentials are never reused:
+
+```bash
+SMOKE_ADMIN_USERNAME=smoke-admin \
+SMOKE_ADMIN_PASSWORD='replace-me' \
+./scripts/smoke-test.sh http://localhost:8080
+```
+
+Set `SMOKE_ADMIN_CHECKS=true` to require both credentials and fail fast when
+either is missing, or set it to `false` to skip admin checks explicitly. The
+default `auto` mode runs admin checks only when both credentials are present.
+
 ## Architecture
 
 ```

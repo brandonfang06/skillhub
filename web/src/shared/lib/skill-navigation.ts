@@ -10,6 +10,16 @@ export function getSkillSquareSearch() {
   }
 }
 
+export function getSkillLabelSearch(label: string) {
+  return {
+    q: '',
+    label,
+    sort: 'newest' as const,
+    page: 0,
+    starredOnly: false,
+  }
+}
+
 export function normalizeSkillDetailReturnTo(returnTo?: string) {
   return returnTo && returnTo.startsWith('/') ? returnTo : undefined
 }

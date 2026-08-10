@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from app.admin.search_refresh import refresh_skill_search_documents
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import is_namespace_manager, platform_roles
+from app.core.request_id import request_id_from_request
 from app.core.response import ok
 
 router = APIRouter()
@@ -135,7 +136,7 @@ def _client_ip(request: Request) -> str | None:
 
 def _request_meta(request: Request) -> dict[str, str | None]:
     return {
-        "request_id": request.headers.get("X-Request-Id"),
+        "request_id": request_id_from_request(request),
         "client_ip": _client_ip(request),
         "user_agent": request.headers.get("User-Agent"),
     }

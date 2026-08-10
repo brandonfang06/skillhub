@@ -174,6 +174,17 @@ make generate-api           # 重新生成 OpenAPI 类型
 ./scripts/smoke-test.sh http://localhost:8080  # 运行冒烟测试
 ```
 
+管理员标签检查只使用独立的 `SMOKE_ADMIN_USERNAME` 与
+`SMOKE_ADMIN_PASSWORD`，不会重用 bootstrap 凭据。默认 `auto` 模式在未同时
+提供两者时会跳过管理员检查；设为 `SMOKE_ADMIN_CHECKS=true` 会要求两者都存在，
+设为 `false` 则明确跳过。
+
+```bash
+SMOKE_ADMIN_USERNAME=smoke-admin \
+SMOKE_ADMIN_PASSWORD='replace-me' \
+./scripts/smoke-test.sh http://localhost:8080
+```
+
 说明：`make test-backend-app` / `make build-backend-app` 现在是 Python backend 的兼容别名，等同于 `make test-backend` / `make build-backend`。
 
 ### 项目结构

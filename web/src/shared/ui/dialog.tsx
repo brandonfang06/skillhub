@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { getPortalContainer } from '@/shared/lib/portal-container'
 import { cn } from '@/shared/lib/utils'
 
 interface DialogContextValue {
@@ -83,7 +84,7 @@ const DialogPortal = ({ children }: { children: React.ReactNode }) => {
   if (typeof document === 'undefined') {
     return null
   }
-  return createPortal(children, document.body)
+  return createPortal(children, getPortalContainer() ?? document.body)
 }
 
 const DialogOverlay = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(

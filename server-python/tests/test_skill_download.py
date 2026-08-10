@@ -155,6 +155,27 @@ def test_clawhub_download_query_redirects_through_legacy_coordinate_resolution()
     assert response.headers["location"] == "/api/v1/skills/team-ai/demo/download"
 
 
+def test_clawhub_download_redirect_percent_encodes_cjk_and_header_controls() -> None:
+    app = create_app()
+    app.state.clawhub_download_coordinate_reader = lambda *_args: (
+        "團隊",
+        "需求\r\nX-Injected: yes",
+    )
+
+    response = TestClient(app, follow_redirects=False).get(
+        "/api/v1/download",
+        params={"slug": "需求", "version": "版本一"},
+    )
+
+    assert response.status_code == 302
+    assert response.headers["location"] == (
+        "/api/v1/skills/%E5%9C%98%E9%9A%8A/"
+        "%E9%9C%80%E6%B1%82%0D%0AX-Injected%3A%20yes/versions/"
+        "%E7%89%88%E6%9C%AC%E4%B8%80/download"
+    )
+    assert response.headers["location"].isascii()
+
+
 def test_clawhub_download_query_forwards_current_user_to_coordinate_reader() -> None:
     seen: list[tuple[str, str | None]] = []
     app = create_app()

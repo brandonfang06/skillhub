@@ -230,9 +230,49 @@ validate_web_base_path() {
           error "SKILLHUB_WEB_BASE_PATH is invalid"
           ;;
       esac
+      first_segment=${normalized_web_base_path#/}
+      first_segment=${first_segment%%/*}
+      case "$first_segment" in
+        api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+          error "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment: $first_segment"
+          ;;
+      esac
       ;;
     *)
       error "SKILLHUB_WEB_BASE_PATH must be blank, /, or a root-relative path"
+      ;;
+  esac
+}
+
+validate_web_api_base_url() {
+  value=${SKILLHUB_WEB_API_BASE_URL:-}
+  if [ -z "$value" ]; then
+    return 0
+  fi
+
+  case "$value" in
+    http://*|https://*)
+      validate_absolute_http_url SKILLHUB_WEB_API_BASE_URL "SKILLHUB_WEB_API_BASE_URL"
+      validate_no_trailing_slash SKILLHUB_WEB_API_BASE_URL
+      ;;
+    /*)
+      if ! printf '%s' "$value" | grep -Eq '^/[A-Za-z0-9._~/-]+$'; then
+        error "SKILLHUB_WEB_API_BASE_URL must be an absolute HTTP/HTTPS URL or a normalized root-relative path"
+        return 0
+      fi
+      case "/${value#/}/" in
+        *"//"*|*"/./"*|*"/../"*)
+          error "SKILLHUB_WEB_API_BASE_URL must be an absolute HTTP/HTTPS URL or a normalized root-relative path"
+          return 0
+          ;;
+      esac
+      validate_no_trailing_slash SKILLHUB_WEB_API_BASE_URL
+      if [ "$value" != "$normalized_web_base_path" ]; then
+        error "SKILLHUB_WEB_API_BASE_URL must match SKILLHUB_WEB_BASE_PATH for same-origin routing"
+      fi
+      ;;
+    *)
+      error "SKILLHUB_WEB_API_BASE_URL must be an absolute HTTP/HTTPS URL or a normalized root-relative path"
       ;;
   esac
 }
@@ -332,10 +372,7 @@ case "$storage_provider" in
     ;;
 esac
 
-if [ -n "${SKILLHUB_WEB_API_BASE_URL:-}" ]; then
-  validate_url SKILLHUB_WEB_API_BASE_URL
-  validate_no_trailing_slash SKILLHUB_WEB_API_BASE_URL
-fi
+validate_web_api_base_url
 
 if [ -n "${SKILLHUB_DEVICE_AUTH_VERIFICATION_URI:-}" ]; then
   validate_absolute_http_url SKILLHUB_DEVICE_AUTH_VERIFICATION_URI "device auth verification URI"

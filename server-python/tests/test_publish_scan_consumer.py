@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
-
 import pytest
 
+from app.core.request_id import current_request_id
 from app.publish.scan_consumer import (
     MAX_SCAN_RETRY_COUNT,
     RedisStreamClient,
@@ -13,7 +11,7 @@ from app.publish.scan_consumer import (
     build_retry_stream_fields,
     parse_stream_messages,
 )
-from app.publish.scan_worker import SecurityScanTask, ScannerClient
+from app.publish.scan_worker import SecurityScanTask
 from app.publish.scanner_result import SecurityScanResultInput
 from tests.test_publish_scan_worker import FakeConnection
 
@@ -73,6 +71,15 @@ class FailingScanner:
         raise RuntimeError("scanner unavailable")
 
 
+class CorrelationScanner:
+    def __init__(self) -> None:
+        self.seen_request_ids: list[str | None] = []
+
+    async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
+        self.seen_request_ids.append(current_request_id())
+        return SecurityScanResultInput("scan-1", "SAFE", 0, "LOW", [], 1.0)
+
+
 def test_parse_stream_messages_reads_xreadgroup_shape() -> None:
     payload = [["skillhub:scan:requests", [["1780-0", ["taskId", "task-1", "versionId", "202"]]]]]
 
@@ -98,12 +105,41 @@ async def test_redis_stream_client_uses_shared_client() -> None:
         async def xgroup_create(self, *args: object, **kwargs: object) -> None:
             self.calls.append(("xgroup_create", args, kwargs))
 
-        async def xreadgroup(self, *args: object, **kwargs: object) -> object:
-            self.calls.append(("xreadgroup", args, kwargs))
+        async def xreadgroup(
+            self,
+            group_name: str,
+            consumer_name: str,
+            streams: dict[str, str],
+            *,
+            count: int,
+            block_ms: int,
+        ) -> object:
+            self.calls.append(
+                (
+                    "xreadgroup",
+                    (group_name, consumer_name, streams),
+                    {"count": count, "block_ms": block_ms},
+                )
+            )
             return [("skillhub:scan:requests", [("1780-0", {"taskId": "task-1", "versionId": "202"})])]
 
-        async def xautoclaim(self, *args: object, **kwargs: object) -> object:
-            self.calls.append(("xautoclaim", args, kwargs))
+        async def xautoclaim(
+            self,
+            stream_key: str,
+            group_name: str,
+            consumer_name: str,
+            *,
+            min_idle_ms: int,
+            start_id: str,
+            count: int,
+        ) -> object:
+            self.calls.append(
+                (
+                    "xautoclaim",
+                    (stream_key, group_name, consumer_name),
+                    {"min_idle_ms": min_idle_ms, "start_id": start_id, "count": count},
+                )
+            )
             return ("0-0", [("1780-0", {"taskId": "task-1", "versionId": "202"})])
 
         async def xack(self, *args: object, **kwargs: object) -> None:
@@ -139,6 +175,8 @@ async def test_redis_stream_client_uses_shared_client() -> None:
     assert reclaimed == ("0-0", [RedisStreamMessage("1780-0", {"taskId": "task-1", "versionId": "202"})])
     assert added == "1781-0"
     assert [call[0] for call in shared.calls] == ["xgroup_create", "xreadgroup", "xautoclaim", "xack", "xadd"]
+    assert shared.calls[1][2] == {"count": 10, "block_ms": 2000}
+    assert shared.calls[2][2] == {"min_idle_ms": 120000, "start_id": "0-0", "count": 20}
 
 
 def test_build_retry_stream_fields_preserves_java_task_shape() -> None:
@@ -200,6 +238,40 @@ async def test_consume_once_creates_group_processes_message_and_acks(tmp_path) -
 
 
 @pytest.mark.anyio
+async def test_consume_once_scopes_and_clears_propagated_request_id(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    bundle = storage / "packages" / "101" / "202" / "bundle.zip"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"zip-bytes")
+    scanner = CorrelationScanner()
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-1",
+                    "versionId": "202",
+                    "bundleKey": "packages/101/202/bundle.zip",
+                    "scannerType": "skill-scanner",
+                    "skillhub.request_id": "request-from-http",
+                },
+            )
+        ]
+    )
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        storage_base_path=str(storage),
+        scan_temp_dir=str(tmp_path / "scans"),
+    )
+
+    await runtime.consume_once(FakeConnection(), scanner)
+
+    assert scanner.seen_request_ids == ["request-from-http"]
+    assert current_request_id() is None
+
+
+@pytest.mark.anyio
 async def test_consume_once_retries_failure_without_marking_failed_before_max_retry(tmp_path) -> None:
     storage = tmp_path / "storage"
     bundle = storage / "packages" / "101" / "202" / "bundle.zip"
@@ -215,6 +287,7 @@ async def test_consume_once_retries_failure_without_marking_failed_before_max_re
                     "bundleKey": "packages/101/202/bundle.zip",
                     "scannerType": "skill-scanner",
                     "retryCount": "2",
+                    "skillhub.request_id": "request-for-retry",
                 },
             )
         ]
@@ -247,9 +320,11 @@ async def test_consume_once_retries_failure_without_marking_failed_before_max_re
                 "createdAtMillis": "1780969000000",
                 "retryCount": "3",
                 "scannerType": "skill-scanner",
+                "skillhub.request_id": "request-for-retry",
             },
         )
     ]
+    assert current_request_id() is None
     assert not any("UPDATE skill_version" in statement and "SCAN_FAILED" in statement for statement in connection.statements)
 
 

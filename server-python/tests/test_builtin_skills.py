@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -113,14 +114,14 @@ class FakeBuiltinSkillConnection:
         raise AssertionError(f"unexpected SQL: {sql}")
 
 
-def skill_zip(*, name: str = "SkillHub Hello", version: str = "1.0.0") -> bytes:
+def skill_zip(*, name: str = "SkillHub Hello", version: str = "1.0.0", readme: str = "# Hello\n") -> bytes:
     buffer = BytesIO()
     with ZipFile(buffer, "w") as archive:
         archive.writestr(
             "SKILL.md",
             f"---\nname: {name}\ndescription: Built in hello\nversion: {version}\n---\n# Hello\n",
         )
-        archive.writestr("README.md", "# Hello\n")
+        archive.writestr("README.md", readme)
     return buffer.getvalue()
 
 
@@ -134,10 +135,30 @@ def test_builtin_skill_manifest_loader_validates_limits_and_duplicates(tmp_path:
         json.dumps(
             {
                 "skills": [
-                    {"slug": "skillhub-hello", "version": "1.0.0", "url": "https://bjcdn.openstorage.cn/hello.zip"},
-                    {"slug": "skillhub-hello", "version": "1.0.0", "url": "https://bjcdn.openstorage.cn/dup.zip"},
-                    {"slug": "Bad Slug", "version": "1.0.0", "url": "https://bjcdn.openstorage.cn/bad.zip"},
+                    {
+                        "slug": "skillhub-hello",
+                        "version": "1.0.0",
+                        "url": "https://bjcdn.openstorage.cn/hello.zip",
+                        "sha256": "a" * 64,
+                    },
+                    {
+                        "slug": "skillhub-hello",
+                        "version": "1.0.0",
+                        "url": "https://bjcdn.openstorage.cn/dup.zip",
+                        "sha256": "b" * 64,
+                    },
+                    {
+                        "slug": "Bad Slug",
+                        "version": "1.0.0",
+                        "url": "https://bjcdn.openstorage.cn/bad.zip",
+                        "sha256": "c" * 64,
+                    },
                     {"slug": "missing-version", "url": "https://bjcdn.openstorage.cn/bad.zip"},
+                    {
+                        "slug": "missing-hash",
+                        "version": "1.0.0",
+                        "url": "https://bjcdn.openstorage.cn/no-hash.zip",
+                    },
                 ]
             }
         ),
@@ -182,6 +203,7 @@ def test_builtin_skill_downloader_restricts_remote_urls() -> None:
 
 @pytest.mark.anyio
 async def test_builtin_skill_sync_ensures_system_publisher_and_publishes_manifest_item(tmp_path: Path) -> None:
+    package = skill_zip()
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(
@@ -191,6 +213,7 @@ async def test_builtin_skill_sync_ensures_system_publisher_and_publishes_manifes
                         "slug": "skillhub-hello",
                         "version": "1.0.0",
                         "url": "https://bjcdn.openstorage.cn/hello.zip",
+                        "sha256": sha256(package).hexdigest(),
                     }
                 ]
             }
@@ -207,7 +230,7 @@ async def test_builtin_skill_sync_ensures_system_publisher_and_publishes_manifes
             "SKILLHUB_BUILTIN_SKILLS_ENABLED": "true",
             "SKILLHUB_BUILTIN_SKILLS_MANIFEST_PATH": str(manifest),
         },
-        downloader=lambda url: skill_zip(),
+        downloader=lambda url: package,
         publisher=lambda item, entries: published.append((item.slug, [entry.path for entry in entries])),
     )
 
@@ -228,6 +251,7 @@ async def test_builtin_skill_sync_skips_other_owner_conflict_before_download(tmp
                         "slug": "skillhub-hello",
                         "version": "1.0.0",
                         "url": "https://bjcdn.openstorage.cn/hello.zip",
+                        "sha256": "a" * 64,
                     }
                 ]
             }
@@ -256,3 +280,40 @@ async def test_builtin_skill_sync_skips_other_owner_conflict_before_download(tmp
 
     assert summary.conflict_skipped == 1
     assert not downloaded
+
+
+@pytest.mark.anyio
+async def test_builtin_skill_sync_rejects_tampered_package_before_publish(tmp_path: Path) -> None:
+    expected_package = skill_zip(readme="# Expected\n")
+    tampered_package = skill_zip(readme="# Tampered\n")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "skills": [
+                    {
+                        "slug": "skillhub-hello",
+                        "version": "1.0.0",
+                        "url": "https://bjcdn.openstorage.cn/hello.zip",
+                        "sha256": sha256(expected_package).hexdigest(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    published: list[str] = []
+
+    summary = await synchronize_builtin_skills(
+        FakeEngine(FakeBuiltinSkillConnection()),
+        settings(),
+        environ={
+            "SKILLHUB_BUILTIN_SKILLS_ENABLED": "true",
+            "SKILLHUB_BUILTIN_SKILLS_MANIFEST_PATH": str(manifest),
+        },
+        downloader=lambda url: tampered_package,
+        publisher=lambda item, entries: published.append(item.slug),
+    )
+
+    assert summary.failed == 1
+    assert published == []

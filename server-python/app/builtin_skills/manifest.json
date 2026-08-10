@@ -3,12 +3,14 @@
     {
       "slug": "skillhub-hello",
       "version": "1.0.0",
-      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-11/f8a59af3-30d4-4031-80f6-ebff74b05195.zip"
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-11/f8a59af3-30d4-4031-80f6-ebff74b05195.zip",
+      "sha256": "acb591ed0891e735c364b955f5b94b2b9ce567c1d9e347312cebfbfde2d93f57"
     },
     {
       "slug": "agentguard",
       "version": "1.1",
-      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-12/9d063bc7-223a-4762-adeb-305c268aa29e.zip"
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-12/9d063bc7-223a-4762-adeb-305c268aa29e.zip",
+      "sha256": "77b16d62c1adaf8c1d5ca06b9bff26005bc77da345e6036cc5f1f91bdee1a149"
     }
   ]
 }

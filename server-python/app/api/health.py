@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Response
 
+from app.core.metrics import render_prometheus_metrics
 from app.core.response import ok
 
 router = APIRouter()
@@ -12,12 +13,4 @@ def health(request: Request) -> dict[str, object]:
 
 @router.get("/api/v1/metrics/prometheus")
 def prometheus_metrics() -> Response:
-    body = "\n".join(
-        [
-            "# HELP skillhub_python_backend_up SkillHub Python backend availability.",
-            "# TYPE skillhub_python_backend_up gauge",
-            "skillhub_python_backend_up 1",
-            "",
-        ]
-    )
-    return Response(content=body, media_type="text/plain; version=0.0.4; charset=utf-8")
+    return Response(content=render_prometheus_metrics(), media_type="text/plain; version=0.0.4; charset=utf-8")

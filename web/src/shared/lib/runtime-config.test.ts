@@ -54,6 +54,20 @@ describe('normalizeBasePath', () => {
   ])('rejects unsafe base path %s', (input) => {
     expect(() => normalizeBasePath(input)).toThrow('Invalid SkillHub web base path')
   })
+
+  it.each([
+    '/api',
+    '/api/nested',
+    '/oauth2',
+    '/login',
+    '/assets',
+    '/registry',
+    '/nginx-health',
+    '/.well-known',
+    '/runtime-config.js',
+  ])('rejects base path with reserved first segment %s', (input) => {
+    expect(() => normalizeBasePath(input)).toThrow('Invalid SkillHub web base path')
+  })
 })
 
 describe('runtime paths', () => {

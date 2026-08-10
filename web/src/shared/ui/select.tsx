@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { getPortalContainer } from '@/shared/lib/portal-container'
 import { cn } from '@/shared/lib/utils'
 
 export const SELECT_TRIGGER_CLASS_NAME = cn(
@@ -89,7 +90,7 @@ const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
+  <SelectPrimitive.Portal container={getPortalContainer()}>
     <SelectPrimitive.Content
       ref={ref}
       className={cn(

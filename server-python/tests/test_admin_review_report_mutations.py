@@ -478,6 +478,7 @@ async def test_admin_report_profile_mutations_enforce_roles_and_disposition() ->
 
 def test_admin_review_report_mutation_routes_use_java_envelopes_and_roles() -> None:
     app = create_app()
+    captured_meta: list[dict[str, str | None]] = []
     app.state.auth_me_reader = lambda user_id: {
         "userId": user_id,
         "displayName": user_id,
@@ -490,7 +491,9 @@ def test_admin_review_report_mutation_routes_use_java_envelopes_and_roles() -> N
             "super-admin": ["SUPER_ADMIN"],
         }.get(user_id, ["USER"]),
     }
-    app.state.admin_skill_report_resolver = lambda report_id, payload, user, request_meta: {
+    app.state.admin_skill_report_resolver = lambda report_id, payload, user, request_meta: captured_meta.append(
+        request_meta
+    ) or {
         "id": report_id,
         "status": "RESOLVED",
     }
@@ -517,6 +520,16 @@ def test_admin_review_report_mutation_routes_use_java_envelopes_and_roles() -> N
     assert resolve_response.status_code == 200
     assert resolve_response.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
     assert resolve_response.json()["data"] == {"id": 10, "status": "RESOLVED"}
+    assert captured_meta[-1]["request_id"] == "req-route"
+
+    unsafe_response = client.post(
+        "/api/v1/admin/skill-reports/10/resolve",
+        headers={"X-Mock-User-Id": "skill-admin", "X-Request-Id": "x" * 65},
+        json={"comment": "ok"},
+    )
+    assert unsafe_response.status_code == 200
+    assert captured_meta[-1]["request_id"] == unsafe_response.json()["requestId"]
+    assert captured_meta[-1]["request_id"] != "x" * 65
 
     dismiss_response = client.post("/api/v1/admin/skill-reports/11/dismiss", headers={"X-Mock-User-Id": "super-admin"})
     assert dismiss_response.status_code == 200

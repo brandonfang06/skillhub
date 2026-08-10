@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
+      - 'web/**'
       - '.github/workflows/pr-scripts.yml'
 
 jobs:
@@ -17,3 +18,10 @@ jobs:
         with:
           node-version: '21'
       - run: bash scripts/tests/publish-cli-test.sh
+
+  web-base-path-nginx-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/tests/web-base-path-nginx-smoke-test.sh
+      - run: bash scripts/tests/smoke-test-admin-mode-test.sh

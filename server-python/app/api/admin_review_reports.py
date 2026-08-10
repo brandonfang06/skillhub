@@ -20,8 +20,8 @@ from app.admin.review_reports import (
 from app.api.admin_policy import reject_bearer_api_token_for_admin_route
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
+from app.core.request_id import request_id_from_request
 from app.core.response import ok
-
 
 router = APIRouter()
 
@@ -70,7 +70,7 @@ def _client_ip(request: Request) -> str | None:
 
 def _request_meta(request: Request) -> dict[str, str | None]:
     return {
-        "request_id": request.headers.get("X-Request-Id"),
+        "request_id": request_id_from_request(request),
         "client_ip": _client_ip(request),
         "user_agent": request.headers.get("User-Agent"),
     }

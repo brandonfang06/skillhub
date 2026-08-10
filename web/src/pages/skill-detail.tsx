@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
+import { Link, useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowUpCircle, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, Play, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
@@ -32,7 +32,7 @@ import { SecurityAuditSummary } from '@/features/security-audit/security-audit-s
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { buildReturnTo } from '@/shared/lib/auth-route'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
-import { getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
+import { getSkillLabelSearch, getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion } from '@/shared/lib/skill-lifecycle'
@@ -933,17 +933,19 @@ export function SkillDetailPage() {
           {(skill.labels?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-2">
               {skill.labels!.map((label) => (
-                <span
+                <Link
                   key={label.slug}
+                  to="/search"
+                  search={getSkillLabelSearch(label.slug)}
                   className={cn(
-                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium',
+                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
                     label.type === 'PRIVILEGED'
-                      ? 'border-amber-500/40 bg-amber-100 text-amber-900'
-                      : 'border-slate-300 bg-slate-100 text-slate-800',
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80'
+                      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200/80',
                   )}
                 >
                   {label.displayName}
-                </span>
+                </Link>
               ))}
             </div>
           )}

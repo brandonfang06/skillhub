@@ -81,3 +81,29 @@ async def test_archive_review_attempt_links_rejected_and_replacement_records() -
     assert connection.params[1]["action"] == "REJECTED_VERSION_RESUBMIT"
     assert connection.params[1]["target_type"] == "SKILL_VERSION"
     assert connection.params[1]["target_id"] == 42
+
+
+@pytest.mark.anyio
+async def test_archive_review_attempt_supports_explicit_version_deletion() -> None:
+    connection = FakeConnection()
+
+    await archive_review_attempt(
+        connection,
+        ReviewAttemptArchiveInput(
+            attempt=rejected_attempt(),
+            replacement_version_id=None,
+            replacement_review_task_id=None,
+            actor_user_id="local-user",
+            request_id="delete-request",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+            archive_reason="REJECTED_VERSION_DELETE",
+            audit_action="REJECTED_VERSION_DELETE",
+        ),
+    )
+
+    assert connection.params[0]["replacement_version_id"] is None
+    assert connection.params[0]["replacement_review_task_id"] is None
+    assert connection.params[0]["archive_reason"] == "REJECTED_VERSION_DELETE"
+    assert connection.params[1]["action"] == "REJECTED_VERSION_DELETE"
+    assert connection.params[1]["target_id"] == 41

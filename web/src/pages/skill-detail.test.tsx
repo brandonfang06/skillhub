@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
@@ -43,6 +43,21 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ namespace: 'global', slug: 'demo-skill' }),
   useRouterState: () => routerLocation,
   useSearch: () => ({ returnTo: '/dashboard/skills' }),
+  Link: ({
+    to,
+    search,
+    children,
+    className,
+  }: {
+    to: string
+    search?: Record<string, unknown>
+    children?: ReactNode
+    className?: string
+  }) => (
+    <a href={to} data-search={JSON.stringify(search ?? {})} className={className}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -656,6 +671,25 @@ describe('SkillDetailPage', () => {
     expect(html).toContain('skillDetail.labelsSectionTitle')
     expect(html).toContain('skillDetail.removeLabel')
     expect(html).toContain('skillDetail.addLabel')
+  })
+
+  it('links skill label chips to a search filtered by that label', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+        labels: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('href="/search"')
+    expect(html).toContain('&quot;label&quot;:&quot;code-generation&quot;')
+    expect(html).toContain('Code Generation')
   })
 
   it('hides the label management panel when the viewer lacks label permissions', () => {

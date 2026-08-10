@@ -4,6 +4,7 @@ import logging
 
 import pytest
 
+from app.core.request_id import request_id_scope
 from app.publish.scanner_handoff import RedisScanTaskPublisher, build_scan_stream_fields, encode_resp_command
 from app.publish.side_effects import ScanTaskPayload
 
@@ -60,6 +61,35 @@ async def test_redis_scan_task_publisher_uses_shared_client() -> None:
     await publisher.publish_scan_task(scan_task())
 
     assert redis_client.added == [("skillhub:scan:requests", build_scan_stream_fields(scan_task()))]
+
+
+@pytest.mark.anyio
+async def test_redis_scan_task_publisher_injects_trusted_request_id() -> None:
+    class FakeRedisClient:
+        def __init__(self) -> None:
+            self.fields: dict[str, str] = {}
+
+        async def xadd(self, stream_key: str, fields: dict[str, str]) -> str:
+            self.fields = fields
+            return "1781-0"
+
+    redis_client = FakeRedisClient()
+    forged = ScanTaskPayload(
+        **{
+            **scan_task().__dict__,
+            "metadata": {
+                "scannerType": "skill-scanner",
+                "skillhub.request_id": "forged-request",
+                "traceparent": "forged-trace",
+            },
+        }
+    )
+
+    with request_id_scope("trusted-request-1"):
+        await RedisScanTaskPublisher(redis_client).publish_scan_task(forged)
+
+    assert redis_client.fields["skillhub.request_id"] == "trusted-request-1"
+    assert "traceparent" not in redis_client.fields
 
 
 @pytest.mark.anyio

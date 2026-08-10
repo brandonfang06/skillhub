@@ -14,13 +14,15 @@ from app.publish.replacement import ArchivedReviewAttempt
 @dataclass(frozen=True)
 class ReviewAttemptArchiveInput:
     attempt: ArchivedReviewAttempt
-    replacement_version_id: int
-    replacement_review_task_id: int
+    replacement_version_id: int | None
+    replacement_review_task_id: int | None
     actor_user_id: str
     request_id: str | None
     client_ip: str | None
     user_agent: str | None
     archived_at: datetime | None = None
+    archive_reason: str = "REJECTED_VERSION_RESUBMIT"
+    audit_action: str = "REJECTED_VERSION_RESUBMIT"
 
 
 def _normalized_now(value: datetime | None) -> datetime:
@@ -97,16 +99,16 @@ async def archive_review_attempt(
             "original_request_id": attempt.original_request_id,
             "replacement_version_id": request.replacement_version_id,
             "replacement_review_task_id": request.replacement_review_task_id,
-            "archive_reason": "REJECTED_VERSION_RESUBMIT",
+            "archive_reason": request.archive_reason,
             "archived_at": archived_at,
         },
     )
     await write_audit_log(
         connection,
         actor_user_id=request.actor_user_id,
-        action="REJECTED_VERSION_RESUBMIT",
+        action=request.audit_action,
         target_type="SKILL_VERSION",
-        target_id=request.replacement_version_id,
+        target_id=request.replacement_version_id or attempt.original_skill_version_id,
         request_id=request.request_id,
         client_ip=request.client_ip,
         user_agent=request.user_agent,

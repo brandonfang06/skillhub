@@ -6,16 +6,23 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from sqlalchemy import text
 
 from app.object_storage import object_storage_for_settings
 from app.publish.dry_run import slugify
 from app.publish.orchestration import PublishWriteInput, execute_publish_write
-from app.publish.package import PackageEntry, extract_package_with_warnings, parse_skill_metadata, validate_package
+from app.publish.package import (
+    PackageEntry,
+    extract_package_with_warnings,
+    parse_skill_metadata,
+    validate_package,
+)
 
 GLOBAL_NAMESPACE = "global"
 SYSTEM_PUBLISHER_ID = "builtin-skill-publisher"
@@ -24,6 +31,7 @@ ALLOWED_BUILTIN_SKILL_HOST = "bjcdn.openstorage.cn"
 MAX_MANIFEST_ITEMS = 100
 DEFAULT_MANIFEST_PATH = Path(__file__).resolve().parent / "builtin_skills" / "manifest.json"
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,127}$")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
@@ -37,6 +45,7 @@ class BuiltinSkillManifestItem:
     slug: str
     version: str
     url: str
+    sha256: str
 
 
 @dataclass(frozen=True)
@@ -87,7 +96,8 @@ def load_builtin_skill_manifest(path: Path = DEFAULT_MANIFEST_PATH) -> list[Buil
         slug = str(raw.get("slug") or "").strip()
         version = str(raw.get("version") or "").strip()
         url = str(raw.get("url") or "").strip()
-        if not slug or not version or not url:
+        package_sha256 = str(raw.get("sha256") or "").strip().lower()
+        if not slug or not version or not url or SHA256_PATTERN.fullmatch(package_sha256) is None:
             continue
         if SLUG_PATTERN.fullmatch(slug) is None:
             continue
@@ -95,7 +105,7 @@ def load_builtin_skill_manifest(path: Path = DEFAULT_MANIFEST_PATH) -> list[Buil
         if key in seen:
             continue
         seen.add(key)
-        items.append(BuiltinSkillManifestItem(slug=slug, version=version, url=url))
+        items.append(BuiltinSkillManifestItem(slug=slug, version=version, url=url, sha256=package_sha256))
     return items
 
 
@@ -339,6 +349,9 @@ async def synchronize_builtin_skills(
 
         package_bytes = active_downloader(item.url)
         if package_bytes is None:
+            failed += 1
+            continue
+        if sha256(package_bytes).hexdigest() != item.sha256:
             failed += 1
             continue
         try:

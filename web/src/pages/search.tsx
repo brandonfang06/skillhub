@@ -305,8 +305,8 @@ export function SearchPage() {
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="shrink-0 text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>
           <Button
             variant={starredOnly ? 'default' : 'outline'}
             size="sm"

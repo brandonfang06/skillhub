@@ -38,6 +38,9 @@ class FakeScalarResult(FakeResult):
     def scalar_one(self) -> int:
         return self.scalar
 
+    def scalar_one_or_none(self) -> int:
+        return self.scalar
+
 
 class FakeTransaction:
     def __init__(self, connection: "FakeSubmitReviewConnection") -> None:

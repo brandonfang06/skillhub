@@ -344,6 +344,15 @@ def test_skill_report_submit_routes_use_java_envelope_and_auth_bridge() -> None:
     assert captured[0]["user"]["userId"] == "reporter-1"
     assert captured[0]["meta"]["request_id"] == "req-route"
 
+    unsafe_response = client.post(
+        "/api/v1/skills/team-ai/reported-skill/reports",
+        headers={"X-Mock-User-Id": "reporter-1", "X-Request-Id": "x" * 65},
+        json={"reason": "spam"},
+    )
+    assert unsafe_response.status_code == 200
+    assert captured[1]["meta"]["request_id"] == unsafe_response.json()["requestId"]
+    assert captured[1]["meta"]["request_id"] != "x" * 65
+
     web_response = client.post(
         "/api/web/skills/team-ai/reported-skill/reports",
         headers={"X-Mock-User-Id": "reporter-1"},

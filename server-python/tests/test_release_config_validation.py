@@ -111,6 +111,60 @@ def test_release_validator_rejects_malformed_web_base_paths(
 
 
 @pytest.mark.parametrize(
+    "base_path",
+    [
+        "/api",
+        "/api/nested",
+        "/oauth2",
+        "/login",
+        "/assets",
+        "/registry",
+        "/nginx-health",
+        "/.well-known",
+        "/runtime-config.js",
+    ],
+)
+def test_release_validator_rejects_web_base_paths_that_shadow_nginx_routes(
+    tmp_path: Path,
+    base_path: str,
+) -> None:
+    result = run_validator(
+        tmp_path,
+        {
+            "SKILLHUB_PUBLIC_BASE_URL": f"https://skills.example.com{base_path}",
+            "SKILLHUB_WEB_BASE_PATH": base_path,
+        },
+    )
+
+    assert result.returncode == 1
+    assert "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "api_base_url",
+    ["", "/skillhub", "https://api.example.com/gateway"],
+)
+def test_release_validator_accepts_supported_api_base_urls_for_subpath(
+    tmp_path: Path,
+    api_base_url: str,
+) -> None:
+    result = run_validator(tmp_path, {"SKILLHUB_WEB_API_BASE_URL": api_base_url})
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("api_base_url", ["skillhub", "//evil.example", "/other"])
+def test_release_validator_rejects_misaligned_same_origin_api_base_urls(
+    tmp_path: Path,
+    api_base_url: str,
+) -> None:
+    result = run_validator(tmp_path, {"SKILLHUB_WEB_API_BASE_URL": api_base_url})
+
+    assert result.returncode == 1
+    assert "SKILLHUB_WEB_API_BASE_URL" in result.stderr
+
+
+@pytest.mark.parametrize(
     "overrides",
     [
         {"SKILLHUB_PUBLIC_BASE_URL": "https://skills.example.com", "SKILLHUB_WEB_BASE_PATH": "/skillhub"},

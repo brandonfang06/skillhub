@@ -277,6 +277,7 @@ async def test_detach_skill_label_deletes_existing_label_and_audits() -> None:
 
 def test_skill_label_mutation_routes_use_java_envelopes_and_auth() -> None:
     app = create_app()
+    captured_meta: list[dict[str, str | None]] = []
     app.state.auth_me_reader = lambda user_id: {
         "userId": user_id,
         "displayName": user_id,
@@ -285,7 +286,9 @@ def test_skill_label_mutation_routes_use_java_envelopes_and_auth() -> None:
         "oauthProvider": "mock",
         "platformRoles": {"super-admin": ["SUPER_ADMIN"]}.get(user_id, ["USER"]),
     }
-    app.state.skill_label_attach_writer = lambda namespace, slug, label_slug, user, request_meta: {
+    app.state.skill_label_attach_writer = lambda namespace, slug, label_slug, user, request_meta: captured_meta.append(
+        request_meta
+    ) or {
         "slug": label_slug,
         "type": "RECOMMENDED",
         "displayName": "Featured",
@@ -305,6 +308,15 @@ def test_skill_label_mutation_routes_use_java_envelopes_and_auth() -> None:
     assert attached.json()["msg"] == "\u66f4\u65b0\u6210\u529f"
     assert attached.json()["requestId"] == "req-route"
     assert attached.json()["data"] == {"slug": "featured", "type": "RECOMMENDED", "displayName": "Featured"}
+    assert captured_meta[-1]["request_id"] == "req-route"
+
+    unsafe_attached = client.put(
+        "/api/v1/skills/global/demo/labels/featured",
+        headers={"X-Mock-User-Id": "owner", "X-Request-Id": "x" * 65},
+    )
+    assert unsafe_attached.status_code == 200
+    assert captured_meta[-1]["request_id"] == unsafe_attached.json()["requestId"]
+    assert captured_meta[-1]["request_id"] != "x" * 65
 
     detached = client.delete("/api/web/skills/global/demo/labels/featured", headers={"X-Mock-User-Id": "super-admin"})
     assert detached.status_code == 200

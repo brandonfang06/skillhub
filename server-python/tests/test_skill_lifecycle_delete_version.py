@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.lifecycle import skill as skill_lifecycle
 from app.lifecycle.skill import (
     SkillLifecycleError,
     SkillVersionDeleteInput,
@@ -61,12 +62,14 @@ class FakeDeleteVersionConnection:
         latest_version_id: int | None = None,
         namespace_role: str | None = "ADMIN",
         owner_id: str = "owner",
+        review_task_statuses: tuple[str, ...] = ("REJECTED",),
     ) -> None:
         self.version_status = version_status
         self.version_count = version_count
         self.latest_version_id = latest_version_id
         self.namespace_role = namespace_role
         self.owner_id = owner_id
+        self.review_task_statuses = review_task_statuses
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -93,10 +96,22 @@ class FakeDeleteVersionConnection:
             return FakeResult(row={"role": self.namespace_role}) if self.namespace_role else FakeResult()
         if "SELECT id" in sql and "status = 'PUBLISHED'" in sql:
             return FakeResult(row={"id": 41})
-        if "FROM skill_version" in sql and "version_count" not in sql and "COUNT(*)" not in sql:
-            return FakeResult(row={"version_id": 42, "version": "1.1.0", "status": self.version_status})
-        if "COUNT(*)" in sql:
-            return FakeResult(row={"version_count": self.version_count})
+        if "FROM skill_version" in sql and "FOR UPDATE" in sql:
+            rows = [
+                {"version_id": 42, "version": "1.1.0", "status": self.version_status},
+                *[
+                    {"version_id": 43 + index, "version": f"1.{2 + index}.0", "status": "UPLOADED"}
+                    for index in range(max(self.version_count - 1, 0))
+                ],
+            ]
+            return FakeResult(rows=rows)
+        if "FROM review_task" in sql and "FOR UPDATE" in sql:
+            return FakeResult(
+                rows=[
+                    {"review_task_id": 91 + index, "status": status}
+                    for index, status in enumerate(self.review_task_statuses)
+                ]
+            )
         if "SELECT storage_key" in sql:
             return FakeResult(
                 rows=[
@@ -136,8 +151,13 @@ async def test_delete_skill_version_deletes_metadata_audit_and_returns_storage_k
         "packages/101/42/bundle.zip",
     ]
     assert any("DELETE FROM skill_file" in statement for statement in connection.statements)
+    lock_index = next(index for index, sql in enumerate(connection.statements) if "FROM skill_version" in sql)
+    assert "ORDER BY id" in connection.statements[lock_index]
+    assert "FOR UPDATE" in connection.statements[lock_index]
+    review_delete_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM review_task" in sql)
     assert any("UPDATE security_audit" in statement and "deleted_at" in statement for statement in connection.statements)
-    assert any("DELETE FROM skill_version" in statement for statement in connection.statements)
+    version_delete_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM skill_version" in sql)
+    assert review_delete_index < version_delete_index
     audit_index = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
     assert connection.params[audit_index]["action"] == "DELETE_SKILL_VERSION"
     assert connection.params[audit_index]["target_type"] == "SKILL_VERSION"
@@ -175,6 +195,60 @@ async def test_delete_skill_version_rejects_last_version() -> None:
         await delete_skill_version(FakeEngine(connection), delete_input())
 
     assert not any("DELETE FROM skill_version" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_delete_skill_version_rejects_inconsistent_pending_review() -> None:
+    connection = FakeDeleteVersionConnection(review_task_statuses=("PENDING",))
+
+    with pytest.raises(SkillLifecycleError, match="error.skill.version.delete.pendingReview") as exc_info:
+        await delete_skill_version(FakeEngine(connection), delete_input())
+
+    assert exc_info.value.status_code == 409
+    assert not any("DELETE FROM review_task" in statement for statement in connection.statements)
+    assert not any("DELETE FROM skill_version" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_delete_rejected_version_archives_review_before_deleting_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    connection = FakeDeleteVersionConnection(version_status="REJECTED")
+    archived_requests: list[object] = []
+
+    async def read_attempt(_connection: object, _version: object) -> object:
+        return SimpleNamespace(original_skill_version_id=42)
+
+    async def archive_attempt(_connection: object, request: object) -> None:
+        archived_requests.append(request)
+
+    monkeypatch.setattr(skill_lifecycle, "read_rejected_review_attempt", read_attempt)
+    monkeypatch.setattr(skill_lifecycle, "archive_review_attempt", archive_attempt)
+
+    await delete_skill_version(FakeEngine(connection), delete_input())
+
+    assert len(archived_requests) == 1
+    archive_request = archived_requests[0]
+    assert archive_request.replacement_version_id is None
+    assert archive_request.replacement_review_task_id is None
+    assert archive_request.archive_reason == "REJECTED_VERSION_DELETE"
+    archive_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM review_task" in sql)
+    assert archive_index > 0
+
+
+@pytest.mark.anyio
+async def test_delete_rejected_version_without_review_history_preserves_legacy_behavior(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeDeleteVersionConnection(version_status="REJECTED", review_task_statuses=())
+
+    async def unexpected_read(_connection: object, _version: object) -> object:
+        raise AssertionError("missing review history must not be archived")
+
+    monkeypatch.setattr(skill_lifecycle, "read_rejected_review_attempt", unexpected_read)
+
+    result = await delete_skill_version(FakeEngine(connection), delete_input())
+
+    assert result.response["versionId"] == 42
+    assert any("DELETE FROM skill_version" in statement for statement in connection.statements)
 
 
 def test_delete_skill_version_routes_return_java_envelopes_and_delete_storage(tmp_path) -> None:

@@ -34,6 +34,7 @@ async def test_refresh_skill_search_documents_deduplicates_and_continues_after_f
 ) -> None:
     engine = FakeEngine()
     rebuilt: list[int] = []
+    failure_triggers: list[str] = []
 
     async def rebuild(_connection: Any, skill_id: int) -> None:
         rebuilt.append(skill_id)
@@ -41,8 +42,11 @@ async def test_refresh_skill_search_documents_deduplicates_and_continues_after_f
             raise RuntimeError("index unavailable")
 
     monkeypatch.setattr(search_refresh, "upsert_skill_search_document", rebuild)
+    monkeypatch.setattr(search_refresh, "increment_search_rebuild_failure", failure_triggers.append)
 
     await search_refresh.refresh_skill_search_documents(engine, [1, 2, 2, 3])
 
-    assert rebuilt == [1, 2, 3]
+    assert rebuilt == [1, 2, 2, 3]
+    assert failure_triggers == ["batch"]
+    assert "Retrying search document rebuild for skill 2 after attempt 1" in caplog.text
     assert "Failed to rebuild search document for skill 2 after label change" in caplog.text

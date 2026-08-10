@@ -20,6 +20,9 @@ server {
         set $proxy_x_forwarded_proto http;
     }
 
+    # Generated at container startup only for a configured non-root base path.
+    include /etc/nginx/skillhub-base-path*.conf;
+
     location / {
         add_header Cache-Control "no-cache, must-revalidate";
         try_files $uri $uri/ /index.html;
