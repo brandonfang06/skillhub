@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import en from './locales/en.json'
 import zhTW from './locales/zh-TW.json'
+import zh from './locales/zh.json'
 
 describe('traditional chinese locale', () => {
   it('uses the approved UI terms', () => {
@@ -10,5 +12,11 @@ describe('traditional chinese locale', () => {
     expect(zhTW.home.viewAll).toBe('查看全部 →')
     expect(zhTW.landing.hero.subtitle).toContain('建立')
     expect(zhTW.landing.quickStart.description).toContain('串接')
+  })
+
+  it('provides the combined download-event user filter in every locale', () => {
+    expect(en.downloadEvents.userPlaceholder).toBeTypeOf('string')
+    expect(zhTW.downloadEvents.userPlaceholder).toBeTypeOf('string')
+    expect(zh.downloadEvents.userPlaceholder).toBeTypeOf('string')
   })
 })

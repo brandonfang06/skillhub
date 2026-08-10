@@ -1354,6 +1354,7 @@ export const adminApi = {
     slug?: string
     version?: string
     userId?: string
+    userQuery?: string
     source?: string
     startTime?: string
     endTime?: string
@@ -1363,6 +1364,7 @@ export const adminApi = {
     if (params.slug) searchParams.set('slug', params.slug)
     if (params.version) searchParams.set('version', params.version)
     if (params.userId) searchParams.set('userId', params.userId)
+    if (params.userQuery) searchParams.set('userQuery', params.userQuery)
     if (params.source) searchParams.set('source', params.source)
     if (params.startTime) searchParams.set('startTime', params.startTime)
     if (params.endTime) searchParams.set('endTime', params.endTime)
@@ -1375,6 +1377,7 @@ export const adminApi = {
     slug?: string
     version?: string
     userId?: string
+    userQuery?: string
     source?: string
     startTime?: string
     endTime?: string
@@ -1386,6 +1389,7 @@ export const adminApi = {
     if (params.slug) searchParams.set('slug', params.slug)
     if (params.version) searchParams.set('version', params.version)
     if (params.userId) searchParams.set('userId', params.userId)
+    if (params.userQuery) searchParams.set('userQuery', params.userQuery)
     if (params.source) searchParams.set('source', params.source)
     if (params.startTime) searchParams.set('startTime', params.startTime)
     if (params.endTime) searchParams.set('endTime', params.endTime)

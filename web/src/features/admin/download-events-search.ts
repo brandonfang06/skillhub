@@ -4,6 +4,7 @@ export interface DownloadEventsSearch {
   namespace?: string
   slug?: string
   version?: string
+  userQuery?: string
   userId?: string
   source?: DownloadEventSource
   startTime?: string
@@ -32,6 +33,7 @@ export function parseDownloadEventsSearch(search: Record<string, unknown>): Down
     namespace: optionalText(search.namespace),
     slug: optionalText(search.slug),
     version: optionalText(search.version),
+    userQuery: optionalText(search.userQuery),
     userId: optionalText(search.userId),
     source,
     startTime: optionalInstant(search.startTime),
