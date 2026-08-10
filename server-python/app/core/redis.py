@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from redis.asyncio.retry import Retry
 from redis.asyncio import Redis, Sentinel
+from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialWithJitterBackoff
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
@@ -74,8 +74,12 @@ class SkillHubRedisClient:
     async def setex(self, key: str, ttl_seconds: int, value: str) -> None:
         await self.raw_client.setex(key, ttl_seconds, value)
 
-    async def delete(self, key: str) -> None:
-        await self.raw_client.delete(key)
+    def pipeline(self, *, transaction: bool = True) -> Any:
+        return self.raw_client.pipeline(transaction=transaction)
+
+    async def delete(self, *keys: str) -> None:
+        if keys:
+            await self.raw_client.delete(*keys)
 
     async def aclose(self) -> None:
         close = getattr(self.raw_client, "aclose", None)

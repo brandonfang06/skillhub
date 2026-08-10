@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from redis.asyncio.retry import Retry
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
@@ -171,6 +170,30 @@ def test_create_redis_client_parses_default_sentinel_port(monkeypatch: pytest.Mo
     create_redis_client(get_settings())
 
     assert calls["sentinels"] == [("sentinel-a", 26379)]
+
+
+@pytest.mark.anyio
+async def test_redis_client_exposes_transaction_and_variadic_delete_contract() -> None:
+    calls: list[tuple[object, ...]] = []
+    pipeline = object()
+
+    class FakeRawClient:
+        def pipeline(self, *, transaction: bool) -> object:
+            calls.append(("pipeline", transaction))
+            return pipeline
+
+        async def delete(self, *keys: str) -> None:
+            calls.append(("delete", *keys))
+
+    client = SkillHubRedisClient(FakeRawClient())
+
+    assert client.pipeline(transaction=True) is pipeline
+    await client.delete("session:first", "session:second")
+
+    assert calls == [
+        ("pipeline", True),
+        ("delete", "session:first", "session:second"),
+    ]
 
 
 @pytest.mark.anyio
