@@ -140,6 +140,7 @@ def _where_clause(
     slug: str | None,
     version: str | None,
     user_id: str | None,
+    user_query: str | None,
     source: str | None,
     start_time: datetime | str | None,
     end_time: datetime | str | None,
@@ -158,6 +159,15 @@ def _where_clause(
     if (value := _trim(user_id)) is not None:
         filters.append("de.user_id = :user_id")
         params["user_id"] = value
+    if (value := _trim(user_query)) is not None:
+        escaped_value = (
+            value.lower().replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        )
+        filters.append(
+            "(LOWER(COALESCE(ua.display_name, '')) LIKE :user_query ESCAPE '!' "
+            "OR LOWER(COALESCE(de.user_id, '')) LIKE :user_query ESCAPE '!')"
+        )
+        params["user_query"] = f"%{escaped_value}%"
     if (value := _normalize_source(source)) is not None:
         filters.append("de.source = :source")
         params["source"] = value
@@ -179,6 +189,7 @@ async def _list_download_events(
     slug: str | None,
     version: str | None,
     user_id: str | None,
+    user_query: str | None,
     source: str | None,
     start_time: datetime | str | None,
     end_time: datetime | str | None,
@@ -190,6 +201,7 @@ async def _list_download_events(
         slug=slug,
         version=version,
         user_id=user_id,
+        user_query=user_query,
         source=source,
         start_time=start_time,
         end_time=end_time,
@@ -202,7 +214,14 @@ async def _list_download_events(
     total = int(
         (
             await connection.execute(
-                text(f"SELECT COUNT(*) FROM local_skill_download_event de{where_clause}"),
+                text(
+                    f"""
+                    SELECT COUNT(*)
+                    FROM local_skill_download_event de
+                    LEFT JOIN user_account ua ON ua.id = de.user_id
+                    {where_clause}
+                    """
+                ),
                 params,
             )
         ).scalar_one()
@@ -249,6 +268,7 @@ async def _read_download_event_rows(
     slug: str | None,
     version: str | None,
     user_id: str | None,
+    user_query: str | None,
     source: str | None,
     start_time: datetime | str | None,
     end_time: datetime | str | None,
@@ -260,6 +280,7 @@ async def _read_download_event_rows(
         slug=slug,
         version=version,
         user_id=user_id,
+        user_query=user_query,
         source=source,
         start_time=start_time,
         end_time=end_time,
@@ -325,6 +346,7 @@ async def list_admin_download_events(
     start_time: datetime | str | None,
     end_time: datetime | str | None,
     platform_roles: list[str],
+    user_query: str | None = None,
 ) -> dict[str, Any]:
     require_platform_download_event_reader(platform_roles)
     async with engine.connect() as connection:
@@ -336,6 +358,7 @@ async def list_admin_download_events(
             slug=slug,
             version=version,
             user_id=user_id,
+            user_query=user_query,
             source=source,
             start_time=start_time,
             end_time=end_time,
@@ -353,6 +376,7 @@ async def export_admin_download_events_csv(
     start_time: datetime | str | None,
     end_time: datetime | str | None,
     platform_roles: list[str],
+    user_query: str | None = None,
     limit: int = DOWNLOAD_EVENT_CSV_EXPORT_LIMIT,
 ) -> tuple[str, bool]:
     require_platform_download_event_reader(platform_roles)
@@ -364,6 +388,7 @@ async def export_admin_download_events_csv(
             slug=slug,
             version=version,
             user_id=user_id,
+            user_query=user_query,
             source=source,
             start_time=start_time,
             end_time=end_time,
@@ -448,6 +473,7 @@ async def list_skill_download_events(
             slug=normalized_slug,
             version=version,
             user_id=user_id,
+            user_query=None,
             source=source,
             start_time=start_time,
             end_time=end_time,

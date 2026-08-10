@@ -805,7 +805,7 @@
     "namespacePlaceholder": "Namespace...",
     "slugPlaceholder": "Skill slug...",
     "versionPlaceholder": "Version...",
-    "userIdPlaceholder": "User ID...",
+    "userPlaceholder": "User name or ID...",
     "empty": "No download events",
     "anonymousUser": "Anonymous",
     "colTime": "Time",

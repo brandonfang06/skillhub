@@ -402,6 +402,7 @@ describe('adminApi.getDownloadEvents', () => {
       namespace: 'team-a',
       slug: 'demo',
       userId: 'user-a',
+      userQuery: 'User A',
       source: 'web',
       startTime: '2026-07-01T00:00:00.000Z',
       endTime: '2026-07-09T23:59:59.000Z',
@@ -410,7 +411,7 @@ describe('adminApi.getDownloadEvents', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/admin/download-events?namespace=team-a&slug=demo&userId=user-a&source=web&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z&page=1&size=10',
+      '/api/v1/admin/download-events?namespace=team-a&slug=demo&userId=user-a&userQuery=User+A&source=web&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z&page=1&size=10',
       expect.objectContaining({
         headers: expect.any(Headers),
       }),
@@ -423,13 +424,14 @@ describe('adminApi.getDownloadEvents', () => {
       slug: 'demo',
       version: '1.0.0',
       userId: 'user-a',
+      userQuery: 'User A',
       source: 'cli',
       startTime: '2026-07-01T00:00:00.000Z',
       endTime: '2026-07-09T23:59:59.000Z',
     })
 
     expect(url).toBe(
-      '/api/v1/admin/download-events.csv?namespace=team-a&slug=demo&version=1.0.0&userId=user-a&source=cli&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z',
+      '/api/v1/admin/download-events.csv?namespace=team-a&slug=demo&version=1.0.0&userId=user-a&userQuery=User+A&source=cli&startTime=2026-07-01T00%3A00%3A00.000Z&endTime=2026-07-09T23%3A59%3A59.000Z',
     )
     expect(url).not.toContain('page=')
     expect(url).not.toContain('size=')

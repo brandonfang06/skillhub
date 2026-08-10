@@ -30,6 +30,7 @@ type ObservedRequests = {
   oauthCallbackPaths: string[]
   cliRedirects: string[]
   csvPaths: string[]
+  downloadEventPaths: string[]
   ssePaths: string[]
   tokenPaths: string[]
   protectedContentPaths: string[]
@@ -42,6 +43,7 @@ function createObservedRequests(): ObservedRequests {
     oauthCallbackPaths: [],
     cliRedirects: [],
     csvPaths: [],
+    downloadEventPaths: [],
     ssePaths: [],
     tokenPaths: [],
     protectedContentPaths: [],
@@ -319,6 +321,31 @@ async function installMockApi(
       return
     }
 
+    if (path === '/api/v1/admin/download-events') {
+      observed.downloadEventPaths.push(`${url.pathname}${url.search}`)
+      await fulfillJson(route, envelope({
+        items: [{
+          id: 81,
+          skillId: 17,
+          skillVersionId: 52,
+          namespace: 'global',
+          slug: 'subpath-skill',
+          version: '1.2.0',
+          source: 'web',
+          userId: 'oauth-user-81',
+          username: 'Alex Chen',
+          requestId: 'subpath-download-event',
+          ipAddress: '127.0.0.1',
+          userAgent: 'subpath-e2e',
+          createdAt: '2026-08-04T00:00:00Z',
+        }],
+        total: 1,
+        page: 0,
+        size: 20,
+      }))
+      return
+    }
+
     if (path === '/api/v1/admin/download-events.csv') {
       observed.csvPaths.push(url.pathname)
       await route.fulfill({
@@ -557,6 +584,35 @@ test.describe('SkillHub production subpath deployment', () => {
     await expectNoHorizontalOverflow(page)
 
     expect(new URL(download.url()).pathname).toBe(`${basePath}/api/v1/admin/download-events.csv`)
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('filters download events by readable user identity under the prefix', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: true }, observed)
+
+    await page.goto(`${basePath}/admin/download-events`)
+    const filter = page.getByPlaceholder('User name or ID...')
+    const filteredRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return url.pathname === `${basePath}/api/v1/admin/download-events`
+        && url.searchParams.get('userQuery') === 'Alex Chen'
+    })
+    await filter.fill('Alex Chen')
+    await filteredRequest
+
+    const userCell = page.locator('tbody tr td').nth(1)
+    await expect(userCell.locator('.font-medium')).toHaveText('Alex Chen')
+    await expect(userCell.locator('.font-mono')).toHaveText('oauth-user-81')
+    await expect(page.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      `${basePath}/api/v1/admin/download-events.csv?userQuery=Alex+Chen`,
+    )
+    await expectNoHorizontalOverflow(page)
+
+    expect(observed.downloadEventPaths).toContain(
+      `${basePath}/api/v1/admin/download-events?userQuery=Alex+Chen&page=0&size=20`,
+    )
     expect(observed.apiRootEscapes).toEqual([])
   })
 

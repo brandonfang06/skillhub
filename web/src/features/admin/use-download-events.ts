@@ -6,6 +6,7 @@ export interface DownloadEventParams {
   namespace?: string
   slug?: string
   version?: string
+  userQuery?: string
   userId?: string
   source?: string
   startTime?: string

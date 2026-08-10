@@ -792,7 +792,7 @@
     "namespacePlaceholder": "命名空间...",
     "slugPlaceholder": "技能 slug...",
     "versionPlaceholder": "版本...",
-    "userIdPlaceholder": "用户 ID...",
+    "userPlaceholder": "用户名或 ID...",
     "empty": "暂无下载记录",
     "anonymousUser": "匿名用户",
     "colTime": "时间",

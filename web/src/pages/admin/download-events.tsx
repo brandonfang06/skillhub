@@ -50,7 +50,7 @@ export function DownloadEventsPage() {
   const [namespaceFilter, setNamespaceFilter] = useState(() => initialTextFilter(routeSearch.namespace))
   const [slugFilter, setSlugFilter] = useState(() => initialTextFilter(routeSearch.slug))
   const [versionFilter, setVersionFilter] = useState(() => initialTextFilter(routeSearch.version))
-  const [userIdFilter, setUserIdFilter] = useState(() => initialTextFilter(routeSearch.userId))
+  const [userFilter, setUserFilter] = useState(() => initialTextFilter(routeSearch.userQuery ?? routeSearch.userId))
   const [sourceFilter, setSourceFilter] = useState(() => initialTextFilter(routeSearch.source))
   const [startTimeFilter, setStartTimeFilter] = useState(() => initialDateTimeFilter(routeSearch.startTime))
   const [endTimeFilter, setEndTimeFilter] = useState(() => initialDateTimeFilter(routeSearch.endTime))
@@ -60,7 +60,7 @@ export function DownloadEventsPage() {
     namespace: namespaceFilter.trim() || undefined,
     slug: slugFilter.trim() || undefined,
     version: versionFilter.trim() || undefined,
-    userId: userIdFilter.trim() || undefined,
+    userQuery: userFilter.trim() || undefined,
     source: sourceFilter || undefined,
     startTime: startTimeFilter ? new Date(startTimeFilter).toISOString() : undefined,
     endTime: endTimeFilter ? new Date(endTimeFilter).toISOString() : undefined,
@@ -74,7 +74,7 @@ export function DownloadEventsPage() {
     setNamespaceFilter('')
     setSlugFilter('')
     setVersionFilter('')
-    setUserIdFilter('')
+    setUserFilter('')
     setSourceFilter('')
     setStartTimeFilter('')
     setEndTimeFilter('')
@@ -134,10 +134,10 @@ export function DownloadEventsPage() {
             }}
           />
           <Input
-            placeholder={t('downloadEvents.userIdPlaceholder')}
-            value={userIdFilter}
+            placeholder={t('downloadEvents.userPlaceholder')}
+            value={userFilter}
             onChange={(event) => {
-              setUserIdFilter(event.target.value)
+              setUserFilter(event.target.value)
               setPage(0)
             }}
           />
@@ -212,9 +212,11 @@ export function DownloadEventsPage() {
                     <TableCell>{formatDate(event.createdAt)}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="font-medium">{event.userId || t('downloadEvents.anonymousUser')}</div>
-                        {event.username ? (
-                          <div className="text-xs text-muted-foreground">{event.username}</div>
+                        <div className="font-medium">
+                          {event.username || event.userId || t('downloadEvents.anonymousUser')}
+                        </div>
+                        {event.username && event.userId ? (
+                          <div className="font-mono text-xs text-muted-foreground">{event.userId}</div>
                         ) : null}
                       </div>
                     </TableCell>

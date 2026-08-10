@@ -69,6 +69,7 @@ class FakeDownloadAnalyticsConnection:
     ) -> None:
         self.skill = skill or {"id": 7, "owner_id": "owner-user", "namespace_id": 10}
         self.namespace_role = namespace_role
+        self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
         self.rows = [
             {
@@ -106,6 +107,7 @@ class FakeDownloadAnalyticsConnection:
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
         bound = params or {}
+        self.statements.append(sql)
         self.params.append(bound)
         if "FROM skill s" in sql and "JOIN namespace n" in sql:
             return FakeResult(rows=[self.skill] if self.skill is not None else [])
@@ -130,6 +132,14 @@ class FakeDownloadAnalyticsConnection:
             rows = [row for row in rows if row["version"] == bound["version"]]
         if bound.get("user_id"):
             rows = [row for row in rows if row["user_id"] == bound["user_id"]]
+        if bound.get("user_query"):
+            query = str(bound["user_query"]).strip("%").lower()
+            rows = [
+                row
+                for row in rows
+                if query in str(row.get("display_name") or "").lower()
+                or query in str(row.get("user_id") or "").lower()
+            ]
         if bound.get("source"):
             rows = [row for row in rows if row["source"] == bound["source"]]
         return sorted([row.copy() for row in rows], key=lambda row: row["created_at"], reverse=True)
@@ -301,6 +311,76 @@ async def test_admin_download_events_filter_and_project_fields() -> None:
 
 
 @pytest.mark.anyio
+async def test_admin_download_events_filter_by_user_name_or_id() -> None:
+    connection = FakeDownloadAnalyticsConnection()
+    template = connection.rows[1]
+    connection.rows = [
+        template,
+        dict(
+            template,
+            id=3,
+            user_id="user-b",
+            display_name="USER A",
+            created_at=datetime(2026, 7, 8, 10, 3, tzinfo=UTC),
+        ),
+        dict(
+            template,
+            id=4,
+            user_id="user-c",
+            display_name="Different User",
+            created_at=datetime(2026, 7, 8, 10, 4, tzinfo=UTC),
+        ),
+    ]
+
+    by_name = await download_repository.list_admin_download_events(
+        FakeDownloadAnalyticsEngine(connection),
+        page=0,
+        size=20,
+        namespace=None,
+        slug=None,
+        version=None,
+        user_id=None,
+        user_query=" User A ",
+        source=None,
+        start_time=None,
+        end_time=None,
+        platform_roles=["AUDITOR"],
+    )
+    by_id = await download_repository.list_admin_download_events(
+        FakeDownloadAnalyticsEngine(connection),
+        page=0,
+        size=20,
+        namespace=None,
+        slug=None,
+        version=None,
+        user_id=None,
+        user_query=" SER-B ",
+        source=None,
+        start_time=None,
+        end_time=None,
+        platform_roles=["AUDITOR"],
+    )
+
+    assert {item["userId"] for item in by_name["items"]} == {"user-a", "user-b"}
+    assert [item["userId"] for item in by_id["items"]] == ["user-b"]
+    assert connection.params[0]["user_query"] == "%user a%"
+    assert "LEFT JOIN user_account ua ON ua.id = de.user_id" in connection.statements[0]
+
+    wildcard_where, wildcard_params = download_repository._where_clause(
+        namespace=None,
+        slug=None,
+        version=None,
+        user_id=None,
+        user_query=" User_% ",
+        source=None,
+        start_time=None,
+        end_time=None,
+    )
+    assert "LIKE :user_query ESCAPE '!'" in wildcard_where
+    assert wildcard_params["user_query"] == "%user!_!%%"
+
+
+@pytest.mark.anyio
 async def test_admin_download_events_require_platform_reader_role() -> None:
     with pytest.raises(download_repository.DownloadAnalyticsError, match="error.downloadAnalytics.readDenied") as denied:
         await download_repository.list_admin_download_events(
@@ -392,14 +472,19 @@ def test_admin_download_events_route_uses_envelope_and_roles() -> None:
     response = client.get(
         "/api/v1/admin/download-events",
         headers={"X-Mock-User-Id": "admin-user"},
-        params={"namespace": "team-a", "slug": "demo", "size": "1"},
+        params={
+            "namespace": "team-a",
+            "slug": "demo",
+            "userQuery": "User A",
+            "size": "1",
+        },
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["code"] == 0
-    assert body["data"]["total"] == 2
-    assert body["data"]["items"][0]["source"] == "cli"
+    assert body["data"]["total"] == 1
+    assert body["data"]["items"][0]["userId"] == "user-a"
 
 
 def test_admin_download_events_csv_route_exports_filtered_rows() -> None:
@@ -419,7 +504,7 @@ def test_admin_download_events_csv_route_exports_filtered_rows() -> None:
     response = client.get(
         "/api/v1/admin/download-events.csv",
         headers={"X-Mock-User-Id": "admin-user"},
-        params={"namespace": "team-a", "source": "web"},
+        params={"namespace": "team-a", "userQuery": "User A", "source": "web"},
     )
 
     assert response.status_code == 200
