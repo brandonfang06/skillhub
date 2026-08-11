@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import type { SkillSummary, PagedResponse } from '@/api/types'
 import { meApi, promotionApi, namespaceApi } from '@/api/client'
+import { scanStatusRefetchInterval } from '@/shared/lib/scan-status-polling'
 
 async function getMySkills(params: { page?: number; size?: number; filter?: string; q?: string; namespace?: string } = {}): Promise<PagedResponse<SkillSummary>> {
   return meApi.getSkills(params)
@@ -36,6 +37,7 @@ export function useMySkills(params: { page?: number; size?: number; filter?: str
     queryKey: ['skills', 'my', params],
     queryFn: () => getMySkills(params),
     placeholderData: keepPreviousData,
+    refetchInterval: (query) => scanStatusRefetchInterval(query.state.data),
   })
 }
 

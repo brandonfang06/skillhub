@@ -33,7 +33,7 @@ interface SecurityAuditSectionProps {
 
 export function SecurityAuditSection({ skillId, versionId, versionStatus, bare }: SecurityAuditSectionProps) {
   const { t } = useTranslation()
-  const { data: audits, isLoading } = useSecurityAudits(skillId, versionId)
+  const { data: audits, isLoading } = useSecurityAudits(skillId, versionId, versionStatus)
 
   // Return nothing while loading or when there are no audits.
   // This section is supplementary — showing a shimmer that then disappears

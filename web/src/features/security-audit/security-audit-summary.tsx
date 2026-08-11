@@ -17,7 +17,7 @@ interface SecurityAuditSummaryProps {
 
 export function SecurityAuditSummary({ skillId, versionId, versionStatus }: SecurityAuditSummaryProps) {
   const { t } = useTranslation()
-  const { data: audits } = useSecurityAudits(skillId, versionId)
+  const { data: audits } = useSecurityAudits(skillId, versionId, versionStatus)
   const [dialogOpen, setDialogOpen] = useState(false)
 
   if (!audits || audits.length === 0) {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reviewApi } from '@/api/client'
 import type { ReviewSkillDetail, ReviewTask } from '@/api/types'
+import { scanStatusRefetchInterval } from '@/shared/lib/scan-status-polling'
 
 /**
  * Fetches one review task for governance detail views.
@@ -44,6 +45,7 @@ export function useReviewSkillDetail(taskId: number, enabled = true) {
     queryKey: ['reviews', taskId, 'skill-detail'],
     queryFn: () => getReviewSkillDetail(taskId),
     enabled: !!taskId && enabled,
+    refetchInterval: (query) => scanStatusRefetchInterval(query.state.data),
   })
 }
 

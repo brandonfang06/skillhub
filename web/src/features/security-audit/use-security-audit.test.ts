@@ -78,4 +78,15 @@ describe('useSecurityAudits', () => {
 
     expect(capturedOptions?.retry).toBe(false)
   })
+
+  it('polls incomplete audits while the version is scanning and stops after failure', () => {
+    useSecurityAudits(1, 2, 'SCANNING')
+    const refetchInterval = capturedOptions?.refetchInterval as (query: object) => number | false
+
+    expect(refetchInterval({ state: { data: [{ scannedAt: null }] } })).toBe(3_000)
+
+    useSecurityAudits(1, 2, 'SCAN_FAILED')
+    const failedRefetchInterval = capturedOptions?.refetchInterval as (query: object) => number | false
+    expect(failedRefetchInterval({ state: { data: [{ scannedAt: null }] } })).toBe(false)
+  })
 })

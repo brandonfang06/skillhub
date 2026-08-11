@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, fetchJson } from '@/api/client'
+import { securityAuditRefetchInterval } from '@/shared/lib/scan-status-polling'
 import type { SecurityAuditRecord } from './types'
 
 async function fetchSecurityAudits(
@@ -20,13 +21,15 @@ async function fetchSecurityAudits(
 
 export function useSecurityAudits(
   skillId: number | undefined,
-  versionId: number | undefined
+  versionId: number | undefined,
+  versionStatus?: string,
 ) {
   return useQuery({
     queryKey: ['security-audits', skillId, versionId],
     queryFn: () => fetchSecurityAudits(skillId!, versionId!),
     enabled: !!skillId && !!versionId,
     staleTime: 30_000,
+    refetchInterval: (query) => securityAuditRefetchInterval(query.state.data, versionStatus),
     // Most versions have no audit; avoid retrying on expected empty/404.
     retry: false,
   })

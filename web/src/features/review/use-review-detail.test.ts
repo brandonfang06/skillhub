@@ -76,4 +76,13 @@ describe('use-review-detail mutations', () => {
       }),
     )
   })
+
+  it('polls artifact detail while its active version is scanning', () => {
+    useReviewSkillDetail(91)
+
+    const options = mocks.useQuery.mock.calls[0]?.[0]
+    expect(options.refetchInterval({
+      state: { data: { versions: [{ status: 'SCANNING' }] } },
+    })).toBe(3_000)
+  })
 })

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
 import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
 import { useAuth } from '@/shared/hooks/use-auth'
+import { scanStatusRefetchInterval } from '@/shared/lib/scan-status-polling'
 import { getSkillDetailQueryKey, getSkillSearchQueryKey } from './query-keys'
 import { clearDeletedSkillQueries } from './skill-delete-cache'
 import { buildSkillSearchUrl } from './skill-query-helpers'
@@ -76,6 +77,7 @@ export function useSkillDetail(namespace: string, slug: string, enabled = true) 
     queryFn: () => getSkillDetail(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
     refetchOnMount: 'always',
+    refetchInterval: (query) => scanStatusRefetchInterval(query.state.data),
   })
 }
 
@@ -84,6 +86,7 @@ export function useSkillVersions(namespace: string, slug: string, enabled = true
     queryKey: ['skills', namespace, slug, 'versions'],
     queryFn: () => getSkillVersions(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
+    refetchInterval: (query) => scanStatusRefetchInterval(query.state.data),
   })
 }
 
@@ -129,6 +132,7 @@ export function useSkillVersionDetail(namespace: string, slug: string, version?:
     queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
     queryFn: () => getSkillVersionDetail(namespace, slug, version!),
     enabled: enabled && !!namespace && !!slug && !!version,
+    refetchInterval: (query) => scanStatusRefetchInterval(query.state.data),
   })
 }
 
