@@ -9,7 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.review.approval import ReviewApprovalError, ReviewApproveInput, approve_review_task
+from app.review.approval import (
+    ReviewApprovalError,
+    ReviewApproveInput,
+    approve_review_task,
+)
 
 
 @dataclass
@@ -18,7 +22,7 @@ class FakeResult:
     rows: list[dict[str, Any]] | None = None
     scalar: Any = None
 
-    def mappings(self) -> "FakeResult":
+    def mappings(self) -> FakeResult:
         return self
 
     def one_or_none(self) -> dict[str, Any] | None:
@@ -44,10 +48,16 @@ class FakeReviewApproveConnection:
         current_visibility: str = "NAMESPACE_ONLY",
         visibility_updated_after_submission: bool = False,
         review_update_result: int | None = 1,
+        platform_roles: set[str] | None = None,
+        scan_evidence: dict[str, Any] | None = None,
+        version_status: str = "PENDING_REVIEW",
     ) -> None:
         self.current_visibility = current_visibility
         self.visibility_updated_after_submission = visibility_updated_after_submission
         self.review_update_result = review_update_result
+        self.platform_roles = platform_roles or set()
+        self.scan_evidence = scan_evidence
+        self.version_status = version_status
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.notifications: list[dict[str, Any]] = []
@@ -75,13 +85,15 @@ class FakeReviewApproveConnection:
                     "skill_slug": "agent-helper",
                     "owner_id": "local-user",
                     "version_name": "1.0.0",
-                    "version_status": "PENDING_REVIEW",
+                    "version_status": self.version_status,
                     "requested_visibility": "NAMESPACE_ONLY",
                     "parsed_metadata_json": json.dumps({"name": "Agent Helper", "description": "Helps agents"}),
                 }
             )
         if "FROM user_role_binding" in sql:
-            return FakeResult(rows=[])
+            return FakeResult(rows=[{"code": role} for role in sorted(self.platform_roles)])
+        if "FROM security_audit sa" in sql:
+            return FakeResult(row=self.scan_evidence)
         if "FROM namespace_member" in sql:
             return FakeResult(row={"role": "ADMIN"})
         if "SELECT COUNT(*)" in sql and "FROM skill other" in sql:
@@ -179,6 +191,20 @@ def approve_input(**overrides: Any) -> ReviewApproveInput:
     return ReviewApproveInput(**data)
 
 
+def partial_scan_evidence(**overrides: Any) -> dict[str, Any]:
+    evidence = {
+        "id": 801,
+        "max_severity": "MEDIUM",
+        "scanned_at": datetime(2026, 6, 9, 10, 30, tzinfo=UTC),
+        "scan_status": "PARTIAL",
+        "analyzers_completed": ["static_analyzer", "behavioral_analyzer"],
+        "analyzer_failures": [{"analyzer": "llm_analyzer", "code": "LLM_TIMEOUT"}],
+        "failure_code": "LLM_TIMEOUT",
+    }
+    evidence.update(overrides)
+    return evidence
+
+
 @pytest.mark.anyio
 async def test_approve_review_task_publishes_version_updates_skill_and_audit() -> None:
     connection = FakeReviewApproveConnection()
@@ -210,6 +236,81 @@ async def test_approve_review_task_publishes_version_updates_skill_and_audit() -
     assert connection.params[audit_insert]["target_type"] == "REVIEW_TASK"
     assert json.loads(connection.params[audit_insert]["detail_json"]) == {"comment": "ship it"}
     assert connection.params[search_upsert]["skill_id"] == 7
+
+
+@pytest.mark.anyio
+async def test_platform_admin_can_approve_partial_scan_with_dedicated_audit() -> None:
+    connection = FakeReviewApproveConnection(
+        platform_roles={"SKILL_ADMIN"},
+        scan_evidence=partial_scan_evidence(),
+    )
+
+    result = await approve_review_task(
+        FakeEngine(connection),
+        approve_input(
+            reviewer_id="skill-admin",
+            confirm_scan_override=True,
+            scan_override_reason="Provider timeout; baseline findings reviewed",
+        ),
+    )
+
+    assert result["status"] == "APPROVED"
+    audit_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
+    assert connection.params[audit_insert]["action"] == "REVIEW_APPROVE_SCAN_OVERRIDE"
+    detail = connection.params[audit_insert]["detail_json"]
+    assert detail == {
+        "comment": "ship it",
+        "securityAuditId": 801,
+        "scanStatus": "PARTIAL",
+        "failureCodes": ["LLM_TIMEOUT"],
+        "completedAnalyzers": ["static_analyzer", "behavioral_analyzer"],
+        "baselineMaxSeverity": "MEDIUM",
+        "scanOverrideReason": "Provider timeout; baseline findings reviewed",
+    }
+
+
+@pytest.mark.anyio
+async def test_namespace_reviewer_cannot_override_partial_scan_and_writes_nothing() -> None:
+    connection = FakeReviewApproveConnection(scan_evidence=partial_scan_evidence())
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await approve_review_task(
+            FakeEngine(connection),
+            approve_input(
+                confirm_scan_override=True,
+                scan_override_reason="reviewed",
+            ),
+        )
+
+    assert str(error.value) == "review.approve.scan_override_forbidden"
+    assert error.value.status_code == 403
+    assert not any("UPDATE review_task" in sql for sql in connection.statements)
+    assert not any("UPDATE skill_version" in sql for sql in connection.statements)
+    assert not any("INSERT INTO audit_log" in sql for sql in connection.statements)
+    assert connection.notifications == []
+
+
+@pytest.mark.anyio
+async def test_scan_failed_version_cannot_be_approved_and_writes_nothing() -> None:
+    connection = FakeReviewApproveConnection(
+        platform_roles={"SUPER_ADMIN"},
+        scan_evidence=partial_scan_evidence(scan_status="FAILED", failure_code="SCANNER_ERROR"),
+        version_status="SCAN_FAILED",
+    )
+
+    with pytest.raises(ReviewApprovalError) as error:
+        await approve_review_task(
+            FakeEngine(connection),
+            approve_input(
+                reviewer_id="super-admin",
+                confirm_scan_override=True,
+                scan_override_reason="try override",
+            ),
+        )
+
+    assert str(error.value) == "review.approve.scan_failed"
+    assert not any("UPDATE review_task" in sql for sql in connection.statements)
+    assert not any("UPDATE skill_version" in sql for sql in connection.statements)
 
 
 @pytest.mark.anyio
@@ -331,7 +432,11 @@ def test_review_approve_route_returns_java_envelope() -> None:
 
     response = client.post(
         "/api/v1/reviews/701/approve",
-        json={"comment": "ship it"},
+        json={
+            "comment": "ship it",
+            "confirmScanOverride": True,
+            "scanOverrideReason": "LLM provider unavailable; baseline reviewed",
+        },
         headers={"X-Mock-User-Id": "team-admin", "X-Request-Id": "review-approve-test"},
     )
 
@@ -344,6 +449,8 @@ def test_review_approve_route_returns_java_envelope() -> None:
     assert seen[0].review_task_id == 701
     assert seen[0].reviewer_id == "team-admin"
     assert seen[0].comment == "ship it"
+    assert seen[0].confirm_scan_override is True
+    assert seen[0].scan_override_reason == "LLM provider unavailable; baseline reviewed"
 
 
 def test_review_approve_route_requires_mock_user() -> None:

@@ -27,9 +27,9 @@ from app.review.batch import (
     validate_review_batch_input,
 )
 from app.review.query import (
+    ReviewDownloadResult,
     ReviewListQuery,
     ReviewQueryError,
-    ReviewDownloadResult,
     list_my_review_submissions,
     list_pending_reviews,
     list_review_tasks,
@@ -39,8 +39,13 @@ from app.review.query import (
     read_review_skill_detail,
 )
 
-
 router = APIRouter()
+
+
+class ReviewApproveRequest(BaseModel):
+    comment: str | None = None
+    confirmScanOverride: bool = False
+    scanOverrideReason: str | None = None
 
 
 class ReviewActionRequest(BaseModel):
@@ -133,7 +138,7 @@ def _validate_review_file_path(path: str | None) -> str:
 async def approve_review(
     request: Request,
     review_task_id: int,
-    body: ReviewActionRequest | None,
+    body: ReviewApproveRequest | None,
     mock_user_id: str | None,
 ) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
@@ -142,6 +147,8 @@ async def approve_review(
         review_task_id=review_task_id,
         reviewer_id=user_id,
         comment=body.comment if body is not None else None,
+        confirm_scan_override=body.confirmScanOverride if body is not None else False,
+        scan_override_reason=body.scanOverrideReason if body is not None else None,
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
@@ -599,7 +606,7 @@ async def decide_reviews_batch_route(
 async def approve_review_route(
     request: Request,
     review_task_id: int,
-    body: ReviewActionRequest | None = None,
+    body: ReviewApproveRequest | None = None,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await approve_review(request, review_task_id, body, mock_user_id)

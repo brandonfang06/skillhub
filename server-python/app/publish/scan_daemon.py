@@ -7,8 +7,7 @@ from typing import Any
 from app.core.config import Settings
 from app.object_storage import object_storage_for_settings
 from app.publish.scan_consumer import RedisStreamClient, ScanConsumerRuntime
-from app.publish.scanner_client import ScanOptions, ScannerHttpClient
-
+from app.publish.scanner_client import ScannerHttpClient, ScanOptions
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -65,19 +64,18 @@ class ScanConsumerDaemon:
         while self._running:
             try:
                 await self.runtime.ensure_group()
-                async with self.engine.begin() as connection:
-                    await self.runtime.consume_once(
-                        connection,
-                        self.scanner,
-                        count=self.read_count,
-                        block_ms=self.block_ms,
-                    )
-                    await self.runtime.reclaim_once(
-                        connection,
-                        self.scanner,
-                        min_idle_ms=self.reclaim_min_idle_ms,
-                        count=self.reclaim_count,
-                    )
+                await self.runtime.consume_once(
+                    self.engine,
+                    self.scanner,
+                    count=self.read_count,
+                    block_ms=self.block_ms,
+                )
+                await self.runtime.reclaim_once(
+                    self.engine,
+                    self.scanner,
+                    min_idle_ms=self.reclaim_min_idle_ms,
+                    count=self.reclaim_count,
+                )
                 await asyncio.sleep(0)
             except asyncio.CancelledError:
                 raise

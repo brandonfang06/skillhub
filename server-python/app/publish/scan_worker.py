@@ -1,18 +1,38 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
 from sqlalchemy import text
 
+from app.core.request_id import current_request_id
 from app.object_storage import ObjectStorage
-from app.publish.scanner_result import AppliedSecurityScanResult, SecurityScanResultInput, apply_security_scan_result
-
+from app.publish.scanner_result import (
+    AppliedSecurityScanResult,
+    SecurityScanResultInput,
+    apply_security_scan_result,
+    scanner_type_db_value,
+    upsert_scan_execution,
+)
 
 logger = logging.getLogger("uvicorn.error")
+
+
+class ScanTaskLeaseUnavailable(RuntimeError):
+    pass
+
+
+class ScanTaskAlreadyFinalized(RuntimeError):
+    pass
+
+
+class ScanTaskNotReady(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -23,6 +43,8 @@ class SecurityScanTask:
     bundle_key: str | None = None
     scanner_type: str = "skill-scanner"
     retry_count: int = 0
+    created_at_millis: int | None = None
+    visibility_retry_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -71,6 +93,16 @@ def parse_retry_count(fields: dict[str, str]) -> int:
         return 0
 
 
+def parse_optional_int(fields: dict[str, str], field: str) -> int | None:
+    raw = blank_to_none(fields.get(field))
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
 def parse_scan_task_fields(fields: dict[str, str]) -> SecurityScanTask | None:
     raw_version_id = blank_to_none(fields.get("versionId"))
     if raw_version_id is None:
@@ -87,6 +119,8 @@ def parse_scan_task_fields(fields: dict[str, str]) -> SecurityScanTask | None:
         bundle_key=blank_to_none(fields.get("bundleKey")),
         scanner_type=blank_to_none(fields.get("scannerType")) or "skill-scanner",
         retry_count=parse_retry_count(fields),
+        created_at_millis=parse_optional_int(fields, "createdAtMillis"),
+        visibility_retry_count=max(parse_optional_int(fields, "visibilityRetryCount") or 0, 0),
     )
 
 
@@ -145,6 +179,34 @@ def cleanup_scan_path(path: str | None, *, scan_temp_dir: str) -> None:
         target.unlink()
 
 
+async def acquire_scan_task_lease(connection: Any, version_id: int) -> None:
+    lease_row = (
+        await connection.execute(
+            text("SELECT pg_try_advisory_xact_lock(:version_id) AS acquired"),
+            {"version_id": version_id},
+        )
+    ).mappings().first()
+    if lease_row is None or not bool(lease_row["acquired"]):
+        raise ScanTaskLeaseUnavailable(f"Scan task lease is already held for versionId={version_id}")
+
+    version_row = None
+    for attempt in range(20):
+        version_row = (
+            await connection.execute(
+                text("SELECT status FROM skill_version WHERE id = :version_id"),
+                {"version_id": version_id},
+            )
+        ).mappings().first()
+        if version_row is not None:
+            break
+        if attempt < 19:
+            await asyncio.sleep(0.05)
+    if version_row is None:
+        raise ScanTaskNotReady(f"SkillVersion is not visible yet: {version_id}")
+    if version_row["status"] != "SCANNING":
+        raise ScanTaskAlreadyFinalized(f"SkillVersion is no longer scanning: {version_id}")
+
+
 async def process_scan_task(
     connection: Any,
     task: SecurityScanTask,
@@ -155,13 +217,16 @@ async def process_scan_task(
     storage: ObjectStorage | None = None,
     mark_failed_on_error: bool = True,
 ) -> AppliedSecurityScanResult:
-    resolved = resolve_working_skill_path(
-        task,
-        storage_base_path=storage_base_path,
-        scan_temp_dir=scan_temp_dir,
-        storage=storage,
-    )
+    started = time.perf_counter()
+    await acquire_scan_task_lease(connection, task.version_id)
+    resolved: ResolvedScanPath | None = None
     try:
+        resolved = resolve_working_skill_path(
+            task,
+            storage_base_path=storage_base_path,
+            scan_temp_dir=scan_temp_dir,
+            storage=storage,
+        )
         scan_result = await scanner.scan(task, resolved.skill_path)
         applied = await apply_security_scan_result(
             connection,
@@ -170,47 +235,89 @@ async def process_scan_task(
             scan_result=scan_result,
         )
         logger.info(
-            "Applied scan result: version_id=%s scanner_type=%s scan_id=%s verdict=%s findings_count=%s new_status=%s",
+            "scan.task.completed task_id=%s version_id=%s scanner_type=%s retry_count=%s scan_id=%s "
+            "scan_status=%s verdict=%s findings_count=%s audit_id=%s previous_status=%s new_status=%s "
+            "failure_code=%s request_id=%s elapsed_ms=%s",
+            task.task_id,
             task.version_id,
             task.scanner_type,
+            task.retry_count,
             scan_result.scan_id,
+            scan_result.scan_status,
             scan_result.verdict,
             scan_result.findings_count,
+            applied.audit_id,
+            applied.previous_status,
             applied.new_status,
+            scan_result.failure_code,
+            current_request_id(),
+            int((time.perf_counter() - started) * 1000),
         )
         return applied
     except Exception:
         if mark_failed_on_error:
-            await mark_scan_task_failed(connection, version_id=task.version_id)
+            await mark_scan_task_failed(
+                connection,
+                version_id=task.version_id,
+                scanner_type=task.scanner_type,
+            )
         raise
     finally:
-        cleanup_scan_path(resolved.cleanup_path, scan_temp_dir=scan_temp_dir)
+        cleanup_scan_path(resolved.cleanup_path if resolved is not None else None, scan_temp_dir=scan_temp_dir)
 
 
-async def mark_scan_task_failed(connection: Any, *, version_id: int) -> bool:
-    row = (
+async def mark_scan_task_failed(
+    connection: Any,
+    *,
+    version_id: int,
+    scanner_type: str = "skill-scanner",
+    failure_code: str = "SCANNER_ERROR",
+) -> bool:
+    transition_row = (
         await connection.execute(
             text(
                 """
-                SELECT id, status
-                FROM skill_version
+                UPDATE skill_version
+                SET status = 'SCAN_FAILED'
                 WHERE id = :version_id
+                  AND status = 'SCANNING'
+                RETURNING id
                 """
             ),
             {"version_id": version_id},
         )
     ).mappings().first()
-    if row is None or row["status"] != "SCANNING":
+    if transition_row is None:
         return False
 
-    await connection.execute(
-        text(
-            """
-            UPDATE skill_version
-            SET status = 'SCAN_FAILED'
-            WHERE id = :version_id
-            """
-        ),
-        {"version_id": version_id},
-    )
+    audit_row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id
+                FROM security_audit
+                WHERE skill_version_id = :version_id
+                  AND scanner_type = :scanner_type
+                  AND deleted_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            ),
+            {
+                "version_id": version_id,
+                "scanner_type": scanner_type_db_value(scanner_type),
+            },
+        )
+    ).mappings().first()
+
+    if audit_row is not None:
+        await upsert_scan_execution(
+            connection,
+            security_audit_id=int(audit_row["id"]),
+            scan_status="FAILED",
+            analyzers_requested=[],
+            analyzers_completed=[],
+            analyzer_failures=[{"analyzer": "scanner", "code": failure_code}],
+            failure_code=failure_code,
+        )
     return True

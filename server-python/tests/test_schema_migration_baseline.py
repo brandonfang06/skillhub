@@ -5,7 +5,6 @@ from pathlib import Path
 
 from app import migrations
 
-
 ROOT = Path(__file__).resolve().parents[2]
 FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 
@@ -114,6 +113,28 @@ def test_local_migration_files_include_review_attempt_archive_extension() -> Non
     assert "idx_review_attempt_archive_skill_version" in sql
     assert "idx_review_attempt_archive_namespace_status_reviewed" in sql
     assert "idx_review_attempt_archive_replacement_review" in sql
+
+
+def test_local_migration_files_include_security_scan_execution_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    execution_migration = next(
+        (item for item in local_migrations if item.identifier == "20260811_01"),
+        None,
+    )
+
+    assert execution_migration is not None
+    assert execution_migration.path.name == "20260811_01__local_security_scan_execution.sql"
+    sql = execution_migration.path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS local_security_scan_execution" in sql
+    assert "security_audit_id BIGINT PRIMARY KEY" in sql
+    assert "REFERENCES security_audit(id) ON DELETE CASCADE" in sql
+    assert "scan_status VARCHAR(16) NOT NULL" in sql
+    assert "CHECK (scan_status IN ('PENDING', 'COMPLETE', 'PARTIAL', 'FAILED'))" in sql
+    assert "analyzers_requested JSONB NOT NULL DEFAULT '[]'::jsonb" in sql
+    assert "analyzers_completed JSONB NOT NULL DEFAULT '[]'::jsonb" in sql
+    assert "analyzer_failures JSONB NOT NULL DEFAULT '[]'::jsonb" in sql
+    assert "failure_code VARCHAR(64)" in sql
 
 
 def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:

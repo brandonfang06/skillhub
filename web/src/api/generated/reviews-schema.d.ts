@@ -417,6 +417,18 @@ export interface components {
             /** Comment */
             comment?: string | null;
         };
+        /** ReviewApproveRequest */
+        ReviewApproveRequest: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Confirmscanoverride
+             * @default false
+             */
+            confirmScanOverride: boolean;
+            /** Scanoverridereason */
+            scanOverrideReason?: string | null;
+        };
         /** ReviewBatchDecisionRequest */
         ReviewBatchDecisionRequest: {
             /** Reviewtaskids */
@@ -1121,7 +1133,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ReviewActionRequest"] | null;
+                "application/json": components["schemas"]["ReviewApproveRequest"] | null;
             };
         };
         responses: {
@@ -1160,7 +1172,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ReviewActionRequest"] | null;
+                "application/json": components["schemas"]["ReviewApproveRequest"] | null;
             };
         };
         responses: {

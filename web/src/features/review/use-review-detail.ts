@@ -14,11 +14,11 @@ async function getReviewSkillDetail(taskId: number): Promise<ReviewSkillDetail> 
   return reviewApi.getSkillDetail(taskId)
 }
 
-/**
- * Approves the current review task.
- */
-async function approveReview(taskId: number, comment?: string): Promise<void> {
-  await reviewApi.approve(taskId, comment)
+interface ApproveReviewMutationInput {
+  taskId: number
+  comment?: string
+  confirmScanOverride?: boolean
+  scanOverrideReason?: string
 }
 
 /**
@@ -57,8 +57,16 @@ export function useApproveReview(callbacks?: { onSuccess?: () => void; onError?:
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ taskId, comment }: { taskId: number; comment?: string }) =>
-      approveReview(taskId, comment),
+    mutationFn: ({
+      taskId,
+      comment,
+      confirmScanOverride,
+      scanOverrideReason,
+    }: ApproveReviewMutationInput) => reviewApi.approve(taskId, {
+      comment,
+      confirmScanOverride,
+      scanOverrideReason,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })

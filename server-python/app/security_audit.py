@@ -8,7 +8,6 @@ from sqlalchemy import text
 from app.api.skills import to_java_instant
 from app.auth.policy import is_namespace_manager, is_namespace_member
 
-
 SCANNER_TYPE_API_TO_DB = {
     "skill-scanner": "SKILL_SCANNER",
     "custom": "CUSTOM",
@@ -50,6 +49,30 @@ def _json_findings(value: Any) -> list[dict[str, Any]]:
     if not isinstance(parsed, list):
         return []
     return [item if isinstance(item, dict) else {} for item in parsed]
+
+
+def _json_string_list(value: Any) -> list[str]:
+    parsed = _json_array(value)
+    return [str(item) for item in parsed if isinstance(item, str) and item]
+
+
+def _json_object_list(value: Any) -> list[dict[str, Any]]:
+    parsed = _json_array(value)
+    return [item for item in parsed if isinstance(item, dict)]
+
+
+def _json_array(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    parsed = value
+    if isinstance(value, str):
+        if value.strip() == "":
+            return []
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+    return parsed if isinstance(parsed, list) else []
 
 
 async def _read_version(connection: Any, version_id: int) -> dict[str, Any]:
@@ -147,6 +170,7 @@ def _can_view_audit(
 
 
 def _audit_response(row: dict[str, Any]) -> dict[str, Any]:
+    scan_status = row.get("scan_status") or ("COMPLETE" if row.get("scanned_at") is not None else "PENDING")
     return {
         "id": int(row["id"]),
         "scanId": row.get("scan_id"),
@@ -159,6 +183,11 @@ def _audit_response(row: dict[str, Any]) -> dict[str, Any]:
         "scanDurationSeconds": float(row["scan_duration_seconds"]) if row.get("scan_duration_seconds") is not None else None,
         "scannedAt": to_java_instant(row.get("scanned_at")),
         "createdAt": to_java_instant(row.get("created_at")),
+        "scanStatus": scan_status,
+        "analyzersRequested": _json_string_list(row.get("analyzers_requested")),
+        "analyzersCompleted": _json_string_list(row.get("analyzers_completed")),
+        "analyzerFailures": _json_object_list(row.get("analyzer_failures")),
+        "failureCode": row.get("failure_code"),
     }
 
 
@@ -173,14 +202,18 @@ async def _read_latest_security_audits(
             await connection.execute(
                 text(
                     """
-                    SELECT id, skill_version_id, scan_id, scanner_type, verdict, is_safe,
-                           max_severity, findings_count, findings, scan_duration_seconds,
-                           scanned_at, created_at
-                    FROM security_audit
-                    WHERE skill_version_id = :version_id
-                      AND scanner_type = :scanner_type
-                      AND deleted_at IS NULL
-                    ORDER BY created_at DESC
+                    SELECT sa.id, sa.skill_version_id, sa.scan_id, sa.scanner_type, sa.verdict, sa.is_safe,
+                           sa.max_severity, sa.findings_count, sa.findings, sa.scan_duration_seconds,
+                           sa.scanned_at, sa.created_at, execution.scan_status,
+                           execution.analyzers_requested, execution.analyzers_completed,
+                           execution.analyzer_failures, execution.failure_code
+                    FROM security_audit sa
+                    LEFT JOIN local_security_scan_execution execution
+                      ON execution.security_audit_id = sa.id
+                    WHERE sa.skill_version_id = :version_id
+                      AND sa.scanner_type = :scanner_type
+                      AND sa.deleted_at IS NULL
+                    ORDER BY sa.created_at DESC
                     LIMIT 1
                     """
                 ),
@@ -193,14 +226,18 @@ async def _read_latest_security_audits(
         await connection.execute(
             text(
                 """
-                SELECT DISTINCT ON (scanner_type)
-                       id, skill_version_id, scan_id, scanner_type, verdict, is_safe,
-                       max_severity, findings_count, findings, scan_duration_seconds,
-                       scanned_at, created_at
-                FROM security_audit
-                WHERE skill_version_id = :version_id
-                  AND deleted_at IS NULL
-                ORDER BY scanner_type ASC, created_at DESC
+                SELECT DISTINCT ON (sa.scanner_type)
+                       sa.id, sa.skill_version_id, sa.scan_id, sa.scanner_type, sa.verdict, sa.is_safe,
+                       sa.max_severity, sa.findings_count, sa.findings, sa.scan_duration_seconds,
+                       sa.scanned_at, sa.created_at, execution.scan_status,
+                       execution.analyzers_requested, execution.analyzers_completed,
+                       execution.analyzer_failures, execution.failure_code
+                FROM security_audit sa
+                LEFT JOIN local_security_scan_execution execution
+                  ON execution.security_audit_id = sa.id
+                WHERE sa.skill_version_id = :version_id
+                  AND sa.deleted_at IS NULL
+                ORDER BY sa.scanner_type ASC, sa.created_at DESC
                 """
             ),
             {"version_id": version_id},

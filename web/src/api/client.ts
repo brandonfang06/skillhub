@@ -972,13 +972,17 @@ export const reviewApi = {
     return fetchJson<ReviewSkillDetail>(`${WEB_API_PREFIX}/reviews/${id}/skill-detail`)
   },
 
-  async approve(id: number, comment?: string): Promise<void> {
+  async approve(id: number, request: {
+    comment?: string
+    confirmScanOverride?: boolean
+    scanOverrideReason?: string
+  } = {}): Promise<void> {
     await fetchJson<void>(`${WEB_API_PREFIX}/reviews/${id}/approve`, {
       method: 'POST',
       headers: getCsrfHeaders({
         'Content-Type': 'application/json',
       }),
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify(request),
     })
   },
 

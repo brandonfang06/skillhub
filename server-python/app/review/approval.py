@@ -6,14 +6,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
-
-from app.audit.writer import write_audit_log
-from app.db.unit_of_work import transaction_connection
-
-from app.admin.search import upsert_skill_search_document
 from sqlalchemy.exc import IntegrityError
 
+from app.admin.search import upsert_skill_search_document
+from app.audit.writer import write_audit_log
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.db.unit_of_work import transaction_connection
 from app.notifications.publisher import NotificationFanout
 from app.review.notifications import (
     publish_review_notifications,
@@ -21,7 +19,11 @@ from app.review.notifications import (
     write_review_decision_notification,
     write_review_submitted_notifications,
 )
-
+from app.review.scan_approval import (
+    ScanApprovalPolicyError,
+    evaluate_scan_approval,
+    read_latest_scan_approval_evidence,
+)
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
 NAMESPACE_REVIEW_ROLES = NAMESPACE_MANAGER_ROLES
@@ -32,6 +34,9 @@ class ReviewApproveInput:
     review_task_id: int
     reviewer_id: str
     comment: str | None = None
+    confirm_scan_override: bool = False
+    scan_override_reason: str | None = None
+    allow_scan_override: bool = True
     request_id: str | None = None
     client_ip: str | None = None
     user_agent: str | None = None
@@ -85,6 +90,13 @@ def _detail_with_comment(comment: str | None) -> str | None:
     return json.dumps({"comment": comment}, separators=(",", ":"))
 
 
+def _approval_override_detail(comment: str | None, override_detail: dict[str, Any]) -> dict[str, Any]:
+    detail = dict(override_detail)
+    if comment is not None and comment.strip() != "":
+        detail = {"comment": comment, **detail}
+    return detail
+
+
 async def _write_review_audit(
     connection: Any,
     *,
@@ -95,6 +107,7 @@ async def _write_review_audit(
     client_ip: str | None,
     user_agent: str | None,
     detail_json: str | None,
+    detail: dict[str, Any] | None = None,
     created_at: datetime,
 ) -> None:
     await write_audit_log(
@@ -106,7 +119,7 @@ async def _write_review_audit(
         request_id=request_id,
         client_ip=client_ip,
         user_agent=user_agent,
-        detail={},
+        detail=detail or {},
         detail_json=detail_json,
         created_at=created_at,
     )
@@ -332,11 +345,12 @@ def _assert_namespace_active(task: dict[str, Any]) -> None:
         raise ReviewApprovalError("error.namespace.archived")
 
 
-async def _assert_can_review(connection: Any, task: dict[str, Any], reviewer_id: str) -> None:
+async def _assert_can_review(connection: Any, task: dict[str, Any], reviewer_id: str) -> set[str]:
     platform_roles = await _read_platform_roles(connection, reviewer_id)
     namespace_role = await _read_namespace_role(connection, int(task["namespace_id"]), reviewer_id)
     if not _can_review(task, reviewer_id, namespace_role, platform_roles):
         raise ReviewApprovalError("review.no_permission", status_code=403)
+    return platform_roles
 
 
 async def _read_review_submit_context(connection: Any, skill_version_id: int, user_id: str) -> dict[str, Any]:
@@ -507,10 +521,26 @@ async def approve_review_task(
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
         _assert_namespace_active(task)
+        platform_roles = await _assert_can_review(connection, task, request.reviewer_id)
         if str(task["version_status"]) == "SCANNING":
             raise ReviewApprovalError("review.approve.scan_in_progress")
+        if str(task["version_status"]) == "SCAN_FAILED":
+            raise ReviewApprovalError("review.approve.scan_failed")
 
-        await _assert_can_review(connection, task, request.reviewer_id)
+        scan_evidence = await read_latest_scan_approval_evidence(
+            connection,
+            skill_version_id=int(task["skill_version_id"]),
+        )
+        try:
+            scan_decision = evaluate_scan_approval(
+                scan_evidence,
+                platform_roles=platform_roles,
+                confirm_override=request.confirm_scan_override,
+                override_reason=request.scan_override_reason,
+                allow_override=request.allow_scan_override,
+            )
+        except ScanApprovalPolicyError as exc:
+            raise ReviewApprovalError(str(exc), status_code=exc.status_code) from exc
 
         conflict_count = (
             await connection.execute(
@@ -609,15 +639,21 @@ async def approve_review_task(
             },
         )
 
+        override_audit_detail = (
+            _approval_override_detail(request.comment, scan_decision.override_detail)
+            if scan_decision.override_detail is not None
+            else None
+        )
         await _write_review_audit(
             connection,
             actor_user_id=request.reviewer_id,
-            action="REVIEW_APPROVE",
+            action=scan_decision.audit_action,
             target_id=request.review_task_id,
             request_id=request.request_id,
             client_ip=request.client_ip,
             user_agent=request.user_agent,
-            detail_json=_detail_with_comment(request.comment),
+            detail_json=None if override_audit_detail is not None else _detail_with_comment(request.comment),
+            detail=override_audit_detail,
             created_at=reviewed_at,
         )
         await upsert_skill_search_document(connection, int(task["skill_id"]))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-import json
 from typing import Any
 
 import pytest
@@ -35,10 +34,10 @@ class FakeResult:
 
 
 class FakeContext:
-    def __init__(self, connection: "FakeSecurityAuditConnection") -> None:
+    def __init__(self, connection: FakeSecurityAuditConnection) -> None:
         self.connection = connection
 
-    async def __aenter__(self) -> "FakeSecurityAuditConnection":
+    async def __aenter__(self) -> FakeSecurityAuditConnection:
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -46,7 +45,7 @@ class FakeContext:
 
 
 class FakeEngine:
-    def __init__(self, connection: "FakeSecurityAuditConnection") -> None:
+    def __init__(self, connection: FakeSecurityAuditConnection) -> None:
         self.connection = connection
 
     def connect(self) -> FakeContext:
@@ -111,6 +110,11 @@ class FakeSecurityAuditConnection:
                 "scanned_at": datetime(2026, 6, 11, 8, 1, tzinfo=UTC),
                 "created_at": datetime(2026, 6, 11, 8, 2, tzinfo=UTC),
                 "deleted_at": None,
+                "scan_status": "PARTIAL",
+                "analyzers_requested": ["static_analyzer", "llm_analyzer"],
+                "analyzers_completed": ["static_analyzer"],
+                "analyzer_failures": [{"analyzer": "llm_analyzer", "code": "LLM_TIMEOUT"}],
+                "failure_code": "LLM_TIMEOUT",
             },
             {
                 "id": 9,
@@ -187,8 +191,15 @@ async def test_list_security_audits_returns_latest_active_per_scanner_with_java_
     assert result[1]["verdict"] == "DANGEROUS"
     assert result[1]["findings"][0]["ruleId"] == "STATIC-001"
     assert result[1]["scannedAt"] == "2026-06-11T08:01:00Z"
+    assert result[1]["scanStatus"] == "PARTIAL"
+    assert result[1]["analyzersRequested"] == ["static_analyzer", "llm_analyzer"]
+    assert result[1]["analyzersCompleted"] == ["static_analyzer"]
+    assert result[1]["analyzerFailures"] == [{"analyzer": "llm_analyzer", "code": "LLM_TIMEOUT"}]
+    assert result[1]["failureCode"] == "LLM_TIMEOUT"
     assert result[0]["scannerType"] == "custom"
     assert result[0]["findings"] == []
+    assert result[0]["scanStatus"] == "COMPLETE"
+    assert result[0]["analyzersRequested"] == []
 
 
 @pytest.mark.anyio

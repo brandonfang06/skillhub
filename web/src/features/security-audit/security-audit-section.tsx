@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronUp, Shield } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Shield } from 'lucide-react'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { useSecurityAudits } from './use-security-audit'
@@ -85,6 +85,40 @@ function ScannerCard({ audit, versionStatus }: { audit: SecurityAuditRecord; ver
           )}
         </div>
       </div>
+
+      {audit.scanStatus === 'PARTIAL' && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div className="min-w-0 space-y-2">
+              <div>
+                <p className="font-semibold">{t('securityAudit.partialTitle')}</p>
+                <p className="mt-1 text-amber-900/80 dark:text-amber-100/80">
+                  {t('securityAudit.partialDescription')}
+                </p>
+              </div>
+              {audit.analyzersCompleted && audit.analyzersCompleted.length > 0 && (
+                <p className="break-words">
+                  <span className="font-semibold">{t('securityAudit.completedAnalyzers')}: </span>
+                  <span className="font-mono">{audit.analyzersCompleted.join(', ')}</span>
+                </p>
+              )}
+              {audit.analyzerFailures && audit.analyzerFailures.length > 0 && (
+                <div>
+                  <p className="font-semibold">{t('securityAudit.failedAnalyzers')}:</p>
+                  <ul className="mt-1 space-y-1 font-mono">
+                    {audit.analyzerFailures.map((failure) => (
+                      <li key={`${failure.analyzer}-${failure.code}`} className="break-words">
+                        {failure.analyzer}: {failure.code}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {sortedFindings.length > 0 && (
         <>

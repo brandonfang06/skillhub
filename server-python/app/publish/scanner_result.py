@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -23,6 +23,11 @@ class SecurityScanResultInput:
     findings: list[dict[str, Any]]
     scan_duration_seconds: float
     scanned_at: datetime | None = None
+    scan_status: str = "COMPLETE"
+    analyzers_requested: list[str] = field(default_factory=list)
+    analyzers_completed: list[str] = field(default_factory=list)
+    analyzer_failures: list[dict[str, str]] = field(default_factory=list)
+    failure_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -33,12 +38,52 @@ class AppliedSecurityScanResult:
     status_changed: bool
 
 
-def status_after_scan_result(current_status: str, requested_visibility: str | None) -> str:
-    if current_status != "SCANNING":
-        return current_status
-    if requested_visibility == "PRIVATE":
-        return "UPLOADED"
-    return "PENDING_REVIEW"
+async def upsert_scan_execution(
+    connection: Any,
+    *,
+    security_audit_id: int,
+    scan_status: str,
+    analyzers_requested: list[str],
+    analyzers_completed: list[str],
+    analyzer_failures: list[dict[str, str]],
+    failure_code: str | None,
+) -> None:
+    await connection.execute(
+        text(
+            """
+            INSERT INTO local_security_scan_execution (
+                security_audit_id,
+                scan_status,
+                analyzers_requested,
+                analyzers_completed,
+                analyzer_failures,
+                failure_code
+            ) VALUES (
+                :security_audit_id,
+                :scan_status,
+                :analyzers_requested,
+                :analyzers_completed,
+                :analyzer_failures,
+                :failure_code
+            )
+            ON CONFLICT (security_audit_id) DO UPDATE
+            SET scan_status = EXCLUDED.scan_status,
+                analyzers_requested = EXCLUDED.analyzers_requested,
+                analyzers_completed = EXCLUDED.analyzers_completed,
+                analyzer_failures = EXCLUDED.analyzer_failures,
+                failure_code = EXCLUDED.failure_code,
+                updated_at = CURRENT_TIMESTAMP
+            """
+        ),
+        {
+            "security_audit_id": security_audit_id,
+            "scan_status": scan_status,
+            "analyzers_requested": json.dumps(analyzers_requested, separators=(",", ":")),
+            "analyzers_completed": json.dumps(analyzers_completed, separators=(",", ":")),
+            "analyzer_failures": json.dumps(analyzer_failures, separators=(",", ":")),
+            "failure_code": failure_code,
+        },
+    )
 
 
 async def apply_security_scan_result(
@@ -68,20 +113,39 @@ async def apply_security_scan_result(
     if audit_row is None:
         raise ValueError(f"SecurityAudit not found for versionId={version_id}, scannerType={scanner_type}")
 
-    version_row = (
+    transition_row = (
         await connection.execute(
             text(
                 """
-                SELECT id, status, requested_visibility
-                FROM skill_version
+                UPDATE skill_version
+                SET status = CASE
+                    WHEN requested_visibility = 'PRIVATE' THEN 'UPLOADED'
+                    ELSE 'PENDING_REVIEW'
+                END
                 WHERE id = :version_id
+                  AND status = 'SCANNING'
+                RETURNING status
                 """
             ),
             {"version_id": version_id},
         )
     ).mappings().first()
-    if version_row is None:
-        raise ValueError(f"SkillVersion not found: {version_id}")
+    if transition_row is None:
+        version_row = (
+            await connection.execute(
+                text("SELECT status FROM skill_version WHERE id = :version_id"),
+                {"version_id": version_id},
+            )
+        ).mappings().first()
+        if version_row is None:
+            raise ValueError(f"SkillVersion not found: {version_id}")
+        current_status = str(version_row["status"])
+        return AppliedSecurityScanResult(
+            audit_id=int(audit_row["id"]),
+            previous_status=current_status,
+            new_status=current_status,
+            status_changed=False,
+        )
 
     scanned_at = scan_result.scanned_at or datetime.now(UTC)
     await connection.execute(
@@ -111,24 +175,19 @@ async def apply_security_scan_result(
             "scanned_at": scanned_at,
         },
     )
-
-    previous_status = str(version_row["status"])
-    new_status = status_after_scan_result(previous_status, version_row.get("requested_visibility"))
-    if new_status != previous_status:
-        await connection.execute(
-            text(
-                """
-                UPDATE skill_version
-                SET status = :status
-                WHERE id = :version_id
-                """
-            ),
-            {"version_id": version_id, "status": new_status},
-        )
+    await upsert_scan_execution(
+        connection,
+        security_audit_id=int(audit_row["id"]),
+        scan_status=scan_result.scan_status,
+        analyzers_requested=scan_result.analyzers_requested,
+        analyzers_completed=scan_result.analyzers_completed,
+        analyzer_failures=scan_result.analyzer_failures,
+        failure_code=scan_result.failure_code,
+    )
 
     return AppliedSecurityScanResult(
         audit_id=int(audit_row["id"]),
-        previous_status=previous_status,
-        new_status=new_status,
-        status_changed=new_status != previous_status,
+        previous_status="SCANNING",
+        new_status=str(transition_row["status"]),
+        status_changed=True,
     )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Any
 
@@ -23,7 +22,7 @@ async def write_audit_log(
     created_at: datetime,
     detail_json: str | None = None,
 ) -> None:
-    serialized_detail = detail_json if detail_json is not None else (json.dumps(detail) if detail else None)
+    stored_detail = detail_json if detail_json is not None else (detail or None)
     await connection.execute(
         insert(AuditLog),
         {
@@ -34,7 +33,7 @@ async def write_audit_log(
             "request_id": request_id,
             "client_ip": client_ip,
             "user_agent": user_agent,
-            "detail_json": serialized_detail,
+            "detail_json": stored_detail,
             "created_at": created_at,
         },
     )

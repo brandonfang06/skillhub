@@ -1,6 +1,12 @@
 export type SecurityVerdict = 'SAFE' | 'SUSPICIOUS' | 'DANGEROUS' | 'BLOCKED'
 export type SecurityAuditDisplayState = SecurityVerdict | 'SCANNING' | 'SCAN_FAILED'
 export type FindingSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'
+export type SecurityScanStatus = 'PENDING' | 'COMPLETE' | 'PARTIAL' | 'FAILED'
+
+export interface AnalyzerFailure {
+  analyzer: string
+  code: string
+}
 
 export interface SecurityFinding {
   ruleId: string
@@ -28,4 +34,9 @@ export interface SecurityAuditRecord {
   scanDurationSeconds: number | null
   scannedAt: string | null
   createdAt: string
+  scanStatus?: SecurityScanStatus
+  analyzersRequested?: string[]
+  analyzersCompleted?: string[]
+  analyzerFailures?: AnalyzerFailure[]
+  failureCode?: string | null
 }

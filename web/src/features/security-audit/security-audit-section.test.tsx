@@ -136,6 +136,30 @@ describe('SecurityAuditSection', () => {
     expect(html).toContain('securityAudit.scanDuration')
   })
 
+  it('renders partial scan evidence without treating it as a complete clean scan', () => {
+    mockAudits = [
+      createAudit({
+        scanStatus: 'PARTIAL',
+        analyzersRequested: ['static_analyzer', 'behavioral_analyzer', 'llm_analyzer'],
+        analyzersCompleted: ['static_analyzer', 'behavioral_analyzer'],
+        analyzerFailures: [{ analyzer: 'llm_analyzer', code: 'LLM_TIMEOUT' }],
+        failureCode: 'LLM_TIMEOUT',
+      }),
+    ]
+    mockIsLoading = false
+
+    const html = renderToStaticMarkup(<SecurityAuditSection skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.partialTitle')
+    expect(html).toContain('securityAudit.partialDescription')
+    expect(html).toContain('securityAudit.completedAnalyzers')
+    expect(html).toContain('static_analyzer')
+    expect(html).toContain('behavioral_analyzer')
+    expect(html).toContain('securityAudit.failedAnalyzers')
+    expect(html).toContain('llm_analyzer')
+    expect(html).toContain('LLM_TIMEOUT')
+  })
+
   it('omits the scan duration when null', () => {
     mockAudits = [createAudit({ scanDurationSeconds: null })]
     mockIsLoading = false

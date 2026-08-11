@@ -1176,7 +1176,7 @@
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/ReviewActionRequest"
+                    "$ref": "#/components/schemas/ReviewApproveRequest"
                   },
                   {
                     "type": "null"
@@ -1250,7 +1250,7 @@
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/ReviewActionRequest"
+                    "$ref": "#/components/schemas/ReviewApproveRequest"
                   },
                   {
                     "type": "null"
@@ -1699,6 +1699,39 @@
         },
         "type": "object",
         "title": "ReviewActionRequest"
+      },
+      "ReviewApproveRequest": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "confirmScanOverride": {
+            "type": "boolean",
+            "title": "Confirmscanoverride",
+            "default": false
+          },
+          "scanOverrideReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scanoverridereason"
+          }
+        },
+        "type": "object",
+        "title": "ReviewApproveRequest"
       },
       "ReviewBatchDecisionRequest": {
         "properties": {

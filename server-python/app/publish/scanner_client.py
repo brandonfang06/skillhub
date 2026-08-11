@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 
+from app.core.request_id import current_request_id
 from app.publish.scan_worker import SecurityScanTask
 from app.publish.scanner_result import SecurityScanResultInput
-
 
 DEFAULT_SCANNER_BASE_URL = "http://localhost:8000"
 DEFAULT_SCANNER_HEALTH_PATH = "/health"
@@ -32,7 +33,7 @@ class ScanOptions:
     use_trigger: bool
 
     @staticmethod
-    def disabled() -> "ScanOptions":
+    def disabled() -> ScanOptions:
         return ScanOptions(False, False, "anthropic", False, False, "", False, False)
 
     def as_form_fields(self) -> dict[str, str]:
@@ -67,6 +68,25 @@ class ScanOptions:
         if self.use_aidefense and self.aidefense_api_key:
             return {"X-AIDefense-Key": self.aidefense_api_key}
         return {}
+
+    def without_llm(self) -> ScanOptions:
+        return replace(self, use_llm=False, enable_meta=False)
+
+    def requested_analyzers(self) -> list[str]:
+        analyzers = ["static_analyzer"]
+        if self.use_behavioral:
+            analyzers.append("behavioral_analyzer")
+        if self.use_llm:
+            analyzers.append("llm_analyzer")
+        if self.enable_meta:
+            analyzers.append("meta_analyzer")
+        if self.use_aidefense:
+            analyzers.append("aidefense_analyzer")
+        if self.use_virustotal:
+            analyzers.append("virustotal_analyzer")
+        if self.use_trigger:
+            analyzers.append("trigger_analyzer")
+        return analyzers
 
 
 def bool_string(value: bool) -> str:
@@ -117,6 +137,12 @@ def map_scanner_api_response(payload: dict[str, Any]) -> SecurityScanResultInput
     findings = payload.get("findings") or []
     if not isinstance(findings, list):
         findings = []
+    raw_analyzers = payload.get("analyzers_used")
+    analyzers_completed = (
+        [str(analyzer) for analyzer in raw_analyzers if str(analyzer)]
+        if isinstance(raw_analyzers, list)
+        else ["static_analyzer"]
+    )
     return SecurityScanResultInput(
         scan_id=str(payload.get("scan_id") or ""),
         verdict=map_verdict(payload.get("is_safe"), payload.get("max_severity")),
@@ -124,7 +150,54 @@ def map_scanner_api_response(payload: dict[str, Any]) -> SecurityScanResultInput
         max_severity=payload.get("max_severity"),
         findings=[map_finding(finding) for finding in findings if isinstance(finding, dict)],
         scan_duration_seconds=float(payload.get("scan_duration_seconds") or 0.0),
+        analyzers_completed=analyzers_completed,
     )
+
+
+def optional_llm_failure_code(error: Exception) -> str | None:
+    if not isinstance(error, httpx.HTTPStatusError):
+        return None
+    try:
+        payload = error.response.json()
+    except ValueError:
+        return None
+    if not isinstance(payload, dict) or not isinstance(payload.get("detail"), str):
+        return None
+
+    detail = payload["detail"]
+    prefix = "Scan failed: "
+    if detail.startswith(prefix):
+        detail = detail.removeprefix(prefix)
+    markers = {
+        "SKILLHUB_LLM_ANALYSIS_FAILED:LLM_TIMEOUT": "LLM_TIMEOUT",
+        "SKILLHUB_LLM_ANALYSIS_FAILED:LLM_UNAVAILABLE": "LLM_UNAVAILABLE",
+    }
+    return markers.get(detail)
+
+
+@dataclass(frozen=True)
+class ScannerStageResult:
+    result: SecurityScanResultInput
+    analyzer_evidence_reported: bool
+
+
+def validated_scanner_response(response: httpx.Response, options: ScanOptions) -> ScannerStageResult:
+    payload = response.json()
+    if "analyzers_used" in payload and not isinstance(payload["analyzers_used"], list):
+        raise ValueError("Scanner response analyzers_used must be a list")
+    result = map_scanner_api_response(payload)
+    analyzer_evidence_reported = "analyzers_used" in payload
+    if not analyzer_evidence_reported:
+        result = replace(result, analyzers_completed=options.requested_analyzers())
+        return ScannerStageResult(result, False)
+    missing = [
+        analyzer
+        for analyzer in options.requested_analyzers()
+        if analyzer not in result.analyzers_completed
+    ]
+    if missing:
+        raise ValueError(f"Scanner response did not report {', '.join(missing)} completion")
+    return ScannerStageResult(result, True)
 
 
 class ScannerHttpClient:
@@ -152,59 +225,200 @@ class ScannerHttpClient:
         self.transport = transport
 
     async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
-        if self.mode.lower() == "local":
-            return await self.scan_directory(task, skill_path)
-        return await self.scan_upload(task, Path(skill_path))
+        if not self.options.use_llm:
+            stage_result = await self._scan_once(task, skill_path, self.options, stage="complete")
+            return replace(stage_result.result, analyzers_requested=self.options.requested_analyzers())
 
-    def _log_request(self, *, mode: str, version_id: int, url: str) -> None:
+        baseline_options = self.options.without_llm()
+        baseline = await self._scan_once(task, skill_path, baseline_options, stage="baseline")
+        try:
+            enhanced = await self._scan_once(task, skill_path, self.options, stage="enhanced")
+        except Exception as exc:
+            failure_code = optional_llm_failure_code(exc)
+            if failure_code is None:
+                raise
+            if not baseline.analyzer_evidence_reported or "static_analyzer" not in baseline.result.analyzers_completed:
+                raise ValueError("Scanner baseline did not report static_analyzer completion") from None
+            return replace(
+                baseline.result,
+                scan_status="PARTIAL",
+                analyzers_requested=self.options.requested_analyzers(),
+                analyzer_failures=[{"analyzer": "llm_analyzer", "code": failure_code}],
+                failure_code=failure_code,
+            )
+        return replace(
+            enhanced.result,
+            analyzers_requested=self.options.requested_analyzers(),
+        )
+
+    async def _scan_once(
+        self,
+        task: SecurityScanTask,
+        skill_path: str,
+        options: ScanOptions,
+        *,
+        stage: str,
+    ) -> ScannerStageResult:
+        if self.mode.lower() == "local":
+            return await self.scan_directory(task, skill_path, options=options, stage=stage)
+        return await self.scan_upload(task, Path(skill_path), options=options, stage=stage)
+
+    def _log_request(
+        self,
+        *,
+        mode: str,
+        task: SecurityScanTask,
+        stage: str,
+        url: str,
+        options: ScanOptions,
+    ) -> None:
         logger.info(
-            "Calling scanner API: mode=%s version_id=%s url=%s use_behavioral=%s use_llm=%s llm_provider=%s "
-            "enable_meta=%s use_aidefense=%s use_virustotal=%s use_trigger=%s",
+            "scan.stage.started task_id=%s version_id=%s scanner_type=%s retry_count=%s stage=%s mode=%s url=%s "
+            "use_behavioral=%s use_llm=%s llm_provider=%s "
+            "enable_meta=%s use_aidefense=%s use_virustotal=%s use_trigger=%s request_id=%s",
+            task.task_id,
+            task.version_id,
+            task.scanner_type,
+            task.retry_count,
+            stage,
             mode,
-            version_id,
             url,
-            self.options.use_behavioral,
-            self.options.use_llm,
-            self.options.llm_provider,
-            self.options.enable_meta,
-            self.options.use_aidefense,
-            self.options.use_virustotal,
-            self.options.use_trigger,
+            options.use_behavioral,
+            options.use_llm,
+            options.llm_provider,
+            options.enable_meta,
+            options.use_aidefense,
+            options.use_virustotal,
+            options.use_trigger,
+            current_request_id(),
         )
 
     @staticmethod
-    def _log_response(*, mode: str, version_id: int, status_code: int) -> None:
+    def _log_response(
+        *,
+        mode: str,
+        task: SecurityScanTask,
+        stage: str,
+        status_code: int,
+        elapsed_ms: int,
+    ) -> None:
         logger.info(
-            "Scanner API response: mode=%s version_id=%s status_code=%s",
+            "scan.stage.completed task_id=%s version_id=%s scanner_type=%s retry_count=%s stage=%s mode=%s "
+            "status_code=%s request_id=%s elapsed_ms=%s",
+            task.task_id,
+            task.version_id,
+            task.scanner_type,
+            task.retry_count,
+            stage,
             mode,
-            version_id,
             status_code,
+            current_request_id(),
+            elapsed_ms,
         )
 
-    async def scan_directory(self, task: SecurityScanTask, skill_directory: str) -> SecurityScanResultInput:
-        url = f"{self.base_url}/scan"
-        self._log_request(mode="local", version_id=task.version_id, url=url)
-        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
-            response = await client.post(
-                url,
-                json=self.options.as_json_body(skill_directory),
-                headers=self.options.as_headers(),
-            )
-            self._log_response(mode="local", version_id=task.version_id, status_code=response.status_code)
-            response.raise_for_status()
-            return map_scanner_api_response(response.json())
+    @staticmethod
+    def _log_failure(
+        *,
+        mode: str,
+        task: SecurityScanTask,
+        stage: str,
+        error: Exception,
+        elapsed_ms: int,
+    ) -> None:
+        status_code = error.response.status_code if isinstance(error, httpx.HTTPStatusError) else None
+        logger.warning(
+            "scan.stage.failed task_id=%s version_id=%s scanner_type=%s retry_count=%s stage=%s mode=%s "
+            "status_code=%s failure_code=%s error_type=%s request_id=%s elapsed_ms=%s",
+            task.task_id,
+            task.version_id,
+            task.scanner_type,
+            task.retry_count,
+            stage,
+            mode,
+            status_code,
+            optional_llm_failure_code(error) or "SCANNER_ERROR",
+            type(error).__name__,
+            current_request_id(),
+            elapsed_ms,
+        )
 
-    async def scan_upload(self, task: SecurityScanTask, skill_package_path: Path) -> SecurityScanResultInput:
-        url = f"{self.base_url}{self.scan_path}"
-        self._log_request(mode="upload", version_id=task.version_id, url=url)
-        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
-            with skill_package_path.open("rb") as file_handle:
+    async def scan_directory(
+        self,
+        task: SecurityScanTask,
+        skill_directory: str,
+        *,
+        options: ScanOptions | None = None,
+        stage: str = "complete",
+    ) -> ScannerStageResult:
+        scan_options = options or self.options
+        url = f"{self.base_url}/scan"
+        self._log_request(mode="local", task=task, stage=stage, url=url, options=scan_options)
+        started = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
                 response = await client.post(
                     url,
-                    data=self.options.as_form_fields(),
-                    files={"file": (skill_package_path.name, file_handle, "application/zip")},
-                    headers=self.options.as_headers(),
+                    json=scan_options.as_json_body(skill_directory),
+                    headers=scan_options.as_headers(),
                 )
-            self._log_response(mode="upload", version_id=task.version_id, status_code=response.status_code)
-            response.raise_for_status()
-            return map_scanner_api_response(response.json())
+                response.raise_for_status()
+                result = validated_scanner_response(response, scan_options)
+        except Exception as exc:
+            self._log_failure(
+                mode="local",
+                task=task,
+                stage=stage,
+                error=exc,
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+            )
+            raise
+        self._log_response(
+            mode="local",
+            task=task,
+            stage=stage,
+            status_code=response.status_code,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        return result
+
+    async def scan_upload(
+        self,
+        task: SecurityScanTask,
+        skill_package_path: Path,
+        *,
+        options: ScanOptions | None = None,
+        stage: str = "complete",
+    ) -> ScannerStageResult:
+        scan_options = options or self.options
+        url = f"{self.base_url}{self.scan_path}"
+        self._log_request(mode="upload", task=task, stage=stage, url=url, options=scan_options)
+        started = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
+                with skill_package_path.open("rb") as file_handle:
+                    response = await client.post(
+                        url,
+                        params=scan_options.as_form_fields(),
+                        data=scan_options.as_form_fields(),
+                        files={"file": (skill_package_path.name, file_handle, "application/zip")},
+                        headers=scan_options.as_headers(),
+                    )
+                response.raise_for_status()
+                result = validated_scanner_response(response, scan_options)
+        except Exception as exc:
+            self._log_failure(
+                mode="upload",
+                task=task,
+                stage=stage,
+                error=exc,
+                elapsed_ms=int((time.perf_counter() - started) * 1000),
+            )
+            raise
+        self._log_response(
+            mode="upload",
+            task=task,
+            stage=stage,
+            status_code=response.status_code,
+            elapsed_ms=int((time.perf_counter() - started) * 1000),
+        )
+        return result

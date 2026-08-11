@@ -331,6 +331,45 @@ describe('skillLifecycleApi.updateVisibility', () => {
   })
 })
 
+describe('reviewApi.approve', () => {
+  it('sends the explicit partial-scan override fields only on individual approval', async () => {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      writable: true,
+      value: { cookie: 'XSRF-TOKEN=test-token' },
+    })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        msg: 'ok',
+        data: null,
+        timestamp: '2026-08-11T00:00:00Z',
+        requestId: 'req-test',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await reviewApi.approve(13, {
+      comment: 'Static evidence reviewed',
+      confirmScanOverride: true,
+      scanOverrideReason: 'LLM provider timed out',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/web/reviews/13/approve',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          comment: 'Static evidence reviewed',
+          confirmScanOverride: true,
+          scanOverrideReason: 'LLM provider timed out',
+        }),
+      }),
+    )
+  })
+})
+
 describe('reviewApi.batchDecision', () => {
   it('sends one POST request with the selected review tasks', async () => {
     Object.defineProperty(globalThis, 'document', {

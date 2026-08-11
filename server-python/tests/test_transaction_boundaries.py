@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import UTC, datetime
 
 from app.audit.writer import write_audit_log
@@ -84,9 +83,34 @@ def test_write_audit_log_uses_common_insert_shape() -> None:
         "request_id": "req-1",
         "client_ip": "127.0.0.1",
         "user_agent": "pytest",
-        "detail_json": json.dumps({"status": "ARCHIVED"}),
+        "detail_json": {"status": "ARCHIVED"},
         "created_at": created_at,
     }
+
+
+def test_write_audit_log_preserves_legacy_detail_json() -> None:
+    connection = _FakeConnection()
+    created_at = datetime(2026, 6, 12, tzinfo=UTC)
+
+    async def run() -> None:
+        await write_audit_log(
+            connection,
+            actor_user_id="admin",
+            action="REVIEW_APPROVE_SCAN_OVERRIDE",
+            target_type="REVIEW_TASK",
+            target_id=42,
+            request_id="req-2",
+            client_ip="127.0.0.1",
+            user_agent="pytest",
+            detail={},
+            detail_json='{"comment":"verified"}',
+            created_at=created_at,
+        )
+
+    asyncio.run(run())
+
+    _, params = connection.calls[0]
+    assert params["detail_json"] == '{"comment":"verified"}'
 
 
 def test_write_audit_log_preserves_null_detail() -> None:

@@ -7,7 +7,12 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
-from app.publish.scan_consumer import DEFAULT_SCAN_GROUP_NAME, RedisStreamClient, ScanConsumerRuntime
+from app.core.redis import create_redis_client
+from app.publish.scan_consumer import (
+    DEFAULT_SCAN_GROUP_NAME,
+    RedisStreamClient,
+    ScanConsumerRuntime,
+)
 from app.publish.scan_worker import StaticScannerClient
 from app.publish.scanner_client import ScannerHttpClient
 from app.publish.scanner_result import SecurityScanResultInput
@@ -55,7 +60,8 @@ async def main() -> None:
                 scan_duration_seconds=args.duration,
             )
         )
-    redis = RedisStreamClient(settings.redis_url)
+    redis_client = create_redis_client(settings)
+    redis = RedisStreamClient(redis_client)
     runtime = ScanConsumerRuntime(
         redis,
         stream_key=args.stream_key,
@@ -66,10 +72,12 @@ async def main() -> None:
     )
     engine = create_database_engine(settings)
     try:
-        async with engine.begin() as connection:
-            result = await runtime.consume_once(connection, scanner, count=args.count, block_ms=args.block_ms)
+        result = await runtime.consume_once(engine, scanner, count=args.count, block_ms=args.block_ms)
     finally:
-        await dispose_database_engine(engine)
+        try:
+            await redis_client.aclose()
+        finally:
+            await dispose_database_engine(engine)
 
     print(
         json.dumps(

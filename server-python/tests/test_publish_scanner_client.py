@@ -7,10 +7,11 @@ from typing import Any
 import httpx
 import pytest
 
+from app.core.request_id import request_id_scope
 from app.publish.scan_worker import SecurityScanTask
 from app.publish.scanner_client import (
-    ScanOptions,
     ScannerHttpClient,
+    ScanOptions,
     map_scanner_api_response,
     normalize_scanner_base_url,
 )
@@ -45,6 +46,7 @@ def api_response(**overrides: Any) -> dict[str, Any]:
             }
         ],
         "scan_duration_seconds": 1.25,
+        "analyzers_used": ["static_analyzer"],
         "timestamp": "2026-03-22T07:00:00",
     }
     payload.update(overrides)
@@ -100,14 +102,39 @@ def test_map_scanner_api_response_matches_java_verdict_matrix(
 
 @pytest.mark.anyio
 async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path) -> None:
-    seen: dict[str, Any] = {}
+    seen: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        seen["url"] = str(request.url)
-        seen["headers"] = request.headers
-        seen["content_type"] = request.headers["content-type"]
-        seen["body"] = request.content
-        return httpx.Response(200, json=api_response(is_safe=True, max_severity=None, findings_count=0, findings=[]))
+        seen.append(
+            {
+                "url": str(request.url),
+                "headers": request.headers,
+                "content_type": request.headers["content-type"],
+                "body": request.content,
+                "query": dict(request.url.params),
+            }
+        )
+        analyzers = ["static_analyzer", "behavioral_analyzer"]
+        if request.url.params.get("use_llm") == "true":
+            analyzers.append("llm_analyzer")
+        if request.url.params.get("enable_meta") == "true":
+            analyzers.append("meta_analyzer")
+        if request.url.params.get("use_aidefense") == "true":
+            analyzers.append("aidefense_analyzer")
+        if request.url.params.get("use_virustotal") == "true":
+            analyzers.append("virustotal_analyzer")
+        if request.url.params.get("use_trigger") == "true":
+            analyzers.append("trigger_analyzer")
+        return httpx.Response(
+            200,
+            json=api_response(
+                is_safe=True,
+                max_severity=None,
+                findings_count=0,
+                findings=[],
+                analyzers_used=analyzers,
+            ),
+        )
 
     bundle = tmp_path / "bundle.zip"
     bundle.write_bytes(b"zip-bytes")
@@ -130,10 +157,25 @@ async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path
     result = await client.scan(SecurityScanTask(task_id="task-1", version_id=202), str(bundle))
 
     assert result.verdict == "SAFE"
-    assert seen["url"] == "http://scanner.test/scan-upload"
-    assert "multipart/form-data" in seen["content_type"]
-    assert b'name="file"' in seen["body"]
-    assert b"zip-bytes" in seen["body"]
+    assert result.scan_status == "COMPLETE"
+    assert result.analyzers_completed == [
+        "static_analyzer",
+        "behavioral_analyzer",
+        "llm_analyzer",
+        "meta_analyzer",
+        "aidefense_analyzer",
+        "virustotal_analyzer",
+        "trigger_analyzer",
+    ]
+    assert len(seen) == 2
+    assert seen[0]["query"]["use_llm"] == "false"
+    assert seen[0]["query"]["enable_meta"] == "false"
+    assert seen[1]["query"]["use_llm"] == "true"
+    assert seen[1]["query"]["enable_meta"] == "true"
+    assert seen[1]["url"].startswith("http://scanner.test/scan-upload?")
+    assert "multipart/form-data" in seen[1]["content_type"]
+    assert b'name="file"' in seen[1]["body"]
+    assert b"zip-bytes" in seen[1]["body"]
     for field, value in {
         "use_behavioral": "true",
         "use_llm": "true",
@@ -143,9 +185,101 @@ async def test_upload_mode_posts_multipart_with_java_scan_options(tmp_path: Path
         "use_virustotal": "true",
         "use_trigger": "true",
     }.items():
-        assert f'name="{field}"'.encode() in seen["body"]
-        assert f"\r\n\r\n{value}\r\n".encode() in seen["body"]
-    assert request_header(seen, "X-AIDefense-Key") == "aidefense-secret"
+        assert seen[1]["query"][field] == value
+        assert f'name="{field}"'.encode() in seen[1]["body"]
+        assert f"\r\n\r\n{value}\r\n".encode() in seen[1]["body"]
+    assert request_header(seen[1], "X-AIDefense-Key") == "aidefense-secret"
+
+
+@pytest.mark.anyio
+async def test_reported_llm_success_without_llm_analyzer_is_not_complete(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        analyzers = ["static_analyzer"]
+        return httpx.Response(
+            200,
+            json=api_response(
+                is_safe=True,
+                max_severity=None,
+                findings_count=0,
+                findings=[],
+                analyzers_used=analyzers,
+            ),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(False, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(ValueError, match="did not report llm_analyzer completion"):
+        await client.scan(SecurityScanTask(task_id="task-missing-llm", version_id=205), str(bundle))
+
+
+@pytest.mark.anyio
+async def test_reported_response_requires_every_requested_analyzer(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=api_response(
+                is_safe=True,
+                max_severity=None,
+                findings_count=0,
+                findings=[],
+                analyzers_used=["static_analyzer"],
+            ),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(True, False, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(ValueError, match="behavioral_analyzer"):
+        await client.scan(SecurityScanTask(task_id="task-missing-behavioral", version_id=208), str(bundle))
+
+
+@pytest.mark.anyio
+async def test_present_non_list_analyzer_evidence_is_rejected(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=api_response(analyzers_used="static_analyzer"))
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(ValueError, match="analyzers_used must be a list"):
+        await client.scan(SecurityScanTask(task_id="task-malformed-analyzers", version_id=209), str(bundle))
+
+
+@pytest.mark.anyio
+async def test_legacy_llm_success_without_analyzer_evidence_remains_compatible(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = api_response(is_safe=True, max_severity=None, findings_count=0, findings=[])
+        payload.pop("analyzers_used")
+        return httpx.Response(200, json=payload)
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(False, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    result = await client.scan(SecurityScanTask(task_id="task-legacy-llm", version_id=206), str(bundle))
+
+    assert result.scan_status == "COMPLETE"
+    assert result.analyzers_requested == ["static_analyzer", "llm_analyzer"]
+    assert result.analyzers_completed == ["static_analyzer", "llm_analyzer"]
 
 
 @pytest.mark.anyio
@@ -154,7 +288,19 @@ async def test_upload_mode_logs_scanner_request_and_response(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=api_response(is_safe=True, max_severity=None, findings_count=0, findings=[]))
+        analyzers = ["static_analyzer", "behavioral_analyzer"]
+        if request.url.params.get("use_llm") == "true":
+            analyzers.append("llm_analyzer")
+        return httpx.Response(
+            200,
+            json=api_response(
+                is_safe=True,
+                max_severity=None,
+                findings_count=0,
+                findings=[],
+                analyzers_used=analyzers,
+            ),
+        )
 
     bundle = tmp_path / "bundle.zip"
     bundle.write_bytes(b"zip-bytes")
@@ -175,14 +321,136 @@ async def test_upload_mode_logs_scanner_request_and_response(
     )
     caplog.set_level(logging.INFO, logger="uvicorn.error")
 
-    await client.scan(SecurityScanTask(task_id="task-1", version_id=202), str(bundle))
+    with request_id_scope("scanner-log-request"):
+        await client.scan(SecurityScanTask(task_id="task-1", version_id=202), str(bundle))
 
-    assert "Calling scanner API" in caplog.text
+    assert "scan.stage.started" in caplog.text
+    assert "task_id=task-1" in caplog.text
     assert "mode=upload" in caplog.text
     assert "version_id=202" in caplog.text
     assert "use_llm=True" in caplog.text
-    assert "Scanner API response" in caplog.text
+    assert "stage=baseline" in caplog.text
+    assert "stage=enhanced" in caplog.text
+    assert "scan.stage.completed" in caplog.text
     assert "status_code=200" in caplog.text
+    assert "request_id=scanner-log-request" in caplog.text
+    assert "elapsed_ms=" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_generic_enhanced_read_timeout_is_not_overridable(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.params.get("use_llm") == "true":
+            raise httpx.ReadTimeout("provider took too long", request=request)
+        return httpx.Response(
+            200,
+            json=api_response(
+                is_safe=True,
+                max_severity=None,
+                findings_count=0,
+                findings=[],
+                analyzers_used=["static_analyzer", "behavioral_analyzer"],
+            ),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        mode="upload",
+        options=ScanOptions(True, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.ReadTimeout):
+        await client.scan(SecurityScanTask(task_id="task-timeout", version_id=203), str(bundle))
+
+    assert len(requests) == 2
+
+
+@pytest.mark.anyio
+async def test_exact_scanner_unavailable_marker_preserves_baseline_as_partial(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("use_llm") == "true":
+            return httpx.Response(
+                500,
+                json={"detail": "Scan failed: SKILLHUB_LLM_ANALYSIS_FAILED:LLM_UNAVAILABLE"},
+            )
+        return httpx.Response(
+            200,
+            json=api_response(is_safe=True, findings_count=0, findings=[], analyzers_used=["static_analyzer"]),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(False, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    result = await client.scan(SecurityScanTask(task_id="task-unavailable", version_id=204), str(bundle))
+
+    assert result.scan_status == "PARTIAL"
+    assert result.failure_code == "LLM_UNAVAILABLE"
+
+
+@pytest.mark.anyio
+async def test_exact_llm_marker_requires_reported_static_baseline_completion(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("use_llm") == "true":
+            return httpx.Response(
+                500,
+                json={"detail": "Scan failed: SKILLHUB_LLM_ANALYSIS_FAILED:LLM_TIMEOUT"},
+            )
+        return httpx.Response(
+            200,
+            json=api_response(is_safe=True, findings_count=0, findings=[], analyzers_used=[]),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(False, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(ValueError, match="static_analyzer completion"):
+        await client.scan(SecurityScanTask(task_id="task-missing-static", version_id=207), str(bundle))
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(503, text="service unavailable"),
+        httpx.Response(500, json={"detail": "SKILLHUB_LLM_ANALYSIS_FAILED:LLM_ERROR"}),
+        httpx.Response(500, json={"detail": "Scan failed: SKILLHUB_LLM_ANALYSIS_FAILED:LLM_TIMEOUT extra"}),
+    ],
+)
+async def test_generic_enhanced_failure_is_not_overridable(tmp_path: Path, response: httpx.Response) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("use_llm") == "true":
+            return response
+        return httpx.Response(
+            200,
+            json=api_response(is_safe=True, findings_count=0, findings=[], analyzers_used=["static_analyzer"]),
+        )
+
+    bundle = tmp_path / "bundle.zip"
+    bundle.write_bytes(b"zip-bytes")
+    client = ScannerHttpClient(
+        base_url="http://scanner.test",
+        options=ScanOptions(False, True, "openai", False, False, "", False, False),
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.scan(SecurityScanTask(task_id="task-failed", version_id=205), str(bundle))
 
 
 def request_header(seen: dict[str, Any], name: str) -> str | None:

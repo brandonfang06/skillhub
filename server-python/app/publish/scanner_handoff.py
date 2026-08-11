@@ -137,7 +137,7 @@ class RedisScanTaskPublisher:
         if response is None:
             raise ValueError("Redis XADD returned null")
         logger.info(
-            "Enqueued scan task: stream=%s message_id=%s task_id=%s version_id=%s scanner_type=%s has_bundle=%s has_skill_path=%s request_id=%s",
+            "scan.task.enqueued stream=%s message_id=%s task_id=%s version_id=%s scanner_type=%s has_bundle=%s has_skill_path=%s request_id=%s",
             self.stream_key,
             response,
             task.task_id,

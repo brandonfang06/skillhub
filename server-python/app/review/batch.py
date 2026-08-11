@@ -12,7 +12,6 @@ from app.review.approval import (
     reject_review_task,
 )
 
-
 MAX_BATCH_REVIEW_TASKS = 100
 
 
@@ -47,14 +46,21 @@ def validate_review_batch_input(request: ReviewBatchDecisionInput) -> None:
 
 
 def _task_input(request: ReviewBatchDecisionInput, review_task_id: int) -> ReviewApproveInput | ReviewRejectInput:
-    input_type = ReviewApproveInput if request.decision == "APPROVE" else ReviewRejectInput
-    return input_type(
-        review_task_id=review_task_id,
-        reviewer_id=request.reviewer_id,
-        comment=request.comment,
-        request_id=request.request_id,
-        client_ip=request.client_ip,
-        user_agent=request.user_agent,
+    common = {
+        "review_task_id": review_task_id,
+        "reviewer_id": request.reviewer_id,
+        "comment": request.comment,
+        "request_id": request.request_id,
+        "client_ip": request.client_ip,
+        "user_agent": request.user_agent,
+    }
+    if request.decision == "APPROVE":
+        return ReviewApproveInput(
+            **common,
+            allow_scan_override=False,
+        )
+    return ReviewRejectInput(
+        **common,
     )
 
 

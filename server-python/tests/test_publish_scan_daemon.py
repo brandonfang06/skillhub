@@ -6,17 +6,17 @@ from typing import Any
 import pytest
 
 from app.core.config import get_settings
-from app.publish.scan_daemon import ScanConsumerDaemon, create_scan_consumer_daemon
 from app.publish.scan_consumer import ScanConsumerResult
+from app.publish.scan_daemon import ScanConsumerDaemon, create_scan_consumer_daemon
 
 
 class FakeEngine:
-    def begin(self) -> "FakeBegin":
+    def begin(self) -> FakeBegin:
         return FakeBegin()
 
 
 class FakeBegin:
-    async def __aenter__(self) -> "FakeConnection":
+    async def __aenter__(self) -> FakeConnection:
         return FakeConnection()
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -41,14 +41,14 @@ class FakeRuntime:
     async def ensure_group(self) -> None:
         self.calls.append("ensure_group")
 
-    async def consume_once(self, connection: Any, scanner: object, *, count: int, block_ms: int) -> ScanConsumerResult:
+    async def consume_once(self, engine: Any, scanner: object, *, count: int, block_ms: int) -> ScanConsumerResult:
         self.calls.append("consume_once")
         self.consume_calls += 1
         return ScanConsumerResult(processed=1, acknowledged=1)
 
     async def reclaim_once(
         self,
-        connection: Any,
+        engine: Any,
         scanner: object,
         *,
         min_idle_ms: int,

@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 import app.review.batch as batch_module
 from app.main import create_app
@@ -51,12 +51,19 @@ def test_validate_review_batch_input_rejects_invalid_requests(
 
 @pytest.mark.anyio
 async def test_decide_review_tasks_batch_preserves_order_and_partial_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: list[tuple[int, str, object]] = []
+    seen: list[tuple[int, str, object, bool]] = []
     fanout = object()
 
     async def approve(_engine: object, request: object, *, notification_fanout: object) -> dict[str, object]:
-        task_id = int(getattr(request, "review_task_id"))
-        seen.append((task_id, str(getattr(request, "reviewer_id")), notification_fanout))
+        task_id = int(request.review_task_id)
+        seen.append(
+            (
+                task_id,
+                str(request.reviewer_id),
+                notification_fanout,
+                bool(request.allow_scan_override),
+            )
+        )
         if task_id == 12:
             raise ReviewApprovalError("review.task.notPending", status_code=400)
         return {"id": task_id, "status": "APPROVED"}
@@ -65,7 +72,11 @@ async def test_decide_review_tasks_batch_preserves_order_and_partial_success(mon
 
     result = await decide_review_tasks_batch(object(), batch_input(), notification_fanout=fanout)
 
-    assert seen == [(11, "team-admin", fanout), (12, "team-admin", fanout), (13, "team-admin", fanout)]
+    assert seen == [
+        (11, "team-admin", fanout, False),
+        (12, "team-admin", fanout, False),
+        (13, "team-admin", fanout, False),
+    ]
     assert result == {
         "totalCount": 3,
         "successCount": 2,
@@ -84,7 +95,7 @@ async def test_decide_review_tasks_batch_reuses_reject_behavior(monkeypatch: pyt
 
     async def reject(_engine: object, request: object, *, notification_fanout: object) -> dict[str, object]:
         seen.append(request)
-        return {"id": getattr(request, "review_task_id"), "status": "REJECTED"}
+        return {"id": request.review_task_id, "status": "REJECTED"}
 
     monkeypatch.setattr(batch_module, "reject_review_task", reject)
     request = replace(batch_input(), review_task_ids=[21], decision="REJECT", comment="missing documentation")
@@ -92,7 +103,7 @@ async def test_decide_review_tasks_batch_reuses_reject_behavior(monkeypatch: pyt
     result = await decide_review_tasks_batch(object(), request)
 
     assert len(seen) == 1
-    assert getattr(seen[0], "comment") == "missing documentation"
+    assert seen[0].comment == "missing documentation"
     assert result["results"] == [
         {"reviewTaskId": 21, "success": True, "status": "REJECTED", "errorCode": None}
     ]

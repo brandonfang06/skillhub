@@ -6,14 +6,17 @@ from typing import Any
 
 import pytest
 
-from app.publish.scanner_result import SecurityScanResultInput, apply_security_scan_result
+from app.publish.scanner_result import (
+    SecurityScanResultInput,
+    apply_security_scan_result,
+)
 
 
 class FakeScalarResult:
     def __init__(self, row: dict[str, object] | None = None) -> None:
         self.row = row
 
-    def mappings(self) -> "FakeScalarResult":
+    def mappings(self) -> FakeScalarResult:
         return self
 
     def first(self) -> dict[str, object] | None:
@@ -21,6 +24,7 @@ class FakeScalarResult:
 
 
 MISSING = object()
+DEFAULT_TRANSITION = object()
 
 
 class FakeConnection:
@@ -29,6 +33,7 @@ class FakeConnection:
         *,
         audit_row: dict[str, object] | None | object = MISSING,
         version_row: dict[str, object] | None = None,
+        transition_row: dict[str, object] | None | object = DEFAULT_TRANSITION,
     ) -> None:
         self.audit_row = {"id": 801} if audit_row is MISSING else audit_row
         self.version_row = version_row or {
@@ -36,6 +41,11 @@ class FakeConnection:
             "status": "SCANNING",
             "requested_visibility": "PUBLIC",
         }
+        if transition_row is DEFAULT_TRANSITION:
+            next_status = "UPLOADED" if self.version_row["requested_visibility"] == "PRIVATE" else "PENDING_REVIEW"
+            self.transition_row: dict[str, object] | None = {"status": next_status}
+        else:
+            self.transition_row = transition_row
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -45,6 +55,8 @@ class FakeConnection:
         self.params.append(params or {})
         if "FROM security_audit" in sql:
             return FakeScalarResult(self.audit_row)
+        if "UPDATE skill_version" in sql and "RETURNING" in sql:
+            return FakeScalarResult(self.transition_row)
         if "FROM skill_version" in sql:
             return FakeScalarResult(self.version_row)
         return FakeScalarResult()
@@ -92,11 +104,25 @@ async def test_apply_scan_result_updates_latest_audit_and_public_scanning_versio
     assert audit_params["findings_count"] == 1
     assert json.loads(audit_params["findings"]) == [{"rule": "ok"}]
     assert audit_params["scan_duration_seconds"] == 1.25
+    execution_index = next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if "INSERT INTO local_security_scan_execution" in statement
+    )
+    execution_params = connection.params[execution_index]
+    assert execution_params["security_audit_id"] == 801
+    assert execution_params["scan_status"] == "COMPLETE"
+    assert json.loads(execution_params["analyzers_requested"]) == []
+    assert json.loads(execution_params["analyzers_completed"]) == []
+    assert json.loads(execution_params["analyzer_failures"]) == []
+    assert execution_params["failure_code"] is None
 
     version_update_index = next(
         index for index, statement in enumerate(connection.statements) if "UPDATE skill_version" in statement
     )
-    assert connection.params[version_update_index] == {"version_id": 202, "status": "PENDING_REVIEW"}
+    assert connection.params[version_update_index] == {"version_id": 202}
+    assert "AND status = 'SCANNING'" in connection.statements[version_update_index]
+    assert "RETURNING status" in connection.statements[version_update_index]
 
 
 @pytest.mark.anyio
@@ -117,7 +143,7 @@ async def test_apply_scan_result_moves_private_scanning_version_to_uploaded() ->
     version_update_index = next(
         index for index, statement in enumerate(connection.statements) if "UPDATE skill_version" in statement
     )
-    assert connection.params[version_update_index] == {"version_id": 202, "status": "UPLOADED"}
+    assert connection.params[version_update_index] == {"version_id": 202}
     audit_update_index = next(
         index for index, statement in enumerate(connection.statements) if "UPDATE security_audit" in statement
     )
@@ -125,9 +151,47 @@ async def test_apply_scan_result_moves_private_scanning_version_to_uploaded() ->
 
 
 @pytest.mark.anyio
+async def test_apply_partial_scan_result_persists_baseline_execution_evidence() -> None:
+    connection = FakeConnection()
+
+    result = await apply_security_scan_result(
+        connection,
+        version_id=202,
+        scanner_type="skill-scanner",
+        scan_result=scan_input(
+            scan_status="PARTIAL",
+            analyzers_requested=["static_analyzer", "behavioral_analyzer", "llm_analyzer"],
+            analyzers_completed=["static_analyzer", "behavioral_analyzer"],
+            analyzer_failures=[{"analyzer": "llm_analyzer", "code": "LLM_TIMEOUT"}],
+            failure_code="LLM_TIMEOUT",
+        ),
+    )
+
+    assert result.new_status == "PENDING_REVIEW"
+    execution_index = next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if "INSERT INTO local_security_scan_execution" in statement
+    )
+    execution_params = connection.params[execution_index]
+    assert execution_params["scan_status"] == "PARTIAL"
+    assert json.loads(execution_params["analyzers_requested"]) == [
+        "static_analyzer",
+        "behavioral_analyzer",
+        "llm_analyzer",
+    ]
+    assert json.loads(execution_params["analyzers_completed"]) == ["static_analyzer", "behavioral_analyzer"]
+    assert json.loads(execution_params["analyzer_failures"]) == [
+        {"analyzer": "llm_analyzer", "code": "LLM_TIMEOUT"}
+    ]
+    assert execution_params["failure_code"] == "LLM_TIMEOUT"
+
+
+@pytest.mark.anyio
 async def test_apply_scan_result_leaves_published_version_status_untouched() -> None:
     connection = FakeConnection(
         version_row={"id": 202, "status": "PUBLISHED", "requested_visibility": "PUBLIC"},
+        transition_row=None,
     )
 
     result = await apply_security_scan_result(
@@ -140,7 +204,10 @@ async def test_apply_scan_result_leaves_published_version_status_untouched() -> 
     assert result.previous_status == "PUBLISHED"
     assert result.new_status == "PUBLISHED"
     assert result.status_changed is False
-    assert not any("UPDATE skill_version" in statement for statement in connection.statements)
+    transition = next(statement for statement in connection.statements if "UPDATE skill_version" in statement)
+    assert "AND status = 'SCANNING'" in transition
+    assert not any("UPDATE security_audit" in statement for statement in connection.statements)
+    assert not any("INSERT INTO local_security_scan_execution" in statement for statement in connection.statements)
 
 
 @pytest.mark.anyio

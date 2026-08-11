@@ -19,7 +19,9 @@ import { toast } from '@/shared/lib/toast'
 import { cn } from '@/shared/lib/utils'
 import { resolveReviewActionErrorDescription } from '@/features/review/review-error'
 import { ReviewSkillDetailSection } from '@/features/review/review-skill-detail-section'
+import { ScanOverrideDialog } from '@/features/review/scan-override-dialog'
 import { SecurityAuditSection } from '@/features/security-audit/security-audit-section'
+import { useSecurityAudits } from '@/features/security-audit/use-security-audit'
 import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
@@ -76,6 +78,7 @@ function ReviewDetailScreen({
   const [comment, setComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [approveDialog, setApproveDialog] = useState(false)
+  const [scanOverrideDialog, setScanOverrideDialog] = useState(false)
   const [rejectDialog, setRejectDialog] = useState(false)
   // File browser sidebar state
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
@@ -87,6 +90,27 @@ function ReviewDetailScreen({
     !!review &&
     review.namespace !== 'global' &&
     !hasGlobalReviewAccess
+  const activeReviewVersion = reviewSkillDetail?.versions?.find(
+    (version) => version.version === reviewSkillDetail.activeVersion
+  )
+  const skillId = reviewSkillDetail?.skill?.id
+  const versionId = activeReviewVersion?.id ?? review?.skillVersionId
+  const {
+    data: securityAudits,
+    isLoading: isLoadingSecurityAudits,
+    error: securityAuditError,
+  } = useSecurityAudits(
+    skillId,
+    versionId,
+    activeReviewVersion?.status,
+  )
+  const scannerAudit = securityAudits?.find(
+    (audit) => audit.scannerType.toLowerCase().replace(/_/g, '-') === 'skill-scanner'
+  )
+  const isPartialScan = scannerAudit?.scanStatus === 'PARTIAL'
+  const canOverridePartialScan = Boolean(
+    user?.platformRoles?.some((role) => role === 'SKILL_ADMIN' || role === 'SUPER_ADMIN')
+  )
 
   // File content for preview — uses the review-bound version via review file API
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useReviewFile(
@@ -128,6 +152,15 @@ function ReviewDetailScreen({
 
   const handleApprove = async () => {
     approveMutation.mutate({ taskId, comment: comment || undefined })
+  }
+
+  const handleScanOverrideApprove = (reason: string) => {
+    approveMutation.mutate({
+      taskId,
+      comment: comment || undefined,
+      confirmScanOverride: true,
+      scanOverrideReason: reason,
+    })
   }
 
   const handleReject = async () => {
@@ -177,10 +210,19 @@ function ReviewDetailScreen({
   }
 
   const reviewFiles = reviewSkillDetail?.files
-  const activeReviewVersion = reviewSkillDetail?.versions?.find(
-    (version) => version.version === reviewSkillDetail.activeVersion
-  )
-  const isApprovalBlockedByScanning = activeReviewVersion?.status === 'SCANNING'
+  const approvalBlockReason =
+    isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits)
+      ? 'review.approveDisabledAuditLoading'
+      : reviewSkillDetailError || !skillId || !versionId || securityAuditError
+        ? 'review.approveDisabledAuditUnavailable'
+        : activeReviewVersion?.status === 'SCANNING' || scannerAudit?.scanStatus === 'PENDING'
+          ? 'review.approveDisabledScanning'
+          : activeReviewVersion?.status === 'SCAN_FAILED' || scannerAudit?.scanStatus === 'FAILED'
+            ? 'review.approveDisabledScanFailed'
+            : isPartialScan && !canOverridePartialScan
+              ? 'review.approveDisabledPartialNamespace'
+              : null
+  const isApprovalBlocked = approvalBlockReason !== null
   const replacementReviewPath = review.replacementReviewTaskId
     ? review.namespace === 'global'
       ? `/dashboard/reviews/${review.replacementReviewTaskId}`
@@ -316,13 +358,18 @@ function ReviewDetailScreen({
 
           <div className="flex gap-3">
             <Button
+              data-review-approve
               onClick={() => {
-                if (isApprovalBlockedByScanning) {
+                if (isApprovalBlocked) {
                   return
                 }
-                setApproveDialog(true)
+                if (isPartialScan) {
+                  setScanOverrideDialog(true)
+                } else {
+                  setApproveDialog(true)
+                }
               }}
-              disabled={approveMutation.isPending || rejectMutation.isPending || isApprovalBlockedByScanning}
+              disabled={approveMutation.isPending || rejectMutation.isPending || isApprovalBlocked}
             >
               {t('review.approve')}
             </Button>
@@ -360,8 +407,12 @@ function ReviewDetailScreen({
             )}
           </div>
 
-          {isApprovalBlockedByScanning && (
-            <p className="text-sm text-muted-foreground">{t('review.approveDisabledScanning')}</p>
+          {approvalBlockReason && (
+            <p className="text-sm text-muted-foreground">{t(approvalBlockReason)}</p>
+          )}
+
+          {isPartialScan && canOverridePartialScan && (
+            <p className="text-sm text-amber-700 dark:text-amber-300">{t('review.scanOverrideRequired')}</p>
           )}
 
           {showRejectForm && !comment.trim() && (
@@ -370,15 +421,9 @@ function ReviewDetailScreen({
         </Card>
       )}
 
-      {(() => {
-        const skillId = reviewSkillDetail?.skill?.id
-        const versionId =
-          reviewSkillDetail?.versions?.find((v) => v.version === review.version)?.id ??
-          review.skillVersionId
-        return !review.superseded && skillId && versionId ? (
-          <SecurityAuditSection skillId={skillId} versionId={versionId} versionStatus={activeReviewVersion?.status} />
-        ) : null
-      })()}
+      {!review.superseded && skillId && versionId ? (
+        <SecurityAuditSection skillId={skillId} versionId={versionId} versionStatus={activeReviewVersion?.status} />
+      ) : null}
 
       {!review.superseded && (
         <ReviewSkillDetailSection
@@ -396,6 +441,13 @@ function ReviewDetailScreen({
         description={t('review.approveDescription')}
         confirmText={t('review.approveConfirm')}
         onConfirm={handleApprove}
+      />
+
+      <ScanOverrideDialog
+        open={scanOverrideDialog}
+        isPending={approveMutation.isPending}
+        onOpenChange={setScanOverrideDialog}
+        onConfirm={handleScanOverrideApprove}
       />
 
       <ConfirmDialog

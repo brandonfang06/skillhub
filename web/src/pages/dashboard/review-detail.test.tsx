@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SecurityAuditRecord } from '@/features/security-audit/types'
 
 const navigateMock = vi.fn()
 
@@ -116,6 +117,38 @@ vi.mock('@/features/review/use-review-detail', () => ({
   }),
 }))
 
+let securityAuditsMock: SecurityAuditRecord[] = []
+let securityAuditsLoading = false
+let securityAuditsError: Error | null = null
+
+function createPartialAudit(): SecurityAuditRecord {
+  return {
+    id: 21,
+    scanId: 'scan-partial',
+    scannerType: 'skill-scanner',
+    verdict: 'SAFE',
+    isSafe: true,
+    maxSeverity: null,
+    findingsCount: 0,
+    findings: [],
+    scanDurationSeconds: 3,
+    scannedAt: '2026-03-19T00:01:00Z',
+    createdAt: '2026-03-19T00:00:00Z',
+    scanStatus: 'PARTIAL',
+    analyzersCompleted: ['static_analyzer'],
+    analyzerFailures: [{ analyzer: 'llm_analyzer', code: 'LLM_TIMEOUT' }],
+    failureCode: 'LLM_TIMEOUT',
+  }
+}
+
+vi.mock('@/features/security-audit/use-security-audit', () => ({
+  useSecurityAudits: () => ({
+    data: securityAuditsMock,
+    isLoading: securityAuditsLoading,
+    error: securityAuditsError,
+  }),
+}))
+
 const userMock = { platformRoles: ['SKILL_ADMIN'] as string[] }
 vi.mock('@/features/auth/use-auth', () => ({
   useAuth: () => ({ user: userMock }),
@@ -137,6 +170,9 @@ describe('ReviewDetailPage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     userMock.platformRoles = ['SKILL_ADMIN']
+    securityAuditsMock = []
+    securityAuditsLoading = false
+    securityAuditsError = null
     useReviewDetailMock.mockReset()
     useReviewSkillDetailMock.mockReset()
     useReviewDetailMock.mockReturnValue({
@@ -337,6 +373,74 @@ describe('ReviewDetailPage', () => {
 
     expect(html).toContain('review.approveDisabledScanning')
     expect(html).toContain('disabled=""')
+  })
+
+  it('blocks approval when the active review version scan failed', () => {
+    useReviewSkillDetailMock.mockReturnValue({
+      data: {
+        skill: { id: 1 },
+        versions: [{ id: 10, version: '1.2.0', status: 'SCAN_FAILED' }],
+        files: [],
+        downloadUrl: '/api/v1/reviews/13/download',
+        activeVersion: '1.2.0',
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.approveDisabledScanFailed')
+    expect(html).toMatch(/data-review-approve="true"[^>]*disabled=""/)
+  })
+
+  it('blocks approval until security scan evidence finishes loading', () => {
+    securityAuditsLoading = true
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.approveDisabledAuditLoading')
+    expect(html).toMatch(/data-review-approve="true"[^>]*disabled=""/)
+  })
+
+  it('blocks approval when security scan evidence cannot be loaded', () => {
+    securityAuditsError = new Error('audit unavailable')
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.approveDisabledAuditUnavailable')
+    expect(html).toMatch(/data-review-approve="true"[^>]*disabled=""/)
+  })
+
+  it('requires the dedicated override flow for platform administrators when the LLM scan is partial', () => {
+    securityAuditsMock = [createPartialAudit()]
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.scanOverrideRequired')
+    expect(html).not.toMatch(/data-review-approve="true"[^>]*disabled=""/)
+  })
+
+  it('blocks namespace reviewers from overriding a partial LLM scan', () => {
+    userMock.platformRoles = []
+    securityAuditsMock = [createPartialAudit()]
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.approveDisabledPartialNamespace')
+    expect(html).toMatch(/data-review-approve="true"[^>]*disabled=""/)
   })
 
   it('renders archived feedback without requesting or exposing artifact actions', () => {
