@@ -172,6 +172,31 @@ async def search_skills(
     return ok("获取成功", data, request)
 
 
+@router.get("/api/web/search/namespaces")
+async def search_namespace_candidates(
+    request: Request,
+    q: str | None = None,
+    limit: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, object]:
+    current_user_id = await optional_current_user_id(request, mock_user_id, authorization)
+    normalized_query = q.strip() if q and q.strip() else None
+    normalized_limit = min(max(limit, 1), 50) if limit > 0 else 20
+    reader = getattr(request.app.state, "skill_search_namespace_reader", None)
+    data = await _resolve_reader_result(
+        reader(query=normalized_query, limit=normalized_limit, current_user_id=current_user_id)
+        if reader is not None
+        else read_searchable_skill_namespaces(
+            request.app.state.db_engine,
+            query=normalized_query,
+            limit=normalized_limit,
+            current_user_id=current_user_id,
+        )
+    )
+    return ok("Search namespaces retrieved", data, request)
+
+
 @router.get("/api/v1/search")
 async def search_clawhub_skills(
     request: Request,

@@ -406,6 +406,12 @@ export interface SearchParams {
   starredOnly?: boolean
 }
 
+export interface SearchableNamespace {
+  slug: string
+  displayName: string
+  visibleSkillCount: number
+}
+
 export interface PagedResponse<T> {
   items: T[]
   total: number

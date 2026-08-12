@@ -49,6 +49,7 @@ import type {
   BatchMemberResponse,
   PlaygroundCapability,
   SkillResourceDiagnostics,
+  SearchableNamespace,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import { getApiBaseUrl, getRuntimeConfig } from '@/shared/lib/runtime-config'
@@ -873,6 +874,16 @@ export const namespaceApi = {
       }),
       body: JSON.stringify({ newOwnerId: newOwnerUserId.trim() }),
     })
+  },
+}
+
+export const searchApi = {
+  async listNamespaces(params?: { q?: string; limit?: number }): Promise<SearchableNamespace[]> {
+    const searchParams = new URLSearchParams()
+    if (params?.q?.trim()) searchParams.set('q', params.q.trim())
+    if (params?.limit !== undefined) searchParams.set('limit', String(params.limit))
+    const query = searchParams.toString()
+    return fetchJson<SearchableNamespace[]>(`${WEB_API_PREFIX}/search/namespaces${query ? `?${query}` : ''}`)
   },
 }
 

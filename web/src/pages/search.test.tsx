@@ -6,6 +6,7 @@ const navigateMock = vi.fn()
 const useSearchMock = vi.fn()
 const buttonRecords: Array<{ label: string; variant?: string | null; onClick?: (() => void) | undefined }> = []
 const paginationProps: Array<{ onPageChange: (page: number) => void }> = []
+let namespaceFilterProps: { value: string; onValueChange: (value: string) => void } | null = null
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -34,7 +35,14 @@ vi.mock('@/features/auth/use-auth', () => ({
 }))
 
 vi.mock('@/features/search/search-bar', () => ({
-  SearchBar: () => <div>search-bar</div>,
+  SearchBar: ({ leadingControl }: { leadingControl?: ReactNode }) => <div>{leadingControl}search-bar</div>,
+}))
+
+vi.mock('@/features/search/namespace-search-filter', () => ({
+  NamespaceSearchFilter: (props: { value: string; onValueChange: (value: string) => void }) => {
+    namespaceFilterProps = props
+    return null
+  },
 }))
 
 vi.mock('@/features/skill/skill-card', () => ({
@@ -120,6 +128,7 @@ describe('SearchPage', () => {
     navigateMock.mockReset()
     buttonRecords.length = 0
     paginationProps.length = 0
+    namespaceFilterProps = null
     useSearchMock.mockReturnValue({
       q: 'agent',
       label: 'code-generation',
@@ -183,6 +192,33 @@ describe('SearchPage', () => {
         sort: 'newest',
         page: 0,
         starredOnly: false,
+      },
+    })
+  })
+
+  it('preserves search state and resets paging when changing namespace', () => {
+    useSearchMock.mockReturnValue({
+      q: 'agent',
+      namespace: 'team-a',
+      label: 'code-generation',
+      sort: 'downloads',
+      page: 2,
+      starredOnly: true,
+    })
+    renderToStaticMarkup(<SearchPage />)
+
+    expect(namespaceFilterProps?.value).toBe('team-a')
+    namespaceFilterProps?.onValueChange('team-b')
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/search',
+      search: {
+        q: 'agent',
+        namespace: 'team-b',
+        label: 'code-generation',
+        sort: 'downloads',
+        page: 0,
+        starredOnly: true,
       },
     })
   })

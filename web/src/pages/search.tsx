@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import type { SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { SearchBar } from '@/features/search/search-bar'
+import { NamespaceSearchFilter } from '@/features/search/namespace-search-filter'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
@@ -12,7 +13,7 @@ import { Pagination } from '@/shared/components/pagination'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useVisibleLabels } from '@/shared/hooks/use-label-queries'
 import { useMyStars } from '@/shared/hooks/use-user-queries'
-import { formatNamespaceSearchInput, normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
+import { normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { buildReturnTo } from '@/shared/lib/auth-route'
@@ -117,11 +118,11 @@ export function SearchPage() {
   const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
-  const [queryInput, setQueryInput] = useState(formatNamespaceSearchInput(namespace, q))
+  const [queryInput, setQueryInput] = useState(q)
   const previousPageRef = useRef(page)
 
   useEffect(() => {
-    setQueryInput(formatNamespaceSearchInput(namespace, q))
+    setQueryInput(q)
   }, [namespace, q])
 
   useEffect(() => {
@@ -157,11 +158,13 @@ export function SearchPage() {
     // Debounce URL updates while the user is typing so query state stays shareable without
     // triggering a navigation on every keystroke.
     const parsedInput = parseNamespaceSearchInput(queryInput)
-    if (parsedInput.query === q && parsedInput.namespace === namespace) {
+    const inputHasNamespace = queryInput.trimStart().startsWith('@')
+    const nextNamespace = inputHasNamespace ? parsedInput.namespace : namespace
+    if (parsedInput.query === q && nextNamespace === namespace) {
       return
     }
 
-    if (!parsedInput.query && !parsedInput.namespace) {
+    if (!parsedInput.query && !nextNamespace) {
       startTransition(() => {
         navigate({ to: '/search', search: buildSearchRouteState({ q: '', label: selectedLabel, sort, page: 0, starredOnly }), replace: page === 0 })
       })
@@ -170,7 +173,7 @@ export function SearchPage() {
 
     const timeoutId = window.setTimeout(() => {
       startTransition(() => {
-        navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
+        navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: nextNamespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
       })
     }, 250)
 
@@ -179,9 +182,10 @@ export function SearchPage() {
 
   const handleSearch = (query: string) => {
     const parsedInput = parseNamespaceSearchInput(query)
+    const nextNamespace = query.trimStart().startsWith('@') ? parsedInput.namespace : namespace
     setQueryInput(query)
     startTransition(() => {
-      navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
+      navigate({ to: '/search', search: buildSearchRouteState({ q: parsedInput.query, namespace: nextNamespace, label: selectedLabel, sort, page: 0, starredOnly }), replace: true })
     })
   }
 
@@ -201,6 +205,13 @@ export function SearchPage() {
 
   const handleNamespaceClear = () => {
     navigate({ to: '/search', search: buildSearchRouteState({ q, label: selectedLabel, sort, page: 0, starredOnly }) })
+  }
+
+  const handleNamespaceChange = (nextNamespace: string) => {
+    navigate({
+      to: '/search',
+      search: buildSearchRouteState({ q, namespace: nextNamespace, label: selectedLabel, sort, page: 0, starredOnly }),
+    })
   }
 
   const handleStarredToggle = () => {
@@ -258,6 +269,7 @@ export function SearchPage() {
           isSearching={isUpdatingResults}
           onChange={setQueryInput}
           onSearch={handleSearch}
+          leadingControl={<NamespaceSearchFilter value={namespace} onValueChange={handleNamespaceChange} />}
         />
       </div>
 

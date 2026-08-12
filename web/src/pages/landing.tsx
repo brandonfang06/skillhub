@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { normalizeSearchQuery } from '@/shared/lib/search-query'
-import { Search as SearchIcon } from 'lucide-react'
+import { normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
+import { SearchBar } from '@/features/search/search-bar'
+import { NamespaceSearchFilter } from '@/features/search/namespace-search-filter'
 import { LandingQuickStartSection } from '@/shared/components/landing-quick-start'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
@@ -18,6 +20,7 @@ import { Button } from '@/shared/ui/button'
 export function LandingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [namespace, setNamespace] = useState('')
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
     sort: 'downloads',
@@ -39,10 +42,15 @@ export function LandingPage() {
   const latestView = useInView()
 
   const handleSearch = (query: string) => {
-    const normalized = normalizeSearchQuery(query)
+    const parsed = parseNamespaceSearchInput(query)
+    const selectedNamespace = parsed.namespace || namespace
     navigate({
       to: '/search',
-      search: { q: normalized, sort: 'relevance', page: 0, starredOnly: false },
+      search: {
+        q: normalizeSearchQuery(parsed.query),
+        ...(selectedNamespace ? { namespace: selectedNamespace } : {}),
+        sort: 'relevance', page: 0, starredOnly: false,
+      },
     })
   }
 
@@ -68,23 +76,11 @@ export function LandingPage() {
 
         {/* Search box */}
         <div className="w-full max-w-2xl mb-8">
-          <div
-            className="flex items-center bg-white rounded-xl border shadow-sm px-5 py-3.5"
-            style={{ borderColor: 'hsl(var(--border))' }}
-          >
-            <SearchIcon className="w-5 h-5 flex-shrink-0 mr-3" style={{ color: 'hsl(var(--text-placeholder))' }} strokeWidth={1.5} />
-            <input
-              type="text"
-              placeholder={t('landing.hero.searchPlaceholder')}
-              className="hero-input flex-1 bg-transparent outline-none text-base"
-              style={{ color: 'hsl(var(--foreground))' }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch((e.target as HTMLInputElement).value)
-                }
-              }}
-            />
-          </div>
+          <SearchBar
+            placeholder={t('landing.hero.searchPlaceholder')}
+            onSearch={handleSearch}
+            leadingControl={<NamespaceSearchFilter value={namespace} onValueChange={setNamespace} />}
+          />
         </div>
 
         {/* CTA buttons */}

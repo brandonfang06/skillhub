@@ -1,16 +1,19 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
+import { NamespaceSearchFilter } from '@/features/search/namespace-search-filter'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { QuickStartSection } from '@/shared/components/quick-start'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
-import { normalizeSearchQuery } from '@/shared/lib/search-query'
+import { normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
 
 export function HomePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [namespace, setNamespace] = useState('')
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
     sort: 'downloads',
@@ -23,7 +26,16 @@ export function HomePage() {
   })
 
   const handleSearch = (query: string) => {
-    navigate({ to: '/search', search: { q: normalizeSearchQuery(query), sort: 'relevance', page: 0, starredOnly: false } })
+    const parsed = parseNamespaceSearchInput(query)
+    const selectedNamespace = parsed.namespace || namespace
+    navigate({
+      to: '/search',
+      search: {
+        q: normalizeSearchQuery(parsed.query),
+        ...(selectedNamespace ? { namespace: selectedNamespace } : {}),
+        sort: 'relevance', page: 0, starredOnly: false,
+      },
+    })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -47,7 +59,10 @@ export function HomePage() {
         </div>
 
         <div className="max-w-2xl mx-auto animate-fade-up delay-1">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar
+            onSearch={handleSearch}
+            leadingControl={<NamespaceSearchFilter value={namespace} onValueChange={setNamespace} />}
+          />
         </div>
 
         <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">

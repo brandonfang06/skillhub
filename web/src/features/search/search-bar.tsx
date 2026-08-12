@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Search, X } from 'lucide-react'
 import { MAX_SEARCH_INPUT_LENGTH } from '@/shared/lib/search-query'
@@ -12,6 +12,7 @@ interface SearchBarProps {
   isSearching?: boolean
   onChange?: (query: string) => void
   onSearch?: (query: string) => void
+  leadingControl?: ReactNode
 }
 
 /**
@@ -20,7 +21,7 @@ interface SearchBarProps {
  * It supports both controlled and uncontrolled usage so page-level containers can decide whether
  * query text should be driven from URL state or local form state.
  */
-export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch, leadingControl }: SearchBarProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)
   const isControlled = value !== undefined
@@ -52,8 +53,9 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-3 glass-strong p-2 rounded-xl">
-      <div className="relative flex-1">
+    <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 glass-strong p-2 rounded-xl sm:flex-nowrap">
+      {leadingControl ? <div className="w-full sm:w-auto">{leadingControl}</div> : null}
+      <div className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
           type="text"

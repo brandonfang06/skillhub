@@ -1022,6 +1022,78 @@ async def read_skill_search(
     return build_skill_search_response([dict(row) for row in rows], int(total), page, size)
 
 
+async def read_searchable_skill_namespaces(
+    engine: AsyncEngine,
+    *,
+    query: str | None,
+    limit: int,
+    current_user_id: str | None,
+) -> list[dict[str, object]]:
+    normalized_query = query.strip().lower() if query and query.strip() else None
+    visibility_filter = "d.visibility = 'PUBLIC'"
+    if current_user_id is not None:
+        visibility_filter = (
+            "(d.visibility = 'PUBLIC' OR (d.visibility = 'NAMESPACE_ONLY' AND EXISTS ("
+            "SELECT 1 FROM namespace_member nm WHERE nm.namespace_id = d.namespace_id "
+            "AND nm.user_id = :current_user_id)))"
+        )
+    filters = [
+        visibility_filter,
+        "d.status = 'ACTIVE'",
+        "s.status = 'ACTIVE'",
+        "s.hidden = FALSE",
+        "n.status <> 'ARCHIVED'",
+        (
+            "EXISTS (SELECT 1 FROM skill_version sv WHERE sv.skill_id = s.id "
+            "AND sv.status = 'PUBLISHED' AND EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = sv.id))"
+        ),
+    ]
+    params: dict[str, object] = {"limit": limit}
+    if current_user_id is not None:
+        params["current_user_id"] = current_user_id
+    rank_sql = ""
+    if normalized_query is not None:
+        filters.append("(LOWER(n.slug) LIKE :query_like OR LOWER(n.display_name) LIKE :query_like)")
+        params.update({
+            "query": normalized_query,
+            "query_like": f"%{normalized_query}%",
+            "query_prefix": f"{normalized_query}%",
+        })
+        rank_sql = (
+            "CASE WHEN LOWER(n.slug) = :query THEN 0 WHEN LOWER(n.display_name) = :query THEN 1 "
+            "WHEN LOWER(n.slug) LIKE :query_prefix THEN 2 WHEN LOWER(n.display_name) LIKE :query_prefix THEN 3 "
+            "ELSE 4 END,"
+        )
+
+    async with engine.connect() as connection:
+        rows = (
+            await connection.execute(
+                text(
+                    f"""
+                    SELECT n.slug, n.display_name,
+                           COUNT(DISTINCT d.skill_id) AS visible_skill_count
+                    FROM skill_search_document d
+                    JOIN skill s ON s.id = d.skill_id
+                    JOIN namespace n ON n.id = d.namespace_id
+                    WHERE {' AND '.join(filters)}
+                    GROUP BY n.id, n.slug, n.display_name
+                    ORDER BY {rank_sql} visible_skill_count DESC, LOWER(n.display_name), n.slug
+                    LIMIT :limit
+                    """
+                ),
+                params,
+            )
+        ).mappings().all()
+    return [
+        {
+            "slug": str(row["slug"]),
+            "displayName": str(row["display_name"]),
+            "visibleSkillCount": int(row["visible_skill_count"]),
+        }
+        for row in rows
+    ]
+
+
 async def read_skill_version_files(
     engine: AsyncEngine,
     namespace: str,

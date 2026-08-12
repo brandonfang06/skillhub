@@ -190,7 +190,13 @@
     "results": "找到 {{count}} 個技能",
     "resultCount": "找到 <1>{{count}}</1> 個結果",
     "loadingMore": "正在更新搜尋結果...",
-    "namespaceFilter": "@{{namespace}}"
+    "namespaceFilter": "@{{namespace}}",
+    "namespaceFilterLabel": "依命名空間篩選",
+    "allNamespaces": "全部命名空間",
+    "namespaceSearchLabel": "搜尋命名空間",
+    "namespaceSearchPlaceholder": "搜尋名稱或 slug...",
+    "namespaceLoadError": "無法載入命名空間，點擊重試。",
+    "noMatchingNamespaces": "找不到符合的命名空間"
   },
   "searchBar": {
     "placeholder": "搜尋技能...",

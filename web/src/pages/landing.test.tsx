@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const navigateMock = vi.fn()
+let searchBarProps: { onSearch?: (query: string) => void } = {}
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }))
 
 vi.mock('react-i18next', async () => {
@@ -33,6 +36,17 @@ vi.mock('@/features/skill/skill-card', () => ({
   SkillCard: () => null,
 }))
 
+vi.mock('@/features/search/search-bar', () => ({
+  SearchBar: (props: { onSearch?: (query: string) => void }) => {
+    searchBarProps = props
+    return null
+  },
+}))
+
+vi.mock('@/features/search/namespace-search-filter', () => ({
+  NamespaceSearchFilter: () => null,
+}))
+
 vi.mock('@/shared/components/skeleton-loader', () => ({
   SkeletonList: () => null,
 }))
@@ -48,10 +62,6 @@ vi.mock('@/shared/hooks/use-in-view', () => ({
   useInView: () => ({ ref: vi.fn(), inView: true }),
 }))
 
-vi.mock('@/shared/lib/search-query', () => ({
-  normalizeSearchQuery: (q: string) => q.trim(),
-}))
-
 vi.mock('@/shared/ui/button', () => ({
   Button: ({ children }: { children: unknown }) => children,
 }))
@@ -60,6 +70,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { LandingPage } from './landing'
 
 describe('LandingPage', () => {
+  beforeEach(() => {
+    navigateMock.mockReset()
+    searchBarProps = {}
+  })
+
   it('exports a named component function', () => {
     expect(typeof LandingPage).toBe('function')
   })
@@ -69,5 +84,16 @@ describe('LandingPage', () => {
 
     expect(html).toContain('SkillHub')
     expect(html).toContain('landing.hero.title')
+  })
+
+  it('keeps typed namespace search compatible for anonymous users', () => {
+    renderToStaticMarkup(<LandingPage />)
+
+    searchBarProps.onSearch?.('@public-tools agent')
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/search',
+      search: { q: 'agent', namespace: 'public-tools', sort: 'relevance', page: 0, starredOnly: false },
+    })
   })
 })
