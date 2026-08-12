@@ -1472,6 +1472,10 @@
     },
     "namespace": "命名空间",
     "selectNamespace": "选择命名空间",
+    "namespaceSearchLabel": "搜索命名空间",
+    "namespaceSearchPlaceholder": "搜索命名空间名称或 slug...",
+    "clearNamespace": "清除命名空间选择",
+    "noMatchingNamespace": "没有匹配的命名空间",
     "visibility": "可见性",
     "visibilityOptions": {
       "public": "公开",

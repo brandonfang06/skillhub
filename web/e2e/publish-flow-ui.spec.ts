@@ -35,14 +35,14 @@ test.describe('Publish Flow UI (Real API)', () => {
       const namespaceTrigger = page.locator('#namespace')
       await expect(namespaceTrigger).toBeVisible()
       await namespaceTrigger.click()
-      const namespaceOption = page.getByRole('option', {
-        name: new RegExp(`\\(@${namespace.slug}\\)`),
+      const namespaceSearch = page.getByRole('searchbox', { name: 'Search namespaces' })
+      await expect(namespaceSearch).toBeFocused()
+      await namespaceSearch.fill(namespace.slug)
+      const namespaceOption = page.getByRole('menuitem', {
+        name: new RegExp(`@${namespace.slug}`),
       }).first()
       await expect(namespaceOption).toBeVisible()
-      await namespaceOption.evaluate((element: HTMLElement) => {
-        element.scrollIntoView({ block: 'center' })
-        element.click()
-      })
+      await namespaceOption.click()
       await expect(namespaceTrigger).toContainText(`@${namespace.slug}`)
 
       await page.locator('input[type="file"]').setInputFiles(packagePath)
@@ -71,5 +71,64 @@ test.describe('Publish Flow UI (Real API)', () => {
     } finally {
       await builder.cleanup()
     }
+  })
+
+  test('searches 125 namespaces without overflowing desktop or mobile viewports', async ({ page }) => {
+    const namespaces = Array.from({ length: 125 }, (_, index) => ({
+      id: index + 1,
+      slug: `team-${index + 1}`,
+      displayName: `Team ${index + 1}`,
+      type: 'TEAM',
+      status: 'ACTIVE',
+      createdAt: '2026-08-12T00:00:00Z',
+      immutable: false,
+      canFreeze: false,
+      canUnfreeze: false,
+      canArchive: false,
+      canRestore: false,
+      canDelete: false,
+    }))
+    namespaces[124] = {
+      ...namespaces[124],
+      slug: 'foundation-models',
+      displayName: 'AI Platform',
+    }
+
+    await page.route('**/api/web/me/namespaces', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 0, msg: 'success', data: namespaces }),
+      })
+    })
+
+    await page.goto('/dashboard/publish')
+    const namespaceTrigger = page.locator('#namespace')
+    await namespaceTrigger.click()
+
+    const namespaceMenu = page.getByRole('menu')
+    const scrollArea = namespaceMenu.locator('.max-h-80')
+    await expect(scrollArea).toBeVisible()
+    expect(await scrollArea.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
+
+    const namespaceSearch = page.getByRole('searchbox', { name: 'Search namespaces' })
+    await namespaceSearch.fill('FOUNDATION-models')
+    await expect(page.getByRole('menuitem', { name: /AI Platform.*@foundation-models/ })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /Team 1.*@team-1/ })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: /AI Platform.*@foundation-models/ }).click()
+    await expect(namespaceTrigger).toContainText('AI Platform (@foundation-models)')
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.reload()
+    await namespaceTrigger.click()
+    await page.getByRole('searchbox', { name: 'Search namespaces' }).fill('AI PLATFORM')
+    const mobileMenuBox = await page.getByRole('menu').boundingBox()
+    expect(mobileMenuBox).not.toBeNull()
+    expect(mobileMenuBox!.x).toBeGreaterThanOrEqual(0)
+    expect(mobileMenuBox!.x + mobileMenuBox!.width).toBeLessThanOrEqual(390)
+    await page.getByRole('menuitem', { name: /AI Platform.*@foundation-models/ }).click()
+    const mobileTriggerBox = await namespaceTrigger.boundingBox()
+    expect(mobileTriggerBox).not.toBeNull()
+    expect(mobileTriggerBox!.x + mobileTriggerBox!.width).toBeLessThanOrEqual(390)
   })
 })

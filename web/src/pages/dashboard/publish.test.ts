@@ -1,11 +1,12 @@
 /** @vitest-environment jsdom */
 import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const useSearchMock = vi.fn()
 const selectRecords: Array<{ value?: string }> = []
+const namespacePickerRecords: Array<{ value: string }> = []
 const { publishMutationMock, toastErrorMock } = vi.hoisted(() => ({
   publishMutationMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -33,6 +34,23 @@ vi.mock('@/features/publish/upload-zone', () => ({
       { type: 'button', onClick: () => onFileSelect(new File(['skill'], 'skill.zip')) },
       'choose-file',
     ),
+}))
+
+vi.mock('@/features/publish/namespace-picker', () => ({
+  NamespacePicker: ({
+    value,
+    onValueChange,
+  }: {
+    value: string
+    onValueChange: (value: string) => void
+  }) => {
+    namespacePickerRecords.push({ value })
+    return createElement(
+      'button',
+      { type: 'button', onClick: () => onValueChange('team-search') },
+      'pick-namespace',
+    )
+  },
 }))
 
 vi.mock('@/shared/ui/button', () => ({
@@ -93,9 +111,12 @@ vi.mock('@/api/client', () => ({
 import { ApiError } from '@/api/client'
 import { PublishPage } from './publish'
 
+afterEach(cleanup)
+
 describe('PublishPage', () => {
   beforeEach(() => {
     selectRecords.length = 0
+    namespacePickerRecords.length = 0
     publishMutationMock.mockReset()
     toastErrorMock.mockReset()
     useSearchMock.mockReturnValue({
@@ -107,8 +128,8 @@ describe('PublishPage', () => {
   it('prefills namespace and visibility from route search params', () => {
     renderToStaticMarkup(createElement(PublishPage))
 
-    expect(selectRecords[0]?.value).toBe('team-ai')
-    expect(selectRecords[1]?.value).toBe('PRIVATE')
+    expect(namespacePickerRecords[0]?.value).toBe('team-ai')
+    expect(selectRecords[0]?.value).toBe('PRIVATE')
   })
 
   it('falls back to public visibility when search params are missing', () => {
@@ -116,8 +137,8 @@ describe('PublishPage', () => {
 
     renderToStaticMarkup(createElement(PublishPage))
 
-    expect(selectRecords[0]?.value).toBe('__select_namespace__')
-    expect(selectRecords[1]?.value).toBe('PUBLIC')
+    expect(namespacePickerRecords[0]?.value).toBe('')
+    expect(selectRecords[0]?.value).toBe('PUBLIC')
   })
 
   it('exports a named component function', () => {
@@ -142,6 +163,28 @@ describe('PublishPage', () => {
         'publish.error',
         'Publish failed',
       )
+    })
+  })
+
+  it('publishes with the namespace selected by the searchable picker', async () => {
+    useSearchMock.mockReturnValue({})
+    publishMutationMock.mockResolvedValue({
+      namespace: 'team-search',
+      slug: 'test-skill',
+      version: '1.0.0',
+      status: 'PUBLISHED',
+    })
+
+    render(createElement(PublishPage))
+    fireEvent.click(screen.getByText('pick-namespace'))
+    fireEvent.click(screen.getByText('choose-file'))
+    fireEvent.click(screen.getByText('publish.confirm'))
+
+    await waitFor(() => {
+      expect(publishMutationMock).toHaveBeenCalledWith(expect.objectContaining({
+        namespace: 'team-search',
+        visibility: 'PUBLIC',
+      }))
     })
   })
 })

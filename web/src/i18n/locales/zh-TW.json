@@ -1471,6 +1471,10 @@
     },
     "namespace": "命名空間",
     "selectNamespace": "選擇命名空間",
+    "namespaceSearchLabel": "搜尋命名空間",
+    "namespaceSearchPlaceholder": "搜尋命名空間名稱或 slug...",
+    "clearNamespace": "清除命名空間選擇",
+    "noMatchingNamespace": "找不到符合的命名空間",
     "visibility": "可見性",
     "visibilityOptions": {
       "public": "公開",

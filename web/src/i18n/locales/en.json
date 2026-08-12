@@ -1484,6 +1484,10 @@
     },
     "namespace": "Namespace",
     "selectNamespace": "Select namespace",
+    "namespaceSearchLabel": "Search namespaces",
+    "namespaceSearchPlaceholder": "Search by namespace name or slug...",
+    "clearNamespace": "Clear namespace selection",
+    "noMatchingNamespace": "No matching namespaces",
     "visibility": "Visibility",
     "visibilityOptions": {
       "public": "Public",
