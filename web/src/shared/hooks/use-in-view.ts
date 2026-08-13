@@ -49,6 +49,28 @@ export function useInView(options?: IntersectionObserverInit) {
     if (!el) return
 
     const observerOptions = { threshold: 0.15, ...optionsRef.current }
+    let observer: IntersectionObserver | null = null
+    let frame = 0
+    let delayedCheck = 0
+    let revealed = false
+
+    const stopFallbackChecks = () => {
+      window.removeEventListener('scroll', revealIfVisible)
+      window.removeEventListener('resize', revealIfVisible)
+      window.removeEventListener('pageshow', revealIfVisible)
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(delayedCheck)
+    }
+
+    const reveal = () => {
+      if (revealed) return
+
+      revealed = true
+      setInView(true)
+      observer?.unobserve(el)
+      stopFallbackChecks()
+    }
+
     const revealIfVisible = () => {
       if (
         isRectVisibleInViewport(
@@ -57,7 +79,7 @@ export function useInView(options?: IntersectionObserverInit) {
           getFirstThreshold(observerOptions.threshold),
         )
       ) {
-        setInView(true)
+        reveal()
         return true
       }
 
@@ -73,26 +95,25 @@ export function useInView(options?: IntersectionObserverInit) {
       return
     }
 
-    const observer = new IntersectionObserver(
+    observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setInView(true)
-          observer.unobserve(el)
+          reveal()
         }
       },
       observerOptions,
     )
 
     observer.observe(el)
-    const frame = window.requestAnimationFrame(() => {
-      if (revealIfVisible()) {
-        observer.unobserve(el)
-      }
-    })
+    window.addEventListener('scroll', revealIfVisible, { passive: true })
+    window.addEventListener('resize', revealIfVisible)
+    window.addEventListener('pageshow', revealIfVisible)
+    frame = window.requestAnimationFrame(revealIfVisible)
+    delayedCheck = window.setTimeout(revealIfVisible, 250)
 
     return () => {
-      window.cancelAnimationFrame(frame)
-      observer.disconnect()
+      stopFallbackChecks()
+      observer?.disconnect()
     }
   }, [])
 
