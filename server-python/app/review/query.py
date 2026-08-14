@@ -114,8 +114,24 @@ def _task_response(row: dict[str, Any]) -> dict[str, Any]:
     return response
 
 
-def _archived_task_response(row: dict[str, Any]) -> dict[str, Any]:
+def _detail_task_response(row: dict[str, Any]) -> dict[str, Any]:
+    requested_visibility = row.get("requested_visibility")
+    approval_visibility = requested_visibility
+    if bool(row.get("visibility_updated_after_submission")):
+        approval_visibility = row.get("current_visibility")
+
     response = _task_response(row)
+    response.update(
+        {
+            "requestedVisibility": requested_visibility,
+            "approvalVisibility": approval_visibility,
+        }
+    )
+    return response
+
+
+def _archived_task_response(row: dict[str, Any]) -> dict[str, Any]:
+    response = _detail_task_response(row)
     response.update(
         {
             "superseded": True,
@@ -644,7 +660,17 @@ async def _read_review_task_row(connection: Any, review_task_id: int) -> dict[st
                        n.type AS namespace_type,
                        s.slug AS skill_slug,
                        sv.version AS version_name,
-                       sv.status AS version_status
+                       sv.status AS version_status,
+                       sv.requested_visibility,
+                       s.visibility AS current_visibility,
+                       EXISTS (
+                           SELECT 1
+                           FROM audit_log visibility_audit
+                           WHERE visibility_audit.action = 'UPDATE_SKILL_VISIBILITY'
+                             AND visibility_audit.target_type = 'SKILL'
+                             AND visibility_audit.target_id = s.id
+                             AND visibility_audit.created_at > rt.submitted_at
+                       ) AS visibility_updated_after_submission
                 FROM review_task rt
                 JOIN namespace n ON n.id = rt.namespace_id
                 JOIN skill_version sv ON sv.id = rt.skill_version_id
@@ -952,7 +978,7 @@ async def read_review_detail(engine: Any, *, review_task_id: int, user_id: str) 
     async with engine.connect() as connection:
         try:
             row = await _read_review_task_row(connection, review_task_id)
-            response_builder = _task_response
+            response_builder = _detail_task_response
         except ReviewQueryError as exc:
             if exc.status_code != 404:
                 raise

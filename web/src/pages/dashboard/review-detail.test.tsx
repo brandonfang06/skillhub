@@ -277,6 +277,130 @@ describe('ReviewDetailPage', () => {
     expect(html).toContain('demo-skill')
   })
 
+  it('shows the visibility requested by the version under namespace review', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        requestedVisibility: 'NAMESPACE_ONLY',
+        approvalVisibility: 'NAMESPACE_ONLY',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedByName: 'Local Admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+        reviewedBy: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewComment: null,
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.requestedVisibility')
+    expect(html).toContain('publish.visibilityOptions.namespaceOnly')
+    expect(html).not.toContain('review.approvalVisibility')
+  })
+
+  it('warns when approval will use a newer visibility than the submitted value', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        requestedVisibility: 'NAMESPACE_ONLY',
+        approvalVisibility: 'PRIVATE',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.requestedVisibility')
+    expect(html).toContain('publish.visibilityOptions.namespaceOnly')
+    expect(html).toContain('review.approvalVisibility')
+    expect(html).toContain('publish.visibilityOptions.private')
+    expect(html).toContain('review.visibilityChangedAfterSubmission')
+  })
+
+  it('shows a neutral fallback when requested visibility was not recorded', () => {
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('review.requestedVisibility')
+    expect(html).toContain('review.visibilityNotRecorded')
+  })
+
+  it('shows a known approval visibility when a legacy request was not recorded', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'team-alpha',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        requestedVisibility: null,
+        approvalVisibility: 'PRIVATE',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
+
+    expect(html).toContain('review.visibilityNotRecorded')
+    expect(html).toContain('review.approvalVisibility')
+    expect(html).toContain('publish.visibilityOptions.private')
+    expect(html).toContain('review.visibilityChangedAfterSubmission')
+  })
+
+  it('shows public when public visibility was requested', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'global',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        requestedVisibility: 'PUBLIC',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('publish.visibilityOptions.public')
+  })
+
+  it('uses the logged-in users label for global namespace-only reviews', () => {
+    useReviewDetailMock.mockReturnValue({
+      data: {
+        id: 13,
+        namespace: 'global',
+        skillSlug: 'demo-skill',
+        version: '1.2.0',
+        requestedVisibility: 'NAMESPACE_ONLY',
+        status: 'PENDING',
+        submittedBy: 'local-admin',
+        submittedAt: '2026-03-19T00:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    const html = renderToStaticMarkup(<ReviewDetailPage />)
+
+    expect(html).toContain('publish.visibilityOptions.loggedInUsersOnly')
+  })
+
   it('redirects namespace reviews opened through the global route for namespace operators', () => {
     userMock.platformRoles = []
     useReviewDetailMock.mockReturnValue({

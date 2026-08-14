@@ -72,6 +72,9 @@ class FakeReviewDetailConnection:
                     "skill_slug": "agent-helper",
                     "version_name": "1.0.0",
                     "version_status": "PENDING_REVIEW",
+                    "requested_visibility": "NAMESPACE_ONLY",
+                    "current_visibility": "PRIVATE",
+                    "visibility_updated_after_submission": True,
                 }
             )
         if "FROM review_attempt_archive raa" in sql:
@@ -150,6 +153,8 @@ async def test_read_review_detail_allows_submitter() -> None:
     assert response["submittedBy"] == "local-user"
     assert response["namespace"] == "team-a"
     assert response["versionStatus"] == "PENDING_REVIEW"
+    assert response["requestedVisibility"] == "NAMESPACE_ONLY"
+    assert response["approvalVisibility"] == "PRIVATE"
     assert response["submittedAt"] == "2026-06-09T10:00:00Z"
     assert response["superseded"] is False
     assert response["artifactAvailable"] is True
@@ -206,6 +211,8 @@ async def test_read_review_detail_falls_back_to_archived_attempt_for_submitter()
     assert response["reviewComment"] == "Fix the manifest"
     assert response["superseded"] is True
     assert response["artifactAvailable"] is False
+    assert response["requestedVisibility"] is None
+    assert response["approvalVisibility"] is None
     assert response["replacementVersionId"] == 53
     assert response["replacementReviewTaskId"] == 802
     assert response["archivedAt"] == "2026-06-10T09:00:00Z"

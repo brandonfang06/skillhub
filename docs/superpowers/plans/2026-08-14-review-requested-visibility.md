@@ -4,7 +4,9 @@
 
 **Goal:** Show the review-bound requested skill visibility to authorized namespace and platform reviewers without changing lifecycle behavior.
 
-**Architecture:** Extend the existing review detail contract with the version snapshot stored in `skill_version.requested_visibility`. Render that optional value in the shared review detail metadata grid with localized labels and a neutral legacy fallback; do not read or infer the mutable current skill visibility.
+**Architecture:** Extend the review detail contract with the version snapshot stored in `skill_version.requested_visibility` and an effective approval value calculated by the existing post-submission visibility-audit rule. Render the requested value with localized labels and a neutral legacy fallback, show the approval value only when it differs, and leave review list responses unchanged.
+
+**Review correction:** Code review found that approval intentionally uses current skill visibility only when an audited visibility update occurred after submission. The detail contract therefore also exposes `approvalVisibility` calculated by that exact rule, while keeping `requestedVisibility` as the submission snapshot. The UI shows the approval value only when it differs, and list responses remain unchanged.
 
 **Tech Stack:** FastAPI, Pydantic, SQLAlchemy async, PostgreSQL, OpenAPI, React 19, TypeScript, i18next, Vitest, Playwright.
 
@@ -47,26 +49,29 @@ cd server-python
 uv run pytest tests/test_review_detail.py tests/test_review_openapi_contract.py -q
 ```
 
-Expected: failures because `requestedVisibility` is absent from the response and schema.
+Expected: failures because the detail-only visibility fields are absent from the response and schema.
 
 - [ ] **Step 3: Implement the minimal contract**
 
-In `_task_response`, add:
+Add `_detail_task_response` on top of the unchanged list mapper. It must expose:
 
 ```python
 "requestedVisibility": row.get("requested_visibility"),
+"approvalVisibility": approval_visibility,
 ```
 
-In `_read_review_task_row`, select:
+In `_read_review_task_row`, select the requested visibility, current visibility, and whether an `UPDATE_SKILL_VISIBILITY` audit entry exists after submission. Use the current value only when that audit condition is true; otherwise use the requested value.
 
 ```sql
 sv.requested_visibility,
+s.visibility AS current_visibility,
 ```
 
-Add this optional field to `ReviewTaskResponse`:
+Add these optional fields to `ReviewTaskResponse`:
 
 ```python
 requestedVisibility: str | None = None
+approvalVisibility: str | None = None
 ```
 
 - [ ] **Step 4: Run focused backend tests and verify GREEN**

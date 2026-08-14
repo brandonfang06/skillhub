@@ -148,6 +148,8 @@ async def test_list_review_tasks_global_queue_requires_platform_role_and_preserv
     assert response["items"][0]["id"] == 1001
     assert response["items"][0]["namespace"] == "team-a"
     assert response["items"][0]["versionStatus"] == "PENDING_REVIEW"
+    assert "requestedVisibility" not in response["items"][0]
+    assert "approvalVisibility" not in response["items"][0]
     count_index = next(index for index, sql in enumerate(connection.statements) if "COUNT(*)" in sql)
     page_index = next(index for index, sql in enumerate(connection.statements) if "ORDER BY" in sql)
     assert count_index < page_index

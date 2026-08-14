@@ -1835,6 +1835,28 @@
             ],
             "title": "Version"
           },
+          "requestedVisibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestedvisibility"
+          },
+          "approvalVisibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvalvisibility"
+          },
           "status": {
             "anyOf": [
               {

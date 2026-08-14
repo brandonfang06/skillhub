@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const externalBaseURL = process.env.E2E_BASE_URL?.trim()
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -9,7 +11,7 @@ export default defineConfig({
   workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 1),
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: externalBaseURL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'on',
   },
@@ -19,10 +21,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'corepack pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+  webServer: externalBaseURL
+    ? undefined
+    : {
+        command: 'corepack pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort',
+        url: 'http://localhost:3000',
+        reuseExistingServer: true,
+        timeout: 120000,
+      },
 })

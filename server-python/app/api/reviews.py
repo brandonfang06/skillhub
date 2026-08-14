@@ -82,6 +82,8 @@ class ReviewTaskResponse(BaseModel):
     namespace: str | None = None
     skillSlug: str | None = None
     version: str | None = None
+    requestedVisibility: str | None = None
+    approvalVisibility: str | None = None
     status: str | None = None
     submittedBy: str | None = None
     submittedByName: str | None = None

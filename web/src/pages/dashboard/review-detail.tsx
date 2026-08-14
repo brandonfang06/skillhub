@@ -228,6 +228,24 @@ function ReviewDetailScreen({
       ? `/dashboard/reviews/${review.replacementReviewTaskId}`
       : buildNamespaceReviewDetailPath(review.namespace, review.replacementReviewTaskId)
     : null
+  const requestedVisibilityLabel = review.requestedVisibility === 'PUBLIC'
+    ? t('publish.visibilityOptions.public')
+    : review.requestedVisibility === 'NAMESPACE_ONLY'
+      ? review.namespace === 'global'
+        ? t('publish.visibilityOptions.loggedInUsersOnly')
+        : t('publish.visibilityOptions.namespaceOnly')
+      : t('review.visibilityNotRecorded')
+  const approvalVisibilityLabel = review.approvalVisibility === 'PUBLIC'
+    ? t('publish.visibilityOptions.public')
+    : review.approvalVisibility === 'NAMESPACE_ONLY'
+      ? review.namespace === 'global'
+        ? t('publish.visibilityOptions.loggedInUsersOnly')
+        : t('publish.visibilityOptions.namespaceOnly')
+      : review.approvalVisibility === 'PRIVATE'
+        ? t('publish.visibilityOptions.private')
+        : t('review.visibilityNotRecorded')
+  const approvalVisibilityChanged = review.approvalVisibility != null
+    && review.approvalVisibility !== review.requestedVisibility
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
@@ -254,6 +272,38 @@ function ReviewDetailScreen({
             <p className="font-semibold">
               <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
                 {review.version}
+              </span>
+            </p>
+          </div>
+          {approvalVisibilityChanged && (
+            <div className="col-span-2 min-w-0 space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <Label className="text-xs text-amber-700 uppercase tracking-wider dark:text-amber-300">
+                {t('review.approvalVisibility')}
+              </Label>
+              <p className="font-semibold">
+                <span className="inline-flex max-w-full rounded-full bg-amber-500/15 px-2.5 py-0.5 text-sm text-amber-700 dark:text-amber-300">
+                  {approvalVisibilityLabel}
+                </span>
+              </p>
+              <p className="break-words text-sm text-amber-800 dark:text-amber-200">
+                {t('review.visibilityChangedAfterSubmission')}
+              </p>
+            </div>
+          )}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+              {t('review.requestedVisibility')}
+            </Label>
+            <p className="font-semibold">
+              <span className={cn(
+                'inline-flex rounded-full px-2.5 py-0.5 text-sm',
+                review.requestedVisibility === 'PUBLIC' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                review.requestedVisibility === 'NAMESPACE_ONLY' && 'badge-soft-blue',
+                review.requestedVisibility !== 'PUBLIC'
+                  && review.requestedVisibility !== 'NAMESPACE_ONLY'
+                  && 'bg-secondary text-muted-foreground',
+              )}>
+                {requestedVisibilityLabel}
               </span>
             </p>
           </div>

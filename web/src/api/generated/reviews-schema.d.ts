@@ -455,6 +455,10 @@ export interface components {
             skillSlug?: string | null;
             /** Version */
             version?: string | null;
+            /** Requestedvisibility */
+            requestedVisibility?: string | null;
+            /** Approvalvisibility */
+            approvalVisibility?: string | null;
             /** Status */
             status?: string | null;
             /** Submittedby */

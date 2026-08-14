@@ -13,6 +13,8 @@ def test_review_detail_openapi_exposes_archive_fields() -> None:
     assert properties["artifactAvailable"]["type"] == "boolean"
     assert properties["replacementVersionId"]["anyOf"][0]["type"] == "integer"
     assert properties["replacementReviewTaskId"]["anyOf"][0]["type"] == "integer"
+    assert properties["requestedVisibility"]["anyOf"][0]["type"] == "string"
+    assert properties["approvalVisibility"]["anyOf"][0]["type"] == "string"
     assert properties["archivedSnapshot"]["anyOf"][0]["$ref"] == (
         "#/components/schemas/ArchivedReviewSnapshotResponse"
     )
