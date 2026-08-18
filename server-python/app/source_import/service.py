@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Set as AbstractSet
 from collections.abc import Callable
 from typing import Any, Literal, Protocol
 
-from app.source_import.contracts import SourceIdentity, SourceRepository
+from app.publish.dry_run import slugify
+from app.publish.package import PackageEntry, validate_package
+from app.source_import.contracts import (
+    SourceIdentity,
+    SourceImportPlanOutcome,
+    SourcePackage,
+    SourceRepository,
+    SourceRevision,
+)
+from app.source_import.source import content_fingerprint, normalize_source_path
 
 
 class SourceImportError(ValueError):
@@ -22,6 +32,11 @@ class SourceImportConflict(SourceImportError):
 class SourceImportNotFound(SourceImportError):
     def __init__(self, message: str, *, code: str = "error.sourceImport.identity.notFound") -> None:
         super().__init__(message, status_code=404, code=code)
+
+
+class SourceImportValidationError(SourceImportError):
+    def __init__(self, message: str, *, code: str = "error.sourceImport.validation") -> None:
+        super().__init__(message, status_code=400, code=code)
 
 
 @dataclass(frozen=True)
@@ -47,6 +62,56 @@ class NamespaceSourceBinding:
     id: int
     namespace_id: int
     repository_url: str
+
+
+@dataclass(frozen=True)
+class SourceSkillRecord:
+    source_id: int | None
+    namespace_source_id: int | None
+    source_path: str | None
+    skill_id: int
+    slug: str
+    owner_id: str
+    status: str
+    owner_display_name: str | None = None
+    owner_status: str = "ACTIVE"
+
+
+@dataclass(frozen=True)
+class SourceSkillVersionRecord:
+    version_id: int
+    skill_id: int
+    version: str
+    status: str
+    content_fingerprint: str | None
+
+
+@dataclass(frozen=True)
+class ValidateSourceSkillInput:
+    namespace_slug: str
+    repository: SourceRepository
+    revision: SourceRevision
+    source_path: str
+    entries: list[PackageEntry]
+    version_override: str | None
+    initiator: SourceIdentity | None
+    actor_user_id: str
+    allowed_extensions: AbstractSet[str] | None = None
+
+
+@dataclass(frozen=True)
+class SourceSkillValidationPlan:
+    outcome: SourceImportPlanOutcome
+    namespace: NamespaceRecord
+    namespace_binding: NamespaceSourceBinding
+    source_skill: SourceSkillRecord | None
+    package: SourcePackage
+    skill_slug: str
+    stable_owner: IdentityAccount
+    review_submitter: IdentityAccount
+    add_submitter_as_member: bool
+    visibility: Literal["PUBLIC"] = "PUBLIC"
+    auto_publish: Literal[False] = False
 
 
 @dataclass(frozen=True)
@@ -87,6 +152,20 @@ class SourceImportRepositoryProtocol(Protocol):
         actor_user_id: str,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]: ...
+
+    async def read_source_skill(self, namespace_source_id: int, source_path: str) -> SourceSkillRecord | None: ...
+
+    async def read_skill_by_slug(self, namespace_id: int, slug: str) -> SourceSkillRecord | None: ...
+
+    async def read_source_skill_version(self, skill_id: int, version: str) -> SourceSkillVersionRecord | None: ...
+
+    async def read_source_skill_version_by_fingerprint(
+        self,
+        source_skill_id: int,
+        fingerprint: str,
+    ) -> SourceSkillVersionRecord | None: ...
+
+    async def read_namespace_membership(self, namespace_id: int, user_id: str) -> str | None: ...
 
 
 async def _resolve_unique_active_identity(
@@ -196,6 +275,120 @@ async def ensure_source_namespace_in_transaction(
         request_id=request.request_id,
     )
     return EnsureSourceNamespaceResult("CREATED", created_namespace, created_binding, fallback_owner)
+
+
+def _resolve_effective_version(source_version: str | None, version_override: str | None) -> str:
+    explicit_version = (source_version or "").strip()
+    override = (version_override or "").strip()
+    if explicit_version:
+        if override:
+            raise SourceImportValidationError("A version override cannot replace an explicit SKILL.md version")
+        return explicit_version
+    if not override:
+        raise SourceImportValidationError("A version override is required when SKILL.md has no version")
+    if len(override) > 64:
+        raise SourceImportValidationError("The version override exceeds 64 characters")
+    return override
+
+
+def _stable_owner_for_source(source_skill: SourceSkillRecord | None, attribution: IdentityAccount) -> IdentityAccount:
+    if source_skill is None:
+        return attribution
+    return IdentityAccount(
+        user_id=source_skill.owner_id,
+        display_name=source_skill.owner_display_name or source_skill.owner_id,
+        status=source_skill.owner_status,
+        provider_code=None,
+        login_name=None,
+    )
+
+
+async def validate_source_skill_in_transaction(
+    repository: SourceImportRepositoryProtocol,
+    request: ValidateSourceSkillInput,
+) -> SourceSkillValidationPlan:
+    namespace = await repository.read_namespace(request.namespace_slug)
+    if namespace is None:
+        raise SourceImportNotFound("Source namespace was not found", code="error.sourceImport.namespace.notFound")
+    _require_writable_source_namespace(namespace)
+    namespace_binding = await repository.read_namespace_source_by_namespace(namespace.id)
+    if namespace_binding is None or namespace_binding.repository_url != request.repository.canonical_url:
+        raise SourceImportConflict(
+            "Source namespace repository binding does not match the request",
+            code="error.sourceImport.repository.mismatch",
+        )
+
+    normalized_source_path = normalize_source_path(request.source_path)
+    package_validation = validate_package(request.entries, allowed_extensions=request.allowed_extensions)
+    if not package_validation.valid or package_validation.metadata is None:
+        messages = package_validation.errors or ["Package must contain valid SKILL.md metadata"]
+        raise SourceImportValidationError(", ".join(messages))
+    if package_validation.warnings:
+        raise SourceImportValidationError(", ".join(package_validation.warnings))
+    metadata = package_validation.metadata
+    effective_version = _resolve_effective_version(metadata.version, request.version_override)
+    try:
+        resolved_slug = slugify(metadata.name)
+    except ValueError as exc:
+        raise SourceImportValidationError(f"Invalid skill name: {exc}") from exc
+
+    fingerprint = content_fingerprint(request.entries)
+    source_skill = await repository.read_source_skill(namespace_binding.id, normalized_source_path)
+    if source_skill is not None:
+        if source_skill.slug != resolved_slug:
+            raise SourceImportConflict(
+                "Skill source identity drift: source path now resolves to another slug",
+                code="error.sourceImport.skill.sourceIdentityDrift",
+            )
+        if source_skill.status != "ACTIVE":
+            raise SourceImportConflict("Source skill is not writable", code="error.sourceImport.skill.notWritable")
+    elif await repository.read_skill_by_slug(namespace.id, resolved_slug) is not None:
+        raise SourceImportConflict(
+            "Skill slug already exists but is not bound to this source path",
+            code="error.sourceImport.skill.slug.conflict",
+        )
+
+    attribution = await resolve_attribution_user(repository, namespace.id, request.initiator)
+    stable_owner = _stable_owner_for_source(source_skill, attribution)
+    existing_version = (
+        await repository.read_source_skill_version(source_skill.skill_id, effective_version)
+        if source_skill is not None
+        else None
+    )
+    if existing_version is not None:
+        if existing_version.content_fingerprint == fingerprint:
+            outcome: SourceImportPlanOutcome = "SKIPPED_ALREADY_IMPORTED"
+        else:
+            raise SourceImportConflict(
+                "An immutable version already exists with different source content",
+                code="error.sourceImport.version.immutableConflict",
+            )
+    elif source_skill is not None and source_skill.source_id is not None and await repository.read_source_skill_version_by_fingerprint(
+        source_skill.source_id,
+        fingerprint,
+    ) is not None:
+        outcome = "SKIPPED_UNCHANGED"
+    else:
+        outcome = "IMPORT"
+
+    membership = await repository.read_namespace_membership(namespace.id, attribution.user_id)
+    return SourceSkillValidationPlan(
+        outcome=outcome,
+        namespace=namespace,
+        namespace_binding=namespace_binding,
+        source_skill=source_skill,
+        package=SourcePackage(
+            source_path=normalized_source_path,
+            entries=request.entries,
+            metadata=metadata,
+            content_fingerprint=fingerprint,
+            effective_version=effective_version,
+        ),
+        skill_slug=resolved_slug,
+        stable_owner=stable_owner,
+        review_submitter=attribution,
+        add_submitter_as_member=membership is None,
+    )
 
 
 async def ensure_source_namespace(

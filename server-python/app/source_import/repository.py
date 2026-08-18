@@ -6,7 +6,13 @@ from typing import Any
 from sqlalchemy import text
 
 from app.audit.writer import write_audit_log
-from app.source_import.service import IdentityAccount, NamespaceRecord, NamespaceSourceBinding
+from app.source_import.service import (
+    IdentityAccount,
+    NamespaceRecord,
+    NamespaceSourceBinding,
+    SourceSkillRecord,
+    SourceSkillVersionRecord,
+)
 
 
 class SourceImportRepository:
@@ -180,6 +186,125 @@ class SourceImportRepository:
         )
         return namespace, binding
 
+    async def read_source_skill(self, namespace_source_id: int, source_path: str) -> SourceSkillRecord | None:
+        row = (
+            await self.connection.execute(
+                text(
+                    """
+                    SELECT source.id AS source_id,
+                           source.namespace_source_id,
+                           source.source_path,
+                           skill.id AS skill_id,
+                           skill.slug,
+                           skill.owner_id,
+                           skill.status,
+                           owner.display_name AS owner_display_name,
+                           owner.status AS owner_status
+                    FROM local_oss_skill_source source
+                    JOIN skill ON skill.id = source.skill_id
+                    JOIN user_account owner ON owner.id = skill.owner_id
+                    WHERE source.namespace_source_id = :namespace_source_id
+                      AND source.source_path = :source_path
+                    LIMIT 1
+                    """
+                ),
+                {"namespace_source_id": namespace_source_id, "source_path": source_path},
+            )
+        ).mappings().one_or_none()
+        return _source_skill_record(dict(row)) if row is not None else None
+
+    async def read_skill_by_slug(self, namespace_id: int, slug: str) -> SourceSkillRecord | None:
+        row = (
+            await self.connection.execute(
+                text(
+                    """
+                    SELECT source.id AS source_id,
+                           source.namespace_source_id,
+                           source.source_path,
+                           skill.id AS skill_id,
+                           skill.slug,
+                           skill.owner_id,
+                           skill.status,
+                           owner.display_name AS owner_display_name,
+                           owner.status AS owner_status
+                    FROM skill
+                    JOIN user_account owner ON owner.id = skill.owner_id
+                    LEFT JOIN local_oss_skill_source source ON source.skill_id = skill.id
+                    WHERE skill.namespace_id = :namespace_id
+                      AND skill.slug = :slug
+                    LIMIT 1
+                    """
+                ),
+                {"namespace_id": namespace_id, "slug": slug},
+            )
+        ).mappings().one_or_none()
+        return _source_skill_record(dict(row)) if row is not None else None
+
+    async def read_source_skill_version(self, skill_id: int, version: str) -> SourceSkillVersionRecord | None:
+        row = (
+            await self.connection.execute(
+                text(
+                    """
+                    SELECT version.id AS version_id,
+                           version.skill_id,
+                           version.version,
+                           version.status,
+                           source.content_fingerprint
+                    FROM skill_version version
+                    LEFT JOIN local_oss_skill_version_source source ON source.skill_version_id = version.id
+                    WHERE version.skill_id = :skill_id
+                      AND version.version = :version
+                    LIMIT 1
+                    """
+                ),
+                {"skill_id": skill_id, "version": version},
+            )
+        ).mappings().one_or_none()
+        return _source_skill_version_record(dict(row)) if row is not None else None
+
+    async def read_source_skill_version_by_fingerprint(
+        self,
+        source_skill_id: int,
+        fingerprint: str,
+    ) -> SourceSkillVersionRecord | None:
+        row = (
+            await self.connection.execute(
+                text(
+                    """
+                    SELECT version.id AS version_id,
+                           version.skill_id,
+                           version.version,
+                           version.status,
+                           source.content_fingerprint
+                    FROM local_oss_skill_version_source source
+                    JOIN skill_version version ON version.id = source.skill_version_id
+                    WHERE source.skill_source_id = :source_skill_id
+                      AND source.content_fingerprint = :fingerprint
+                    LIMIT 1
+                    """
+                ),
+                {"source_skill_id": source_skill_id, "fingerprint": fingerprint},
+            )
+        ).mappings().one_or_none()
+        return _source_skill_version_record(dict(row)) if row is not None else None
+
+    async def read_namespace_membership(self, namespace_id: int, user_id: str) -> str | None:
+        value = (
+            await self.connection.execute(
+                text(
+                    """
+                    SELECT role
+                    FROM namespace_member
+                    WHERE namespace_id = :namespace_id
+                      AND user_id = :user_id
+                    LIMIT 1
+                    """
+                ),
+                {"namespace_id": namespace_id, "user_id": user_id},
+            )
+        ).scalar_one_or_none()
+        return str(value) if value is not None else None
+
 
 def _identity_account(row: dict[str, Any]) -> IdentityAccount:
     return IdentityAccount(
@@ -206,4 +331,32 @@ def _namespace_source_binding(row: dict[str, Any]) -> NamespaceSourceBinding:
         id=int(row["id"]),
         namespace_id=int(row["namespace_id"]),
         repository_url=str(row["repository_url"]),
+    )
+
+
+def _source_skill_record(row: dict[str, Any]) -> SourceSkillRecord:
+    return SourceSkillRecord(
+        source_id=int(row["source_id"]) if row.get("source_id") is not None else None,
+        namespace_source_id=(
+            int(row["namespace_source_id"]) if row.get("namespace_source_id") is not None else None
+        ),
+        source_path=str(row["source_path"]) if row.get("source_path") is not None else None,
+        skill_id=int(row["skill_id"]),
+        slug=str(row["slug"]),
+        owner_id=str(row["owner_id"]),
+        status=str(row["status"]),
+        owner_display_name=str(row["owner_display_name"]),
+        owner_status=str(row["owner_status"]),
+    )
+
+
+def _source_skill_version_record(row: dict[str, Any]) -> SourceSkillVersionRecord:
+    return SourceSkillVersionRecord(
+        version_id=int(row["version_id"]),
+        skill_id=int(row["skill_id"]),
+        version=str(row["version"]),
+        status=str(row["status"]),
+        content_fingerprint=(
+            str(row["content_fingerprint"]).strip() if row.get("content_fingerprint") is not None else None
+        ),
     )
