@@ -101,6 +101,15 @@ const reviewSkillDetail = {
   documentationContent: '# Subpath Skill',
   downloadUrl: `${basePath}/api/web/reviews/${reviewId}/download`,
   activeVersion: '1.2.0',
+  sourceProvenance: {
+    repositoryUrl: 'https://github.com/example/subpath-skill',
+    repositoryRevisionSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    sourceRefType: 'TAG',
+    sourceRef: 'v1.2.0',
+    sourcePath: 'skills/subpath-skill',
+    contentFingerprint: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    browseUrl: 'https://github.com/example/subpath-skill/tree/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/skills/subpath-skill',
+  },
 }
 
 const publicSkill = {
@@ -391,6 +400,19 @@ async function installMockApi(
       return
     }
 
+    if (path === '/api/web/skills/global/subpath-skill/versions/1.2.0') {
+      await fulfillJson(route, envelope({
+        id: 52,
+        version: '1.2.0',
+        status: 'PUBLISHED',
+        fileCount: 1,
+        totalSize: 96,
+        publishedAt: '2026-08-04T00:00:00Z',
+        sourceProvenance: reviewSkillDetail.sourceProvenance,
+      }))
+      return
+    }
+
     if (path === '/api/web/skills/global/subpath-skill/versions/1.2.0/file') {
       await route.fulfill({ status: 200, contentType: 'text/markdown', body: '# Subpath Skill\n' })
       return
@@ -460,6 +482,10 @@ test.describe('SkillHub production subpath deployment', () => {
 
     await page.goto(`${basePath}/space/global/subpath-skill`)
     await expect(page.getByRole('heading', { name: 'Subpath Skill', exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: 'View immutable source on GitHub' })).toHaveAttribute(
+      'href',
+      reviewSkillDetail.sourceProvenance.browseUrl,
+    )
     await expectNoHorizontalOverflow(page)
 
     const downloadRequest = page.waitForRequest((request) =>
