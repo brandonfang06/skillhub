@@ -123,10 +123,11 @@ powershell -ExecutionPolicy Bypass `
   -File scripts/oss-source-import-smoke-test.ps1
 ```
 
-Final result at 2026-08-18 16:41 +08:00:
+Final result at 2026-08-18 16:48 +08:00, after recreating the services from
+the committed branch images without caller-provided environment overrides:
 
 ```text
-OSS source import smoke passed: run=e4f09b244b0d initial=ad433c60fb34e6a628abb1f0ccd64ef426850e5a changed=7ef49f31ba63ee0c22d9f598ef18614ef9a2ba9c
+OSS source import smoke passed: run=e873baf36483 initial=de6c82530de2289f6b0a5459d2b44e4ad3f72bb8 changed=751d5b65985d61995c303d03ae896b965b51af63
 ```
 
 The smoke performed and asserted all of the following through the public Nginx
@@ -140,12 +141,17 @@ routes:
 6. verified package objects exist in MinIO;
 7. read provenance in namespace review, approved one version through the normal review API, and read the same immutable commit provenance publicly;
 8. retried the identical revision and received only skip outcomes;
-9. committed a change to only the unversioned Alpha fixture, imported through `/skillhub`, and received exactly `git-7ef49f31ba63ee0c22d9f598ef18614ef9a2ba9c` for Alpha while unchanged skills skipped;
+9. committed a change to only the unversioned Alpha fixture, imported through `/skillhub`, and received exactly `git-751d5b65985d61995c303d03ae896b965b51af63` for Alpha while unchanged skills skipped;
 10. proved the second trigger became the new review submitter without transferring the existing stable skill owner.
 
 The final three-minute log window for PostgreSQL, Redis, MinIO, scanner,
 backend, root web, and subpath web contained no traceback, scanner task failure,
 SQL syntax error, unhandled exception, fatal, panic, or error entry.
+
+The test overlay fixes its own PostgreSQL and Redis credentials and its
+`55432`, `56379`, `58081`, `58080`, and `58082` host ports. The smoke script
+asserts that resolved Compose contract before changing any database state, so
+the verification cannot silently depend on temporary shell environment values.
 
 The isolated Compose project remains running so the feature can be inspected
 before merge. Its uniquely named smoke rows and S3 objects are confined to the

@@ -47,6 +47,32 @@ function Assert-Equal {
     if ($Actual -ne $Expected) { throw "$Message. Expected '$Expected', got '$Actual'." }
 }
 
+function Assert-ComposeContract {
+    $configJson = & docker compose @composeFiles config --format json
+    if ($LASTEXITCODE -ne 0) { throw "Unable to render the OSS source import Compose contract" }
+    $config = $configJson | ConvertFrom-Json
+
+    Assert-Equal $config.services.postgres.environment.POSTGRES_PASSWORD `
+        "skillhub_smoke_db" "Smoke PostgreSQL password"
+    Assert-Equal $config.services.redis.environment.REDIS_PASSWORD `
+        "skillhub_smoke_redis" "Smoke Redis password"
+    Assert-Equal $config.services.server.environment.SKILLHUB_DATABASE_URL `
+        "postgresql+asyncpg://skillhub:skillhub_smoke_db@postgres:5432/skillhub" `
+        "Smoke backend database URL"
+    Assert-Equal $config.services.server.environment.SPRING_DATA_REDIS_PASSWORD `
+        "skillhub_smoke_redis" "Smoke backend Redis password"
+    Assert-Equal ($config.services.postgres.ports | Where-Object target -eq 5432).published `
+        "55432" "Smoke PostgreSQL host port"
+    Assert-Equal ($config.services.redis.ports | Where-Object target -eq 6379).published `
+        "56379" "Smoke Redis host port"
+    Assert-Equal ($config.services.server.ports | Where-Object target -eq 8080).published `
+        "58081" "Smoke backend host port"
+    Assert-Equal ($config.services.web.ports | Where-Object target -eq 80).published `
+        "58080" "Smoke root web host port"
+    Assert-Equal ($config.services.'web-subpath'.ports | Where-Object target -eq 80).published `
+        "58082" "Smoke subpath web host port"
+}
+
 function Invoke-Importer {
     param(
         [string]$BaseUrl,
@@ -85,6 +111,7 @@ function Invoke-Importer {
 }
 
 try {
+    Assert-ComposeContract
     New-Item -ItemType Directory -Path $checkout, $reports -Force | Out-Null
     Copy-Item -Path (Join-Path $repoRoot "tests\fixtures\oss-source-repository\*") -Destination $checkout -Recurse
     & git -C $checkout init -q
