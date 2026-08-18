@@ -266,6 +266,37 @@ async def test_execute_publish_write_runs_after_publish_callback_in_same_transac
 
 
 @pytest.mark.anyio
+async def test_execute_publish_write_runs_after_prepare_callback_before_storage_and_review(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    seen: list[tuple[int, int, int]] = []
+
+    async def after_prepare(callback_connection: Any, skill_id: int, version_id: int) -> None:
+        seen.append((skill_id, version_id, len(callback_connection.statements)))
+
+    await execute_publish_write(
+        FakeEngine([connection]),
+        publish_input(str(tmp_path)),
+        after_prepare=after_prepare,
+    )
+
+    assert seen == [(7, 42, 3)]
+    first_file_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_file" in sql)
+    review_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO review_task" in sql)
+    assert seen[0][2] == first_file_insert < review_insert
+
+
+@pytest.mark.anyio
 async def test_execute_publish_write_notifies_reviewers_when_review_task_created(tmp_path) -> None:
     connection = FakeConnection(
         [
@@ -299,6 +330,37 @@ async def test_execute_publish_write_notifies_reviewers_when_review_task_created
     assert body["skillName"] == "Agent Helper"
     assert {recipient for recipient, _payload in fanout.published} == {"local-user", "team-admin"}
     assert {payload["eventType"] for _recipient, payload in fanout.published} == {"REVIEW_SUBMITTED"}
+
+
+@pytest.mark.anyio
+async def test_execute_publish_write_keeps_owner_but_uses_explicit_review_submitter(tmp_path) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    request = replace(
+        publish_input(str(tmp_path)),
+        submitter_id="pipeline-trigger",
+        actor_user_id="importer-service",
+    )
+
+    await execute_publish_write(FakeEngine([connection]), request)
+
+    skill_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill (" in sql)
+    version_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO skill_version" in sql)
+    review_insert = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO review_task" in sql)
+    assert connection.params[skill_insert]["publisher_id"] == "local-user"
+    assert connection.params[version_insert]["publisher_id"] == "local-user"
+    assert connection.params[review_insert]["submitted_by"] == "pipeline-trigger"
+    assert {json.loads(row["body_json"])["submitterId"] for row in connection.notifications} == {"pipeline-trigger"}
 
 
 @pytest.mark.anyio
@@ -498,6 +560,7 @@ async def test_execute_publish_write_archives_rejected_attempt_with_new_review_l
         request_id="resubmit-request",
         client_ip="127.0.0.1",
         user_agent="pytest",
+        actor_user_id="importer-service",
     ).with_replacement(
         ReplaceableVersion(
             skill_id=7,
@@ -529,6 +592,7 @@ async def test_execute_publish_write_archives_rejected_attempt_with_new_review_l
     assert connection.params[archive_index]["original_review_task_id"] == 91
     assert connection.params[archive_index]["replacement_version_id"] == 42
     assert connection.params[archive_index]["replacement_review_task_id"] == 900
+    assert connection.params[audit_index]["actor_user_id"] == "importer-service"
 
 
 @pytest.mark.anyio

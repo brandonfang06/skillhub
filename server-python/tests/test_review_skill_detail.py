@@ -132,6 +132,12 @@ class FakeReviewSkillDetailConnection:
                     "active_version_id": 52,
                     "active_version": "1.0.0",
                     "active_version_status": "PENDING_REVIEW",
+                    "source_repository_url": "https://github.com/mattpocock/skills",
+                    "source_revision_sha": "a" * 40,
+                    "source_ref_type": "TAG",
+                    "source_ref": "v1.0.0",
+                    "source_path": "skills/agent-helper",
+                    "source_content_fingerprint": "f" * 64,
                 }
             )
         if "FROM skill_version sv" in sql:
@@ -286,6 +292,15 @@ async def test_read_review_skill_detail_builds_review_bound_snapshot(tmp_path: P
     assert response["documentationContent"] == "# Review\r\n"
     assert response["downloadUrl"] == "/api/v1/reviews/801/download"
     assert response["activeVersion"] == "1.0.0"
+    assert response["sourceProvenance"] == {
+        "repositoryUrl": "https://github.com/mattpocock/skills",
+        "repositoryRevisionSha": "a" * 40,
+        "sourceRefType": "TAG",
+        "sourceRef": "v1.0.0",
+        "sourcePath": "skills/agent-helper",
+        "contentFingerprint": "f" * 64,
+        "browseUrl": "https://github.com/mattpocock/skills/tree/" + "a" * 40 + "/skills/agent-helper",
+    }
 
 
 @pytest.mark.anyio

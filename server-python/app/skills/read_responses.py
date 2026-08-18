@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.skills.read_access import can_manage_lifecycle_for_row
+from app.source_import.source import source_provenance_from_row
 
 
 def to_java_instant(value: Any) -> str | None:
@@ -80,6 +81,7 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
         "publishedAt": to_java_instant(row["published_at"]),
         "parsedMetadataJson": row["parsed_metadata_json"],
         "manifestJson": row["manifest_json"],
+        "sourceProvenance": source_provenance_from_row(row),
     }
 
 

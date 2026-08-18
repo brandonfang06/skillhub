@@ -137,6 +137,29 @@ def test_local_migration_files_include_security_scan_execution_extension() -> No
     assert "failure_code VARCHAR(64)" in sql
 
 
+def test_local_migration_files_include_oss_source_import_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    source_migration = next(
+        (item for item in local_migrations if item.identifier == "20260818_01"),
+        None,
+    )
+
+    assert source_migration is not None
+    assert source_migration.path.name == "20260818_01__oss_source_import.sql"
+    sql = source_migration.path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS local_oss_namespace_source" in sql
+    assert "namespace_id BIGINT NOT NULL UNIQUE" in sql
+    assert "repository_url VARCHAR(500) NOT NULL UNIQUE" in sql
+    assert "CREATE TABLE IF NOT EXISTS local_oss_skill_source" in sql
+    assert "UNIQUE (namespace_source_id, source_path)" in sql
+    assert "skill_id BIGINT NOT NULL UNIQUE" in sql
+    assert "CREATE TABLE IF NOT EXISTS local_oss_skill_version_source" in sql
+    assert "skill_version_id BIGINT NOT NULL UNIQUE" in sql
+    assert "UNIQUE (skill_source_id, content_fingerprint)" in sql
+    assert "REFERENCES skill_version(id) ON DELETE CASCADE" in sql
+
+
 def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
     connection = FakeConnection(
         existing_tables={"user_account"},

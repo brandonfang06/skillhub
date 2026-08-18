@@ -48,6 +48,8 @@ def side_effect_input(
     scan_mode: str = "upload",
     compat_namespace: str | None = None,
     compat_slug: str | None = None,
+    submitter_id: str | None = None,
+    actor_user_id: str | None = None,
 ) -> PublishSideEffectInput:
     return PublishSideEffectInput(
         skill_id=101,
@@ -67,6 +69,8 @@ def side_effect_input(
         compat_slug=compat_slug,
         now=datetime(2026, 6, 8, 14, 15, 16, tzinfo=UTC),
         task_id="scan-task-1",
+        submitter_id=submitter_id,
+        actor_user_id=actor_user_id,
     )
 
 
@@ -173,6 +177,23 @@ async def test_apply_side_effects_inserts_review_task_and_event_intent() -> None
 
 
 @pytest.mark.anyio
+async def test_apply_side_effects_uses_review_submitter_separately_from_stable_owner() -> None:
+    connection = FakeConnection()
+
+    result = await apply_publish_side_effects(
+        connection,
+        side_effect_input(submitter_id="pipeline-trigger", actor_user_id="importer-service"),
+    )
+
+    review_index = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO review_task" in sql)
+    assert connection.params[review_index]["submitted_by"] == "pipeline-trigger"
+    assert result.events[0].payload["submitterId"] == "pipeline-trigger"
+    assert build_scan_task_payload(
+        side_effect_input(scanner_enabled=True, submitter_id="pipeline-trigger")
+    ).publisher_id == "local-user"
+
+
+@pytest.mark.anyio
 async def test_apply_side_effects_scanner_enabled_adds_audit_task_and_scanning_status() -> None:
     connection = FakeConnection()
 
@@ -232,3 +253,21 @@ async def test_apply_side_effects_records_compat_publish_audit_when_requested() 
     assert audit_params["user_agent"] == "pytest"
     assert isinstance(audit_params["detail_json"], str)
     assert json.loads(audit_params["detail_json"]) == {"namespace": "global", "slug": "agent-helper"}
+
+
+@pytest.mark.anyio
+async def test_apply_side_effects_uses_explicit_actor_for_compat_audit() -> None:
+    connection = FakeConnection()
+
+    await apply_publish_side_effects(
+        connection,
+        side_effect_input(
+            compat_namespace="global",
+            compat_slug="agent-helper",
+            submitter_id="pipeline-trigger",
+            actor_user_id="importer-service",
+        ),
+    )
+
+    audit_index = next(index for index, statement in enumerate(connection.statements) if "INSERT INTO audit_log" in statement)
+    assert connection.params[audit_index]["actor_user_id"] == "importer-service"

@@ -7,6 +7,7 @@ import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
+import { SourceProvenanceCard } from '@/features/skill/source-provenance'
 import { Button, buttonVariants } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -108,6 +109,8 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
 
       {isExpanded ? (
         <div data-review-skill-detail-panel className="space-y-6 border-t border-border/60 pt-4">
+          <SourceProvenanceCard provenance={detail.sourceProvenance} />
+
           <div className="flex justify-start">
             <a className={buttonVariants()} href={buildApiUrl(getReviewDownloadHref(detail))}>
               {t('review.downloadSkillZip')}

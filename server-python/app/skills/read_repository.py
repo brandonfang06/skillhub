@@ -508,8 +508,20 @@ async def read_skill_version_detail(
                            sv.total_size,
                            sv.published_at,
                            sv.parsed_metadata_json::text AS parsed_metadata_json,
-                           sv.manifest_json::text AS manifest_json
+                           sv.manifest_json::text AS manifest_json,
+                           namespace_source.repository_url AS source_repository_url,
+                           version_source.repository_revision_sha AS source_revision_sha,
+                           version_source.source_ref_type,
+                           version_source.source_ref,
+                           skill_source.source_path,
+                           version_source.content_fingerprint AS source_content_fingerprint
                     FROM skill_version sv
+                    LEFT JOIN local_oss_skill_version_source version_source
+                      ON version_source.skill_version_id = sv.id
+                    LEFT JOIN local_oss_skill_source skill_source
+                      ON skill_source.id = version_source.skill_source_id
+                    LEFT JOIN local_oss_namespace_source namespace_source
+                      ON namespace_source.id = skill_source.namespace_source_id
                     WHERE sv.skill_id = :skill_id
                       AND sv.version = :version
                     ORDER BY sv.id ASC
