@@ -31,6 +31,16 @@ class PublishSideEffectInput:
     compat_slug: str | None = None
     now: datetime | None = None
     task_id: str | None = None
+    submitter_id: str | None = None
+    actor_user_id: str | None = None
+
+    @property
+    def resolved_submitter_id(self) -> str:
+        return self.submitter_id or self.publisher_id
+
+    @property
+    def resolved_actor_user_id(self) -> str:
+        return self.actor_user_id or self.publisher_id
 
 
 @dataclass(frozen=True)
@@ -138,7 +148,7 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
                         "skill_version_id": request.version_id,
                         "namespace_id": request.namespace_id,
                         "status": "PENDING",
-                        "submitted_by": request.publisher_id,
+                        "submitted_by": request.resolved_submitter_id,
                         "submitted_at": now,
                     },
                 )
@@ -152,7 +162,7 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
                         "reviewId": review_task_id,
                         "skillId": request.skill_id,
                         "versionId": request.version_id,
-                        "submitterId": request.publisher_id,
+                        "submitterId": request.resolved_submitter_id,
                         "namespaceId": request.namespace_id,
                     },
                 )
@@ -215,7 +225,7 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
     if plan.create_compat_audit:
         await write_audit_log(
             connection,
-            actor_user_id=request.publisher_id,
+            actor_user_id=request.resolved_actor_user_id,
             action="COMPAT_PUBLISH",
             target_type="SKILL_VERSION",
             target_id=request.version_id,

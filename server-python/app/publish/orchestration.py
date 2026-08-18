@@ -58,9 +58,19 @@ class PublishWriteInput:
     replacement: ReplaceableVersion | None = None
     now: datetime | None = None
     task_id: str | None = None
+    submitter_id: str | None = None
+    actor_user_id: str | None = None
 
     def with_replacement(self, replacement_version: ReplaceableVersion) -> "PublishWriteInput":
         return replace(self, replacement=replacement_version)
+
+    @property
+    def resolved_submitter_id(self) -> str:
+        return self.submitter_id or self.publisher_id
+
+    @property
+    def resolved_actor_user_id(self) -> str:
+        return self.actor_user_id or self.publisher_id
 
 
 @dataclass(frozen=True)
@@ -176,6 +186,8 @@ async def execute_publish_write(
                 compat_slug=request.compat_slug,
                 now=request.now,
                 task_id=request.task_id,
+                submitter_id=request.resolved_submitter_id,
+                actor_user_id=request.resolved_actor_user_id,
             ),
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
@@ -189,7 +201,7 @@ async def execute_publish_write(
                     attempt=replacement_cleanup.archived_review,
                     replacement_version_id=prepared.version_id,
                     replacement_review_task_id=side_effects.review_task_id,
-                    actor_user_id=request.publisher_id,
+                    actor_user_id=request.resolved_actor_user_id,
                     request_id=request.request_id,
                     client_ip=request.client_ip,
                     user_agent=request.user_agent,
@@ -206,7 +218,7 @@ async def execute_publish_write(
                 review_task_id=side_effects.review_task_id,
                 skill_id=prepared.skill_id,
                 version_id=prepared.version_id,
-                submitter_id=request.publisher_id,
+                submitter_id=request.resolved_submitter_id,
                 namespace=request.namespace_slug,
                 slug=request.slug,
                 skill_name=request.display_name,
