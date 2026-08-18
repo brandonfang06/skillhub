@@ -27,6 +27,7 @@ from app.api.playground import router as playground_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
 from app.api.skill_reports import router as skill_reports_router
+from app.api.source_imports import router as source_imports_router
 from app.api.security_audit import router as security_audit_router
 from app.api.skills import router as skills_router
 from app.api.social import router as social_router
@@ -144,6 +145,7 @@ def create_app() -> FastAPI:
     app.include_router(publish_router)
     app.include_router(security_audit_router)
     app.include_router(skill_reports_router)
+    app.include_router(source_imports_router)
     app.include_router(tokens_router)
     app.include_router(user_profile_router)
     app.include_router(reviews_router)

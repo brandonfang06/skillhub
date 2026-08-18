@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.publish.orchestration import PublishWriteResult
 from app.publish.package import PackageEntry, SkillMetadata
@@ -135,6 +136,33 @@ async def test_submits_import_and_persists_provenance_in_publish_transaction(tmp
     assert persisted[0]["source_skill_id"] is None
     assert persisted[0]["actor_user_id"] == "importer-service"
     assert persisted[0]["review_submitter_id"] == "pipeline-trigger"
+    assert persisted[0]["repository_url"] == "https://github.com/mattpocock/skills"
+    assert persisted[0]["stable_owner_id"] == "stable-owner"
+    assert persisted[0]["outcome"] == "IMPORTED"
+
+
+@pytest.mark.anyio
+async def test_revalidates_unique_constraint_race_as_idempotent_skip(tmp_path) -> None:
+    initial = validation_plan()
+    skipped = validation_plan(outcome="SKIPPED_ALREADY_IMPORTED", existing=True)
+    validations = iter((initial, skipped))
+
+    async def validator(_engine: Any, _request: ValidateSourceSkillInput) -> SourceSkillValidationPlan:
+        return next(validations)
+
+    async def publisher(*_args: object, **_kwargs: object) -> PublishWriteResult:
+        raise IntegrityError("insert", {}, RuntimeError("duplicate source version"))
+
+    result = await submit_source_skill(
+        object(),
+        validation_request(),
+        SourceSkillSubmissionRuntime(storage_base_path=str(tmp_path)),
+        validator=validator,
+        publisher=publisher,
+    )
+
+    assert result.outcome == "SKIPPED_ALREADY_IMPORTED"
+    assert result.skill_id == 41
 
 
 @pytest.mark.anyio

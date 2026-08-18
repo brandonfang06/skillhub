@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from collections.abc import Awaitable, Callable, Set as AbstractSet
 from typing import Any, Literal, Protocol, cast
 
+from sqlalchemy.exc import IntegrityError
+
 from app.publish.dry_run import slugify
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, validate_package
@@ -511,21 +513,41 @@ async def submit_source_skill(
             version_id=version_id,
             revision=request.revision,
             content_fingerprint=plan.package.content_fingerprint,
+            repository_url=request.repository.canonical_url,
             actor_user_id=request.actor_user_id,
             review_submitter_id=plan.review_submitter.user_id,
+            stable_owner_id=plan.stable_owner.user_id,
+            outcome="IMPORTED",
             add_submitter_as_member=plan.add_submitter_as_member,
             request_id=request.request_id,
             client_ip=request.client_ip,
             user_agent=request.user_agent,
         )
 
-    result = await publisher(
-        engine,
-        build_source_publish_input(plan, request, runtime),
-        scan_task_publisher=runtime.scan_task_publisher,
-        notification_fanout=runtime.notification_fanout,
-        after_prepare=persist_provenance,
-    )
+    try:
+        result = await publisher(
+            engine,
+            build_source_publish_input(plan, request, runtime),
+            scan_task_publisher=runtime.scan_task_publisher,
+            notification_fanout=runtime.notification_fanout,
+            after_prepare=persist_provenance,
+        )
+    except IntegrityError:
+        concurrent_plan = await validator(engine, request)
+        if concurrent_plan.outcome == "IMPORT":
+            raise
+        return SourceSkillSubmissionResult(
+            outcome=cast(Any, concurrent_plan.outcome),
+            plan=concurrent_plan,
+            skill_id=(
+                concurrent_plan.source_skill.skill_id
+                if concurrent_plan.source_skill is not None
+                else None
+            ),
+            version_id=None,
+            version_status=None,
+            review_task_id=None,
+        )
     side_effects = getattr(result, "side_effects", None)
     return SourceSkillSubmissionResult(
         outcome="IMPORTED",
