@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import cast
+from typing import Any, cast
 from urllib.parse import quote, urlsplit
 
 from app.publish.package import PackageEntry
@@ -93,6 +93,30 @@ def build_browse_url(repository: SourceRepository, revision: SourceRevision, sou
     if normalized_path == ".":
         return base
     return f"{base}/{quote(normalized_path, safe='/')}"
+
+
+def source_provenance_from_row(row: dict[str, Any]) -> dict[str, object] | None:
+    repository_url = row.get("source_repository_url")
+    if repository_url is None:
+        return None
+    repository = canonicalize_github_repository(str(repository_url))
+    revision = validate_source_revision(
+        str(row["source_revision_sha"]),
+        str(row["source_ref_type"]),
+        str(row["source_ref"]) if row.get("source_ref") is not None else None,
+    )
+    source_path = normalize_source_path(str(row["source_path"]))
+    result: dict[str, object] = {
+        "repositoryUrl": repository.canonical_url,
+        "repositoryRevisionSha": revision.commit_sha,
+        "sourceRefType": revision.ref_type,
+        "sourcePath": source_path,
+        "contentFingerprint": str(row["source_content_fingerprint"]),
+        "browseUrl": build_browse_url(repository, revision, source_path),
+    }
+    if revision.ref is not None:
+        result["sourceRef"] = revision.ref
+    return result
 
 
 def content_fingerprint(entries: list[PackageEntry]) -> str:

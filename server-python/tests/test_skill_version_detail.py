@@ -56,6 +56,12 @@ class _SkillVersionDetailOwnerPreviewWithoutLatestConnection:
                     "published_at": None,
                     "parsed_metadata_json": "{\"name\":\"demo\"}",
                     "manifest_json": "[{\"path\":\"SKILL.md\"}]",
+                    "source_repository_url": "https://github.com/mattpocock/skills",
+                    "source_revision_sha": "b" * 40,
+                    "source_ref_type": "BRANCH",
+                    "source_ref": "main",
+                    "source_path": "skills/demo",
+                    "source_content_fingerprint": "e" * 64,
                 }
             )
         raise AssertionError(f"unexpected SQL: {sql}")
@@ -222,6 +228,9 @@ def test_read_skill_version_detail_allows_owner_preview_without_latest_pointer()
 
     assert result["version"] == "1.0.0"
     assert result["status"] == "PENDING_REVIEW"
+    assert result["sourceProvenance"]["browseUrl"] == (
+        "https://github.com/mattpocock/skills/tree/" + "b" * 40 + "/skills/demo"
+    )
 
 
 def test_read_skill_version_detail_rejects_public_skill_without_latest_for_anonymous_user() -> None:

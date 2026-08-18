@@ -11,6 +11,7 @@ from sqlalchemy import text
 
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
+from app.source_import.source import source_provenance_from_row
 
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -336,6 +337,7 @@ def _review_skill_detail_response(
         "documentationContent": documentation_content,
         "downloadUrl": f"/api/v1/reviews/{review_task_id}/download",
         "activeVersion": str(snapshot["active_version"]),
+        "sourceProvenance": source_provenance_from_row(snapshot),
     }
 
 
@@ -762,11 +764,23 @@ async def _read_review_skill_snapshot(connection: Any, skill_version_id: int) ->
                        n.slug AS namespace,
                        active.id AS active_version_id,
                        active.version AS active_version,
-                       active.status AS active_version_status
+                       active.status AS active_version_status,
+                       namespace_source.repository_url AS source_repository_url,
+                       version_source.repository_revision_sha AS source_revision_sha,
+                       version_source.source_ref_type,
+                       version_source.source_ref,
+                       skill_source.source_path,
+                       version_source.content_fingerprint AS source_content_fingerprint
                 FROM skill_version active
                 JOIN skill s ON s.id = active.skill_id
                 JOIN namespace n ON n.id = s.namespace_id
                 LEFT JOIN user_account owner ON owner.id = s.owner_id
+                LEFT JOIN local_oss_skill_version_source version_source
+                  ON version_source.skill_version_id = active.id
+                LEFT JOIN local_oss_skill_source skill_source
+                  ON skill_source.id = version_source.skill_source_id
+                LEFT JOIN local_oss_namespace_source namespace_source
+                  ON namespace_source.id = skill_source.namespace_source_id
                 WHERE active.id = :skill_version_id
                 """
             ),
