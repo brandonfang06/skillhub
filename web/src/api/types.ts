@@ -4,6 +4,9 @@ import type {
   components as namespaceAnalyticsComponents,
   operations as namespaceAnalyticsOperations,
 } from './generated/namespace-analytics-schema'
+import type { components as SourceImportComponents } from './generated/source-import-schema'
+
+export type SourceProvenance = SourceImportComponents['schemas']['SourceProvenanceResponse']
 
 export interface PlaygroundCapability {
   token: string
@@ -337,6 +340,7 @@ export interface SkillVersionDetail {
   publishedAt: string
   parsedMetadataJson?: string
   manifestJson?: string
+  sourceProvenance?: SourceProvenance | null
 }
 
 export interface SkillFile {
@@ -490,6 +494,7 @@ export interface ReviewSkillDetail {
   documentationContent?: string
   downloadUrl: string
   activeVersion: string
+  sourceProvenance?: SourceProvenance | null
 }
 
 export interface PromotionTask {

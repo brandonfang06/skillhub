@@ -12,6 +12,7 @@ import type { SkillFile } from '@/api/types'
 import { InstallCommand } from '@/features/skill/install-command'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
+import { SourceProvenanceCard } from '@/features/skill/source-provenance'
 import { useResourceDiagnostics } from '@/features/skill/use-resource-diagnostics'
 import {
   getOverviewCollapseMaxHeight,
@@ -185,6 +186,7 @@ export function SkillDetailPage() {
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
+  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
   const { data: readme, error: readmeError } = useSkillReadme(
@@ -1359,6 +1361,8 @@ export function SkillDetailPage() {
             </Button>
           </Card>
         )}
+
+        <SourceProvenanceCard provenance={selectedVersionDetail?.sourceProvenance} />
 
         <Button
           className="w-full"
