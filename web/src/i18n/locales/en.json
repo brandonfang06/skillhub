@@ -1472,6 +1472,7 @@
       "labels": "Label Management",
       "downloadEvents": "Download Events",
       "namespaceAnalytics": "Namespace Analytics",
+      "servicePrincipals": "Service Accounts",
       "auditLog": "Audit Log",
       "security": "Security Settings",
       "profile": "Profile Settings",
@@ -1769,5 +1770,31 @@
       "report": "Report Notifications",
       "reportDesc": "Notify on report submission or resolution"
     }
+  },
+  "servicePrincipals": {
+    "title": "Service Accounts",
+    "subtitle": "Manage independent service principals and expiring tokens for GitLab and other automation.",
+    "create": "Create Service Principal",
+    "createHint": "The code is immutable after creation. Display name and status can be changed later.",
+    "created": "Service principal created",
+    "error": "Operation failed",
+    "total": "Service Principals",
+    "active": "Active",
+    "tokens": "Active Tokens",
+    "identity": "Identity",
+    "status": "Status",
+    "lastUsed": "Last Used",
+    "manageTokens": "Manage Tokens",
+    "disable": "Disable",
+    "enable": "Enable",
+    "code": "Code",
+    "displayName": "Display Name",
+    "tokenHint": "Tokens are shown only once after creation or rotation. Save them as a masked GitLab variable now.",
+    "tokenName": "Token Name",
+    "createToken": "Create Token",
+    "secretTitle": "Save This Service Token Now",
+    "secretWarning": "The complete token cannot be shown again after this dialog closes.",
+    "copy": "Copy Token",
+    "copied": "Token copied"
   }
 }

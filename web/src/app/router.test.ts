@@ -90,4 +90,10 @@ describe('router', () => {
     const childPaths = children.map((route) => route.fullPath ?? route.path)
     expect(childPaths).toContain('/admin/namespace-analytics')
   })
+
+  it('registers the super-admin service principals route', () => {
+    const children = (router.routeTree.children ?? []) as Array<{ fullPath?: string; path?: string }>
+    const childPaths = children.map((route) => route.fullPath ?? route.path)
+    expect(childPaths).toContain('/admin/service-principals')
+  })
 })

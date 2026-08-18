@@ -1459,6 +1459,7 @@
       "labels": "標籤管理",
       "downloadEvents": "下載記錄",
       "namespaceAnalytics": "Namespace Analytics",
+      "servicePrincipals": "Service Accounts",
       "auditLog": "審計日誌",
       "security": "安全設定",
       "profile": "個人設定",
@@ -1756,6 +1757,32 @@
       "report": "舉報通知",
       "reportDesc": "舉報提交或處理完成時通知"
     }
+  },
+  "servicePrincipals": {
+    "title": "Service Accounts",
+    "subtitle": "集中管理 GitLab 等自動化工作使用的 service principal 與限時 token，不綁定觸發者的個人帳號。",
+    "create": "新增 Service Principal",
+    "createHint": "代碼建立後不可變更；顯示名稱與狀態可稍後調整。",
+    "created": "Service principal 已建立",
+    "error": "操作失敗",
+    "total": "Service Principals",
+    "active": "啟用中",
+    "tokens": "有效 Tokens",
+    "identity": "身分",
+    "status": "狀態",
+    "lastUsed": "最後使用",
+    "manageTokens": "管理 Tokens",
+    "disable": "停用",
+    "enable": "啟用",
+    "code": "代碼",
+    "displayName": "顯示名稱",
+    "tokenHint": "Token 僅在建立或輪替後顯示一次；請立即存入 GitLab masked variable。",
+    "tokenName": "Token 名稱",
+    "createToken": "建立 Token",
+    "secretTitle": "立即保存 Service Token",
+    "secretWarning": "關閉後無法再次查看完整 token。",
+    "copy": "複製 Token",
+    "copied": "Token 已複製"
   }
 }
 

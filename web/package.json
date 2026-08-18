@@ -34,7 +34,8 @@
     "generate-api": "openapi-typescript http://localhost:8080/v3/api-docs -o src/api/generated/schema.d.ts",
     "generate-api:reviews": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_review_openapi ../web/src/api/generated/reviews-openapi.json && cd ../web && openapi-typescript src/api/generated/reviews-openapi.json -o src/api/generated/reviews-schema.d.ts",
     "generate-api:namespace-analytics": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_namespace_analytics_openapi ../web/src/api/generated/namespace-analytics-openapi.json && cd ../web && openapi-typescript src/api/generated/namespace-analytics-openapi.json -o src/api/generated/namespace-analytics-schema.d.ts",
-    "generate-api:source-import": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_source_import_openapi ../web/src/api/generated/source-import-openapi.json && cd ../web && openapi-typescript src/api/generated/source-import-openapi.json -o src/api/generated/source-import-schema.d.ts"
+    "generate-api:source-import": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_source_import_openapi ../web/src/api/generated/source-import-openapi.json && cd ../web && openapi-typescript src/api/generated/source-import-openapi.json -o src/api/generated/source-import-schema.d.ts",
+    "generate-api:service-principals": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_service_principal_openapi ../web/src/api/generated/service-principals-openapi.json && cd ../web && openapi-typescript src/api/generated/service-principals-openapi.json -o src/api/generated/service-principals-schema.d.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.19",
