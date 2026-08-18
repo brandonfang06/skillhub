@@ -54,7 +54,16 @@ def test_selective_orm_models_define_expected_primary_keys_and_columns() -> None
             "submitted_by",
         },
         "api_token": {"id", "subject_type", "subject_id", "user_id", "token_hash", "scope_json", "revoked_at"},
-        "audit_log": {"id", "actor_user_id", "action", "target_type", "target_id", "detail_json", "created_at"},
+        "audit_log": {
+            "id",
+            "actor_user_id",
+            "actor_service_principal_id",
+            "action",
+            "target_type",
+            "target_id",
+            "detail_json",
+            "created_at",
+        },
     }
 
     for table_name, columns in expected.items():

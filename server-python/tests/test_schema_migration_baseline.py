@@ -160,6 +160,25 @@ def test_local_migration_files_include_oss_source_import_extension() -> None:
     assert "REFERENCES skill_version(id) ON DELETE CASCADE" in sql
 
 
+def test_local_migration_files_include_service_principal_auth_extension() -> None:
+    local_migrations = migrations.local_migration_files(ROOT / "server-python" / "app" / "db" / "local_migration")
+
+    service_migration = next(
+        (item for item in local_migrations if item.identifier == "20260818_02"),
+        None,
+    )
+
+    assert service_migration is not None
+    assert service_migration.path.name == "20260818_02__service_principal_auth.sql"
+    sql = service_migration.path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS service_principal" in sql
+    assert "CREATE TABLE IF NOT EXISTS service_token" in sql
+    assert "WHERE revoked_at IS NULL" in sql
+    assert "actor_service_principal_id" in sql
+    assert "created_by_service_principal_id" in sql
+    assert "imported_by_service_principal_id" in sql
+
+
 def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
     connection = FakeConnection(
         existing_tables={"user_account"},

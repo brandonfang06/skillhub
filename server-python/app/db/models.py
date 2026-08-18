@@ -156,6 +156,7 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     actor_user_id: Mapped[str | None] = mapped_column(String(128), ForeignKey("user_account.id"))
+    actor_service_principal_id: Mapped[str | None] = mapped_column(String(128))
     action: Mapped[str] = mapped_column(String(64))
     target_type: Mapped[str | None] = mapped_column(String(64))
     target_id: Mapped[int | None] = mapped_column(BigInteger)
