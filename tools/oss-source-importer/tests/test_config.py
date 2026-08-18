@@ -8,7 +8,7 @@ from skillhub_oss_importer.config import Config, ConfigError
 def valid_env(tmp_path: Path) -> dict[str, str]:
     return {
         "SKILLHUB_BASE_URL": "https://skillhub.example/skillhub/",
-        "SKILLHUB_API_TOKEN": "secret-token",
+        "SKILLHUB_SERVICE_TOKEN": "st_secret-token",
         "SKILLHUB_SOURCE_REPOSITORY_URL": "https://github.com/MattPocock/Skills.git",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE": "keycloak",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME": "platform-owner",
@@ -34,8 +34,9 @@ def test_reads_required_contract_and_preserves_subpath(tmp_path: Path) -> None:
 
 def test_requires_every_required_variable(tmp_path: Path) -> None:
     env = valid_env(tmp_path)
-    del env["SKILLHUB_API_TOKEN"]
-    with pytest.raises(ConfigError, match="SKILLHUB_API_TOKEN"):
+    del env["SKILLHUB_SERVICE_TOKEN"]
+    env["SKILLHUB_API_TOKEN"] = "sk_personal-must-not-fallback"
+    with pytest.raises(ConfigError, match="SKILLHUB_SERVICE_TOKEN"):
         Config.from_env(env)
 
 

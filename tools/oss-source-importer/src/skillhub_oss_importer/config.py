@@ -24,7 +24,7 @@ def _required(env: Mapping[str, str], name: str) -> str:
 @dataclass(frozen=True)
 class Config:
     base_url: str
-    api_token: str = field(repr=False)
+    service_token: str = field(repr=False)
     repository_url: str
     namespace_slug: str
     namespace_display_name: str
@@ -82,7 +82,7 @@ class Config:
         trigger_login = values.get("SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME", "").strip() or None
         return cls(
             base_url=base_url,
-            api_token=_required(values, "SKILLHUB_API_TOKEN"),
+            service_token=_required(values, "SKILLHUB_SERVICE_TOKEN"),
             repository_url=repository.canonical_url,
             namespace_slug=repository.namespace_slug,
             namespace_display_name=repository.namespace_display_name,

@@ -3,7 +3,9 @@
 本文適用於 Python backend cutover 後的 Kubernetes 部署。目標是讓既有 Java
 Spring Boot 版部署可以盡量無痛切換到 Python backend。
 
-GitLab OSS source importer 使用的是獨立 pipeline variables，不是 backend Pod env；
+GitLab OSS source importer 使用的是獨立 pipeline variables，不是 backend Pod env；其中
+`SKILLHUB_SERVICE_TOKEN` 必須是 Platform Admin 在 Service Accounts 頁建立的 `st_`
+service token，不接受使用者 `SKILLHUB_API_TOKEN`。
 完整清單與 Keycloak/TSSO 對應請見
 [GitHub OSS Skills 匯入 GitLab Pipeline SOP](./oss-github-source-import.zh.md)。
 

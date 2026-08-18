@@ -21,7 +21,9 @@ $actorId = "$prefix-importer"
 $ownerId = "$prefix-owner"
 $triggerId = "$prefix-trigger"
 $triggerTwoId = "$prefix-trigger2"
-$rawToken = "sk_${prefix}_token"
+$serviceId = "svc_$runId"
+$serviceCode = "oss-smoke-$runId"
+$rawToken = "st_${prefix}_token"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) "skillhub-oss-import-$runId"
 $checkout = Join-Path $temporaryRoot "checkout"
 $reports = Join-Path $temporaryRoot "reports"
@@ -87,7 +89,7 @@ function Invoke-Importer {
         "-v", "${checkout}:/workspace:ro",
         "-v", "${reports}:/reports",
         "-e", "SKILLHUB_BASE_URL=$BaseUrl",
-        "-e", "SKILLHUB_API_TOKEN=$rawToken",
+        "-e", "SKILLHUB_SERVICE_TOKEN=$rawToken",
         "-e", "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
         "-e", "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE=keycloak",
         "-e", "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME=$ownerId",
@@ -139,10 +141,16 @@ INSERT INTO identity_binding (user_id, provider_code, subject, login_name, extra
 ('$ownerId','keycloak','$ownerId-subject','$ownerId','{}'::jsonb),
 ('$triggerId','keycloak','$triggerId-subject','$triggerId','{}'::jsonb),
 ('$triggerTwoId','keycloak','$triggerTwoId-subject','$triggerTwoId','{}'::jsonb);
-INSERT INTO user_role_binding (user_id, role_id)
-SELECT '$actorId', id FROM role WHERE code='SKILL_ADMIN';
-INSERT INTO api_token (subject_type, subject_id, user_id, name, token_prefix, token_hash, scope_json)
-VALUES ('USER','$actorId','$actorId','OSS Smoke Importer','sk_oss_s','$tokenHash','["source:import"]'::jsonb);
+INSERT INTO service_principal (id, code, display_name, status, created_by_user_id)
+VALUES ('$serviceId','$serviceCode','OSS Smoke Importer','ACTIVE','$actorId');
+INSERT INTO service_token (
+  service_principal_id, name, token_prefix, token_hash, scope_json,
+  created_by_user_id, expires_at
+)
+VALUES (
+  '$serviceId','OSS Smoke Importer','st_oss_smoke','$tokenHash','["source:import"]'::jsonb,
+  '$actorId',CURRENT_TIMESTAMP + INTERVAL '1 day'
+);
 "@ | Out-Null
 
     $first = Invoke-Importer "http://web" $initialCommit $triggerId "first.json" "1"
@@ -164,7 +172,10 @@ JOIN audit_log audit ON audit.target_type='SKILL_VERSION' AND audit.target_id=sv
 WHERE n.slug='$namespaceSlug'
   AND s.owner_id='$triggerId'
   AND rt.submitted_by='$triggerId'
-  AND audit.actor_user_id='$actorId'
+  AND audit.actor_user_id IS NULL
+  AND audit.actor_service_principal_id='$serviceId'
+  AND source.imported_by='$triggerId'
+  AND source.imported_by_service_principal_id='$serviceId'
   AND source.repository_revision_sha='$initialCommit';
 "@ -TuplesOnly
         if ($databaseEvidence.Trim() -eq "3") { break }

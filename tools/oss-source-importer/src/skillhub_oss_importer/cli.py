@@ -37,7 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         config = Config.from_env()
         report_path = args.json_report.resolve() if args.json_report else config.report_path
-        client = SkillHubClient(config.base_url, config.api_token, config.timeout_seconds)
+        client = SkillHubClient(config.base_url, config.service_token, config.timeout_seconds)
         report = run_import(config, client)
         write_report(report_path, report)
         if report["status"] == "VALIDATION_FAILED":

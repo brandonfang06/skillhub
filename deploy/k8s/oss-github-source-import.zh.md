@@ -16,25 +16,23 @@ Pipeline 成功表示 skill 已匯入或判定為可安全略過，並進入 sca
 - `POST /api/cli/v1/source-imports/{namespaceSlug}/skills/validate`
 - `POST /api/cli/v1/source-imports/{namespaceSlug}/skills`
 
-三個 endpoints 都只接受 bearer API token，且同時要求：
+三個 endpoints 都只接受 `st_` service token，且 token 必須包含
+`source:import` scope。一般使用者的 `sk_` personal token 即使屬於
+`SUPER_ADMIN` 也會被拒絕；pipeline 不需要、也不應取得觸發者的 SkillHub token。
 
-- token scope：`source:import`
-- token 所屬 user 的 platform role：`SKILL_ADMIN` 或 `SUPER_ADMIN`
+Platform Admin 先登入 SkillHub，開啟 `/admin/service-principals`（subpath 部署時為
+`/skillhub/admin/service-principals`）：
 
-一般 token UI／device login 常用的 `skill:read`、`skill:publish` 不會自動包含
-`source:import`，而且這三個 endpoints 本身不要求那兩個普通 scopes。請建立專用
-service account，授予最小平台角色，再以該帳號的登入 session 呼叫：
+1. 建立 ACTIVE service principal，例如 code `gitlab-oss-importer`。
+2. 建立 scope 為 `source:import`、有效期最長 365 天的 token。
+3. raw `st_` token 只顯示一次，立即存入 GitLab masked、protected variable
+   `SKILLHUB_SERVICE_TOKEN`，不要寫入 repository、job log 或 artifact。
+4. 到期前從同頁輪替，先更新 GitLab variable 並驗證，再撤銷舊 token。緊急事件可停用
+   principal，所有 token 會立即停止通過驗證；不需要停用建立它的管理員帳號。
 
-```http
-POST /api/v1/tokens
-Content-Type: application/json
-
-{"name":"GitLab OSS Importer","scopes":["source:import"]}
-```
-
-若服務在 `/skillhub`，實際 URL 是 `/skillhub/api/v1/tokens`。回應中的 raw token
-只顯示一次；立即存入 GitLab masked、protected variable `SKILLHUB_API_TOKEN`，不要
-寫入 repository、job log 或 artifact。
+管理 API 位於 `/api/v1/admin/service-principals`，只接受登入中的 `SUPER_ADMIN`
+session，不接受 personal 或 service bearer token。Service principal 是獨立身分；建立它的
+admin 只記錄為管理操作人，admin 日後離職、停權或失去角色不會自動撤銷 service token。
 
 ### Keycloak／TSSO 名稱對應
 
@@ -64,7 +62,7 @@ SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=<secret>
 | --- | --- |
 | `SKILLHUB_IMPORTER_IMAGE` | `registry.example/skillhub-oss-source-importer:0.1.0` 或 digest；必須 immutable，不用 `latest`。 |
 | `SKILLHUB_BASE_URL` | `https://skillhub.example.com/skillhub`；保留 `/skillhub`，不加 `/api`。 |
-| `SKILLHUB_API_TOKEN` | 專用 `source:import` token；設為 masked/protected。 |
+| `SKILLHUB_SERVICE_TOKEN` | Platform Admin 建立的 `st_`、`source:import` service token；設為 masked/protected。`SKILLHUB_API_TOKEN` 不會 fallback。 |
 | `SKILLHUB_SOURCE_REPOSITORY_URL` | 使用者輸入的 HTTPS GitHub URL，例如 `https://github.com/mattpocock/skills`。目前只接受 `github.com`。 |
 | `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE` | 通常固定 `keycloak`。 |
 | `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME` | 固定 fallback owner 的 Keycloak `preferred_username`。 |
@@ -147,7 +145,7 @@ review task 與 `requestId`，但不含 token。
 | `0` | 全部 imported／skipped。 |
 | `2` | 設定錯誤或缺變數。 |
 | `3` | discovery、package 或 validation 失敗。 |
-| `4` | token、scope 或 platform role 不符。 |
+| `4` | 缺少／無效／過期／已撤銷的 service token，或缺少 `source:import` scope。 |
 | `5` | DNS、timeout、TLS 等 transport failure。 |
 | `6` | 部分提交；查看 report 後安全重跑。 |
 | `10` | 未預期 importer 錯誤。 |
