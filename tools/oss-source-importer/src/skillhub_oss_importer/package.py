@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -14,6 +15,20 @@ class BuiltPackage:
     source_path: str
     filename: str
     content: bytes
+    has_explicit_version: bool
+
+
+def _has_explicit_version(content: bytes) -> bool:
+    lines = content.decode("utf-8-sig", errors="replace").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return False
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        match = re.match(r"^version\s*:\s*(.+?)\s*$", line)
+        if match is not None and match.group(1).strip("'\"").strip():
+            return True
+    return False
 
 
 def build_skill_package(root: SkillRoot, all_roots: set[Path]) -> BuiltPackage:
@@ -46,4 +61,9 @@ def build_skill_package(root: SkillRoot, all_roots: set[Path]) -> BuiltPackage:
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             archive.writestr(info, source_path.read_bytes(), compress_type=ZIP_DEFLATED, compresslevel=9)
-    return BuiltPackage(root.source_path, f"{root.path.name}.zip", output.getvalue())
+    return BuiltPackage(
+        root.source_path,
+        f"{root.path.name}.zip",
+        output.getvalue(),
+        _has_explicit_version((root.path / "SKILL.md").read_bytes()),
+    )

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from .client import AuthorizationError, SkillHubError, TransportError
 from .discovery import discover_skill_roots
 from .github_source import verify_checkout_revision
 from .package import BuiltPackage, build_skill_package
@@ -20,6 +21,8 @@ def _metadata(config: Any, package: BuiltPackage) -> dict[str, object]:
     }
     if config.source_ref is not None:
         data["sourceRef"] = config.source_ref
+    if not package.has_explicit_version:
+        data["versionOverride"] = f"git-{config.commit_sha}"
     if config.trigger_login_name is not None:
         data["initiatorProviderCode"] = config.trigger_provider_code
         data["initiatorLoginName"] = config.trigger_login_name
@@ -53,7 +56,9 @@ def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dic
                 _metadata(config, package),
             )
             record["validation"] = validation
-        except (RuntimeError, ValueError) as exc:
+        except (AuthorizationError, TransportError):
+            raise
+        except (SkillHubError, ValueError) as exc:
             record["validationError"] = str(exc)
             validation_failed = True
         records.append(record)
@@ -72,7 +77,9 @@ def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dic
                 package.content,
                 _metadata(config, package),
             )
-        except (RuntimeError, ValueError) as exc:
+        except (AuthorizationError, TransportError):
+            raise
+        except (SkillHubError, ValueError) as exc:
             record["submissionError"] = str(exc)
             partial = True
     return _report(config, namespace, records, started_at, "PARTIAL_SUBMISSION" if partial else "SUCCESS")

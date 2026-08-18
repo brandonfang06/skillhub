@@ -61,7 +61,7 @@ def canonicalize_repository(raw_url: str) -> GitHubRepository:
 def verify_checkout_revision(project_dir: Path, expected_sha: str) -> None:
     try:
         actual = subprocess.run(
-            ["git", "-C", str(project_dir), "rev-parse", "HEAD"],
+            ["git", "-c", f"safe.directory={project_dir}", "-C", str(project_dir), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,

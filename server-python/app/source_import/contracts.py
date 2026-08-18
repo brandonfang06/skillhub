@@ -51,4 +51,3 @@ class SourceProvenance:
     source_path: str
     content_fingerprint: str
     browse_url: str
-
