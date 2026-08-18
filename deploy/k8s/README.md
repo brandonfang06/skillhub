@@ -39,7 +39,11 @@ deploy/k8s/
   overlays/
     external/
   environment-variables.zh.md
+  oss-github-source-import.zh.md
 ```
+
+GitLab Runner 從 GitHub checkout 批次匯入 skills 的部署、變數與 review SOP：
+[oss-github-source-import.zh.md](./oss-github-source-import.zh.md)。
 
 ## Runtime
 

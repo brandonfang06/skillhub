@@ -31,6 +31,7 @@ SkillHub 是一个自托管平台，为团队提供私有的、受治理的智�
 
 - 📖 **[用户指南](https://iflytek.github.io/skillhub/)** — 技能发布、搜索、CLI 使用等用户操作指南
 - 🛠️ **[开发者文档](https://zread.ai/iflytek/skillhub)** — 架构设计、API 参考、本地开发、部署运维等技术文档
+- 📦 **[GitHub OSS Skills GitLab 匯入 SOP](./deploy/k8s/oss-github-source-import.zh.md)** — Pipeline variables、Keycloak 身分、scanner/review 與 `/skillhub` 部署方式
 
 ## 核心特性
 
