@@ -77,6 +77,7 @@ def test_write_audit_log_uses_common_insert_shape() -> None:
     assert statement.table.name == "audit_log"
     assert params == {
         "actor_user_id": "admin",
+        "actor_service_principal_id": None,
         "action": "SKILL_ARCHIVED",
         "target_type": "SKILL",
         "target_id": 42,

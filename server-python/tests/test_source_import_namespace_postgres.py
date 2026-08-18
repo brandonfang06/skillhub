@@ -7,11 +7,13 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.source_import.contracts import SourceIdentity
+from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.repository import SourceImportRepository
-from app.source_import.service import EnsureSourceNamespaceInput, ensure_source_namespace
+from app.source_import.service import (
+    EnsureSourceNamespaceInput,
+    ensure_source_namespace,
+)
 from app.source_import.source import canonicalize_github_repository
-
 
 TEST_DATABASE_URL = os.getenv("SKILLHUB_TEST_DATABASE_URL")
 
@@ -27,6 +29,7 @@ class FailingAfterNamespaceRepository(SourceImportRepository):
 async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() -> None:
     suffix = uuid4().hex[:12]
     actor_id = f"oss-actor-{suffix}"
+    service_id = f"svc_{suffix}"
     owner_id = f"oss-owner-{suffix}"
     owner_login = f"owner-{suffix}"
     repository = canonicalize_github_repository(f"https://github.com/owner{suffix}/repo")
@@ -47,6 +50,17 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
             await connection.execute(
                 text(
                     """
+                    INSERT INTO service_principal (
+                        id, code, display_name, status, created_by_user_id
+                    )
+                    VALUES (:service_id, :code, 'OSS importer service', 'ACTIVE', :actor_id)
+                    """
+                ),
+                {"service_id": service_id, "code": f"oss-{suffix}", "actor_id": actor_id},
+            )
+            await connection.execute(
+                text(
+                    """
                     INSERT INTO identity_binding (user_id, provider_code, subject, login_name)
                     VALUES (:owner_id, 'keycloak', :subject, :login_name)
                     """
@@ -58,7 +72,7 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
             repository=repository,
             requested_display_name=repository.namespace_display_name,
             fallback_owner=SourceIdentity("keycloak", owner_login),
-            actor_user_id=actor_id,
+            service_actor=SourceServiceActor(service_id, f"oss-{suffix}", "OSS importer service"),
             request_id=f"request-{suffix}",
         )
         created = await ensure_source_namespace(engine, request)
@@ -68,7 +82,7 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
                 repository=repository,
                 requested_display_name=repository.namespace_display_name,
                 fallback_owner=SourceIdentity("keycloak", "not-used-for-existing"),
-                actor_user_id=actor_id,
+                service_actor=SourceServiceActor(service_id, f"oss-{suffix}", "OSS importer service"),
             ),
         )
 
@@ -80,7 +94,9 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
                 await connection.execute(
                     text(
                         """
-                        SELECT n.type, n.status, nm.role, source.repository_url
+                        SELECT n.type, n.status, n.created_by AS namespace_created_by, nm.role,
+                               source.repository_url, source.created_by AS source_created_by,
+                               source.created_by_service_principal_id
                         FROM namespace n
                         JOIN namespace_member nm ON nm.namespace_id = n.id
                         JOIN local_oss_namespace_source source ON source.namespace_id = n.id
@@ -93,15 +109,18 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
             assert dict(row) == {
                 "type": "TEAM",
                 "status": "ACTIVE",
+                "namespace_created_by": owner_id,
                 "role": "OWNER",
                 "repository_url": repository.canonical_url,
+                "source_created_by": owner_id,
+                "created_by_service_principal_id": service_id,
             }
 
         failing_request = EnsureSourceNamespaceInput(
             repository=failing_repository,
             requested_display_name=failing_repository.namespace_display_name,
             fallback_owner=SourceIdentity("keycloak", owner_login),
-            actor_user_id=actor_id,
+            service_actor=SourceServiceActor(service_id, f"oss-{suffix}", "OSS importer service"),
         )
         with pytest.raises(RuntimeError, match="forced failure"):
             await ensure_source_namespace(
@@ -138,8 +157,14 @@ async def test_source_namespace_creation_is_atomic_and_reuses_current_owner() ->
                     {"namespace_ids": list(namespace_ids)},
                 )
             await connection.execute(
-                text("DELETE FROM audit_log WHERE actor_user_id IN (:actor_id, :owner_id)"),
-                {"actor_id": actor_id, "owner_id": owner_id},
+                text(
+                    "DELETE FROM audit_log WHERE actor_service_principal_id = :service_id OR actor_user_id = :owner_id"
+                ),
+                {"service_id": service_id, "owner_id": owner_id},
+            )
+            await connection.execute(
+                text("DELETE FROM service_principal WHERE id = :service_id"),
+                {"service_id": service_id},
             )
             await connection.execute(
                 text("DELETE FROM identity_binding WHERE user_id IN (:actor_id, :owner_id)"),

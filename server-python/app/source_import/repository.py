@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.audit.writer import write_audit_log
+from app.source_import.contracts import SourceServiceActor
 from app.source_import.service import (
     IdentityAccount,
     NamespaceRecord,
@@ -19,11 +20,14 @@ class SourceImportRepository:
     def __init__(self, connection: Any) -> None:
         self.connection = connection
 
-    async def read_identity_accounts(self, provider_code: str, login_name: str) -> list[IdentityAccount]:
+    async def read_identity_accounts(
+        self, provider_code: str, login_name: str
+    ) -> list[IdentityAccount]:
         rows = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT ua.id AS user_id,
                            ua.display_name,
                            ua.status,
@@ -35,65 +39,85 @@ class SourceImportRepository:
                       AND ib.login_name = :login_name
                     ORDER BY ua.id ASC
                     """
-                ),
-                {"provider_code": provider_code, "login_name": login_name},
+                    ),
+                    {"provider_code": provider_code, "login_name": login_name},
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         return [_identity_account(dict(row)) for row in rows]
 
     async def read_namespace(self, slug: str) -> NamespaceRecord | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT id, slug, display_name, type, status
                     FROM namespace
                     WHERE slug = :slug
                     LIMIT 1
                     """
-                ),
-                {"slug": slug},
+                    ),
+                    {"slug": slug},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _namespace_record(dict(row)) if row is not None else None
 
-    async def read_namespace_source_by_repository(self, repository_url: str) -> NamespaceSourceBinding | None:
+    async def read_namespace_source_by_repository(
+        self, repository_url: str
+    ) -> NamespaceSourceBinding | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT id, namespace_id, repository_url
                     FROM local_oss_namespace_source
                     WHERE repository_url = :repository_url
                     LIMIT 1
                     """
-                ),
-                {"repository_url": repository_url},
+                    ),
+                    {"repository_url": repository_url},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _namespace_source_binding(dict(row)) if row is not None else None
 
-    async def read_namespace_source_by_namespace(self, namespace_id: int) -> NamespaceSourceBinding | None:
+    async def read_namespace_source_by_namespace(
+        self, namespace_id: int
+    ) -> NamespaceSourceBinding | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT id, namespace_id, repository_url
                     FROM local_oss_namespace_source
                     WHERE namespace_id = :namespace_id
                     LIMIT 1
                     """
-                ),
-                {"namespace_id": namespace_id},
+                    ),
+                    {"namespace_id": namespace_id},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _namespace_source_binding(dict(row)) if row is not None else None
 
     async def read_namespace_owners(self, namespace_id: int) -> list[IdentityAccount]:
         rows = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT ua.id AS user_id,
                            ua.display_name,
                            ua.status,
@@ -113,10 +137,13 @@ class SourceImportRepository:
                       AND nm.role = 'OWNER'
                     ORDER BY ua.id ASC
                     """
-                ),
-                {"namespace_id": namespace_id},
+                    ),
+                    {"namespace_id": namespace_id},
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         return [_identity_account(dict(row)) for row in rows]
 
     async def create_namespace_source(
@@ -126,21 +153,29 @@ class SourceImportRepository:
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
-        actor_user_id: str,
+        service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]:
         namespace_row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     INSERT INTO namespace (slug, display_name, type, status, created_by)
                     VALUES (:slug, :display_name, 'TEAM', 'ACTIVE', :created_by)
                     RETURNING id, slug, display_name, type, status
                     """
-                ),
-                {"slug": slug, "display_name": display_name, "created_by": actor_user_id},
+                    ),
+                    {
+                        "slug": slug,
+                        "display_name": display_name,
+                        "created_by": owner.user_id,
+                    },
+                )
             )
-        ).mappings().one()
+            .mappings()
+            .one()
+        )
         namespace = _namespace_record(dict(namespace_row))
         await self.connection.execute(
             text(
@@ -152,25 +187,36 @@ class SourceImportRepository:
             {"namespace_id": namespace.id, "user_id": owner.user_id},
         )
         binding_row = (
-            await self.connection.execute(
-                text(
-                    """
-                    INSERT INTO local_oss_namespace_source (namespace_id, repository_url, created_by)
-                    VALUES (:namespace_id, :repository_url, :created_by)
+            (
+                await self.connection.execute(
+                    text(
+                        """
+                    INSERT INTO local_oss_namespace_source (
+                        namespace_id, repository_url, created_by,
+                        created_by_service_principal_id
+                    )
+                    VALUES (
+                        :namespace_id, :repository_url, :created_by,
+                        :created_by_service_principal_id
+                    )
                     RETURNING id, namespace_id, repository_url
                     """
-                ),
-                {
-                    "namespace_id": namespace.id,
-                    "repository_url": repository_url,
-                    "created_by": actor_user_id,
-                },
+                    ),
+                    {
+                        "namespace_id": namespace.id,
+                        "repository_url": repository_url,
+                        "created_by": owner.user_id,
+                        "created_by_service_principal_id": service_actor.service_principal_id,
+                    },
+                )
             )
-        ).mappings().one()
+            .mappings()
+            .one()
+        )
         binding = _namespace_source_binding(dict(binding_row))
         await write_audit_log(
             self.connection,
-            actor_user_id=actor_user_id,
+            actor_service_principal_id=service_actor.service_principal_id,
             action="CREATE_OSS_SOURCE_NAMESPACE",
             target_type="NAMESPACE",
             target_id=namespace.id,
@@ -181,16 +227,20 @@ class SourceImportRepository:
                 "repositoryUrl": repository_url,
                 "namespaceSlug": slug,
                 "ownerUserId": owner.user_id,
+                "servicePrincipalCode": service_actor.code,
             },
             created_at=datetime.now(UTC),
         )
         return namespace, binding
 
-    async def read_source_skill(self, namespace_source_id: int, source_path: str) -> SourceSkillRecord | None:
+    async def read_source_skill(
+        self, namespace_source_id: int, source_path: str
+    ) -> SourceSkillRecord | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT source.id AS source_id,
                            source.namespace_source_id,
                            source.source_path,
@@ -207,17 +257,26 @@ class SourceImportRepository:
                       AND source.source_path = :source_path
                     LIMIT 1
                     """
-                ),
-                {"namespace_source_id": namespace_source_id, "source_path": source_path},
+                    ),
+                    {
+                        "namespace_source_id": namespace_source_id,
+                        "source_path": source_path,
+                    },
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _source_skill_record(dict(row)) if row is not None else None
 
-    async def read_skill_by_slug(self, namespace_id: int, slug: str) -> SourceSkillRecord | None:
+    async def read_skill_by_slug(
+        self, namespace_id: int, slug: str
+    ) -> SourceSkillRecord | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT source.id AS source_id,
                            source.namespace_source_id,
                            source.source_path,
@@ -234,17 +293,23 @@ class SourceImportRepository:
                       AND skill.slug = :slug
                     LIMIT 1
                     """
-                ),
-                {"namespace_id": namespace_id, "slug": slug},
+                    ),
+                    {"namespace_id": namespace_id, "slug": slug},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _source_skill_record(dict(row)) if row is not None else None
 
-    async def read_source_skill_version(self, skill_id: int, version: str) -> SourceSkillVersionRecord | None:
+    async def read_source_skill_version(
+        self, skill_id: int, version: str
+    ) -> SourceSkillVersionRecord | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT version.id AS version_id,
                            version.skill_id,
                            version.version,
@@ -256,10 +321,13 @@ class SourceImportRepository:
                       AND version.version = :version
                     LIMIT 1
                     """
-                ),
-                {"skill_id": skill_id, "version": version},
+                    ),
+                    {"skill_id": skill_id, "version": version},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _source_skill_version_record(dict(row)) if row is not None else None
 
     async def read_source_skill_version_by_fingerprint(
@@ -268,9 +336,10 @@ class SourceImportRepository:
         fingerprint: str,
     ) -> SourceSkillVersionRecord | None:
         row = (
-            await self.connection.execute(
-                text(
-                    """
+            (
+                await self.connection.execute(
+                    text(
+                        """
                     SELECT version.id AS version_id,
                            version.skill_id,
                            version.version,
@@ -282,13 +351,18 @@ class SourceImportRepository:
                       AND source.content_fingerprint = :fingerprint
                     LIMIT 1
                     """
-                ),
-                {"source_skill_id": source_skill_id, "fingerprint": fingerprint},
+                    ),
+                    {"source_skill_id": source_skill_id, "fingerprint": fingerprint},
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return _source_skill_version_record(dict(row)) if row is not None else None
 
-    async def read_namespace_membership(self, namespace_id: int, user_id: str) -> str | None:
+    async def read_namespace_membership(
+        self, namespace_id: int, user_id: str
+    ) -> str | None:
         value = (
             await self.connection.execute(
                 text(
@@ -317,7 +391,7 @@ class SourceImportRepository:
         revision: Any,
         content_fingerprint: str,
         repository_url: str,
-        actor_user_id: str,
+        service_actor: SourceServiceActor,
         review_submitter_id: str,
         stable_owner_id: str,
         outcome: str,
@@ -325,6 +399,9 @@ class SourceImportRepository:
         request_id: str | None,
         client_ip: str | None,
         user_agent: str | None,
+        initiator_provider_code: str | None,
+        initiator_login_name: str | None,
+        attribution_source: str,
     ) -> None:
         if add_submitter_as_member:
             await self.connection.execute(
@@ -346,9 +423,13 @@ class SourceImportRepository:
                         text(
                             """
                             INSERT INTO local_oss_skill_source (
-                                namespace_source_id, source_path, skill_id, created_by
+                                namespace_source_id, source_path, skill_id, created_by,
+                                created_by_service_principal_id
                             )
-                            VALUES (:namespace_source_id, :source_path, :skill_id, :created_by)
+                            VALUES (
+                                :namespace_source_id, :source_path, :skill_id, :created_by,
+                                :created_by_service_principal_id
+                            )
                             RETURNING id
                             """
                         ),
@@ -356,7 +437,8 @@ class SourceImportRepository:
                             "namespace_source_id": namespace_source_id,
                             "source_path": source_path,
                             "skill_id": skill_id,
-                            "created_by": actor_user_id,
+                            "created_by": review_submitter_id,
+                            "created_by_service_principal_id": service_actor.service_principal_id,
                         },
                     )
                 ).scalar_one()
@@ -367,11 +449,13 @@ class SourceImportRepository:
                 """
                 INSERT INTO local_oss_skill_version_source (
                     skill_source_id, skill_version_id, repository_revision_sha,
-                    source_ref_type, source_ref, content_fingerprint, imported_by
+                    source_ref_type, source_ref, content_fingerprint, imported_by,
+                    imported_by_service_principal_id
                 )
                 VALUES (
                     :skill_source_id, :skill_version_id, :repository_revision_sha,
-                    :source_ref_type, :source_ref, :content_fingerprint, :imported_by
+                    :source_ref_type, :source_ref, :content_fingerprint, :imported_by,
+                    :imported_by_service_principal_id
                 )
                 """
             ),
@@ -382,12 +466,13 @@ class SourceImportRepository:
                 "source_ref_type": revision.ref_type,
                 "source_ref": revision.ref,
                 "content_fingerprint": content_fingerprint,
-                "imported_by": actor_user_id,
+                "imported_by": review_submitter_id,
+                "imported_by_service_principal_id": service_actor.service_principal_id,
             },
         )
         await write_audit_log(
             self.connection,
-            actor_user_id=actor_user_id,
+            actor_service_principal_id=service_actor.service_principal_id,
             action="SOURCE_IMPORT_SKILL_VERSION",
             target_type="SKILL_VERSION",
             target_id=version_id,
@@ -405,6 +490,11 @@ class SourceImportRepository:
                 "outcome": outcome,
                 "stableOwnerId": stable_owner_id,
                 "reviewSubmitterId": review_submitter_id,
+                "attributedUserId": review_submitter_id,
+                "servicePrincipalCode": service_actor.code,
+                "initiatorProviderCode": initiator_provider_code,
+                "initiatorLoginName": initiator_login_name,
+                "attributionSource": attribution_source,
             },
             created_at=datetime.now(UTC),
         )
@@ -415,8 +505,12 @@ def _identity_account(row: dict[str, Any]) -> IdentityAccount:
         user_id=str(row["user_id"]),
         display_name=str(row["display_name"]),
         status=str(row["status"]),
-        provider_code=str(row["provider_code"]) if row.get("provider_code") is not None else None,
-        login_name=str(row["login_name"]) if row.get("login_name") is not None else None,
+        provider_code=str(row["provider_code"])
+        if row.get("provider_code") is not None
+        else None,
+        login_name=str(row["login_name"])
+        if row.get("login_name") is not None
+        else None,
     )
 
 
@@ -442,9 +536,13 @@ def _source_skill_record(row: dict[str, Any]) -> SourceSkillRecord:
     return SourceSkillRecord(
         source_id=int(row["source_id"]) if row.get("source_id") is not None else None,
         namespace_source_id=(
-            int(row["namespace_source_id"]) if row.get("namespace_source_id") is not None else None
+            int(row["namespace_source_id"])
+            if row.get("namespace_source_id") is not None
+            else None
         ),
-        source_path=str(row["source_path"]) if row.get("source_path") is not None else None,
+        source_path=str(row["source_path"])
+        if row.get("source_path") is not None
+        else None,
         skill_id=int(row["skill_id"]),
         slug=str(row["slug"]),
         owner_id=str(row["owner_id"]),
@@ -461,6 +559,8 @@ def _source_skill_version_record(row: dict[str, Any]) -> SourceSkillVersionRecor
         version=str(row["version"]),
         status=str(row["status"]),
         content_fingerprint=(
-            str(row["content_fingerprint"]).strip() if row.get("content_fingerprint") is not None else None
+            str(row["content_fingerprint"]).strip()
+            if row.get("content_fingerprint") is not None
+            else None
         ),
     )

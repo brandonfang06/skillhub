@@ -13,6 +13,7 @@ from app.audit.writer import write_audit_log
 from app.auth.tokens import sha256_token
 from app.service_accounts.contracts import (
     ServicePrincipal,
+    ServicePrincipalSummary,
     ServiceTokenMetadata,
     ServiceTokenSecret,
 )
@@ -150,6 +151,23 @@ async def create_service_principal(
         raise ServiceAccountError(
             "error.servicePrincipal.code.duplicate", status_code=409
         ) from exc
+
+
+async def list_service_principals(
+    engine: Any,
+    *,
+    page: int,
+    size: int,
+    actor_platform_roles: list[str],
+) -> tuple[list[ServicePrincipalSummary], int]:
+    require_service_account_admin(actor_platform_roles)
+    resolved_page = max(page, 0)
+    resolved_size = min(max(size, 1), 100)
+    async with engine.connect() as connection:
+        return await ServiceAccountRepository(connection).list_principals(
+            page=resolved_page,
+            size=resolved_size,
+        )
 
 
 async def update_service_principal(

@@ -7,6 +7,7 @@ from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
 
+from app.auth.service_tokens import ServiceTokenPrincipal
 from app.main import create_app
 from app.source_import.contracts import SourcePackage
 from app.source_import.service import (
@@ -17,7 +18,6 @@ from app.source_import.service import (
     SourceSkillSubmissionResult,
     SourceSkillValidationPlan,
 )
-from tests.support.builders import bearer_user as build_bearer_user
 
 
 def skill_zip() -> bytes:
@@ -30,11 +30,14 @@ def skill_zip() -> bytes:
     return buffer.getvalue()
 
 
-def token_user(*, scopes: list[str] | None = None, roles: list[str] | None = None) -> dict[str, object]:
-    user = build_bearer_user("importer-service", scopes or ["source:import"])
-    user["displayName"] = "Importer Service"
-    user["platformRoles"] = roles or ["SKILL_ADMIN"]
-    return user
+def service_actor(*, scopes: tuple[str, ...] = ("source:import",)) -> ServiceTokenPrincipal:
+    return ServiceTokenPrincipal(
+        "svc_importer",
+        "gitlab-oss-importer",
+        "GitLab OSS Importer",
+        7,
+        scopes,
+    )
 
 
 def ensure_result() -> EnsureSourceNamespaceResult:
@@ -86,8 +89,8 @@ def metadata_payload(**changes: object) -> str:
     return json.dumps(payload)
 
 
-def install_bearer(app: object, user: dict[str, object]) -> None:
-    app.state.auth_bearer_reader = lambda _token: user
+def install_bearer(app: object, actor: ServiceTokenPrincipal) -> None:
+    app.state.auth_service_bearer_reader = lambda _token: actor
 
 
 def test_source_import_routes_require_bearer_api_token() -> None:
@@ -107,16 +110,13 @@ def test_source_import_routes_require_bearer_api_token() -> None:
     assert response.status_code == 401
 
 
-def test_source_import_routes_reject_non_api_token_bearer_principal() -> None:
+def test_source_import_routes_reject_personal_api_token() -> None:
     app = create_app()
-    user = token_user()
-    user["oauthProvider"] = "keycloak"
-    install_bearer(app, user)
     client = TestClient(app)
 
     response = client.put(
         "/api/cli/v1/source-imports/namespaces/oss-mattpocock-skills",
-        headers={"Authorization": "Bearer session-token"},
+        headers={"Authorization": "Bearer sk_personal-token"},
         json={
             "repositoryUrl": "https://github.com/mattpocock/skills",
             "displayName": "OSS-mattpocock-skills",
@@ -126,12 +126,12 @@ def test_source_import_routes_reject_non_api_token_bearer_principal() -> None:
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "error.sourceImport.apiToken.required"
+    assert response.json()["detail"] == "error.sourceImport.serviceToken.required"
 
 
-def test_source_import_routes_require_dedicated_scope_and_platform_role() -> None:
+def test_source_import_routes_require_dedicated_scope() -> None:
     app = create_app()
-    install_bearer(app, token_user(scopes=["skill:publish"]))
+    install_bearer(app, service_actor(scopes=()))
     client = TestClient(app)
     body = {
         "repositoryUrl": "https://github.com/mattpocock/skills",
@@ -142,25 +142,16 @@ def test_source_import_routes_require_dedicated_scope_and_platform_role() -> Non
 
     missing_scope = client.put(
         "/api/cli/v1/source-imports/namespaces/oss-mattpocock-skills",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         json=body,
     )
     assert missing_scope.status_code == 403
-    assert missing_scope.json()["msg"] == "error.apiToken.scope.missing"
-
-    install_bearer(app, token_user(roles=["USER"]))
-    missing_role = client.put(
-        "/api/cli/v1/source-imports/namespaces/oss-mattpocock-skills",
-        headers={"Authorization": "Bearer api-token"},
-        json=body,
-    )
-    assert missing_role.status_code == 403
-    assert missing_role.json()["detail"] == "error.sourceImport.platformRole.required"
+    assert missing_scope.json()["detail"] == "error.serviceToken.scope.missing"
 
 
 def test_ensure_namespace_returns_typed_envelope_without_internal_owner_id() -> None:
     app = create_app()
-    install_bearer(app, token_user())
+    install_bearer(app, service_actor())
     seen: list[object] = []
 
     async def ensurer(_engine: object, request: object) -> EnsureSourceNamespaceResult:
@@ -172,7 +163,7 @@ def test_ensure_namespace_returns_typed_envelope_without_internal_owner_id() -> 
 
     response = client.put(
         "/api/cli/v1/source-imports/namespaces/oss-mattpocock-skills",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         json={
             "repositoryUrl": "https://github.com/mattpocock/skills.git",
             "displayName": "OSS-mattpocock-skills",
@@ -200,12 +191,12 @@ def test_ensure_namespace_returns_typed_envelope_without_internal_owner_id() -> 
 
 def test_ensure_namespace_rejects_derived_path_or_display_mismatch() -> None:
     app = create_app()
-    install_bearer(app, token_user())
+    install_bearer(app, service_actor())
     client = TestClient(app)
 
     response = client.put(
         "/api/cli/v1/source-imports/namespaces/oss-other-repo",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         json={
             "repositoryUrl": "https://github.com/mattpocock/skills",
             "displayName": "Wrong display",
@@ -219,7 +210,7 @@ def test_ensure_namespace_rejects_derived_path_or_display_mismatch() -> None:
 
 def test_validate_source_skill_parses_zip_and_returns_planned_provenance() -> None:
     app = create_app()
-    install_bearer(app, token_user())
+    install_bearer(app, service_actor())
     seen: list[object] = []
 
     async def validator(_engine: object, request: object) -> SourceSkillValidationPlan:
@@ -230,7 +221,7 @@ def test_validate_source_skill_parses_zip_and_returns_planned_provenance() -> No
     client = TestClient(app)
     response = client.post(
         "/api/cli/v1/source-imports/oss-mattpocock-skills/skills/validate",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         data={"metadata": metadata_payload()},
         files={"file": ("code-review.zip", skill_zip(), "application/zip")},
     )
@@ -246,12 +237,12 @@ def test_validate_source_skill_parses_zip_and_returns_planned_provenance() -> No
 
 def test_validate_source_skill_rejects_unknown_metadata_fields() -> None:
     app = create_app()
-    install_bearer(app, token_user())
+    install_bearer(app, service_actor())
     client = TestClient(app)
 
     response = client.post(
         "/api/cli/v1/source-imports/oss-mattpocock-skills/skills/validate",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         data={"metadata": metadata_payload(contentFingerprint="caller-controlled")},
         files={"file": ("code-review.zip", skill_zip(), "application/zip")},
     )
@@ -261,7 +252,7 @@ def test_validate_source_skill_rejects_unknown_metadata_fields() -> None:
 
 def test_submit_source_skill_returns_review_state_and_actor() -> None:
     app = create_app()
-    install_bearer(app, token_user())
+    install_bearer(app, service_actor())
 
     async def submitter(_engine: object, _request: object, _runtime: object) -> SourceSkillSubmissionResult:
         return SourceSkillSubmissionResult("IMPORTED", validation_plan(), 41, 51, "PENDING_REVIEW", 61)
@@ -276,7 +267,7 @@ def test_submit_source_skill_returns_review_state_and_actor() -> None:
     client = TestClient(app)
     response = client.post(
         "/api/cli/v1/source-imports/oss-mattpocock-skills/skills",
-        headers={"Authorization": "Bearer api-token"},
+        headers={"Authorization": "Bearer st_service-token"},
         data={"metadata": metadata_payload()},
         files={"file": ("code-review.zip", skill_zip(), "application/zip")},
     )
@@ -286,4 +277,4 @@ def test_submit_source_skill_returns_review_state_and_actor() -> None:
     assert data["outcome"] == "IMPORTED"
     assert data["versionStatus"] == "PENDING_REVIEW"
     assert data["reviewTaskId"] == 61
-    assert data["importerActor"]["displayName"] == "Importer Service"
+    assert data["importerActor"]["displayName"] == "GitLab OSS Importer"

@@ -3,22 +3,26 @@ from __future__ import annotations
 from inspect import isawaitable
 from typing import Any, Literal
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Path, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Path,
+    Request,
+    UploadFile,
+)
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from app.auth.context import resolve_current_user_or_401
-from app.auth.policy import (
-    is_api_token_principal,
-    require_any_platform_role,
-    require_api_token_scope,
-)
+from app.auth.service_tokens import ServiceTokenPrincipal, resolve_service_token_or_401
 from app.core.config import get_settings
 from app.core.redis import create_redis_client
 from app.core.response import ok
 from app.object_storage import object_storage_for_settings
 from app.publish.package import extract_package
 from app.publish.scanner_handoff import RedisScanTaskPublisher
-from app.source_import.contracts import SourceIdentity
+from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.service import (
     EnsureSourceNamespaceInput,
     EnsureSourceNamespaceResult,
@@ -37,7 +41,6 @@ from app.source_import.source import (
     canonicalize_github_repository,
     validate_source_revision,
 )
-
 
 router = APIRouter()
 
@@ -144,17 +147,15 @@ async def _resolve(value: Any) -> Any:
     return await value if isawaitable(value) else value
 
 
-async def _require_import_actor(request: Request, authorization: str | None) -> dict[str, object]:
-    user = dict(await resolve_current_user_or_401(request, None, authorization))
-    if not is_api_token_principal(user):
-        raise HTTPException(status_code=403, detail="error.sourceImport.apiToken.required")
-    require_api_token_scope(user, "source:import")
-    require_any_platform_role(
-        user,
-        {"SKILL_ADMIN", "SUPER_ADMIN"},
-        detail="error.sourceImport.platformRole.required",
+async def _require_import_actor(
+    request: Request,
+    authorization: str | None,
+) -> ServiceTokenPrincipal:
+    return await resolve_service_token_or_401(
+        request,
+        authorization,
+        required_scope="source:import",
     )
-    return user
 
 
 def _identity_response(account: Any) -> dict[str, object]:
@@ -166,15 +167,25 @@ def _identity_response(account: Any) -> dict[str, object]:
     return result
 
 
-def _actor_response(user: dict[str, object]) -> dict[str, object]:
-    return {"displayName": str(user.get("displayName") or user["userId"])}
+def _actor_response(actor: ServiceTokenPrincipal) -> dict[str, object]:
+    return {"displayName": actor.display_name}
+
+
+def _service_actor(actor: ServiceTokenPrincipal) -> SourceServiceActor:
+    return SourceServiceActor(
+        service_principal_id=actor.service_principal_id,
+        code=actor.code,
+        display_name=actor.display_name,
+    )
 
 
 def _parse_metadata(raw: str) -> SourceSkillMetadataRequest:
     try:
         return SourceSkillMetadataRequest.model_validate_json(raw)
     except ValidationError as exc:
-        raise HTTPException(status_code=400, detail="error.sourceImport.metadata.invalid") from exc
+        raise HTTPException(
+            status_code=400, detail="error.sourceImport.metadata.invalid"
+        ) from exc
 
 
 def _initiator(metadata: SourceSkillMetadataRequest) -> SourceIdentity | None:
@@ -183,7 +194,9 @@ def _initiator(metadata: SourceSkillMetadataRequest) -> SourceIdentity | None:
     if not provider and not login:
         return None
     if not provider or not login:
-        raise HTTPException(status_code=400, detail="error.sourceImport.initiator.invalid")
+        raise HTTPException(
+            status_code=400, detail="error.sourceImport.initiator.invalid"
+        )
     return SourceIdentity(provider, login)
 
 
@@ -192,7 +205,7 @@ async def _skill_input(
     namespace_slug: str,
     file: UploadFile,
     metadata_raw: str,
-    actor_user_id: str,
+    service_actor: SourceServiceActor,
 ) -> ValidateSourceSkillInput:
     metadata = _parse_metadata(metadata_raw)
     try:
@@ -206,7 +219,9 @@ async def _skill_input(
     except (SourceInputError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if repository.namespace_slug != namespace_slug:
-        raise HTTPException(status_code=400, detail="error.sourceImport.namespace.mismatch")
+        raise HTTPException(
+            status_code=400, detail="error.sourceImport.namespace.mismatch"
+        )
     settings = getattr(request.app.state, "settings", get_settings())
     return ValidateSourceSkillInput(
         namespace_slug=namespace_slug,
@@ -216,7 +231,7 @@ async def _skill_input(
         entries=entries,
         version_override=metadata.versionOverride,
         initiator=_initiator(metadata),
-        actor_user_id=actor_user_id,
+        service_actor=service_actor,
         allowed_extensions=getattr(settings, "publish_allowed_file_extensions", None),
         request_id=getattr(request.state, "request_id", None),
         client_ip=request.client.host if request.client else None,
@@ -224,21 +239,27 @@ async def _skill_input(
     )
 
 
-def _provenance(plan: SourceSkillValidationPlan, request: ValidateSourceSkillInput) -> dict[str, object]:
+def _provenance(
+    plan: SourceSkillValidationPlan, request: ValidateSourceSkillInput
+) -> dict[str, object]:
     result: dict[str, object] = {
         "repositoryUrl": request.repository.canonical_url,
         "repositoryRevisionSha": request.revision.commit_sha,
         "sourceRefType": request.revision.ref_type,
         "sourcePath": plan.package.source_path,
         "contentFingerprint": plan.package.content_fingerprint,
-        "browseUrl": build_browse_url(request.repository, request.revision, plan.package.source_path),
+        "browseUrl": build_browse_url(
+            request.repository, request.revision, plan.package.source_path
+        ),
     }
     if request.revision.ref is not None:
         result["sourceRef"] = request.revision.ref
     return result
 
 
-def _validation_data(plan: SourceSkillValidationPlan, request: ValidateSourceSkillInput) -> dict[str, object]:
+def _validation_data(
+    plan: SourceSkillValidationPlan, request: ValidateSourceSkillInput
+) -> dict[str, object]:
     return {
         "outcome": plan.outcome,
         "coordinate": f"@{plan.namespace.slug}/{plan.skill_slug}",
@@ -273,18 +294,29 @@ async def ensure_source_namespace_route(
         repository = canonicalize_github_repository(body.repositoryUrl)
     except SourceInputError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if repository.namespace_slug != namespace_slug or repository.namespace_display_name != body.displayName:
-        raise HTTPException(status_code=400, detail="error.sourceImport.namespace.mismatch")
+    if (
+        repository.namespace_slug != namespace_slug
+        or repository.namespace_display_name != body.displayName
+    ):
+        raise HTTPException(
+            status_code=400, detail="error.sourceImport.namespace.mismatch"
+        )
     ensure_input = EnsureSourceNamespaceInput(
         repository=repository,
         requested_display_name=body.displayName,
-        fallback_owner=SourceIdentity(body.fallbackOwnerProviderCode, body.fallbackOwnerLoginName),
-        actor_user_id=str(actor["userId"]),
+        fallback_owner=SourceIdentity(
+            body.fallbackOwnerProviderCode, body.fallbackOwnerLoginName
+        ),
+        service_actor=_service_actor(actor),
         request_id=getattr(request.state, "request_id", None),
     )
-    ensurer = getattr(request.app.state, "source_import_namespace_ensurer", ensure_source_namespace)
+    ensurer = getattr(
+        request.app.state, "source_import_namespace_ensurer", ensure_source_namespace
+    )
     try:
-        result: EnsureSourceNamespaceResult = await _resolve(ensurer(_db_engine(request), ensure_input))
+        result: EnsureSourceNamespaceResult = await _resolve(
+            ensurer(_db_engine(request), ensure_input)
+        )
     except SourceImportError as exc:
         raise _handle_source_error(exc) from exc
     return ok(
@@ -313,15 +345,29 @@ async def validate_source_skill_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     actor = await _require_import_actor(request, authorization)
-    source_input = await _skill_input(request, namespace_slug, file, metadata, str(actor["userId"]))
-    validator = getattr(request.app.state, "source_import_validator", validate_source_skill)
+    source_input = await _skill_input(
+        request,
+        namespace_slug,
+        file,
+        metadata,
+        _service_actor(actor),
+    )
+    validator = getattr(
+        request.app.state, "source_import_validator", validate_source_skill
+    )
     try:
-        plan: SourceSkillValidationPlan = await _resolve(validator(_db_engine(request), source_input))
+        plan: SourceSkillValidationPlan = await _resolve(
+            validator(_db_engine(request), source_input)
+        )
     except SourceImportError as exc:
         raise _handle_source_error(exc) from exc
     except SourceInputError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ok("response.success.sourceImport.validated", _validation_data(plan, source_input), request)
+    return ok(
+        "response.success.sourceImport.validated",
+        _validation_data(plan, source_input),
+        request,
+    )
 
 
 @router.post(
@@ -336,17 +382,31 @@ async def submit_source_skill_route(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     actor = await _require_import_actor(request, authorization)
-    source_input = await _skill_input(request, namespace_slug, file, metadata, str(actor["userId"]))
+    source_input = await _skill_input(
+        request,
+        namespace_slug,
+        file,
+        metadata,
+        _service_actor(actor),
+    )
     settings = getattr(request.app.state, "settings", get_settings())
-    submitter = getattr(request.app.state, "source_import_submitter", submit_source_skill)
-    storage = None if submitter is not submit_source_skill else object_storage_for_settings(settings)
+    submitter = getattr(
+        request.app.state, "source_import_submitter", submit_source_skill
+    )
+    storage = (
+        None
+        if submitter is not submit_source_skill
+        else object_storage_for_settings(settings)
+    )
     scan_task_publisher = None
     if submitter is submit_source_skill and settings.security_scanner_enabled:
         redis_client = getattr(request.app.state, "redis_client", None)
         if redis_client is None:
             redis_client = create_redis_client(settings)
             request.app.state.redis_client = redis_client
-        scan_task_publisher = RedisScanTaskPublisher(redis_client, settings.scan_stream_key)
+        scan_task_publisher = RedisScanTaskPublisher(
+            redis_client, settings.scan_stream_key
+        )
     runtime = SourceSkillSubmissionRuntime(
         storage_base_path=settings.storage_base_path,
         storage=storage,

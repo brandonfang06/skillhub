@@ -16,11 +16,12 @@ class ReviewAttemptArchiveInput:
     attempt: ArchivedReviewAttempt
     replacement_version_id: int | None
     replacement_review_task_id: int | None
-    actor_user_id: str
+    actor_user_id: str | None
     request_id: str | None
     client_ip: str | None
     user_agent: str | None
     archived_at: datetime | None = None
+    actor_service_principal_id: str | None = None
     archive_reason: str = "REJECTED_VERSION_RESUBMIT"
     audit_action: str = "REJECTED_VERSION_RESUBMIT"
 
@@ -106,6 +107,7 @@ async def archive_review_attempt(
     await write_audit_log(
         connection,
         actor_user_id=request.actor_user_id,
+        actor_service_principal_id=request.actor_service_principal_id,
         action=request.audit_action,
         target_type="SKILL_VERSION",
         target_id=request.replacement_version_id or attempt.original_skill_version_id,

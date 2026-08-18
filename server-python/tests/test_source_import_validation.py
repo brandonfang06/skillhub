@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from app.publish.package import PackageEntry
-from app.source_import.contracts import SourceIdentity
+from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.service import (
     IdentityAccount,
     NamespaceRecord,
@@ -17,7 +17,11 @@ from app.source_import.service import (
     ValidateSourceSkillInput,
     validate_source_skill_in_transaction,
 )
-from app.source_import.source import canonicalize_github_repository, content_fingerprint, validate_source_revision
+from app.source_import.source import (
+    canonicalize_github_repository,
+    content_fingerprint,
+    validate_source_revision,
+)
 
 
 def account(user_id: str, *, login_name: str | None = None) -> IdentityAccount:
@@ -117,7 +121,9 @@ def validation_input(
         entries=entries or skill_entries(),
         version_override=version_override,
         initiator=initiator,
-        actor_user_id="importer-service",
+        service_actor=SourceServiceActor(
+            "svc_importer", "gitlab-oss-importer", "GitLab OSS Importer"
+        ),
     )
 
 

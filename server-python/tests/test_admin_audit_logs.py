@@ -19,7 +19,9 @@ class FakeMappings:
 
 
 class FakeResult:
-    def __init__(self, rows: list[dict[str, Any]] | None = None, scalar: int | None = None) -> None:
+    def __init__(
+        self, rows: list[dict[str, Any]] | None = None, scalar: int | None = None
+    ) -> None:
         self.rows = rows or []
         self.scalar = scalar
 
@@ -33,10 +35,10 @@ class FakeResult:
 
 
 class FakeTransaction:
-    def __init__(self, connection: "FakeAuditConnection") -> None:
+    def __init__(self, connection: FakeAuditConnection) -> None:
         self.connection = connection
 
-    async def __aenter__(self) -> "FakeAuditConnection":
+    async def __aenter__(self) -> FakeAuditConnection:
         return self.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -44,7 +46,7 @@ class FakeTransaction:
 
 
 class FakeEngine:
-    def __init__(self, connection: "FakeAuditConnection") -> None:
+    def __init__(self, connection: FakeAuditConnection) -> None:
         self.connection = connection
 
     def connect(self) -> FakeTransaction:
@@ -58,7 +60,9 @@ class FakeAuditConnection:
                 "id": 2,
                 "action": "REVIEW_APPROVE",
                 "actor_user_id": "auditor-target",
+                "actor_service_principal_id": None,
                 "display_name": "Audit Target",
+                "service_display_name": None,
                 "detail_json": None,
                 "target_type": "REVIEW",
                 "target_id": 42,
@@ -70,7 +74,9 @@ class FakeAuditConnection:
                 "id": 1,
                 "action": "HIDE_SKILL",
                 "actor_user_id": "auditor-target",
+                "actor_service_principal_id": None,
                 "display_name": "Audit Target",
+                "service_display_name": None,
                 "detail_json": '{"reason":"policy"}',
                 "target_type": "SKILL",
                 "target_id": 9,
@@ -81,7 +87,9 @@ class FakeAuditConnection:
         ]
         self.params: list[dict[str, Any]] = []
 
-    async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
+    async def execute(
+        self, statement: object, params: dict[str, Any] | None = None
+    ) -> FakeResult:
         sql = str(statement)
         bound = params or {}
         self.params.append(bound)
@@ -107,8 +115,14 @@ class FakeAuditConnection:
         if bound.get("resource_type"):
             rows = [row for row in rows if row["target_type"] == bound["resource_type"]]
         if bound.get("resource_id"):
-            rows = [row for row in rows if str(row["target_id"]) == bound["resource_id"]]
-        return sorted([row.copy() for row in rows], key=lambda row: row["created_at"], reverse=True)
+            rows = [
+                row for row in rows if str(row["target_id"]) == bound["resource_id"]
+            ]
+        return sorted(
+            [row.copy() for row in rows],
+            key=lambda row: row["created_at"],
+            reverse=True,
+        )
 
 
 @pytest.mark.anyio
@@ -136,6 +150,9 @@ async def test_admin_audit_log_filters_and_projects_java_fields() -> None:
         "action": "REVIEW_APPROVE",
         "userId": "auditor-target",
         "username": "Audit Target",
+        "actorType": "USER",
+        "actorId": "auditor-target",
+        "actorName": "Audit Target",
         "details": "REVIEW:42",
         "ipAddress": "127.0.0.2",
         "requestId": "req-2",
@@ -152,8 +169,51 @@ async def test_admin_audit_log_filters_and_projects_java_fields() -> None:
 
 
 @pytest.mark.anyio
+async def test_admin_audit_log_projects_service_actor() -> None:
+    connection = FakeAuditConnection()
+    connection.rows = [
+        {
+            "id": 3,
+            "action": "SOURCE_IMPORT_SKILL_VERSION",
+            "actor_user_id": None,
+            "actor_service_principal_id": "svc_importer",
+            "display_name": None,
+            "service_display_name": "GitLab OSS Importer",
+            "detail_json": {},
+            "target_type": "SKILL_VERSION",
+            "target_id": 8,
+            "request_id": "req-3",
+            "client_ip": "127.0.0.3",
+            "created_at": datetime(2026, 8, 18, 8, 1, tzinfo=UTC),
+        }
+    ]
+    response = await list_admin_audit_logs(
+        FakeEngine(connection),
+        page=0,
+        size=20,
+        user_id=None,
+        action=None,
+        request_id=None,
+        ip_address=None,
+        resource_type=None,
+        resource_id=None,
+        start_time=None,
+        end_time=None,
+        platform_roles=["SUPER_ADMIN"],
+    )
+    item = response["items"][0]
+    assert item["userId"] is None
+    assert item["username"] is None
+    assert item["actorType"] == "SERVICE"
+    assert item["actorId"] == "svc_importer"
+    assert item["actorName"] == "GitLab OSS Importer"
+
+
+@pytest.mark.anyio
 async def test_admin_audit_log_requires_auditor_or_super_admin() -> None:
-    with pytest.raises(AdminAuditLogError, match="error.admin.auditLog.readDenied") as denied:
+    with pytest.raises(
+        AdminAuditLogError, match="error.admin.auditLog.readDenied"
+    ) as denied:
         await list_admin_audit_logs(
             FakeEngine(FakeAuditConnection()),
             page=0,
@@ -184,7 +244,9 @@ def test_admin_audit_log_route_uses_read_envelope_and_roles() -> None:
         "platformRoles": ["AUDITOR"] if user_id == "auditor" else ["USER"],
     }
 
-    def read_audit_logs(payload: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+    def read_audit_logs(
+        payload: dict[str, Any], user: dict[str, Any]
+    ) -> dict[str, Any]:
         captured_payloads.append(payload)
         return {
             "items": [{"id": 1}],
@@ -197,7 +259,12 @@ def test_admin_audit_log_route_uses_read_envelope_and_roles() -> None:
     client = TestClient(app)
 
     assert client.get("/api/v1/admin/audit-logs").status_code == 401
-    assert client.get("/api/v1/admin/audit-logs", headers={"X-Mock-User-Id": "user"}).status_code == 403
+    assert (
+        client.get(
+            "/api/v1/admin/audit-logs", headers={"X-Mock-User-Id": "user"}
+        ).status_code
+        == 403
+    )
 
     response = client.get(
         "/api/v1/admin/audit-logs?page=1&size=5&startTime=2026-06-10T08:00:00Z&endTime=2026-06-10T08:03:00Z",
@@ -205,6 +272,11 @@ def test_admin_audit_log_route_uses_read_envelope_and_roles() -> None:
     )
     assert response.status_code == 200
     assert response.json()["msg"] == "\u83b7\u53d6\u6210\u529f"
-    assert response.json()["data"] == {"items": [{"id": 1}], "total": 1, "page": 1, "size": 5}
+    assert response.json()["data"] == {
+        "items": [{"id": 1}],
+        "total": 1,
+        "page": 1,
+        "size": 5,
+    }
     assert isinstance(captured_payloads[-1]["startTime"], datetime)
     assert isinstance(captured_payloads[-1]["endTime"], datetime)

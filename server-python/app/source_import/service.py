@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
-from collections.abc import Awaitable, Callable, Set as AbstractSet
 from typing import Any, Literal, Protocol, cast
 
 from sqlalchemy.exc import IntegrityError
 
 from app.publish.dry_run import slugify
-from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
+from app.publish.orchestration import (
+    PublishWriteInput,
+    PublishWriteResult,
+    execute_publish_write,
+)
 from app.publish.package import PackageEntry, validate_package
 from app.source_import.contracts import (
     SourceIdentity,
@@ -15,6 +20,7 @@ from app.source_import.contracts import (
     SourcePackage,
     SourceRepository,
     SourceRevision,
+    SourceServiceActor,
 )
 from app.source_import.source import content_fingerprint, normalize_source_path
 
@@ -27,17 +33,23 @@ class SourceImportError(ValueError):
 
 
 class SourceImportConflict(SourceImportError):
-    def __init__(self, message: str, *, code: str = "error.sourceImport.conflict") -> None:
+    def __init__(
+        self, message: str, *, code: str = "error.sourceImport.conflict"
+    ) -> None:
         super().__init__(message, status_code=409, code=code)
 
 
 class SourceImportNotFound(SourceImportError):
-    def __init__(self, message: str, *, code: str = "error.sourceImport.identity.notFound") -> None:
+    def __init__(
+        self, message: str, *, code: str = "error.sourceImport.identity.notFound"
+    ) -> None:
         super().__init__(message, status_code=404, code=code)
 
 
 class SourceImportValidationError(SourceImportError):
-    def __init__(self, message: str, *, code: str = "error.sourceImport.validation") -> None:
+    def __init__(
+        self, message: str, *, code: str = "error.sourceImport.validation"
+    ) -> None:
         super().__init__(message, status_code=400, code=code)
 
 
@@ -97,7 +109,7 @@ class ValidateSourceSkillInput:
     entries: list[PackageEntry]
     version_override: str | None
     initiator: SourceIdentity | None
-    actor_user_id: str
+    service_actor: SourceServiceActor
     allowed_extensions: AbstractSet[str] | None = None
     request_id: str | None = None
     client_ip: str | None = None
@@ -144,7 +156,7 @@ class EnsureSourceNamespaceInput:
     repository: SourceRepository
     requested_display_name: str
     fallback_owner: SourceIdentity
-    actor_user_id: str
+    service_actor: SourceServiceActor
     request_id: str | None = None
 
 
@@ -157,15 +169,23 @@ class EnsureSourceNamespaceResult:
 
 
 class SourceImportRepositoryProtocol(Protocol):
-    async def read_identity_accounts(self, provider_code: str, login_name: str) -> list[IdentityAccount]: ...
+    async def read_identity_accounts(
+        self, provider_code: str, login_name: str
+    ) -> list[IdentityAccount]: ...
 
     async def read_namespace(self, slug: str) -> NamespaceRecord | None: ...
 
-    async def read_namespace_source_by_repository(self, repository_url: str) -> NamespaceSourceBinding | None: ...
+    async def read_namespace_source_by_repository(
+        self, repository_url: str
+    ) -> NamespaceSourceBinding | None: ...
 
-    async def read_namespace_source_by_namespace(self, namespace_id: int) -> NamespaceSourceBinding | None: ...
+    async def read_namespace_source_by_namespace(
+        self, namespace_id: int
+    ) -> NamespaceSourceBinding | None: ...
 
-    async def read_namespace_owners(self, namespace_id: int) -> list[IdentityAccount]: ...
+    async def read_namespace_owners(
+        self, namespace_id: int
+    ) -> list[IdentityAccount]: ...
 
     async def create_namespace_source(
         self,
@@ -174,15 +194,21 @@ class SourceImportRepositoryProtocol(Protocol):
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
-        actor_user_id: str,
+        service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]: ...
 
-    async def read_source_skill(self, namespace_source_id: int, source_path: str) -> SourceSkillRecord | None: ...
+    async def read_source_skill(
+        self, namespace_source_id: int, source_path: str
+    ) -> SourceSkillRecord | None: ...
 
-    async def read_skill_by_slug(self, namespace_id: int, slug: str) -> SourceSkillRecord | None: ...
+    async def read_skill_by_slug(
+        self, namespace_id: int, slug: str
+    ) -> SourceSkillRecord | None: ...
 
-    async def read_source_skill_version(self, skill_id: int, version: str) -> SourceSkillVersionRecord | None: ...
+    async def read_source_skill_version(
+        self, skill_id: int, version: str
+    ) -> SourceSkillVersionRecord | None: ...
 
     async def read_source_skill_version_by_fingerprint(
         self,
@@ -190,7 +216,9 @@ class SourceImportRepositoryProtocol(Protocol):
         fingerprint: str,
     ) -> SourceSkillVersionRecord | None: ...
 
-    async def read_namespace_membership(self, namespace_id: int, user_id: str) -> str | None: ...
+    async def read_namespace_membership(
+        self, namespace_id: int, user_id: str
+    ) -> str | None: ...
 
 
 async def _resolve_unique_active_identity(
@@ -200,16 +228,24 @@ async def _resolve_unique_active_identity(
     missing_is_allowed: bool,
     label: str,
 ) -> IdentityAccount | None:
-    accounts = await repository.read_identity_accounts(identity.provider_code, identity.login_name)
+    accounts = await repository.read_identity_accounts(
+        identity.provider_code, identity.login_name
+    )
     if not accounts:
         if missing_is_allowed:
             return None
         raise SourceImportNotFound(f"{label} identity was not found")
     if len(accounts) != 1:
-        raise SourceImportConflict(f"{label} identity is ambiguous", code="error.sourceImport.identity.ambiguous")
+        raise SourceImportConflict(
+            f"{label} identity is ambiguous",
+            code="error.sourceImport.identity.ambiguous",
+        )
     account = accounts[0]
     if account.status != "ACTIVE":
-        raise SourceImportConflict(f"{label} identity is not active", code="error.sourceImport.identity.inactive")
+        raise SourceImportConflict(
+            f"{label} identity is not active",
+            code="error.sourceImport.identity.inactive",
+        )
     return account
 
 
@@ -263,7 +299,9 @@ async def ensure_source_namespace_in_transaction(
         )
 
     namespace = await repository.read_namespace(source.namespace_slug)
-    repository_binding = await repository.read_namespace_source_by_repository(source.canonical_url)
+    repository_binding = await repository.read_namespace_source_by_repository(
+        source.canonical_url
+    )
     if repository_binding is not None and (
         namespace is None or repository_binding.namespace_id != namespace.id
     ):
@@ -273,15 +311,22 @@ async def ensure_source_namespace_in_transaction(
         )
 
     if namespace is not None:
-        namespace_binding = await repository.read_namespace_source_by_namespace(namespace.id)
-        if namespace_binding is None or namespace_binding.repository_url != source.canonical_url:
+        namespace_binding = await repository.read_namespace_source_by_namespace(
+            namespace.id
+        )
+        if (
+            namespace_binding is None
+            or namespace_binding.repository_url != source.canonical_url
+        ):
             raise SourceImportConflict(
                 "Derived namespace slug already exists without the matching source binding",
                 code="error.sourceImport.namespace.slug.conflict",
             )
         _require_writable_source_namespace(namespace)
         owner = await read_current_namespace_owner(repository, namespace.id)
-        return EnsureSourceNamespaceResult("EXISTING", namespace, namespace_binding, owner)
+        return EnsureSourceNamespaceResult(
+            "EXISTING", namespace, namespace_binding, owner
+        )
 
     fallback_owner = await _resolve_unique_active_identity(
         repository,
@@ -296,27 +341,37 @@ async def ensure_source_namespace_in_transaction(
         display_name=source.namespace_display_name,
         repository_url=source.canonical_url,
         owner=fallback_owner,
-        actor_user_id=request.actor_user_id,
+        service_actor=request.service_actor,
         request_id=request.request_id,
     )
-    return EnsureSourceNamespaceResult("CREATED", created_namespace, created_binding, fallback_owner)
+    return EnsureSourceNamespaceResult(
+        "CREATED", created_namespace, created_binding, fallback_owner
+    )
 
 
-def _resolve_effective_version(source_version: str | None, version_override: str | None) -> str:
+def _resolve_effective_version(
+    source_version: str | None, version_override: str | None
+) -> str:
     explicit_version = (source_version or "").strip()
     override = (version_override or "").strip()
     if explicit_version:
         if override:
-            raise SourceImportValidationError("A version override cannot replace an explicit SKILL.md version")
+            raise SourceImportValidationError(
+                "A version override cannot replace an explicit SKILL.md version"
+            )
         return explicit_version
     if not override:
-        raise SourceImportValidationError("A version override is required when SKILL.md has no version")
+        raise SourceImportValidationError(
+            "A version override is required when SKILL.md has no version"
+        )
     if len(override) > 64:
         raise SourceImportValidationError("The version override exceeds 64 characters")
     return override
 
 
-def _stable_owner_for_source(source_skill: SourceSkillRecord | None, attribution: IdentityAccount) -> IdentityAccount:
+def _stable_owner_for_source(
+    source_skill: SourceSkillRecord | None, attribution: IdentityAccount
+) -> IdentityAccount:
     if source_skill is None:
         return attribution
     return IdentityAccount(
@@ -334,31 +389,47 @@ async def validate_source_skill_in_transaction(
 ) -> SourceSkillValidationPlan:
     namespace = await repository.read_namespace(request.namespace_slug)
     if namespace is None:
-        raise SourceImportNotFound("Source namespace was not found", code="error.sourceImport.namespace.notFound")
+        raise SourceImportNotFound(
+            "Source namespace was not found",
+            code="error.sourceImport.namespace.notFound",
+        )
     _require_writable_source_namespace(namespace)
-    namespace_binding = await repository.read_namespace_source_by_namespace(namespace.id)
-    if namespace_binding is None or namespace_binding.repository_url != request.repository.canonical_url:
+    namespace_binding = await repository.read_namespace_source_by_namespace(
+        namespace.id
+    )
+    if (
+        namespace_binding is None
+        or namespace_binding.repository_url != request.repository.canonical_url
+    ):
         raise SourceImportConflict(
             "Source namespace repository binding does not match the request",
             code="error.sourceImport.repository.mismatch",
         )
 
     normalized_source_path = normalize_source_path(request.source_path)
-    package_validation = validate_package(request.entries, allowed_extensions=request.allowed_extensions)
+    package_validation = validate_package(
+        request.entries, allowed_extensions=request.allowed_extensions
+    )
     if not package_validation.valid or package_validation.metadata is None:
-        messages = package_validation.errors or ["Package must contain valid SKILL.md metadata"]
+        messages = package_validation.errors or [
+            "Package must contain valid SKILL.md metadata"
+        ]
         raise SourceImportValidationError(", ".join(messages))
     if package_validation.warnings:
         raise SourceImportValidationError(", ".join(package_validation.warnings))
     metadata = package_validation.metadata
-    effective_version = _resolve_effective_version(metadata.version, request.version_override)
+    effective_version = _resolve_effective_version(
+        metadata.version, request.version_override
+    )
     try:
         resolved_slug = slugify(metadata.name)
     except ValueError as exc:
         raise SourceImportValidationError(f"Invalid skill name: {exc}") from exc
 
     fingerprint = content_fingerprint(request.entries)
-    source_skill = await repository.read_source_skill(namespace_binding.id, normalized_source_path)
+    source_skill = await repository.read_source_skill(
+        namespace_binding.id, normalized_source_path
+    )
     if source_skill is not None:
         if source_skill.slug != resolved_slug:
             raise SourceImportConflict(
@@ -366,17 +437,24 @@ async def validate_source_skill_in_transaction(
                 code="error.sourceImport.skill.sourceIdentityDrift",
             )
         if source_skill.status != "ACTIVE":
-            raise SourceImportConflict("Source skill is not writable", code="error.sourceImport.skill.notWritable")
+            raise SourceImportConflict(
+                "Source skill is not writable",
+                code="error.sourceImport.skill.notWritable",
+            )
     elif await repository.read_skill_by_slug(namespace.id, resolved_slug) is not None:
         raise SourceImportConflict(
             "Skill slug already exists but is not bound to this source path",
             code="error.sourceImport.skill.slug.conflict",
         )
 
-    attribution = await resolve_attribution_user(repository, namespace.id, request.initiator)
+    attribution = await resolve_attribution_user(
+        repository, namespace.id, request.initiator
+    )
     stable_owner = _stable_owner_for_source(source_skill, attribution)
     existing_version = (
-        await repository.read_source_skill_version(source_skill.skill_id, effective_version)
+        await repository.read_source_skill_version(
+            source_skill.skill_id, effective_version
+        )
         if source_skill is not None
         else None
     )
@@ -388,15 +466,22 @@ async def validate_source_skill_in_transaction(
                 "An immutable version already exists with different source content",
                 code="error.sourceImport.version.immutableConflict",
             )
-    elif source_skill is not None and source_skill.source_id is not None and await repository.read_source_skill_version_by_fingerprint(
-        source_skill.source_id,
-        fingerprint,
-    ) is not None:
+    elif (
+        source_skill is not None
+        and source_skill.source_id is not None
+        and await repository.read_source_skill_version_by_fingerprint(
+            source_skill.source_id,
+            fingerprint,
+        )
+        is not None
+    ):
         outcome = "SKIPPED_UNCHANGED"
     else:
         outcome = "IMPORT"
 
-    membership = await repository.read_namespace_membership(namespace.id, attribution.user_id)
+    membership = await repository.read_namespace_membership(
+        namespace.id, attribution.user_id
+    )
     return SourceSkillValidationPlan(
         outcome=outcome,
         namespace=namespace,
@@ -426,14 +511,20 @@ async def ensure_source_namespace(
 
     factory = repository_factory or SourceImportRepository
     async with engine.begin() as connection:
-        return await ensure_source_namespace_in_transaction(factory(connection), request)
+        return await ensure_source_namespace_in_transaction(
+            factory(connection), request
+        )
 
 
-async def validate_source_skill(engine: Any, request: ValidateSourceSkillInput) -> SourceSkillValidationPlan:
+async def validate_source_skill(
+    engine: Any, request: ValidateSourceSkillInput
+) -> SourceSkillValidationPlan:
     from app.source_import.repository import SourceImportRepository
 
     async with engine.connect() as connection:
-        return await validate_source_skill_in_transaction(SourceImportRepository(connection), request)
+        return await validate_source_skill_in_transaction(
+            SourceImportRepository(connection), request
+        )
 
 
 def build_source_publish_input(
@@ -458,7 +549,7 @@ def build_source_publish_input(
         summary=metadata.description,
         publisher_id=plan.stable_owner.user_id,
         submitter_id=plan.review_submitter.user_id,
-        actor_user_id=request.actor_user_id,
+        actor_service_principal_id=request.service_actor.service_principal_id,
         visibility="PUBLIC",
         version=plan.package.effective_version,
         auto_publish=False,
@@ -474,7 +565,9 @@ def build_source_publish_input(
     )
 
 
-Validator = Callable[[Any, ValidateSourceSkillInput], Awaitable[SourceSkillValidationPlan]]
+Validator = Callable[
+    [Any, ValidateSourceSkillInput], Awaitable[SourceSkillValidationPlan]
+]
 Publisher = Callable[..., Awaitable[PublishWriteResult]]
 
 
@@ -494,7 +587,9 @@ async def submit_source_skill(
         return SourceSkillSubmissionResult(
             outcome=cast(Any, plan.outcome),
             plan=plan,
-            skill_id=plan.source_skill.skill_id if plan.source_skill is not None else None,
+            skill_id=plan.source_skill.skill_id
+            if plan.source_skill is not None
+            else None,
             version_id=None,
             version_status=None,
             review_task_id=None,
@@ -502,19 +597,23 @@ async def submit_source_skill(
 
     factory = repository_factory or SourceImportRepository
 
-    async def persist_provenance(connection: Any, skill_id: int, version_id: int) -> None:
+    async def persist_provenance(
+        connection: Any, skill_id: int, version_id: int
+    ) -> None:
         repository = factory(connection)
         await repository.persist_source_submission(
             namespace_id=plan.namespace.id,
             namespace_source_id=plan.namespace_binding.id,
-            source_skill_id=plan.source_skill.source_id if plan.source_skill is not None else None,
+            source_skill_id=plan.source_skill.source_id
+            if plan.source_skill is not None
+            else None,
             source_path=plan.package.source_path,
             skill_id=skill_id,
             version_id=version_id,
             revision=request.revision,
             content_fingerprint=plan.package.content_fingerprint,
             repository_url=request.repository.canonical_url,
-            actor_user_id=request.actor_user_id,
+            service_actor=request.service_actor,
             review_submitter_id=plan.review_submitter.user_id,
             stable_owner_id=plan.stable_owner.user_id,
             outcome="IMPORTED",
@@ -522,6 +621,19 @@ async def submit_source_skill(
             request_id=request.request_id,
             client_ip=request.client_ip,
             user_agent=request.user_agent,
+            initiator_provider_code=(
+                request.initiator.provider_code if request.initiator is not None else None
+            ),
+            initiator_login_name=(
+                request.initiator.login_name if request.initiator is not None else None
+            ),
+            attribution_source=(
+                "INITIATOR"
+                if request.initiator is not None
+                and plan.review_submitter.provider_code == request.initiator.provider_code
+                and plan.review_submitter.login_name == request.initiator.login_name
+                else "NAMESPACE_OWNER_FALLBACK"
+            ),
         )
 
     try:

@@ -1,36 +1,40 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Any, Awaitable, Callable, Protocol
+from typing import Any, Protocol
 
+from app.admin.search import upsert_skill_search_document
 from app.db.unit_of_work import transaction_connection
+from app.notifications.publisher import NotificationFanout
 from app.object_storage import ObjectStorage, object_storage_for_base_path
-
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
-    delete_local_storage_objects_or_record_compensation,
-    cleanup_replaceable_version,
     VersionReplacementConflict,
+    cleanup_replaceable_version,
+    delete_local_storage_objects_or_record_compensation,
 )
-from app.publish.side_effects import PublishSideEffectInput, PublishSideEffectResult, apply_publish_side_effects
+from app.publish.side_effects import (
+    PublishSideEffectInput,
+    PublishSideEffectResult,
+    apply_publish_side_effects,
+)
 from app.publish.storage import StoredPackageResult, write_package_objects
 from app.publish.transaction import (
     PublishDbFinalizeInput,
     PublishDbPrepareInput,
-    prepare_publish_db_records,
     finalize_publish_db_records,
+    prepare_publish_db_records,
 )
-from app.admin.search import upsert_skill_search_document
-from app.notifications.publisher import NotificationFanout
+from app.review.archive import ReviewAttemptArchiveInput, archive_review_attempt
 from app.review.notifications import (
     publish_review_notifications,
     read_review_submission_recipients,
     write_review_submitted_notifications,
 )
-from app.review.archive import ReviewAttemptArchiveInput, archive_review_attempt
 
 
 @dataclass(frozen=True)
@@ -60,8 +64,11 @@ class PublishWriteInput:
     task_id: str | None = None
     submitter_id: str | None = None
     actor_user_id: str | None = None
+    actor_service_principal_id: str | None = None
 
-    def with_replacement(self, replacement_version: ReplaceableVersion) -> "PublishWriteInput":
+    def with_replacement(
+        self, replacement_version: ReplaceableVersion
+    ) -> PublishWriteInput:
         return replace(self, replacement=replacement_version)
 
     @property
@@ -71,6 +78,12 @@ class PublishWriteInput:
     @property
     def resolved_actor_user_id(self) -> str:
         return self.actor_user_id or self.publisher_id
+
+    @property
+    def audit_actor_user_id(self) -> str | None:
+        if self.actor_service_principal_id is not None:
+            return None
+        return self.resolved_actor_user_id
 
 
 @dataclass(frozen=True)
@@ -96,7 +109,9 @@ def write_local_package_objects(
     version_id: int,
     entries: list[PackageEntry],
 ) -> StoredPackageResult:
-    return write_package_objects(object_storage_for_base_path(storage_base_path), skill_id, version_id, entries)
+    return write_package_objects(
+        object_storage_for_base_path(storage_base_path), skill_id, version_id, entries
+    )
 
 
 async def execute_publish_write(
@@ -110,19 +125,25 @@ async def execute_publish_write(
 ) -> PublishWriteResult:
     if request.replacement is not None and request.replacement.status == "REJECTED":
         if request.auto_publish or request.visibility == "PRIVATE":
-            raise VersionReplacementConflict("Rejected version resubmission requires review")
+            raise VersionReplacementConflict(
+                "Rejected version resubmission requires review"
+            )
 
     replacement_storage_keys: list[str] = []
     replacement_cleanup = None
     notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         if request.replacement is not None:
-            replacement_cleanup = await cleanup_replaceable_version(connection, request.replacement)
+            replacement_cleanup = await cleanup_replaceable_version(
+                connection, request.replacement
+            )
             replacement_storage_keys = replacement_cleanup.storage_keys
             if replacement_cleanup.archived_review is not None and (
                 request.auto_publish or request.visibility == "PRIVATE"
             ):
-                raise VersionReplacementConflict("Rejected version resubmission requires review")
+                raise VersionReplacementConflict(
+                    "Rejected version resubmission requires review"
+                )
 
         prepared = await prepare_publish_db_records(
             connection,
@@ -190,21 +211,28 @@ async def execute_publish_write(
                 now=request.now,
                 task_id=request.task_id,
                 submitter_id=request.resolved_submitter_id,
-                actor_user_id=request.resolved_actor_user_id,
+                actor_user_id=request.audit_actor_user_id,
+                actor_service_principal_id=request.actor_service_principal_id,
             ),
         )
         if side_effects.scan_task is not None and scan_task_publisher is not None:
             await scan_task_publisher.publish_scan_task(side_effects.scan_task)
-        if replacement_cleanup is not None and replacement_cleanup.archived_review is not None:
+        if (
+            replacement_cleanup is not None
+            and replacement_cleanup.archived_review is not None
+        ):
             if side_effects.review_task_id is None:
-                raise ValueError("Rejected version resubmission must create a review task")
+                raise ValueError(
+                    "Rejected version resubmission must create a review task"
+                )
             await archive_review_attempt(
                 connection,
                 ReviewAttemptArchiveInput(
                     attempt=replacement_cleanup.archived_review,
                     replacement_version_id=prepared.version_id,
                     replacement_review_task_id=side_effects.review_task_id,
-                    actor_user_id=request.resolved_actor_user_id,
+                    actor_user_id=request.audit_actor_user_id,
+                    actor_service_principal_id=request.actor_service_principal_id,
                     request_id=request.request_id,
                     client_ip=request.client_ip,
                     user_agent=request.user_agent,

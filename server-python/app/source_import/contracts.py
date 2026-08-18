@@ -5,10 +5,13 @@ from typing import Literal
 
 from app.publish.package import PackageEntry, SkillMetadata
 
-
 SourceRefType = Literal["TAG", "BRANCH", "COMMIT"]
-SourceImportPlanOutcome = Literal["IMPORT", "SKIPPED_UNCHANGED", "SKIPPED_ALREADY_IMPORTED"]
-SourceImportOutcome = Literal["IMPORTED", "SKIPPED_UNCHANGED", "SKIPPED_ALREADY_IMPORTED"]
+SourceImportPlanOutcome = Literal[
+    "IMPORT", "SKIPPED_UNCHANGED", "SKIPPED_ALREADY_IMPORTED"
+]
+SourceImportOutcome = Literal[
+    "IMPORTED", "SKIPPED_UNCHANGED", "SKIPPED_ALREADY_IMPORTED"
+]
 
 
 @dataclass(frozen=True)
@@ -31,6 +34,13 @@ class SourceRevision:
 class SourceIdentity:
     provider_code: str
     login_name: str
+
+
+@dataclass(frozen=True)
+class SourceServiceActor:
+    service_principal_id: str
+    code: str
+    display_name: str
 
 
 @dataclass(frozen=True)

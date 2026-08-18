@@ -6,7 +6,11 @@ from typing import Any
 
 from sqlalchemy import text
 
-from app.service_accounts.contracts import ServicePrincipal, ServiceTokenMetadata
+from app.service_accounts.contracts import (
+    ServicePrincipal,
+    ServicePrincipalSummary,
+    ServiceTokenMetadata,
+)
 
 
 def _scopes(value: Any) -> tuple[str, ...]:
@@ -45,9 +49,63 @@ def _token(row: dict[str, Any]) -> ServiceTokenMetadata:
     )
 
 
+def _principal_summary(row: dict[str, Any]) -> ServicePrincipalSummary:
+    principal = _principal(row)
+    return ServicePrincipalSummary(
+        **principal.__dict__,
+        active_token_count=int(row["active_token_count"]),
+        nearest_token_expiry=row.get("nearest_token_expiry"),
+        last_used_at=row.get("last_used_at"),
+    )
+
+
 class ServiceAccountRepository:
     def __init__(self, connection: Any) -> None:
         self.connection = connection
+
+    async def list_principals(
+        self,
+        *,
+        page: int,
+        size: int,
+    ) -> tuple[list[ServicePrincipalSummary], int]:
+        total = int(
+            (
+                await self.connection.execute(
+                    text("SELECT COUNT(*) FROM service_principal")
+                )
+            ).scalar_one()
+        )
+        rows = (
+            (
+                await self.connection.execute(
+                    text(
+                        """
+                    SELECT principal.*,
+                           COUNT(token.id) FILTER (
+                               WHERE token.revoked_at IS NULL
+                                 AND token.expires_at > CURRENT_TIMESTAMP
+                           ) AS active_token_count,
+                           MIN(token.expires_at) FILTER (
+                               WHERE token.revoked_at IS NULL
+                                 AND token.expires_at > CURRENT_TIMESTAMP
+                           ) AS nearest_token_expiry,
+                           MAX(token.last_used_at) AS last_used_at
+                    FROM service_principal principal
+                    LEFT JOIN service_token token
+                      ON token.service_principal_id = principal.id
+                    GROUP BY principal.id
+                    ORDER BY principal.created_at DESC, principal.id ASC
+                    OFFSET :offset LIMIT :limit
+                    """
+                    ),
+                    {"offset": page * size, "limit": size},
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return [_principal_summary(dict(row)) for row in rows], total
 
     async def create_principal(
         self,

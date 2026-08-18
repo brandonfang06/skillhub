@@ -11,10 +11,11 @@ from app.db.models import AuditLog
 async def write_audit_log(
     connection: Any,
     *,
-    actor_user_id: str,
+    actor_user_id: str | None = None,
+    actor_service_principal_id: str | None = None,
     action: str,
     target_type: str,
-    target_id: int,
+    target_id: int | None,
     request_id: str | None,
     client_ip: str | None,
     user_agent: str | None,
@@ -22,11 +23,14 @@ async def write_audit_log(
     created_at: datetime,
     detail_json: str | None = None,
 ) -> None:
+    if (actor_user_id is None) == (actor_service_principal_id is None):
+        raise ValueError("exactly one audit actor is required")
     stored_detail = detail_json if detail_json is not None else (detail or None)
     await connection.execute(
         insert(AuditLog),
         {
             "actor_user_id": actor_user_id,
+            "actor_service_principal_id": actor_service_principal_id,
             "action": action,
             "target_type": target_type,
             "target_id": target_id,

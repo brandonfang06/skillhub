@@ -6,31 +6,32 @@ from fastapi import FastAPI
 
 from app.api.account_merge import router as account_merge_router
 from app.api.admin_audit_logs import router as admin_audit_logs_router
-from app.api.admin_skills import router as admin_skills_router
 from app.api.admin_labels import router as admin_labels_router
 from app.api.admin_review_reports import router as admin_review_reports_router
 from app.api.admin_search import router as admin_search_router
+from app.api.admin_service_principals import router as admin_service_principals_router
+from app.api.admin_skills import router as admin_skills_router
 from app.api.admin_users import router as admin_users_router
 from app.api.auth import router as auth_router
 from app.api.device_auth import router as device_auth_router
 from app.api.download_analytics import router as download_analytics_router
 from app.api.governance import router as governance_router
 from app.api.health import router as health_router
-from app.api.namespace_analytics import router as namespace_analytics_router
 from app.api.labels import router as labels_router
 from app.api.lifecycle import router as lifecycle_router
 from app.api.local_auth import router as local_auth_router
-from app.api.notifications import router as notifications_router
+from app.api.namespace_analytics import router as namespace_analytics_router
 from app.api.namespaces import router as namespaces_router
-from app.api.promotions import router as promotions_router
+from app.api.notifications import router as notifications_router
 from app.api.playground import router as playground_router
+from app.api.promotions import router as promotions_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
-from app.api.skill_reports import router as skill_reports_router
-from app.api.source_imports import router as source_imports_router
 from app.api.security_audit import router as security_audit_router
+from app.api.skill_reports import router as skill_reports_router
 from app.api.skills import router as skills_router
 from app.api.social import router as social_router
+from app.api.source_imports import router as source_imports_router
 from app.api.tokens import router as tokens_router
 from app.api.user_profile import router as user_profile_router
 from app.api.well_known import router as well_known_router
@@ -46,7 +47,6 @@ from app.download_analytics import prune_expired_download_events
 from app.notifications.fanout import NotificationFanoutManager
 from app.publish.scan_daemon import create_scan_consumer_daemon
 
-
 log = logging.getLogger(__name__)
 DOWNLOAD_ANALYTICS_RETENTION_INTERVAL_SECONDS = 24 * 60 * 60
 
@@ -60,12 +60,16 @@ async def run_builtin_skill_sync(engine: object, settings: object) -> None:
         log.warning("Built-in skill synchronization failed: %s", exc)
 
 
-async def run_download_analytics_retention(engine: object, retention_months: int) -> None:
+async def run_download_analytics_retention(
+    engine: object, retention_months: int
+) -> None:
     if retention_months <= 0:
         return
     try:
         async with engine.begin() as connection:
-            deleted = await prune_expired_download_events(connection, retention_months=retention_months)
+            deleted = await prune_expired_download_events(
+                connection, retention_months=retention_months
+            )
         if deleted > 0:
             log.info("Pruned %s expired download analytics events", deleted)
     except asyncio.CancelledError:
@@ -74,7 +78,9 @@ async def run_download_analytics_retention(engine: object, retention_months: int
         log.warning("Download analytics retention cleanup failed: %s", exc)
 
 
-async def run_download_analytics_retention_loop(engine: object, retention_months: int) -> None:
+async def run_download_analytics_retention_loop(
+    engine: object, retention_months: int
+) -> None:
     if retention_months <= 0:
         return
     while True:
@@ -96,9 +102,13 @@ async def lifespan(app: FastAPI):
     app.state.download_analytics_retention_task = None
     if settings.download_analytics_retention_months > 0:
         app.state.download_analytics_retention_task = asyncio.create_task(
-            run_download_analytics_retention_loop(app.state.db_engine, settings.download_analytics_retention_months)
+            run_download_analytics_retention_loop(
+                app.state.db_engine, settings.download_analytics_retention_months
+            )
         )
-    app.state.scan_consumer_daemon = create_scan_consumer_daemon(settings, app.state.db_engine, app.state.redis_client)
+    app.state.scan_consumer_daemon = create_scan_consumer_daemon(
+        settings, app.state.db_engine, app.state.redis_client
+    )
     if app.state.scan_consumer_daemon is not None:
         app.state.scan_consumer_daemon.start()
     try:
@@ -126,6 +136,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_labels_router)
     app.include_router(admin_review_reports_router)
     app.include_router(admin_search_router)
+    app.include_router(admin_service_principals_router)
     app.include_router(admin_skills_router)
     app.include_router(admin_users_router)
     app.include_router(auth_router)

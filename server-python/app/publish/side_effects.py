@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-from uuid import uuid4
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import text
 
@@ -33,6 +33,7 @@ class PublishSideEffectInput:
     task_id: str | None = None
     submitter_id: str | None = None
     actor_user_id: str | None = None
+    actor_service_principal_id: str | None = None
 
     @property
     def resolved_submitter_id(self) -> str:
@@ -41,6 +42,12 @@ class PublishSideEffectInput:
     @property
     def resolved_actor_user_id(self) -> str:
         return self.actor_user_id or self.publisher_id
+
+    @property
+    def audit_actor_user_id(self) -> str | None:
+        if self.actor_service_principal_id is not None:
+            return None
+        return self.resolved_actor_user_id
 
 
 @dataclass(frozen=True)
@@ -80,7 +87,9 @@ class PublishSideEffectResult:
 
 
 def plan_publish_side_effects(request: PublishSideEffectInput) -> PublishSideEffectPlan:
-    create_review_task = request.version_status == "PENDING_REVIEW" and request.visibility != "PRIVATE"
+    create_review_task = (
+        request.version_status == "PENDING_REVIEW" and request.visibility != "PRIVATE"
+    )
     create_security_audit = request.scanner_enabled
     return PublishSideEffectPlan(
         create_review_task=create_review_task,
@@ -88,7 +97,8 @@ def plan_publish_side_effects(request: PublishSideEffectInput) -> PublishSideEff
         emit_skill_published=request.version_status == "PUBLISHED",
         create_security_audit=create_security_audit,
         publish_scan_task=create_security_audit,
-        mark_version_scanning=create_security_audit and request.version_status != "PUBLISHED",
+        mark_version_scanning=create_security_audit
+        and request.version_status != "PUBLISHED",
         create_compat_audit=request.compat_namespace is not None,
     )
 
@@ -98,7 +108,10 @@ def build_scan_task_payload(request: PublishSideEffectInput) -> ScanTaskPayload:
     scan_mode = request.scan_mode.lower()
     if scan_mode == "upload":
         skill_path = None
-        bundle_key = request.bundle_key or f"packages/{request.skill_id}/{request.version_id}/bundle.zip"
+        bundle_key = (
+            request.bundle_key
+            or f"packages/{request.skill_id}/{request.version_id}/bundle.zip"
+        )
     else:
         skill_path = request.skill_path or f"/tmp/skillhub-scans/{request.version_id}"
         bundle_key = None
@@ -121,7 +134,9 @@ def build_compat_publish_audit_detail(*, namespace: str, slug: str | None) -> st
     return json.dumps(detail, separators=(",", ":"))
 
 
-async def apply_publish_side_effects(connection: Any, request: PublishSideEffectInput) -> PublishSideEffectResult:
+async def apply_publish_side_effects(
+    connection: Any, request: PublishSideEffectInput
+) -> PublishSideEffectResult:
     plan = plan_publish_side_effects(request)
     now = normalized_now(request.now)
     review_task_id: int | None = None
@@ -225,7 +240,8 @@ async def apply_publish_side_effects(connection: Any, request: PublishSideEffect
     if plan.create_compat_audit:
         await write_audit_log(
             connection,
-            actor_user_id=request.resolved_actor_user_id,
+            actor_user_id=request.audit_actor_user_id,
+            actor_service_principal_id=request.actor_service_principal_id,
             action="COMPAT_PUBLISH",
             target_type="SKILL_VERSION",
             target_id=request.version_id,

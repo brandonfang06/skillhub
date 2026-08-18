@@ -8,11 +8,16 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.publish.package import PackageEntry
-from app.source_import.contracts import SourceIdentity
+from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.repository import SourceImportRepository
-from app.source_import.service import ValidateSourceSkillInput, validate_source_skill_in_transaction
-from app.source_import.source import canonicalize_github_repository, validate_source_revision
-
+from app.source_import.service import (
+    ValidateSourceSkillInput,
+    validate_source_skill_in_transaction,
+)
+from app.source_import.source import (
+    canonicalize_github_repository,
+    validate_source_revision,
+)
 
 TEST_DATABASE_URL = os.getenv("SKILLHUB_TEST_DATABASE_URL")
 
@@ -105,7 +110,9 @@ async def test_source_validation_reads_real_namespace_identity_and_membership_st
                     entries=_entries(),
                     version_override="git-" + "a" * 40,
                     initiator=SourceIdentity("keycloak", trigger_login),
-                    actor_user_id=actor_id,
+                    service_actor=SourceServiceActor(
+                        f"svc_{suffix}", f"validation-{suffix}", "Validation service"
+                    ),
                 ),
             )
 

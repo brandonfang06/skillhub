@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.source_import.contracts import SourceIdentity
+from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.service import (
     EnsureSourceNamespaceInput,
     IdentityAccount,
@@ -56,7 +56,7 @@ class FakeSourceImportRepository:
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
-        actor_user_id: str,
+        service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]:
         namespace = NamespaceRecord(
@@ -77,7 +77,7 @@ class FakeSourceImportRepository:
                 "display_name": display_name,
                 "repository_url": repository_url,
                 "owner_id": owner.user_id,
-                "actor_user_id": actor_user_id,
+                "service_principal_id": service_actor.service_principal_id,
                 "request_id": request_id,
             }
         )
@@ -105,7 +105,9 @@ def ensure_input() -> EnsureSourceNamespaceInput:
         repository=canonicalize_github_repository("https://github.com/mattpocock/skills"),
         requested_display_name="OSS-mattpocock-skills",
         fallback_owner=SourceIdentity(provider_code="keycloak", login_name="platform-owner"),
-        actor_user_id="importer-service",
+        service_actor=SourceServiceActor(
+            "svc_importer", "gitlab-oss-importer", "GitLab OSS Importer"
+        ),
         request_id="request-1",
     )
 
@@ -127,7 +129,7 @@ async def test_creates_missing_namespace_with_fallback_owner_and_repository_bind
             "display_name": "OSS-mattpocock-skills",
             "repository_url": "https://github.com/mattpocock/skills",
             "owner_id": "owner-user",
-            "actor_user_id": "importer-service",
+            "service_principal_id": "svc_importer",
             "request_id": "request-1",
         }
     ]

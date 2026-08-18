@@ -10,7 +10,7 @@ def test_sop_documents_complete_source_import_contract() -> None:
     for name in (
         "SKILLHUB_IMPORTER_IMAGE",
         "SKILLHUB_BASE_URL",
-        "SKILLHUB_API_TOKEN",
+        "SKILLHUB_SERVICE_TOKEN",
         "SKILLHUB_SOURCE_REPOSITORY_URL",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
@@ -41,8 +41,12 @@ def test_sop_explains_identity_review_subpath_and_failures() -> None:
     content = SOP.read_text(encoding="utf-8")
     for phrase in (
         "source:import",
-        "SKILL_ADMIN",
         "SUPER_ADMIN",
+        "st_",
+        "/admin/service-principals",
+        "365",
+        "輪替",
+        "撤銷",
         "keycloak",
         "tsso",
         "https://skillhub.example.com/skillhub",
@@ -55,3 +59,4 @@ def test_sop_explains_identity_review_subpath_and_failures() -> None:
         "0 個 SKILL.md",
     ):
         assert phrase in content
+    assert "`SKILLHUB_API_TOKEN` 不會 fallback" in content

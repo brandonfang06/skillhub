@@ -19,6 +19,13 @@ class ServicePrincipal:
 
 
 @dataclass(frozen=True)
+class ServicePrincipalSummary(ServicePrincipal):
+    active_token_count: int
+    nearest_token_expiry: datetime | None
+    last_used_at: datetime | None
+
+
+@dataclass(frozen=True)
 class ServiceTokenMetadata:
     id: int
     service_principal_id: str

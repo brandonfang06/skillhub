@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.publish.orchestration import PublishWriteResult
 from app.publish.package import PackageEntry, SkillMetadata
-from app.source_import.contracts import SourcePackage
+from app.source_import.contracts import SourcePackage, SourceServiceActor
 from app.source_import.service import (
     IdentityAccount,
     NamespaceRecord,
@@ -20,7 +20,10 @@ from app.source_import.service import (
     build_source_publish_input,
     submit_source_skill,
 )
-from app.source_import.source import canonicalize_github_repository, validate_source_revision
+from app.source_import.source import (
+    canonicalize_github_repository,
+    validate_source_revision,
+)
 
 
 def validation_request() -> ValidateSourceSkillInput:
@@ -33,7 +36,9 @@ def validation_request() -> ValidateSourceSkillInput:
         entries=entries,
         version_override="git-" + "a" * 40,
         initiator=None,
-        actor_user_id="importer-service",
+        service_actor=SourceServiceActor(
+            "svc_importer", "gitlab-oss-importer", "GitLab OSS Importer"
+        ),
     )
 
 
@@ -74,7 +79,7 @@ def test_builds_public_review_publish_input_with_separate_identities(tmp_path) -
 
     assert request.publisher_id == "stable-owner"
     assert request.submitter_id == "pipeline-trigger"
-    assert request.actor_user_id == "importer-service"
+    assert request.actor_service_principal_id == "svc_importer"
     assert request.visibility == "PUBLIC"
     assert request.auto_publish is False
     assert request.version == "git-" + "a" * 40
@@ -134,7 +139,7 @@ async def test_submits_import_and_persists_provenance_in_publish_transaction(tmp
     assert result.version_id == 51
     assert result.version_status == "SCANNING"
     assert persisted[0]["source_skill_id"] is None
-    assert persisted[0]["actor_user_id"] == "importer-service"
+    assert persisted[0]["service_actor"].service_principal_id == "svc_importer"
     assert persisted[0]["review_submitter_id"] == "pipeline-trigger"
     assert persisted[0]["repository_url"] == "https://github.com/mattpocock/skills"
     assert persisted[0]["stable_owner_id"] == "stable-owner"

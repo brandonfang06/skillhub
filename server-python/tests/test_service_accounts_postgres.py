@@ -8,10 +8,12 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.auth.service_tokens import read_service_token_principal
 from app.service_accounts.service import (
     ServiceAccountError,
     create_service_principal,
     create_service_token,
+    list_service_principals,
     list_service_tokens,
     revoke_service_token,
     rotate_service_token,
@@ -63,6 +65,10 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
             now=now,
         )
         assert created.token == "st_first-secret"
+        resolved = await read_service_token_principal(engine, created.token)
+        assert resolved is not None
+        assert resolved.service_principal_id == principal.id
+        assert resolved.token_scopes == ("source:import",)
         rows = await list_service_tokens(
             engine,
             service_principal_id=principal.id,
@@ -112,6 +118,16 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
             (rotated.id, False),
             (created.id, True),
         ]
+        principals, total = await list_service_principals(
+            engine,
+            page=0,
+            size=100,
+            actor_platform_roles=["SUPER_ADMIN"],
+        )
+        summary = next(item for item in principals if item.id == principal.id)
+        assert total >= 1
+        assert summary.active_token_count == 1
+        assert summary.nearest_token_expiry == rotated.expires_at
 
         await update_service_principal(
             engine,
@@ -122,6 +138,7 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
             actor_platform_roles=["SUPER_ADMIN"],
             now=now,
         )
+        assert await read_service_token_principal(engine, rotated.token) is None
         with pytest.raises(
             ServiceAccountError, match="error.servicePrincipal.inactive"
         ):

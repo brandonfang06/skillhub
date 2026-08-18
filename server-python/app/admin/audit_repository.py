@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
-
 
 AUDIT_READ_ROLES = {"AUDITOR", "SUPER_ADMIN"}
 
@@ -50,7 +49,7 @@ def _parse_instant(value: datetime | str | None) -> datetime | None:
     text_value = value.strip()
     if text_value == "":
         return None
-    parsed = datetime.fromisoformat(text_value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(text_value)
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
@@ -73,16 +72,27 @@ def _detail_string(detail_json: Any, target_type: Any, target_id: Any) -> str | 
 
 
 def _audit_item(row: dict[str, Any]) -> dict[str, Any]:
+    service_actor_id = row.get("actor_service_principal_id")
+    actor_type = "SERVICE" if service_actor_id is not None else "USER"
+    actor_id = service_actor_id or row.get("actor_user_id")
+    actor_name = row.get("service_display_name") or row.get("display_name")
     return {
         "id": int(row["id"]),
         "action": str(row["action"]),
         "userId": row.get("actor_user_id"),
         "username": row.get("display_name"),
-        "details": _detail_string(row.get("detail_json"), row.get("target_type"), row.get("target_id")),
+        "actorType": actor_type,
+        "actorId": actor_id,
+        "actorName": actor_name,
+        "details": _detail_string(
+            row.get("detail_json"), row.get("target_type"), row.get("target_id")
+        ),
         "ipAddress": row.get("client_ip"),
         "requestId": row.get("request_id"),
         "resourceType": row.get("target_type"),
-        "resourceId": str(row["target_id"]) if row.get("target_id") is not None else None,
+        "resourceId": str(row["target_id"])
+        if row.get("target_id") is not None
+        else None,
         "timestamp": _java_instant(row.get("created_at")),
     }
 
@@ -170,13 +180,16 @@ async def list_admin_audit_logs(
             ).scalar_one()
         )
         rows = (
-            await connection.execute(
-                text(
-                    f"""
+            (
+                await connection.execute(
+                    text(
+                        f"""
                     SELECT al.id,
                            al.action,
                            al.actor_user_id,
+                           al.actor_service_principal_id,
                            ua.display_name,
+                           principal.display_name AS service_display_name,
                            al.detail_json,
                            al.target_type,
                            al.target_id,
@@ -185,14 +198,19 @@ async def list_admin_audit_logs(
                            al.created_at
                     FROM audit_log al
                     LEFT JOIN user_account ua ON ua.id = al.actor_user_id
+                    LEFT JOIN service_principal principal
+                      ON principal.id = al.actor_service_principal_id
                     {where_clause}
                     ORDER BY al.created_at DESC
                     LIMIT :limit OFFSET :offset
                     """
-                ),
-                params,
+                    ),
+                    params,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
     return {
         "items": [_audit_item(dict(row)) for row in rows],
         "total": total,
