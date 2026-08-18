@@ -305,6 +305,104 @@ class SourceImportRepository:
         ).scalar_one_or_none()
         return str(value) if value is not None else None
 
+    async def persist_source_submission(
+        self,
+        *,
+        namespace_id: int,
+        namespace_source_id: int,
+        source_skill_id: int | None,
+        source_path: str,
+        skill_id: int,
+        version_id: int,
+        revision: Any,
+        content_fingerprint: str,
+        actor_user_id: str,
+        review_submitter_id: str,
+        add_submitter_as_member: bool,
+        request_id: str | None,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None:
+        if add_submitter_as_member:
+            await self.connection.execute(
+                text(
+                    """
+                    INSERT INTO namespace_member (namespace_id, user_id, role)
+                    VALUES (:namespace_id, :user_id, 'MEMBER')
+                    ON CONFLICT (namespace_id, user_id) DO NOTHING
+                    """
+                ),
+                {"namespace_id": namespace_id, "user_id": review_submitter_id},
+            )
+
+        resolved_source_skill_id = source_skill_id
+        if resolved_source_skill_id is None:
+            resolved_source_skill_id = int(
+                (
+                    await self.connection.execute(
+                        text(
+                            """
+                            INSERT INTO local_oss_skill_source (
+                                namespace_source_id, source_path, skill_id, created_by
+                            )
+                            VALUES (:namespace_source_id, :source_path, :skill_id, :created_by)
+                            RETURNING id
+                            """
+                        ),
+                        {
+                            "namespace_source_id": namespace_source_id,
+                            "source_path": source_path,
+                            "skill_id": skill_id,
+                            "created_by": actor_user_id,
+                        },
+                    )
+                ).scalar_one()
+            )
+
+        await self.connection.execute(
+            text(
+                """
+                INSERT INTO local_oss_skill_version_source (
+                    skill_source_id, skill_version_id, repository_revision_sha,
+                    source_ref_type, source_ref, content_fingerprint, imported_by
+                )
+                VALUES (
+                    :skill_source_id, :skill_version_id, :repository_revision_sha,
+                    :source_ref_type, :source_ref, :content_fingerprint, :imported_by
+                )
+                """
+            ),
+            {
+                "skill_source_id": resolved_source_skill_id,
+                "skill_version_id": version_id,
+                "repository_revision_sha": revision.commit_sha,
+                "source_ref_type": revision.ref_type,
+                "source_ref": revision.ref,
+                "content_fingerprint": content_fingerprint,
+                "imported_by": actor_user_id,
+            },
+        )
+        await write_audit_log(
+            self.connection,
+            actor_user_id=actor_user_id,
+            action="SOURCE_IMPORT_SKILL_VERSION",
+            target_type="SKILL_VERSION",
+            target_id=version_id,
+            request_id=request_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            detail={
+                "namespaceSourceId": namespace_source_id,
+                "sourcePath": source_path,
+                "repositoryRevisionSha": revision.commit_sha,
+                "sourceRefType": revision.ref_type,
+                "sourceRef": revision.ref,
+                "contentFingerprint": content_fingerprint,
+                "reviewSubmitterId": review_submitter_id,
+            },
+            created_at=datetime.now(UTC),
+        )
+
 
 def _identity_account(row: dict[str, Any]) -> IdentityAccount:
     return IdentityAccount(

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from collections.abc import Set as AbstractSet
-from collections.abc import Callable
-from typing import Any, Literal, Protocol
+from collections.abc import Awaitable, Callable, Set as AbstractSet
+from typing import Any, Literal, Protocol, cast
 
 from app.publish.dry_run import slugify
+from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, validate_package
 from app.source_import.contracts import (
     SourceIdentity,
@@ -97,6 +97,9 @@ class ValidateSourceSkillInput:
     initiator: SourceIdentity | None
     actor_user_id: str
     allowed_extensions: AbstractSet[str] | None = None
+    request_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -112,6 +115,26 @@ class SourceSkillValidationPlan:
     add_submitter_as_member: bool
     visibility: Literal["PUBLIC"] = "PUBLIC"
     auto_publish: Literal[False] = False
+
+
+@dataclass(frozen=True)
+class SourceSkillSubmissionRuntime:
+    storage_base_path: str
+    storage: Any | None = None
+    scanner_enabled: bool = False
+    scan_mode: str = "upload"
+    scan_task_publisher: Any | None = None
+    notification_fanout: Any | None = None
+
+
+@dataclass(frozen=True)
+class SourceSkillSubmissionResult:
+    outcome: Literal["IMPORTED", "SKIPPED_UNCHANGED", "SKIPPED_ALREADY_IMPORTED"]
+    plan: SourceSkillValidationPlan
+    skill_id: int | None
+    version_id: int | None
+    version_status: str | None
+    review_task_id: int | None
 
 
 @dataclass(frozen=True)
@@ -402,3 +425,117 @@ async def ensure_source_namespace(
     factory = repository_factory or SourceImportRepository
     async with engine.begin() as connection:
         return await ensure_source_namespace_in_transaction(factory(connection), request)
+
+
+async def validate_source_skill(engine: Any, request: ValidateSourceSkillInput) -> SourceSkillValidationPlan:
+    from app.source_import.repository import SourceImportRepository
+
+    async with engine.connect() as connection:
+        return await validate_source_skill_in_transaction(SourceImportRepository(connection), request)
+
+
+def build_source_publish_input(
+    plan: SourceSkillValidationPlan,
+    request: ValidateSourceSkillInput,
+    runtime: SourceSkillSubmissionRuntime,
+) -> PublishWriteInput:
+    metadata = plan.package.metadata
+    resolved_frontmatter = dict(metadata.frontmatter)
+    resolved_frontmatter["version"] = plan.package.effective_version
+    resolved_metadata = type(metadata)(
+        name=metadata.name,
+        description=metadata.description,
+        version=plan.package.effective_version,
+        frontmatter=resolved_frontmatter,
+    )
+    return PublishWriteInput(
+        namespace_id=plan.namespace.id,
+        namespace_slug=plan.namespace.slug,
+        slug=plan.skill_slug,
+        display_name=metadata.name,
+        summary=metadata.description,
+        publisher_id=plan.stable_owner.user_id,
+        submitter_id=plan.review_submitter.user_id,
+        actor_user_id=request.actor_user_id,
+        visibility="PUBLIC",
+        version=plan.package.effective_version,
+        auto_publish=False,
+        metadata=resolved_metadata,
+        entries=plan.package.entries,
+        storage_base_path=runtime.storage_base_path,
+        storage=runtime.storage,
+        scanner_enabled=runtime.scanner_enabled,
+        scan_mode=runtime.scan_mode,
+        request_id=request.request_id,
+        client_ip=request.client_ip,
+        user_agent=request.user_agent,
+    )
+
+
+Validator = Callable[[Any, ValidateSourceSkillInput], Awaitable[SourceSkillValidationPlan]]
+Publisher = Callable[..., Awaitable[PublishWriteResult]]
+
+
+async def submit_source_skill(
+    engine: Any,
+    request: ValidateSourceSkillInput,
+    runtime: SourceSkillSubmissionRuntime,
+    *,
+    validator: Validator = validate_source_skill,
+    publisher: Publisher = execute_publish_write,
+    repository_factory: Callable[[Any], Any] | None = None,
+) -> SourceSkillSubmissionResult:
+    from app.source_import.repository import SourceImportRepository
+
+    plan = await validator(engine, request)
+    if plan.outcome != "IMPORT":
+        return SourceSkillSubmissionResult(
+            outcome=cast(Any, plan.outcome),
+            plan=plan,
+            skill_id=plan.source_skill.skill_id if plan.source_skill is not None else None,
+            version_id=None,
+            version_status=None,
+            review_task_id=None,
+        )
+
+    factory = repository_factory or SourceImportRepository
+
+    async def persist_provenance(connection: Any, skill_id: int, version_id: int) -> None:
+        repository = factory(connection)
+        await repository.persist_source_submission(
+            namespace_id=plan.namespace.id,
+            namespace_source_id=plan.namespace_binding.id,
+            source_skill_id=plan.source_skill.source_id if plan.source_skill is not None else None,
+            source_path=plan.package.source_path,
+            skill_id=skill_id,
+            version_id=version_id,
+            revision=request.revision,
+            content_fingerprint=plan.package.content_fingerprint,
+            actor_user_id=request.actor_user_id,
+            review_submitter_id=plan.review_submitter.user_id,
+            add_submitter_as_member=plan.add_submitter_as_member,
+            request_id=request.request_id,
+            client_ip=request.client_ip,
+            user_agent=request.user_agent,
+        )
+
+    result = await publisher(
+        engine,
+        build_source_publish_input(plan, request, runtime),
+        scan_task_publisher=runtime.scan_task_publisher,
+        notification_fanout=runtime.notification_fanout,
+        after_prepare=persist_provenance,
+    )
+    side_effects = getattr(result, "side_effects", None)
+    return SourceSkillSubmissionResult(
+        outcome="IMPORTED",
+        plan=plan,
+        skill_id=int(result.skill_id),
+        version_id=int(result.version_id),
+        version_status=str(result.version_status),
+        review_task_id=(
+            int(side_effects.review_task_id)
+            if side_effects is not None and side_effects.review_task_id is not None
+            else None
+        ),
+    )

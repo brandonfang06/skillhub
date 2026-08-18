@@ -105,6 +105,7 @@ async def execute_publish_write(
     *,
     scan_task_publisher: ScanTaskPublisher | None = None,
     notification_fanout: NotificationFanout | None = None,
+    after_prepare: Callable[[Any, int, int], Awaitable[None]] | None = None,
     after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
     if request.replacement is not None and request.replacement.status == "REJECTED":
@@ -139,6 +140,8 @@ async def execute_publish_write(
                 now=request.now,
             ),
         )
+        if after_prepare is not None:
+            await after_prepare(connection, prepared.skill_id, prepared.version_id)
         if request.storage is None:
             stored_package = write_local_package_objects(
                 request.storage_base_path,
