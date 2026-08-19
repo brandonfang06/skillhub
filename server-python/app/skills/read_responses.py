@@ -70,6 +70,30 @@ def build_versions_page_response(
     }
 
 
+def build_version_attribution_response(
+    row: dict[str, Any],
+) -> dict[str, object] | None:
+    attribution_type = row.get("version_attribution_type")
+    submitted_by = row.get("version_submitted_by")
+    submitted_at = row.get("version_submitted_at")
+    if (
+        attribution_type not in {"NATIVE_SUBMISSION", "OSS_IMPORT"}
+        or submitted_by is None
+        or submitted_at is None
+    ):
+        return None
+    return {
+        "type": str(attribution_type),
+        "submittedBy": str(submitted_by),
+        "submittedByName": (
+            str(row["version_submitted_by_name"])
+            if row.get("version_submitted_by_name") is not None
+            else None
+        ),
+        "submittedAt": to_java_instant(submitted_at),
+    }
+
+
 def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
     return {
         "id": int(row["id"]),
@@ -82,6 +106,7 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
         "parsedMetadataJson": row["parsed_metadata_json"],
         "manifestJson": row["manifest_json"],
         "sourceProvenance": source_provenance_from_row(row),
+        "versionAttribution": build_version_attribution_response(row),
     }
 
 
@@ -213,6 +238,7 @@ __all__ = [
     "build_skill_search_response",
     "build_skill_summary_response",
     "build_tag_response",
+    "build_version_attribution_response",
     "build_version_detail_response",
     "build_versions_page_response",
     "normalize_page_request",
