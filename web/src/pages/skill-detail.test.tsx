@@ -12,6 +12,7 @@ const useSkillFilesMock = vi.fn()
 const useSkillReadmeMock = vi.fn()
 const useSkillFileMock = vi.fn()
 const useSkillVersionsMock = vi.fn()
+const useSkillVersionDetailMock = vi.fn()
 const useResourceDiagnosticsMock = vi.fn()
 const {
   confirmPublishMutationMock,
@@ -254,7 +255,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
-  useSkillVersionDetail: () => ({ data: undefined }),
+  useSkillVersionDetail: (...args: unknown[]) => useSkillVersionDetailMock(...args),
   useSkillFiles: () => useSkillFilesMock(),
   useSkillReadme: (...args: unknown[]) => useSkillReadmeMock(...args),
   useSkillFile: (...args: unknown[]) => useSkillFileMock(...args),
@@ -352,6 +353,7 @@ describe('SkillDetailPage', () => {
         },
       ],
     })
+    useSkillVersionDetailMock.mockReturnValue({ data: undefined })
     useSkillLabelsMock.mockReturnValue({
       data: undefined,
     })
@@ -373,6 +375,71 @@ describe('SkillDetailPage', () => {
     })
     toastErrorMock.mockReset()
     toastSuccessMock.mockReset()
+  })
+
+  it('shows the selected native version submitter without changing the skill owner', () => {
+    useSkillVersionDetailMock.mockReturnValue({
+      data: {
+        id: 10,
+        version: '1.0.0',
+        status: 'PUBLISHED',
+        fileCount: 1,
+        totalSize: 12,
+        publishedAt: '2026-03-20T00:00:00Z',
+        versionAttribution: {
+          type: 'NATIVE_SUBMISSION',
+          submittedBy: 'native-user',
+          submittedByName: 'Bob Submitter',
+          submittedAt: '2026-08-19T08:00:00Z',
+        },
+      },
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('data-testid="version-attribution"')
+    expect(html).toContain('Bob Submitter')
+    expect(useSkillVersionDetailMock).toHaveBeenCalledWith(
+      'global',
+      'demo-skill',
+      '1.0.0',
+      true,
+    )
+    expect(useSkillDetailMock.mock.results[0]?.value.data.ownerId).toBe('owner-1')
+  })
+
+  it('shows the selected OSS importer once inside source provenance', () => {
+    useSkillVersionDetailMock.mockReturnValue({
+      data: {
+        id: 10,
+        version: '1.0.0',
+        status: 'PUBLISHED',
+        fileCount: 1,
+        totalSize: 12,
+        publishedAt: '2026-03-20T00:00:00Z',
+        versionAttribution: {
+          type: 'OSS_IMPORT',
+          submittedBy: 'trigger-user',
+          submittedByName: 'hcfange',
+          submittedAt: '2026-08-19T08:00:00Z',
+        },
+        sourceProvenance: {
+          repositoryUrl: 'https://github.com/mattpocock/skills',
+          repositoryRevisionSha: 'a'.repeat(40),
+          sourceRefType: 'BRANCH',
+          sourceRef: 'main',
+          sourcePath: 'skills/demo',
+          contentFingerprint: 'b'.repeat(64),
+          browseUrl: `https://github.com/mattpocock/skills/tree/${'a'.repeat(40)}/skills/demo`,
+        },
+      },
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('data-testid="source-provenance"')
+    expect(html).toContain('hcfange')
+    expect(html).not.toContain('data-testid="version-attribution"')
   })
 
   it('shows hard delete action for the skill owner', () => {

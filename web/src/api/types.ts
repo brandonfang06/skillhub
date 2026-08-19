@@ -8,6 +8,13 @@ import type { components as SourceImportComponents } from './generated/source-im
 
 export type SourceProvenance = SourceImportComponents['schemas']['SourceProvenanceResponse']
 
+export interface VersionAttribution {
+  type: 'NATIVE_SUBMISSION' | 'OSS_IMPORT'
+  submittedBy: string
+  submittedByName?: string | null
+  submittedAt: string
+}
+
 export interface PlaygroundCapability {
   token: string
   expiresAt: number
@@ -341,6 +348,7 @@ export interface SkillVersionDetail {
   parsedMetadataJson?: string
   manifestJson?: string
   sourceProvenance?: SourceProvenance | null
+  versionAttribution?: VersionAttribution | null
 }
 
 export interface SkillFile {

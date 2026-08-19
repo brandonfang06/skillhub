@@ -1,14 +1,16 @@
 import { ExternalLink, GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { SourceProvenance } from '@/api/types'
+import type { SourceProvenance, VersionAttribution } from '@/api/types'
+import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { Card } from '@/shared/ui/card'
 
 interface SourceProvenanceCardProps {
   provenance?: SourceProvenance | null
+  attribution?: VersionAttribution | null
 }
 
-export function SourceProvenanceCard({ provenance }: SourceProvenanceCardProps) {
-  const { t } = useTranslation()
+export function SourceProvenanceCard({ provenance, attribution }: SourceProvenanceCardProps) {
+  const { t, i18n } = useTranslation()
   if (!provenance) return null
 
   const revisionLabel = provenance.sourceRef
@@ -24,6 +26,22 @@ export function SourceProvenanceCard({ provenance }: SourceProvenanceCardProps) 
         </h3>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-2">
+        {attribution?.type === 'OSS_IMPORT' ? (
+          <>
+            <div className="min-w-0">
+              <dt className="text-xs text-muted-foreground">{t('skillDetail.importedBy')}</dt>
+              <dd className="mt-1 break-words font-medium text-foreground">
+                {attribution.submittedByName || attribution.submittedBy}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs text-muted-foreground">{t('skillDetail.importedAt')}</dt>
+              <dd className="mt-1 text-foreground">
+                {formatLocalDateTime(attribution.submittedAt, i18n.language)}
+              </dd>
+            </div>
+          </>
+        ) : null}
         <div>
           <dt className="text-xs text-muted-foreground">{t('skillDetail.sourceRevision')}</dt>
           <dd className="mt-1 break-all font-mono text-foreground">{revisionLabel}</dd>

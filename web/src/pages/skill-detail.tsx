@@ -13,6 +13,7 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import { SourceProvenanceCard } from '@/features/skill/source-provenance'
+import { VersionAttributionCard } from '@/features/skill/version-attribution'
 import { useResourceDiagnostics } from '@/features/skill/use-resource-diagnostics'
 import {
   getOverviewCollapseMaxHeight,
@@ -1362,7 +1363,11 @@ export function SkillDetailPage() {
           </Card>
         )}
 
-        <SourceProvenanceCard provenance={selectedVersionDetail?.sourceProvenance} />
+        <VersionAttributionCard attribution={selectedVersionDetail?.versionAttribution} />
+        <SourceProvenanceCard
+          provenance={selectedVersionDetail?.sourceProvenance}
+          attribution={selectedVersionDetail?.versionAttribution}
+        />
 
         <Button
           className="w-full"

@@ -21,4 +21,18 @@ describe('skill detail lifecycle locales', () => {
     }
     expect(zhTW.skillDetail.signInToView).toBe('登入查看')
   })
+
+  it('defines version attribution labels in every supported locale', () => {
+    for (const locale of [en, zh, zhTW]) {
+      expect(locale.skillDetail.versionAttributionTitle).toBeTruthy()
+      expect(locale.skillDetail.submittedBy).toBeTruthy()
+      expect(locale.skillDetail.submittedAt).toBeTruthy()
+      expect(locale.skillDetail.importedBy).toBeTruthy()
+      expect(locale.skillDetail.importedAt).toBeTruthy()
+    }
+
+    expect(en.skillDetail.submittedBy).toBe('Submitted by')
+    expect(zh.skillDetail.importedBy).toBe('导入者')
+    expect(zhTW.skillDetail.importedBy).toBe('匯入者')
+  })
 })
