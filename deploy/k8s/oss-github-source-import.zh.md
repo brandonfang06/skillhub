@@ -138,6 +138,12 @@ review task 與 `requestId`，但不含 token。
 6. 重跑相同 commit/content 會回 `SKIPPED_ALREADY_IMPORTED` 或
    `SKIPPED_UNCHANGED`，視為成功；不會新增 duplicate version。
 
+Skill detail 會依選定版本顯示 `Imported by`，人名來自
+`SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME` 對應的 SkillHub user；若 trigger 無法對應，
+則顯示實際代為提交 review 的 namespace owner。Service token 所屬的
+service principal 只是 audit actor，不是版本的人類匯入者。後續他人重新匯入
+只會更新新版本的 importer attribution，不會改變 skill owner。
+
 ## Exit code 與故障排查
 
 | Exit | 意義 |

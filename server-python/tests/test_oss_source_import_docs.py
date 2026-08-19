@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SOP = ROOT / "deploy" / "k8s" / "oss-github-source-import.zh.md"
 
@@ -60,3 +59,14 @@ def test_sop_explains_identity_review_subpath_and_failures() -> None:
     ):
         assert phrase in content
     assert "`SKILLHUB_API_TOKEN` 不會 fallback" in content
+
+
+def test_sop_explains_version_importer_attribution() -> None:
+    content = SOP.read_text(encoding="utf-8")
+    for phrase in (
+        "Imported by",
+        "選定版本",
+        "service principal 只是 audit actor",
+        "不會改變 skill owner",
+    ):
+        assert phrase in content
