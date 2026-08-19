@@ -87,6 +87,9 @@
   - namespace ADMIN 对空间内所有 skill 有完整管理权（归档、版本管理、提升到全局），不受 owner 限制
   - owner 作为 MEMBER 时可管理自己创建的 skill（提交审核、编辑草稿）
   - owner 离职/换组后，namespace ADMIN 仍能完整管理所有技能
+- Skill Owner 是 skill 容器层级的主要维护人与联络人；新增版本不会自动转移 ownership
+- Version Submitter 是把特定版本送进发布／审核流程的人，属于版本归因，可以与 Skill Owner 不同
+- OSS Import Actor 是以 service token 执行汇入的 service principal，只用于授权与审计；人类 Version Submitter 仍由 pipeline initiator 或既有 namespace OWNER fallback 决定
 - `rating_avg` / `rating_count` 冗余字段，避免每次查询聚合
 - `slug`：面向用户的 URL 标识，来自 SKILL.md 的 `name` 字段，首次发布后不可变更。slug 格式校验规则与 namespace slug 相同：`[a-z0-9]([a-z0-9-]*[a-z0-9])?`，同样适用保留词限制，且不得包含连续两个以上的连字符 `--`（为兼容层坐标映射保留）。全局空间（`@global`）下的 skill slug 额外禁止包含 `--`，以避免与兼容层 canonical slug 产生歧义
 - `source_skill_id`：仅在"团队技能提升到全局"场景下填充，记录原始团队空间的 skill ID，用于追溯来源
