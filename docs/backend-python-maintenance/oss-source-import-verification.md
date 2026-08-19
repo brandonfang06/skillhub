@@ -164,3 +164,44 @@ Maven, Spring Boot, source-repository fetcher, auto-publish path, ordinary-token
 default-scope expansion, skill-owner transfer on later runs, removed-skill
 deletion, or production MinIO/K8s workload. Scanner and namespace-owner review
 remain mandatory.
+
+## 2026-08-19 version submitter attribution follow-up
+
+Branch `codex/oss-version-submitter-design` was rebuilt and verified against
+the same complete Compose topology. The runtime images used were:
+
+- backend: `sha256:28a8c155039615cace92b8e24c02421b0928b8b342f82073210b8b5a839fbba7`;
+- web: `sha256:92e8007b50a3012931450b8fa9c6e23ee61f7c02f5b4dba57f24be86888488bf`;
+- scanner: `sha256:a5010489ccf34e82cc98c9aef35ee42f65ff8384c25dc9b46becc505ca7d7363`.
+
+Automated results:
+
+- backend with `SKILLHUB_TEST_DATABASE_URL` pointing to PostgreSQL on port
+  `55432`: `1422 passed, 10 skipped, 1 warning`;
+- frontend: typecheck and lint passed, `217` Vitest files and `876` tests
+  passed, and the production Vite build passed;
+- targeted Ruff, Python compile, K8s render, release Compose render, test
+  overlay render, and `git diff --check` passed.
+
+After force-recreating backend, scanner, root web, and `/skillhub` web from
+those images, all seven services were healthy. The migration command returned
+`skillhub_flyway_v43_baseline`; direct backend, root proxy, and `/skillhub`
+proxy health requests returned HTTP 200.
+
+The importer smoke completed with:
+
+```text
+OSS source import smoke passed: run=4169b4b5eb02 initial=cc1611bf136a410abd6e5e4b28869d94de00ebba changed=d791565f57739e72edb8c759b743c8991f01d9e0
+```
+
+Runtime API assertions proved that the initial published version identifies
+`OSS Smoke Trigger`, the later pending version identifies `OSS Smoke Trigger
+Two`, both use `OSS_IMPORT`, and the skill owner remains the original
+`oss-smoke-4169b4b5eb02-trigger`. A separate native published version returned
+`NATIVE_SUBMISSION` with `Native Smoke Submitter` while retaining its distinct
+`Native Smoke Owner`. Root and `/skillhub` returned identical attribution for
+the published OSS version.
+
+The final ten-minute log scan across PostgreSQL, Redis, MinIO, backend,
+scanner, root web, and subpath web found no traceback, SQL syntax or database
+operational error, unhandled exception, fatal, panic, or scanner task failure.
