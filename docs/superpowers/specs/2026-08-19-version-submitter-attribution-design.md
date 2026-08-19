@@ -147,8 +147,13 @@ Contract rules:
   fingerprint, and browse-link contract. It does not become an authorization
   model.
 
-The generated OpenAPI types must be regenerated; generated files are never
-edited manually.
+The current Python Skill Version Detail endpoint is a compatibility route with
+a dictionary response and a hand-maintained `web/src/api/types.ts` contract. The
+first implementation updates that actual contract and protects it with route
+and repository tests. It must not edit an unrelated generated schema merely to
+simulate coverage. If the endpoint is converted to a typed OpenAPI response as
+part of a later contract milestone, its generated type must then be regenerated
+rather than edited manually.
 
 ## Skill Detail UI
 
