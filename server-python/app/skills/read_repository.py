@@ -514,14 +514,44 @@ async def read_skill_version_detail(
                            version_source.source_ref_type,
                            version_source.source_ref,
                            skill_source.source_path,
-                           version_source.content_fingerprint AS source_content_fingerprint
+                           version_source.content_fingerprint AS source_content_fingerprint,
+                           CASE
+                               WHEN version_source.id IS NOT NULL THEN 'OSS_IMPORT'
+                               ELSE 'NATIVE_SUBMISSION'
+                           END AS version_attribution_type,
+                           COALESCE(
+                               version_source.imported_by,
+                               version_review.submitted_by,
+                               sv.created_by
+                           ) AS version_submitted_by,
+                           submitter.display_name AS version_submitted_by_name,
+                           COALESCE(
+                               version_source.imported_at,
+                               version_review.submitted_at,
+                               sv.created_at
+                           ) AS version_submitted_at
                     FROM skill_version sv
                     LEFT JOIN local_oss_skill_version_source version_source
                       ON version_source.skill_version_id = sv.id
+                    LEFT JOIN LATERAL (
+                        SELECT rt.submitted_by,
+                               rt.submitted_at
+                        FROM review_task rt
+                        WHERE rt.skill_version_id = sv.id
+                        ORDER BY rt.submitted_at DESC,
+                                 rt.id DESC
+                        LIMIT 1
+                    ) version_review ON TRUE
                     LEFT JOIN local_oss_skill_source skill_source
                       ON skill_source.id = version_source.skill_source_id
                     LEFT JOIN local_oss_namespace_source namespace_source
                       ON namespace_source.id = skill_source.namespace_source_id
+                    LEFT JOIN user_account submitter
+                      ON submitter.id = COALESCE(
+                          version_source.imported_by,
+                          version_review.submitted_by,
+                          sv.created_by
+                      )
                     WHERE sv.skill_id = :skill_id
                       AND sv.version = :version
                     ORDER BY sv.id ASC

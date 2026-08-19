@@ -1,8 +1,8 @@
 import asyncio
-
-from fastapi.testclient import TestClient
+from datetime import UTC, datetime
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.api import skills
 from app.api.skills import SkillResolveError
@@ -45,6 +45,10 @@ class _SkillVersionDetailOwnerPreviewWithoutLatestConnection:
         if "FROM namespace_member" in sql:
             return _FakeResult(None)
         if "FROM skill_version sv" in sql:
+            assert "LEFT JOIN LATERAL" in sql
+            assert "FROM review_task" in sql
+            assert "version_source.imported_by" in sql
+            assert "version_submitted_by" in sql
             return _FakeResult(
                 {
                     "id": 101,
@@ -62,6 +66,10 @@ class _SkillVersionDetailOwnerPreviewWithoutLatestConnection:
                     "source_ref": "main",
                     "source_path": "skills/demo",
                     "source_content_fingerprint": "e" * 64,
+                    "version_attribution_type": "OSS_IMPORT",
+                    "version_submitted_by": "trigger-user",
+                    "version_submitted_by_name": "hcfange",
+                    "version_submitted_at": datetime(2026, 8, 19, 8, 0, tzinfo=UTC),
                 }
             )
         raise AssertionError(f"unexpected SQL: {sql}")
@@ -231,6 +239,12 @@ def test_read_skill_version_detail_allows_owner_preview_without_latest_pointer()
     assert result["sourceProvenance"]["browseUrl"] == (
         "https://github.com/mattpocock/skills/tree/" + "b" * 40 + "/skills/demo"
     )
+    assert result["versionAttribution"] == {
+        "type": "OSS_IMPORT",
+        "submittedBy": "trigger-user",
+        "submittedByName": "hcfange",
+        "submittedAt": "2026-08-19T08:00:00Z",
+    }
 
 
 def test_read_skill_version_detail_rejects_public_skill_without_latest_for_anonymous_user() -> None:
