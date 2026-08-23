@@ -30,10 +30,19 @@ class _FakeResult:
     def scalar_one_or_none(self) -> object:
         return self.value
 
+    def scalar_one(self) -> object:
+        return self.value
+
 
 class _SkillVersionsOwnerPreviewWithoutLatestConnection:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+        self.params: list[dict[str, object]] = []
+
     async def execute(self, statement: object, params: dict[str, object] | None = None) -> _FakeResult:
         sql = str(statement)
+        self.statements.append(sql)
+        self.params.append(params or {})
         if "FROM skill s" in sql:
             assert "s.latest_version_id IS NOT NULL" not in sql
             assert "n.status = 'ACTIVE' OR :platform_read_override" in sql
@@ -49,6 +58,8 @@ class _SkillVersionsOwnerPreviewWithoutLatestConnection:
             )
         if "FROM namespace_member" in sql:
             return _FakeResult(None)
+        if "COUNT(*)" in sql and "FROM skill_version" in sql:
+            return _FakeResult(1)
         if "FROM skill_version" in sql:
             return _FakeResult(
                 [
@@ -61,6 +72,8 @@ class _SkillVersionsOwnerPreviewWithoutLatestConnection:
                         "total_size": 128,
                         "published_at": None,
                         "download_ready": False,
+                        "compliance_snapshot_json": None,
+                        "parsed_metadata_json": '{"largeUnrelatedFrontmatter":"must-not-project"}',
                     }
                 ]
             )
@@ -221,9 +234,10 @@ def test_skill_versions_route_uses_session_principal_for_owner_preview() -> None
 
 
 def test_read_skill_versions_allows_owner_preview_without_latest_pointer() -> None:
+    connection = _SkillVersionsOwnerPreviewWithoutLatestConnection()
     result = asyncio.run(
         skills.read_skill_versions(
-            _FakeEngine(_SkillVersionsOwnerPreviewWithoutLatestConnection()),
+            _FakeEngine(connection),
             "global",
             "demo",
             0,
@@ -242,8 +256,46 @@ def test_read_skill_versions_allows_owner_preview_without_latest_pointer() -> No
             "totalSize": 128,
             "publishedAt": None,
             "downloadAvailable": False,
+            "complianceSnapshot": None,
         }
     ]
+    version_statements = [sql for sql in connection.statements if "FROM skill_version" in sql]
+    assert len(version_statements) == 2
+    count_sql, page_sql = version_statements
+    assert "COUNT(*)" in count_sql
+    assert "parsed_metadata_json" not in count_sql
+    assert "LIMIT :limit OFFSET :offset" in page_sql
+    assert "parsed_metadata_json -> 'complianceSnapshot'" in page_sql
+    assert "CAST(parsed_metadata_json AS text)" not in page_sql
+    page_params = connection.params[connection.statements.index(page_sql)]
+    assert page_params["limit"] == 20
+    assert page_params["offset"] == 0
+
+
+def test_read_skill_versions_paginates_before_loading_snapshot() -> None:
+    connection = _SkillVersionsOwnerPreviewWithoutLatestConnection()
+
+    result = asyncio.run(
+        skills.read_skill_versions(
+            _FakeEngine(connection),
+            "global",
+            "demo",
+            3,
+            5,
+            "owner-1",
+        )
+    )
+
+    assert result["page"] == 3
+    assert result["size"] == 5
+    page_sql = next(
+        sql
+        for sql in connection.statements
+        if "FROM skill_version" in sql and "COUNT(*)" not in sql
+    )
+    page_params = connection.params[connection.statements.index(page_sql)]
+    assert page_params["limit"] == 5
+    assert page_params["offset"] == 15
 
 
 def test_read_skill_versions_rejects_public_skill_without_latest_for_anonymous_user() -> None:

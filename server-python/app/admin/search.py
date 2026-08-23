@@ -16,7 +16,7 @@ class AdminSearchError(Exception):
         self.status_code = status_code
 
 
-RESERVED_FRONTMATTER_FIELDS = {"name", "description", "version"}
+RESERVED_FRONTMATTER_FIELDS = {"name", "description", "version", "x-astron-compliance"}
 KEYWORD_FIELD_NAMES = {"keywords", "keyword", "tags", "tag"}
 TOKEN_SPLITTER = re.compile(r"[^\w]+", re.UNICODE)
 DIMENSIONS = 64
@@ -101,10 +101,42 @@ def _metadata_frontmatter(raw_metadata: Any) -> dict[str, Any]:
         return {}
     try:
         metadata = json.loads(raw_metadata) if isinstance(raw_metadata, str) else raw_metadata
-    except Exception:
+    except (TypeError, ValueError):
         return {}
     frontmatter = metadata.get("frontmatter") if isinstance(metadata, dict) else None
     return dict(frontmatter) if isinstance(frontmatter, dict) else {}
+
+
+def _metadata_compliance_snapshot(raw_metadata: Any) -> dict[str, Any]:
+    if raw_metadata is None:
+        return {}
+    try:
+        metadata = json.loads(raw_metadata) if isinstance(raw_metadata, str) else raw_metadata
+    except (TypeError, ValueError):
+        return {}
+    snapshot = metadata.get("complianceSnapshot") if isinstance(metadata, dict) else None
+    return dict(snapshot) if isinstance(snapshot, dict) else {}
+
+
+def _append_compliance_search_values(
+    snapshot: dict[str, Any],
+    keywords: set[str],
+    search_parts: list[str],
+) -> None:
+    items = snapshot.get("items")
+    if not isinstance(items, list):
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for field_name in ("standard", "version", "controlId", "title"):
+            value = item.get(field_name)
+            if not isinstance(value, str | bool | int | float):
+                continue
+            normalized = str(value).strip()
+            if normalized:
+                keywords.add(normalized)
+                search_parts.append(normalized)
 
 
 def _build_search_payload(skill: dict[str, Any], label_keywords: list[str]) -> tuple[str, str]:
@@ -122,6 +154,11 @@ def _build_search_payload(skill: dict[str, Any], label_keywords: list[str]) -> t
         if normalized_field not in RESERVED_FRONTMATTER_FIELDS and normalized_field not in KEYWORD_FIELD_NAMES:
             search_parts.append(str(field_name))
             search_parts.extend(text_value.strip() for text_value in _flatten_to_strings(value) if text_value.strip())
+    _append_compliance_search_values(
+        _metadata_compliance_snapshot(skill.get("parsed_metadata_json")),
+        keywords,
+        search_parts,
+    )
     for label in label_keywords:
         if label.strip():
             keywords.add(label.strip())

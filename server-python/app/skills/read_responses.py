@@ -3,6 +3,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from app.skills.compliance_projection import (
+    compliance_snapshot_from_parsed_metadata,
+    compliance_snapshot_from_value,
+)
 from app.skills.read_access import can_manage_lifecycle_for_row
 from app.source_import.source import source_provenance_from_row
 
@@ -61,6 +65,7 @@ def build_versions_page_response(
                 "totalSize": int(row["total_size"]),
                 "publishedAt": to_java_instant(row["published_at"]),
                 "downloadAvailable": str(row["status"]) == "PUBLISHED" and bool(row["download_ready"]),
+                "complianceSnapshot": compliance_snapshot_from_value(row.get("compliance_snapshot_json")),
             }
             for row in rows
         ],
@@ -107,6 +112,7 @@ def build_version_detail_response(row: dict[str, Any]) -> dict[str, object]:
         "manifestJson": row["manifest_json"],
         "sourceProvenance": source_provenance_from_row(row),
         "versionAttribution": build_version_attribution_response(row),
+        "complianceSnapshot": compliance_snapshot_from_parsed_metadata(row.get("parsed_metadata_json")),
     }
 
 
@@ -216,6 +222,9 @@ def build_skill_summary_response(row: dict[str, Any]) -> dict[str, object]:
         "publishedVersion": published_version,
         "ownerPreviewVersion": None,
         "resolutionMode": str(row["resolution_mode"]),
+        "complianceSnapshot": compliance_snapshot_from_value(
+            row.get("published_version_compliance_snapshot_json")
+        ),
     }
 
 

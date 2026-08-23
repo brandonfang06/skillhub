@@ -41,6 +41,12 @@ jobs:
       - name: Build frontend
         run: make build-frontend
 
+      - name: Check compliance OpenAPI generated types
+        run: cd web && pnpm run check-api:compliance
+
+      - name: Check admin namespace OpenAPI generated types
+        run: cd web && pnpm run check-api:admin-namespaces
+
       - name: Run frontend unit tests
         run: make test-frontend
 

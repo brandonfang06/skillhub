@@ -51,6 +51,7 @@ def test_build_versions_page_response_maps_java_field_names() -> None:
                 "totalSize": 128,
                 "publishedAt": "2026-06-07T10:00:00Z",
                 "downloadAvailable": True,
+                "complianceSnapshot": None,
             }
         ],
         "total": 1,
@@ -73,7 +74,12 @@ def test_build_versions_page_response_marks_non_published_not_downloadable() -> 
         }
     ]
 
-    assert build_versions_page_response(rows, total=1, page=0, size=20)["items"][0]["downloadAvailable"] is False
+    assert (
+        build_versions_page_response(rows, total=1, page=0, size=20)["items"][0][
+            "downloadAvailable"
+        ]
+        is False
+    )
 
 
 def test_lifecycle_visible_statuses_are_published_only_for_public_viewer() -> None:

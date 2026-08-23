@@ -32,6 +32,13 @@ def configure_admin_stubs(app: object) -> None:
     app.state.admin_audit_log_reader = lambda payload, user: {"items": [], "total": 0, "page": 0, "size": 20}
     app.state.admin_skill_report_reader = lambda payload, user: {"items": [], "total": 0, "page": 0, "size": 20}
     app.state.admin_profile_review_approver = lambda request_id, user, request_meta: {"id": request_id, "status": "APPROVED"}
+    app.state.admin_namespace_list_reader = lambda **kwargs: {
+        "items": [],
+        "total": 0,
+        "page": 0,
+        "size": 20,
+        "stats": {"total": 0, "active": 0, "frozen": 0, "archived": 0},
+    }
 
 
 @pytest.mark.parametrize(
@@ -77,3 +84,54 @@ def test_admin_routes_keep_invalid_bearer_unauthorized_and_mock_user_precedence(
         headers={"X-Mock-User-Id": "admin", "Authorization": "Bearer sk_valid"},
     )
     assert mock_precedence.status_code == 200
+
+
+@pytest.mark.parametrize("scheme", ["Bearer", "bearer", "BEARER"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/admin/namespaces",
+        "/api/v1/admin/users",
+    ],
+)
+def test_admin_bearer_policy_is_case_insensitive_for_valid_tokens(
+    scheme: str,
+    path: str,
+) -> None:
+    app = create_app()
+    configure_admin_stubs(app)
+    client = TestClient(app)
+
+    response = client.get(
+        path,
+        headers={"Authorization": f"{scheme} sk_valid"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["msg"] == "error.apiToken.endpoint.unsupported"
+    assert response.json()["data"]["args"] == [path]
+
+
+@pytest.mark.parametrize("scheme", ["Bearer", "bearer", "BEARER"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/admin/namespaces",
+        "/api/v1/admin/users",
+    ],
+)
+def test_admin_bearer_policy_keeps_invalid_tokens_unauthorized(
+    scheme: str,
+    path: str,
+) -> None:
+    app = create_app()
+    configure_admin_stubs(app)
+    client = TestClient(app)
+
+    response = client.get(
+        path,
+        headers={"Authorization": f"{scheme} sk_missing"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"

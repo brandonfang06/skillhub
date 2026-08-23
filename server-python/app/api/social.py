@@ -11,10 +11,25 @@ from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
 from app.core.response import ok
 from app.social.owned import list_my_owned_skills
-from app.social.clawhub_star import ClawHubStarError, clawhub_star_skill, clawhub_unstar_skill
+from app.social.clawhub_star import (
+    ClawHubStarError,
+    clawhub_star_skill,
+    clawhub_unstar_skill,
+)
 from app.social.lists import SocialListKind, list_my_social_skills
-from app.social.rating import SkillRatingError, SkillRatingInput, check_skill_rating, rate_skill
-from app.social.star import SkillStarError, SkillStarInput, check_skill_star, star_skill, unstar_skill
+from app.social.rating import (
+    SkillRatingError,
+    SkillRatingInput,
+    check_skill_rating,
+    rate_skill,
+)
+from app.social.star import (
+    SkillStarError,
+    SkillStarInput,
+    check_skill_star,
+    star_skill,
+    unstar_skill,
+)
 from app.social.subscription import (
     SkillSubscriptionError,
     SkillSubscriptionInput,
@@ -37,24 +52,33 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _read_optional_user_id(request: Request, mock_user_id: str | None) -> str | None:
+async def _read_optional_user_id(
+    request: Request,
+    mock_user_id: str | None,
+) -> str | None:
     try:
         data = await resolve_current_user_or_401(request, mock_user_id, None)
     except HTTPException as exc:
-        if exc.status_code == 401 and (mock_user_id is None or mock_user_id.strip() == ""):
+        if exc.status_code == 401 and (
+            mock_user_id is None or mock_user_id.strip() == ""
+        ):
             return None
         raise
     return str(data["userId"])
 
 
-async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
-    user_id = await _read_optional_user_id(request, mock_user_id)
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="error.auth.required")
-    return user_id
+async def _require_user_id(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> str:
+    data = await resolve_current_user_or_401(request, mock_user_id, authorization)
+    return str(data["userId"])
 
 
-async def _require_user_context(request: Request, mock_user_id: str | None) -> dict[str, Any]:
+async def _require_user_context(
+    request: Request, mock_user_id: str | None
+) -> dict[str, Any]:
     return dict(await resolve_current_user_or_401(request, mock_user_id, None))
 
 
@@ -70,8 +94,13 @@ def _rating_input(skill_id: int, user_id: str, score: int) -> SkillRatingInput:
     return SkillRatingInput(skill_id=skill_id, user_id=user_id, score=score)
 
 
-async def star_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
-    user_id = await _require_user_id(request, mock_user_id)
+async def star_skill_route_data(
+    request: Request,
+    skill_id: int,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id, authorization)
     writer = getattr(request.app.state, "skill_star_writer", None)
     try:
         await _resolve_result(
@@ -84,21 +113,32 @@ async def star_skill_route_data(request: Request, skill_id: int, mock_user_id: s
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
-async def unstar_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
-    user_id = await _require_user_id(request, mock_user_id)
+async def unstar_skill_route_data(
+    request: Request,
+    skill_id: int,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id, authorization)
     writer = getattr(request.app.state, "skill_unstar_writer", None)
     try:
         await _resolve_result(
             writer(_star_input(skill_id, user_id))
             if writer is not None
-            else unstar_skill(request.app.state.db_engine, _star_input(skill_id, user_id))
+            else unstar_skill(
+                request.app.state.db_engine, _star_input(skill_id, user_id)
+            )
         )
     except SkillStarError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
-async def check_skill_star_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+async def check_skill_star_route_data(
+    request: Request,
+    skill_id: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "skill_star_reader", None)
     try:
@@ -112,68 +152,88 @@ async def check_skill_star_route_data(request: Request, skill_id: int, mock_user
     return ok("\u83b7\u53d6\u6210\u529f", bool(data), request)
 
 
-async def clawhub_star_route_data(request: Request, canonical_slug: str, mock_user_id: str | None) -> dict[str, Any]:
+async def clawhub_star_route_data(
+    request: Request, canonical_slug: str, mock_user_id: str | None
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     writer = getattr(request.app.state, "clawhub_star_writer", None)
     try:
         return await _resolve_result(
             writer(request.app.state.db_engine, canonical_slug, user_id)
             if writer is not None
-            else clawhub_star_skill(request.app.state.db_engine, canonical_slug, user_id)
+            else clawhub_star_skill(
+                request.app.state.db_engine, canonical_slug, user_id
+            )
         )
     except ClawHubStarError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
-async def clawhub_unstar_route_data(request: Request, canonical_slug: str, mock_user_id: str | None) -> dict[str, Any]:
+async def clawhub_unstar_route_data(
+    request: Request, canonical_slug: str, mock_user_id: str | None
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     writer = getattr(request.app.state, "clawhub_unstar_writer", None)
     try:
         return await _resolve_result(
             writer(request.app.state.db_engine, canonical_slug, user_id)
             if writer is not None
-            else clawhub_unstar_skill(request.app.state.db_engine, canonical_slug, user_id)
+            else clawhub_unstar_skill(
+                request.app.state.db_engine, canonical_slug, user_id
+            )
         )
     except ClawHubStarError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
-async def subscribe_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+async def subscribe_skill_route_data(
+    request: Request, skill_id: int, mock_user_id: str | None
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     writer = getattr(request.app.state, "skill_subscription_writer", None)
     try:
         await _resolve_result(
             writer(_subscription_input(skill_id, user_id))
             if writer is not None
-            else subscribe_skill(request.app.state.db_engine, _subscription_input(skill_id, user_id))
+            else subscribe_skill(
+                request.app.state.db_engine, _subscription_input(skill_id, user_id)
+            )
         )
     except SkillSubscriptionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
-async def unsubscribe_skill_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+async def unsubscribe_skill_route_data(
+    request: Request, skill_id: int, mock_user_id: str | None
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     writer = getattr(request.app.state, "skill_unsubscribe_writer", None)
     try:
         await _resolve_result(
             writer(_subscription_input(skill_id, user_id))
             if writer is not None
-            else unsubscribe_skill(request.app.state.db_engine, _subscription_input(skill_id, user_id))
+            else unsubscribe_skill(
+                request.app.state.db_engine, _subscription_input(skill_id, user_id)
+            )
         )
     except SkillSubscriptionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
-async def check_skill_subscription_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+async def check_skill_subscription_route_data(
+    request: Request, skill_id: int, mock_user_id: str | None
+) -> dict[str, Any]:
     user_id = await _read_optional_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "skill_subscription_reader", None)
     try:
         data = await _resolve_result(
             reader(skill_id, user_id)
             if reader is not None
-            else check_skill_subscription(request.app.state.db_engine, skill_id, user_id)
+            else check_skill_subscription(
+                request.app.state.db_engine, skill_id, user_id
+            )
         )
     except SkillSubscriptionError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -185,21 +245,29 @@ async def rate_skill_route_data(
     skill_id: int,
     payload: SkillRatingRequest,
     mock_user_id: str | None,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    user_id = await _require_user_id(request, mock_user_id)
+    user_id = await _require_user_id(request, mock_user_id, authorization)
     writer = getattr(request.app.state, "skill_rating_writer", None)
     try:
         await _resolve_result(
             writer(_rating_input(skill_id, user_id, payload.score))
             if writer is not None
-            else rate_skill(request.app.state.db_engine, _rating_input(skill_id, user_id, payload.score))
+            else rate_skill(
+                request.app.state.db_engine,
+                _rating_input(skill_id, user_id, payload.score),
+            )
         )
     except SkillRatingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", None, request)
 
 
-async def check_skill_rating_route_data(request: Request, skill_id: int, mock_user_id: str | None) -> dict[str, Any]:
+async def check_skill_rating_route_data(
+    request: Request,
+    skill_id: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
     user_id = await _require_user_id(request, mock_user_id)
     reader = getattr(request.app.state, "skill_rating_reader", None)
     try:
@@ -264,7 +332,15 @@ async def list_my_owned_skills_route_data(
     normalized_size = _parse_positive_int(size, 10)
     reader = getattr(request.app.state, "my_skills_reader", None)
     data = await _resolve_result(
-        reader(user_id, platform_role_set, normalized_page, normalized_size, filter_value, keyword, namespace)
+        reader(
+            user_id,
+            platform_role_set,
+            normalized_page,
+            normalized_size,
+            filter_value,
+            keyword,
+            namespace,
+        )
         if reader is not None
         else list_my_owned_skills(
             request.app.state.db_engine,
@@ -360,8 +436,9 @@ async def star_skill_route(
     request: Request,
     skill_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    return await star_skill_route_data(request, skill_id, x_mock_user_id)
+    return await star_skill_route_data(request, skill_id, x_mock_user_id, authorization)
 
 
 @router.delete("/api/v1/skills/{skill_id}/star")
@@ -370,8 +447,11 @@ async def unstar_skill_route(
     request: Request,
     skill_id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    return await unstar_skill_route_data(request, skill_id, x_mock_user_id)
+    return await unstar_skill_route_data(
+        request, skill_id, x_mock_user_id, authorization
+    )
 
 
 @router.get("/api/v1/skills/{skill_id}/star")
@@ -421,8 +501,11 @@ async def rate_skill_route(
     skill_id: int,
     payload: SkillRatingRequest,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    return await rate_skill_route_data(request, skill_id, payload, x_mock_user_id)
+    return await rate_skill_route_data(
+        request, skill_id, payload, x_mock_user_id, authorization
+    )
 
 
 @router.get("/api/v1/skills/{skill_id}/rating")

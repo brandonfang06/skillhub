@@ -17,6 +17,7 @@ from app.publish.replacement import (
     cleanup_replaceable_version,
     delete_local_storage_objects_or_record_compensation,
 )
+from app.publish.scan_worker import mark_scan_task_failed
 from app.publish.side_effects import (
     PublishSideEffectInput,
     PublishSideEffectResult,
@@ -128,6 +129,10 @@ async def execute_publish_write(
             raise VersionReplacementConflict(
                 "Rejected version resubmission requires review"
             )
+    if request.scanner_enabled and scan_task_publisher is None:
+        raise ValueError(
+            "Scan task publisher is required when scanner is enabled"
+        )
 
     replacement_storage_keys: list[str] = []
     replacement_cleanup = None
@@ -215,8 +220,6 @@ async def execute_publish_write(
                 actor_service_principal_id=request.actor_service_principal_id,
             ),
         )
-        if side_effects.scan_task is not None and scan_task_publisher is not None:
-            await scan_task_publisher.publish_scan_task(side_effects.scan_task)
         if (
             replacement_cleanup is not None
             and replacement_cleanup.archived_review is not None
@@ -261,26 +264,66 @@ async def execute_publish_write(
         if prepared.latest_version_updated:
             await upsert_skill_search_document(connection, prepared.skill_id)
 
-    await publish_review_notifications(notification_fanout, notification_rows)
+    scan_task_publish_error: Exception | None = None
+    if side_effects.scan_task is not None and scan_task_publisher is not None:
+        try:
+            await scan_task_publisher.publish_scan_task(side_effects.scan_task)
+        except Exception as publish_error:  # noqa: BLE001
+            # Publisher implementations can surface transport-specific errors.
+            scan_task_publish_error = publish_error
+            try:
+                async with transaction_connection(engine) as connection:
+                    await mark_scan_task_failed(
+                        connection,
+                        version_id=side_effects.scan_task.version_id,
+                        scanner_type=side_effects.scan_task.metadata.get(
+                            "scannerType", "skill-scanner"
+                        ),
+                        failure_code="SCAN_TASK_PUBLISH_FAILED",
+                    )
+            except Exception as compensation_error:  # noqa: BLE001
+                # Keep the Redis publication failure as the primary exception.
+                publish_error.add_note(
+                    "Scan task publish compensation failed: "
+                    f"{compensation_error!r}"
+                )
+    if scan_task_publish_error is None:
+        await publish_review_notifications(notification_fanout, notification_rows)
 
     replacement_deleted_keys: list[str] = []
     replacement_compensation_recorded = False
     if request.replacement is not None and replacement_storage_keys:
-        async with transaction_connection(engine) as connection:
-            delete_result = await delete_local_storage_objects_or_record_compensation(
-                connection,
-                request.storage_base_path,
-                StorageDeleteCompensationInput(
-                    skill_id=request.replacement.skill_id,
-                    namespace=request.replacement.namespace,
-                    slug=request.replacement.slug,
-                    storage_keys=replacement_storage_keys,
-                    last_error=None,
-                    now=request.now,
-                ),
+        try:
+            async with transaction_connection(engine) as connection:
+                delete_result = (
+                    await delete_local_storage_objects_or_record_compensation(
+                        connection,
+                        request.storage_base_path,
+                        StorageDeleteCompensationInput(
+                            skill_id=request.replacement.skill_id,
+                            namespace=request.replacement.namespace,
+                            slug=request.replacement.slug,
+                            storage_keys=replacement_storage_keys,
+                            last_error=None,
+                            now=request.now,
+                        ),
+                    )
+                )
+            replacement_deleted_keys = delete_result.deleted_keys
+            replacement_compensation_recorded = (
+                delete_result.compensation_recorded
             )
-        replacement_deleted_keys = delete_result.deleted_keys
-        replacement_compensation_recorded = delete_result.compensation_recorded
+        except Exception as replacement_cleanup_error:
+            if scan_task_publish_error is None:
+                raise
+            # Cleanup failure must not replace the Redis publication failure.
+            scan_task_publish_error.add_note(
+                "Replacement storage cleanup failed: "
+                f"{replacement_cleanup_error!r}"
+            )
+
+    if scan_task_publish_error is not None:
+        raise scan_task_publish_error
 
     return PublishWriteResult(
         skill_id=prepared.skill_id,

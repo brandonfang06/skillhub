@@ -50,6 +50,7 @@ def test_build_version_detail_response_maps_java_fields_and_json_strings() -> No
             "submittedByName": "hcfange",
             "submittedAt": "2026-08-19T08:00:00Z",
         },
+        "complianceSnapshot": None,
     }
 
 

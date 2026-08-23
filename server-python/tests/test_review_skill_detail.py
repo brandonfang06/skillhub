@@ -152,6 +152,8 @@ class FakeReviewSkillDetailConnection:
                         "total_size": 80,
                         "published_at": datetime(2026, 6, 8, 9, 0, tzinfo=UTC),
                         "download_ready": True,
+                        "compliance_snapshot_json": None,
+                        "parsed_metadata_json": '{"largeUnrelatedFrontmatter":"must-not-project"}',
                         "created_at": datetime(2026, 6, 8, 8, 0, tzinfo=UTC),
                     },
                     {
@@ -163,6 +165,8 @@ class FakeReviewSkillDetailConnection:
                         "total_size": 120,
                         "published_at": None,
                         "download_ready": False,
+                        "compliance_snapshot_json": None,
+                        "parsed_metadata_json": '{"largeUnrelatedFrontmatter":"must-not-project"}',
                         "created_at": datetime(2026, 6, 9, 9, 0, tzinfo=UTC),
                     },
                 ]
@@ -260,6 +264,7 @@ async def test_read_review_skill_detail_builds_review_bound_snapshot(tmp_path: P
             "totalSize": 80,
             "publishedAt": "2026-06-08T09:00:00Z",
             "downloadAvailable": True,
+            "complianceSnapshot": None,
         },
         {
             "id": 52,
@@ -270,6 +275,7 @@ async def test_read_review_skill_detail_builds_review_bound_snapshot(tmp_path: P
             "totalSize": 120,
             "publishedAt": None,
             "downloadAvailable": True,
+            "complianceSnapshot": None,
         },
     ]
     assert response["files"] == [
@@ -301,6 +307,9 @@ async def test_read_review_skill_detail_builds_review_bound_snapshot(tmp_path: P
         "contentFingerprint": "f" * 64,
         "browseUrl": "https://github.com/mattpocock/skills/tree/" + "a" * 40 + "/skills/agent-helper",
     }
+    version_query = next(sql for sql in connection.statements if "FROM skill_version sv" in sql)
+    assert "sv.parsed_metadata_json -> 'complianceSnapshot'" in version_query
+    assert "CAST(sv.parsed_metadata_json AS text)" not in version_query
 
 
 @pytest.mark.anyio

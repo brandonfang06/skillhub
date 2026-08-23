@@ -50,6 +50,11 @@ class FakeNamespaceMutationConnection:
             user_id = str(bound["user_id"])
             row = self.members.get(user_id)
             return FakeResult(row={"role": row["role"]}) if row else FakeResult()
+        if "SELECT user_id, role" in sql and "FROM namespace_member" in sql:
+            return FakeResult(rows=[
+                {"user_id": user_id, "role": row["role"]}
+                for user_id, row in self.members.items()
+            ])
         if "SELECT nm.id" in sql and "FROM namespace_member nm" in sql:
             row = self.members.get(str(bound["user_id"]))
             return FakeResult(row=self._member_response_row(row)) if row else FakeResult()
@@ -97,6 +102,7 @@ async def test_add_namespace_member_matches_java_rules() -> None:
     assert response["userId"] == "new-user"
     assert response["displayName"] == "New User"
     assert response["role"] == "ADMIN"
+    assert "FOR UPDATE" in connection.statements[0]
 
     with pytest.raises(NamespaceMemberReadError, match="error.namespace.member.alreadyExists"):
         await add_namespace_member(FakeEngine(connection), slug="team-a", member_user_id="new-user", role="MEMBER", operator_user_id="operator")
@@ -133,6 +139,35 @@ async def test_update_and_remove_namespace_member_match_java_rules() -> None:
     removed = await remove_namespace_member(FakeEngine(connection), slug="team-a", member_user_id="member", operator_user_id="operator")
     assert removed == {"message": "Member removed successfully"}
     assert "member" not in connection.members
+
+
+@pytest.mark.anyio
+async def test_ordinary_update_and_remove_lock_namespace_before_member_rows() -> None:
+    for operation in ("update", "remove"):
+        connection = FakeNamespaceMutationConnection(
+            members={
+                "operator": member_row(user_id="operator", role="OWNER"),
+                "member": member_row(user_id="member", role="MEMBER"),
+            }
+        )
+        if operation == "update":
+            await update_namespace_member_role(
+                FakeEngine(connection),
+                slug="team-a",
+                member_user_id="member",
+                role="ADMIN",
+                operator_user_id="operator",
+            )
+        else:
+            await remove_namespace_member(
+                FakeEngine(connection),
+                slug="team-a",
+                member_user_id="member",
+                operator_user_id="operator",
+            )
+
+        assert "FROM namespace" in connection.statements[0]
+        assert "FOR UPDATE" in connection.statements[0]
 
 
 @pytest.mark.anyio
@@ -176,6 +211,19 @@ async def test_transfer_namespace_ownership_matches_java_role_swap() -> None:
     assert response == {"message": "Ownership transferred successfully"}
     assert connection.members["owner"]["role"] == "ADMIN"
     assert connection.members["new-owner"]["role"] == "OWNER"
+    assert "FOR UPDATE" in connection.statements[0]
+    member_lock_index = next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if "SELECT user_id, role" in statement
+    )
+    first_update_index = next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if "UPDATE namespace_member" in statement
+    )
+    assert member_lock_index < first_update_index
+    assert "FOR UPDATE" in connection.statements[member_lock_index]
 
 
 @pytest.mark.anyio

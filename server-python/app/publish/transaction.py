@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.db.unit_of_work import transaction_connection
 
 from app.publish.auto_withdraw import auto_withdraw_pending_review_versions
+from app.publish.compliance import SNAPSHOT_FIELD_NAME, build_compliance_snapshot
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.storage import StoredPackageResult
 
@@ -95,12 +96,18 @@ def build_manifest_json(entries: list[PackageEntry]) -> list[dict[str, object]]:
     ]
 
 
-def build_parsed_metadata_json(metadata: SkillMetadata) -> dict[str, object]:
-    if metadata.frontmatter:
-        return metadata.frontmatter
+def build_parsed_metadata_json(
+    metadata: SkillMetadata,
+    entries: list[PackageEntry] | None = None,
+) -> dict[str, object]:
     payload: dict[str, object] = {
         "name": metadata.name,
         "description": metadata.description,
+        "frontmatter": metadata.frontmatter,
+        SNAPSHOT_FIELD_NAME: build_compliance_snapshot(
+            metadata.frontmatter,
+            entries or [],
+        ),
     }
     if metadata.version is not None:
         payload["version"] = metadata.version
@@ -244,7 +251,9 @@ async def prepare_publish_db_records(connection: Any, request: PublishDbPrepareI
                     "skill_id": skill_id,
                     "version": request.version,
                     "status": version_status,
-                    "parsed_metadata_json": encode_jsonb(build_parsed_metadata_json(request.metadata)),
+                    "parsed_metadata_json": encode_jsonb(
+                        build_parsed_metadata_json(request.metadata, request.entries)
+                    ),
                     "manifest_json": encode_jsonb(build_manifest_json(request.entries)),
                     "published_at": published_at,
                     "publisher_id": request.publisher_id,

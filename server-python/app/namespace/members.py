@@ -5,7 +5,15 @@ from typing import Any
 from sqlalchemy import text
 
 from app.api.skills import to_java_instant
-from app.auth.policy import is_namespace_manager, is_namespace_member, is_namespace_owner
+from app.auth.policy import (
+    is_namespace_manager,
+    is_namespace_member,
+    is_namespace_owner,
+)
+from app.namespace.locking import (
+    lock_namespace_for_update,
+    lock_namespace_members_for_update,
+)
 
 
 class NamespaceMemberReadError(Exception):
@@ -53,6 +61,15 @@ async def _read_namespace(connection: Any, slug: str) -> dict[str, Any]:
     if row is None:
         raise NamespaceMemberReadError("error.namespace.slug.notFound", status_code=400)
     return dict(row)
+
+
+async def _lock_namespace(connection: Any, slug: str) -> dict[str, Any]:
+    namespace = await lock_namespace_for_update(connection, slug)
+    if namespace is None:
+        raise NamespaceMemberReadError(
+            "error.namespace.slug.notFound", status_code=400
+        )
+    return namespace
 
 
 async def _read_member_role(connection: Any, namespace_id: int, user_id: str) -> str | None:
@@ -174,7 +191,7 @@ async def add_namespace_member(
     operator_user_id: str,
 ) -> dict[str, Any]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace(connection, slug)
+        namespace = await _lock_namespace(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_member_mutation_allowed(namespace)
         await _require_admin_or_owner(connection, namespace_id, operator_user_id)
@@ -205,7 +222,7 @@ async def remove_namespace_member(
     operator_user_id: str,
 ) -> dict[str, str]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace(connection, slug)
+        namespace = await _lock_namespace(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_member_mutation_allowed(namespace)
         await _require_admin_or_owner(connection, namespace_id, operator_user_id)
@@ -236,7 +253,7 @@ async def update_namespace_member_role(
     operator_user_id: str,
 ) -> dict[str, Any]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace(connection, slug)
+        namespace = await _lock_namespace(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_member_mutation_allowed(namespace)
         await _require_admin_or_owner(connection, namespace_id, operator_user_id)
@@ -270,15 +287,23 @@ async def transfer_namespace_ownership(
     new_owner_id: str,
 ) -> dict[str, str]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace(connection, slug)
+        namespace = await _lock_namespace(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_transfer_ownership_allowed(namespace)
-        current_role = await _read_member_role(connection, namespace_id, current_owner_id)
-        if current_role is None:
+        members = await lock_namespace_members_for_update(connection, namespace_id)
+        current_member = next(
+            (item for item in members if str(item["user_id"]) == current_owner_id),
+            None,
+        )
+        if current_member is None:
             raise NamespaceMemberReadError("error.namespace.owner.current.notFound", status_code=400)
+        current_role = str(current_member["role"])
         if not is_namespace_owner(current_role):
             raise NamespaceMemberReadError("error.namespace.owner.current.invalid", status_code=400)
-        if await _read_member_role(connection, namespace_id, new_owner_id) is None:
+        owners = [item for item in members if is_namespace_owner(str(item["role"]))]
+        if len(owners) != 1 or str(owners[0]["user_id"]) != current_owner_id:
+            raise NamespaceMemberReadError("error.namespace.owner.current.invalid", status_code=400)
+        if not any(str(item["user_id"]) == new_owner_id for item in members):
             raise NamespaceMemberReadError("error.namespace.owner.new.notFound", status_code=400)
         await connection.execute(
             text(
@@ -346,7 +371,7 @@ async def batch_add_namespace_members(
             )
             results.append({"userId": user_id, "role": role, "success": True, "error": None})
             success_count += 1
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             results.append({"userId": user_id, "role": role, "success": False, "error": _map_batch_error(exc)})
             failure_count += 1
     return {

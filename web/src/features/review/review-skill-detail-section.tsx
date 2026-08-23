@@ -7,12 +7,14 @@ import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
+import { ComplianceSnapshotPanel } from '@/features/skill/compliance-snapshot-panel'
 import { SourceProvenanceCard } from '@/features/skill/source-provenance'
 import { Button, buttonVariants } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { getReviewDownloadHref, getReviewSkillDocumentation, isActiveReviewVersion } from './review-skill-detail'
 import { useReviewFile } from './use-review-file'
+import { pickBaseVersion, ReviewComplianceDiffPanel } from './review-compliance-diff-panel'
 
 interface ReviewSkillDetailSectionProps {
   detail?: ReviewSkillDetail
@@ -77,6 +79,10 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
   }
 
   const documentation = getReviewSkillDocumentation(detail)
+  const pendingVersion = detail.versions.find(
+    (version) => version.version === detail.activeVersion,
+  ) ?? null
+  const baseVersion = pickBaseVersion(detail.versions, detail.activeVersion)
 
   return (
     <Card className="p-6 space-y-4">
@@ -116,6 +122,12 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
               {t('review.downloadSkillZip')}
             </a>
           </div>
+
+          <ReviewComplianceDiffPanel
+            baseVersion={baseVersion}
+            pendingVersion={pendingVersion}
+            className="shadow-sm"
+          />
 
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
@@ -172,6 +184,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
                         {version.changelog ? (
                           <p className="text-sm text-muted-foreground">{version.changelog}</p>
                         ) : null}
+                        <ComplianceSnapshotPanel snapshot={version.complianceSnapshot} />
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {t('skillDetail.fileCount', { count: version.fileCount })}

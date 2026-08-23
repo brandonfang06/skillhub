@@ -387,6 +387,21 @@ async function installMockApi(
           totalSize: 96,
           publishedAt: '2026-08-04T00:00:00Z',
           downloadAvailable: true,
+          complianceSnapshot: {
+            schemaVersion: '1.0',
+            digest: `sha256:${'d'.repeat(64)}`,
+            items: [{
+              standard: 'soc2',
+              version: '2026',
+              controlId: 'CC7.2',
+              title: 'Publisher-declared monitoring activity',
+              evidence: [{
+                type: 'external-url',
+                url: 'https://example.test/evidence/with/a/very/long/path/that/must/wrap',
+                sha256: 'a'.repeat(64),
+              }],
+            }],
+          },
         }],
         total: 1,
         page: 0,
@@ -501,6 +516,20 @@ test.describe('SkillHub production subpath deployment', () => {
     await page.getByRole('button', { name: 'Logout' }).click()
     await logoutRequest
     await expect(page).toHaveURL('http://127.0.0.1:3190/skillhub/')
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('renders publisher compliance declarations without mobile overflow', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: true }, observed)
+
+    await page.goto(`${basePath}/space/global/subpath-skill`)
+    await page.getByRole('tab', { name: 'Versions' }).click()
+    await expect(page.getByRole('region', { name: 'Publisher compliance declarations' })).toBeVisible()
+    await page.getByRole('button', { name: 'Expand details' }).click()
+    await expect(page.getByText('https://example.test/evidence/with/a/very/long/path/that/must/wrap')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
     expect(observed.apiRootEscapes).toEqual([])
   })
 

@@ -137,6 +137,7 @@ describe('UserMenu security settings visibility', () => {
 
     expect(html).toContain('user.menu.downloadEvents')
     expect(html).toContain('user.menu.namespaceAnalytics')
+    expect(html).toContain('user.menu.namespaceManagement')
   })
 
   it('hides download event analytics from auditor-only users', () => {
@@ -151,5 +152,6 @@ describe('UserMenu security settings visibility', () => {
 
     expect(html).not.toContain('user.menu.downloadEvents')
     expect(html).not.toContain('user.menu.namespaceAnalytics')
+    expect(html).not.toContain('user.menu.namespaceManagement')
   })
 })

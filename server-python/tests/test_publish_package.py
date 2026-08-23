@@ -32,6 +32,19 @@ def skill_md(name: str = "demo", description: str = "Demo skill") -> bytes:
     return f"---\nname: {name}\ndescription: {description}\nversion: 1.0.0\n---\n# Demo\n".encode()
 
 
+def compliance_skill_md(compliance_yaml: str) -> bytes:
+    return (
+        "---\n"
+        "name: compliance-demo\n"
+        "description: Compliance demo\n"
+        "version: 1.0.0\n"
+        "x-astron-compliance:\n"
+        f"{compliance_yaml}\n"
+        "---\n"
+        "# Demo\n"
+    ).encode()
+
+
 def test_package_entry_size_and_content_type_mapping() -> None:
     entry = PackageEntry(path="src/main.py", content=b"print('ok')", content_type="text/x-python")
 
@@ -49,6 +62,8 @@ def test_package_entry_size_and_content_type_mapping() -> None:
         ("SKILL.md", "SKILL.md"),
         (" nested/SKILL.md ", "nested/SKILL.md"),
         ("nested\\src\\main.py", "nested/src/main.py"),
+        ("\u00a0references/evidence.md\u00a0", "\u00a0references/evidence.md\u00a0"),
+        ("\u2003references/evidence.md\u2003", "\u2003references/evidence.md\u2003"),
     ],
 )
 def test_normalize_entry_path_accepts_java_compatible_paths(raw_path: str, normalized: str) -> None:
@@ -229,6 +244,270 @@ def test_validate_package_uses_java_compatible_metadata_error_wording(content: b
 
     assert not result.valid
     assert f"Invalid SKILL.md frontmatter: {message}" in result.errors
+
+
+@pytest.mark.parametrize(
+    ("compliance_yaml", "message"),
+    [
+        ("  standard: nist-csf", "x-astron-compliance must be an array"),
+        ("  - not-an-object", "x-astron-compliance[0] must be an object"),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n    extra: no",
+            "x-astron-compliance[0].extra is not allowed",
+        ),
+        (
+            "  - standard: ''\n    version: '2.0'\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].standard is required",
+        ),
+        (
+            "  - standard: nist-csf\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].version is required",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'",
+            "x-astron-compliance[0].controlId is required",
+        ),
+        (
+            f"  - standard: {'a' * 65}\n    version: '2.0'\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].standard must be at most 64 characters",
+        ),
+        (
+            "  - standard: nist/csf\n    version: '2.0'\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].standard has an invalid format",
+        ),
+        (
+            "  - standard: '\u00a0MITRE-ATTACK\u00a0'\n    version: v19.1\n    controlId: T1059",
+            "x-astron-compliance[0].standard has an invalid format",
+        ),
+        (
+            f"  - standard: nist-csf\n    version: '{'v' * 65}'\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].version must be at most 64 characters",
+        ),
+        (
+            f"  - standard: nist-csf\n    version: '{'😀' * 33}'\n    controlId: GV.OC-03",
+            "x-astron-compliance[0].version must be at most 64 characters",
+        ),
+        (
+            f"  - standard: nist-csf\n    version: '2.0'\n    controlId: {'C' * 129}",
+            "x-astron-compliance[0].controlId must be at most 128 characters",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: bad/control",
+            "x-astron-compliance[0].controlId has an invalid format",
+        ),
+        (
+            f"  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n    title: {'t' * 201}",
+            "x-astron-compliance[0].title must be at most 200 characters",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n    title: ''",
+            "x-astron-compliance[0].title must be a non-empty string",
+        ),
+        (
+            '  - standard: nist-csf\n    version: \'2.0\'\n    controlId: GV.OC-03\n    title: "\\uD800"',
+            "x-astron-compliance[0].title must contain valid Unicode",
+        ),
+        (
+            "  - standard: MITRE-ATTACK\n    version: v19.1\n    controlId: T1059\n"
+            "  - standard: mitre-attack\n    version: v19.1\n    controlId: T1059",
+            "x-astron-compliance contains duplicate mapping mitre-attack/v19.1/T1059",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n    evidence: object",
+            "x-astron-compliance[0].evidence must be an array",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - type: unknown",
+            "type must be one of packaged-file, external-url",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - type: '\u00a0external-url\u00a0'\n        url: https://example.com",
+            "type must be one of packaged-file, external-url",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - not-an-object",
+            "x-astron-compliance[0].evidence[0] must be an object",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - type: external-url\n        url: https://example.com\n        extra: no",
+            "x-astron-compliance[0].evidence[0].extra is not allowed",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - type: packaged-file\n        path: ../outside.md",
+            "Parent directory paths are not allowed",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            "    evidence:\n      - type: packaged-file\n        path: references/missing.md",
+            "path does not exist in package: references/missing.md",
+        ),
+        (
+            "  - standard: nist-csf\n    version: '2.0'\n    controlId: GV.OC-03\n"
+            f"    evidence:\n      - type: packaged-file\n        path: {'p' * 513}",
+            "path must be at most 512 characters",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: file:///tmp/evidence.md",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: https:///missing-host",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            f"    evidence:\n      - type: external-url\n        url: https://example.com/{'u' * 2030}",
+            "url must be at most 2048 characters",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: https://exa mple.com/%zz",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://example.com/a\\b'",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://example.com/a[b]'",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://user@example.com@evil.example/path'",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://example.123/path'",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://example.com:2147483648/path'",
+            "url must be an http or https URL",
+        ),
+        (
+            "  - standard: soc2\n    version: '2017'\n    controlId: CC6.1\n"
+            "    evidence:\n      - type: external-url\n        url: 'https://[fe80::1%eth-0]/path'",
+            "url must be an http or https URL",
+        ),
+    ],
+)
+def test_validate_package_rejects_invalid_compliance_metadata(
+    compliance_yaml: str,
+    message: str,
+) -> None:
+    result = validate_package(
+        [PackageEntry("SKILL.md", compliance_skill_md(compliance_yaml), "text/markdown")]
+    )
+
+    assert not result.valid
+    assert any(message in error for error in result.errors)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com:/path",
+        "https://example.com:65536/path",
+        "https://example.com:2147483647/path",
+        "https://example.com/a\u200db",
+        "https://123/path",
+        "https://1abc/path",
+        "https://010.000.000.001/path",
+        "https://[fe80::1%eth_0]/path",
+        "https://[fe80::1%eth.0]/path",
+        "https://[::ffff:010.000.000.001]/path",
+        "https://[0:0:0:0:0:ffff:010.000.000.001]/path",
+    ],
+)
+def test_validate_package_accepts_java_compatible_external_evidence_urls(url: str) -> None:
+    result = validate_package(
+        [
+            PackageEntry(
+                "SKILL.md",
+                compliance_skill_md(
+                    "  - standard: soc2\n"
+                    "    version: '2017'\n"
+                    "    controlId: CC6.1\n"
+                    "    evidence:\n"
+                    "      - type: external-url\n"
+                    f"        url: '{url}'"
+                ),
+                "text/markdown",
+            )
+        ]
+    )
+
+    assert result.valid
+
+
+@pytest.mark.parametrize("padding", ["\u00a0", "\u2003"])
+def test_validate_package_preserves_java_unicode_whitespace_evidence_paths(
+    padding: str,
+) -> None:
+    evidence_path = f"{padding}references/evidence.md{padding}"
+    entries = extract_package(
+        make_zip(
+            {
+                "SKILL.md": compliance_skill_md(
+                    "  - standard: soc2\n"
+                    "    version: '2017'\n"
+                    "    controlId: CC6.1\n"
+                    "    evidence:\n"
+                    "      - type: packaged-file\n"
+                    f"        path: '{evidence_path}'"
+                ),
+                evidence_path: b"evidence",
+            }
+        )
+    )
+    result = validate_package(entries)
+
+    assert evidence_path in [entry.path for entry in entries]
+    assert result.valid
+
+
+def test_validate_package_enforces_compliance_mapping_and_evidence_limits() -> None:
+    mappings = "\n".join(
+        f"  - standard: standard-{index}\n    version: '1'\n    controlId: C{index}"
+        for index in range(51)
+    )
+    evidence = "\n".join(
+        f"      - type: external-url\n        url: https://example.com/{index}"
+        for index in range(11)
+    )
+    too_many_mappings = validate_package(
+        [PackageEntry("SKILL.md", compliance_skill_md(mappings), "text/markdown")]
+    )
+    too_many_evidence = validate_package(
+        [
+            PackageEntry(
+                "SKILL.md",
+                compliance_skill_md(
+                    "  - standard: nist-csf\n"
+                    "    version: '2.0'\n"
+                    "    controlId: GV.OC-03\n"
+                    "    evidence:\n"
+                    f"{evidence}"
+                ),
+                "text/markdown",
+            )
+        ]
+    )
+
+    assert any("must contain at most 50 items" in error for error in too_many_mappings.errors)
+    assert any("must contain at most 10 items" in error for error in too_many_evidence.errors)
 
 
 @pytest.mark.parametrize(

@@ -339,7 +339,11 @@ async def confirm_publish_route_data(
         data = await _resolve_result(
             writer(confirm_input)
             if writer is not None
-            else confirm_publish_skill_version(request.app.state.db_engine, confirm_input)
+            else confirm_publish_skill_version(
+                request.app.state.db_engine,
+                confirm_input,
+                notification_fanout=getattr(request.app.state, "notification_fanout", None),
+            )
         )
     except SkillLifecycleError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

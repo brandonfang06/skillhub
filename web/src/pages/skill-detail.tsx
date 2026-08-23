@@ -12,6 +12,7 @@ import type { SkillFile } from '@/api/types'
 import { InstallCommand } from '@/features/skill/install-command'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
+import { ComplianceSnapshotPanel } from '@/features/skill/compliance-snapshot-panel'
 import { SourceProvenanceCard } from '@/features/skill/source-provenance'
 import { VersionAttributionCard } from '@/features/skill/version-attribution'
 import { useResourceDiagnostics } from '@/features/skill/use-resource-diagnostics'
@@ -1184,6 +1185,7 @@ export function SkillDetailPage() {
                       {version.changelog && (
                         <p className="text-sm text-muted-foreground leading-relaxed">{version.changelog}</p>
                       )}
+                      <ComplianceSnapshotPanel snapshot={version.complianceSnapshot} className="mt-3" />
                       <div className="text-xs text-muted-foreground mt-2 flex items-center gap-3">
                         <span>{t('skillDetail.fileCount', { count: version.fileCount })}</span>
                         <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />

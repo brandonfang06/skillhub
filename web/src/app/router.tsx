@@ -153,6 +153,11 @@ const NamespaceAnalyticsPage = createRoleProtectedRouteComponent(
   'NamespaceAnalyticsPage',
   ['SUPER_ADMIN'],
 )
+const AdminNamespacesPage = createRoleProtectedRouteComponent(
+  () => import('@/pages/admin/namespaces'),
+  'AdminNamespacesPage',
+  ['SUPER_ADMIN'],
+)
 const ServicePrincipalsPage = createRoleProtectedRouteComponent(
   () => import('@/pages/admin/service-principals'),
   'ServicePrincipalsPage',
@@ -484,6 +489,13 @@ const adminNamespaceAnalyticsRoute = createRoute({
   component: NamespaceAnalyticsPage,
 })
 
+const adminNamespacesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin/namespaces',
+  beforeLoad: requireAuth,
+  component: AdminNamespacesPage,
+})
+
 const adminServicePrincipalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin/service-principals',
@@ -530,6 +542,7 @@ const routeTree = rootRoute.addChildren([
   adminLabelsRoute,
   adminDownloadEventsRoute,
   adminNamespaceAnalyticsRoute,
+  adminNamespacesRoute,
   adminServicePrincipalsRoute,
 ])
 

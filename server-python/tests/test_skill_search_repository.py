@@ -70,6 +70,7 @@ def test_build_skill_search_response_maps_java_summary_fields() -> None:
                 "publishedVersion": {"id": 41, "version": "1.2.0", "status": "PUBLISHED"},
                 "ownerPreviewVersion": None,
                 "resolutionMode": "PUBLISHED",
+                "complianceSnapshot": None,
             }
         ],
         "total": 1,
@@ -159,6 +160,10 @@ async def test_read_skill_search_resolves_an_older_published_version_when_latest
         assert "JOIN skill_version isv ON isv.id = s.latest_version_id" not in statement
         assert "isv.download_ready = TRUE" not in statement
         assert "isv.yanked_at IS NULL" not in statement
+    count_sql, page_sql = connection.statements
+    assert "parsed_metadata_json" not in count_sql
+    assert "isv.parsed_metadata_json -> 'complianceSnapshot'" in page_sql
+    assert "CAST(isv.parsed_metadata_json AS text)" not in page_sql
 
 
 @pytest.mark.anyio

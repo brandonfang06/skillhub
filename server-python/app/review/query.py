@@ -12,6 +12,7 @@ from sqlalchemy import text
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.source_import.source import source_provenance_from_row
+from app.skills.compliance_projection import compliance_snapshot_from_value
 
 
 PLATFORM_REVIEW_ROLES = {"SKILL_ADMIN", "SUPER_ADMIN"}
@@ -288,6 +289,7 @@ def _review_skill_version_response(row: dict[str, Any], active_version_id: int) 
         "totalSize": int(row["total_size"]),
         "publishedAt": _java_instant(row.get("published_at")),
         "downloadAvailable": int(row["id"]) == active_version_id or (status == "PUBLISHED" and bool(row["download_ready"])),
+        "complianceSnapshot": compliance_snapshot_from_value(row.get("compliance_snapshot_json")),
     }
 
 
@@ -828,6 +830,8 @@ async def _read_review_skill_versions(connection: Any, skill_id: int) -> list[di
                        sv.total_size,
                        sv.published_at,
                        sv.download_ready,
+                       CAST(sv.parsed_metadata_json -> 'complianceSnapshot' AS text)
+                           AS compliance_snapshot_json,
                        sv.created_at
                 FROM skill_version sv
                 WHERE sv.skill_id = :skill_id

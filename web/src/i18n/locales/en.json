@@ -1,4 +1,20 @@
 {
+  "common": {
+    "expand": "Expand details",
+    "collapse": "Collapse details"
+  },
+  "compliance": {
+    "title": "Publisher compliance declarations",
+    "badgeLabel": "Publisher declaration: {{standard}} {{controlId}}",
+    "mappingCount": "{{count}} declarations",
+    "schemaVersion": "Schema {{version}}",
+    "digest": "Declaration snapshot digest",
+    "unknownStandard": "Unknown standard",
+    "evidence": "Declared evidence",
+    "noEvidence": "No evidence was declared for this mapping.",
+    "publisherClaimNotice": "These mappings and evidence references are claims supplied by the publisher.",
+    "notCertification": "They are not verified certification or runtime evidence from SkillHub."
+  },
   "nav": {
     "landing": "Home",
     "home": "Skill Center",
@@ -1462,6 +1478,33 @@
     "pageSuffix": "",
     "goToPage": "Go to page {{page}}"
   },
+  "adminNamespaces": {
+    "title": "Namespace Management",
+    "subtitle": "Inspect namespace ownership, members, lifecycle, and platform override capabilities.",
+    "stats": { "label": "Unfiltered lifecycle summary", "total": "All namespaces", "active": "Active", "frozen": "Frozen", "archived": "Archived" },
+    "filter": { "keyword": "Search", "keywordPlaceholder": "Slug, name, or description", "status": "Status", "type": "Namespace type", "all": "All", "search": "Apply filters" },
+    "status": { "ACTIVE": "Active", "FROZEN": "Frozen", "ARCHIVED": "Archived" },
+    "type": { "TEAM": "Team", "GLOBAL": "Global" },
+    "role": { "OWNER": "Owner", "ADMIN": "Admin", "MEMBER": "Member" },
+    "listLabel": "Namespaces", "detailLabel": "Namespace detail", "empty": "No namespaces match these filters.",
+    "counts": "{{memberCount}} members · {{skillCount}} skills", "previous": "Previous", "next": "Next",
+    "currentRole": "Current membership role", "noMembership": "Not a namespace member", "platformOverride": "Platform override", "yes": "Yes", "no": "No",
+    "memberCount": "Members", "skillCount": "Skills", "globalReadOnly": "GLOBAL is immutable and available for inspection only.",
+    "actions": { "freeze": "Freeze", "unfreeze": "Unfreeze", "archive": "Archive", "restore": "Restore" },
+    "members": { "title": "Members", "search": "Find an active non-member", "searching": "Searching…", "empty": "This namespace has no members.", "role": "Initial role", "add": "Add", "changeRole": "Change member role", "transfer": "Transfer ownership", "remove": "Remove", "total": "{{total}} members · page {{page}}", "previous": "Previous members", "next": "Next members" },
+    "confirm": {
+      "reason": "Audit reason (optional, maximum 512 characters)",
+      "freeze": { "title": "Freeze namespace?", "description": "Publishing and member changes will be paused for {{namespace}} (@{{slug}})." },
+      "unfreeze": { "title": "Unfreeze namespace?", "description": "Restore active operations for {{namespace}} (@{{slug}})." },
+      "archive": { "title": "Archive namespace?", "description": "Archive {{namespace}} (@{{slug}}) and stop active operations." },
+      "restore": { "title": "Restore namespace?", "description": "Restore {{namespace}} (@{{slug}}) to Active." },
+      "remove": { "title": "Remove member?", "description": "Remove {{user}} from {{namespace}} (@{{slug}})." },
+      "transfer": { "title": "Transfer ownership?", "description": "Make {{user}} the sole owner of {{namespace}} (@{{slug}})." },
+      "role": { "title": "Change member role?", "description": "Change {{user}} to {{role}} in {{namespace}} (@{{slug}})." }
+    },
+    "success": "Namespace updated.", "retry": "Retry",
+    "error": { "list": "Unable to load namespaces.", "detail": "Unable to load namespace detail.", "members": "Unable to load members.", "candidates": "Unable to search member candidates.", "mutation": "The namespace update failed." }
+  },
   "user": {
     "menu": {
       "dashboard": "Dashboard",
@@ -1477,6 +1520,7 @@
       "labels": "Label Management",
       "downloadEvents": "Download Events",
       "namespaceAnalytics": "Namespace Analytics",
+      "namespaceManagement": "Namespace Management",
       "servicePrincipals": "Service Accounts",
       "auditLog": "Audit Log",
       "security": "Security Settings",
@@ -1549,6 +1593,22 @@
     "close": "Close"
   },
   "review": {
+    "complianceDiffTitle": "Publisher compliance declaration changes",
+    "complianceDiffDescription": "Compare the published version {{baseVersion}} with the pending version {{pendingVersion}}.",
+    "complianceDiffClaimNotice": "This comparison shows publisher-supplied claims; SkillHub has not verified them as certification or runtime evidence.",
+    "complianceDiffBaseVersion": "Published base",
+    "complianceDiffPendingVersion": "Pending version",
+    "complianceDiffBaseDigest": "Published snapshot digest",
+    "complianceDiffPendingDigest": "Pending snapshot digest",
+    "complianceDiffAdded": "Added",
+    "complianceDiffRemoved": "Removed",
+    "complianceDiffModified": "Modified",
+    "complianceDiffAddedLabel": "Added {{count}}",
+    "complianceDiffRemovedLabel": "Removed {{count}}",
+    "complianceDiffModifiedLabel": "Modified {{count}}",
+    "complianceDiffViewDetails": "View declaration details",
+    "complianceDiffMissingFromBase": "This declaration was not present in the published base.",
+    "complianceDiffMissingFromPending": "This declaration was removed from the pending version.",
     "detail": "Review Detail",
     "id": "Review ID",
     "backToList": "Back to List",

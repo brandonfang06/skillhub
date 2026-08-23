@@ -5,7 +5,8 @@ import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
-import { Bookmark } from 'lucide-react'
+import { Bookmark, FileText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface SkillCardProps {
   skill: SkillSummary
@@ -17,11 +18,15 @@ interface SkillCardProps {
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
 export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
+  const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
   const showStarredHighlight = highlightStarred && isAuthenticated && starStatus?.starred
   const headlineVersion = getHeadlineVersion(skill)
   const isInteractive = typeof onClick === 'function'
+  const complianceItems = skill.complianceSnapshot?.items?.filter(
+    (item) => item.standard || item.controlId,
+  ) ?? []
 
   return (
     <Card
@@ -58,6 +63,33 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             {skill.summary}
           </p>
         )}
+
+        {complianceItems.length > 0 ? (
+          <div className="mb-4 flex min-w-0 flex-wrap gap-1.5">
+            {complianceItems.slice(0, 2).map((item, index) => (
+              <span
+                key={`${item.standard ?? 'standard'}-${item.version ?? 'version'}-${item.controlId ?? index}`}
+                className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-100"
+                title={item.title ?? undefined}
+                aria-label={t('compliance.badgeLabel', {
+                  standard: item.standard ?? t('compliance.unknownStandard'),
+                  controlId: item.controlId ?? '—',
+                })}
+                data-compliance-claim-badge
+              >
+                <FileText className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {[item.standard, item.controlId].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+            ))}
+            {complianceItems.length > 2 ? (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                +{complianceItems.length - 2}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground">
           {headlineVersion && (

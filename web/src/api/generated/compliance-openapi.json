@@ -1,0 +1,196 @@
+{
+  "components": {
+    "schemas": {
+      "ComplianceEvidenceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "ComplianceEvidenceResponse",
+        "type": "object"
+      },
+      "ComplianceMappingResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "controlId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Controlid"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ComplianceEvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "standard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "title": "ComplianceMappingResponse",
+        "type": "object"
+      },
+      "ComplianceProjection": {
+        "additionalProperties": false,
+        "properties": {
+          "complianceSnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceSnapshotResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ComplianceProjection",
+        "type": "object"
+      },
+      "ComplianceSnapshotResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ComplianceMappingResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "schemaVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schemaversion"
+          }
+        },
+        "title": "ComplianceSnapshotResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "SkillHub Compliance Projection API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/contracts/compliance-projection": {
+      "get": {
+        "operationId": "get_compliance_projection_contract_contracts_compliance_projection_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceProjection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Compliance Projection Contract",
+        "tags": [
+          "Compliance Contract"
+        ]
+      }
+    }
+  }
+}

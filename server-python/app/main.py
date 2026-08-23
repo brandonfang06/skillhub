@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from app.api.account_merge import router as account_merge_router
 from app.api.admin_audit_logs import router as admin_audit_logs_router
 from app.api.admin_labels import router as admin_labels_router
+from app.api.admin_namespaces import router as admin_namespaces_router
 from app.api.admin_review_reports import router as admin_review_reports_router
 from app.api.admin_search import router as admin_search_router
 from app.api.admin_service_principals import router as admin_service_principals_router
@@ -134,6 +135,7 @@ def create_app() -> FastAPI:
     app.include_router(account_merge_router)
     app.include_router(admin_audit_logs_router)
     app.include_router(admin_labels_router)
+    app.include_router(admin_namespaces_router)
     app.include_router(admin_review_reports_router)
     app.include_router(admin_search_router)
     app.include_router(admin_service_principals_router)

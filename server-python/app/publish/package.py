@@ -10,6 +10,8 @@ from zipfile import BadZipFile, ZipFile
 
 import yaml
 
+from app.publish.java_compat import java_trim
+
 
 @dataclass(frozen=True)
 class PackageEntry:
@@ -224,7 +226,7 @@ def canonicalize_skill_md_path(normalized_path: str) -> str:
 
 
 def normalize_entry_path(raw_path: str) -> str:
-    sanitized = raw_path.replace("\\", "/").strip()
+    sanitized = java_trim(raw_path.replace("\\", "/"))
     if not sanitized:
         raise ValueError("Path must not be blank")
     if sanitized.startswith("/"):
@@ -431,6 +433,10 @@ def validate_package(
         metadata = parse_skill_metadata(skill_md_entry.content)
     except ValueError as exc:
         errors.append(f"Invalid SKILL.md frontmatter: {exc}")
+    if metadata is not None:
+        from app.publish.compliance import validate_compliance_metadata
+
+        errors.extend(validate_compliance_metadata(metadata.frontmatter, normalized_entries))
 
     return ValidationResult(valid=not errors, errors=errors, warnings=warnings, metadata=metadata)
 

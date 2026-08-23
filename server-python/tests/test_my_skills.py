@@ -113,6 +113,7 @@ async def test_list_my_owned_skills_default_includes_archived_hidden_and_owner_p
     assert response["items"][0]["headlineVersion"] == {"id": 501, "version": "1.0.0", "status": "PUBLISHED"}
     assert response["items"][0]["ownerPreviewVersion"] == {"id": 601, "version": "1.1.0", "status": "PENDING_REVIEW"}
     assert response["items"][0]["resolutionMode"] == "PUBLISHED"
+    assert response["items"][0]["complianceSnapshot"] is None
     assert response["items"][0]["canSubmitPromotion"] is True
     assert connection.params[0] == {"user_id": "user-1"}
     assert "promotion_request" in connection.statements[0]

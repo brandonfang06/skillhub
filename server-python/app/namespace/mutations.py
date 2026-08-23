@@ -8,8 +8,16 @@ from typing import Any
 
 from sqlalchemy import text
 
-from app.auth.policy import is_namespace_manager, is_namespace_owner, namespace_role_allows
-from app.namespace.dependencies import has_namespace_dependencies, read_namespace_dependency_counts
+from app.auth.policy import (
+    is_namespace_manager,
+    is_namespace_owner,
+    namespace_role_allows,
+)
+from app.namespace.dependencies import (
+    has_namespace_dependencies,
+    read_namespace_dependency_counts,
+)
+from app.namespace.locking import lock_namespace_for_update
 from app.namespace.read import _namespace_response
 
 
@@ -70,6 +78,13 @@ async def _read_namespace_optional(connection: Any, slug: str) -> dict[str, Any]
         return await _read_namespace_by_slug(connection, slug)
     except NamespaceMutationError:
         return None
+
+
+async def _lock_namespace_by_slug(connection: Any, slug: str) -> dict[str, Any]:
+    locked = await lock_namespace_for_update(connection, slug)
+    if locked is None:
+        raise NamespaceMutationError("error.namespace.slug.notFound", status_code=400)
+    return await _read_namespace_by_slug(connection, slug)
 
 
 async def _read_member_role(connection: Any, namespace_id: int, user_id: str) -> str:
@@ -210,7 +225,7 @@ async def update_namespace(
     actor_user_id: str,
 ) -> dict[str, Any]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace_by_slug(connection, slug)
+        namespace = await _lock_namespace_by_slug(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_not_immutable(namespace)
         await _require_admin_or_owner(connection, namespace_id, actor_user_id)
@@ -248,7 +263,7 @@ async def delete_namespace(
     platform_roles: list[str] | None = None,
 ) -> dict[str, str]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace_by_slug(connection, slug)
+        namespace = await _lock_namespace_by_slug(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_not_immutable(namespace)
         is_super_admin = "SUPER_ADMIN" in set(platform_roles or [])
@@ -280,7 +295,7 @@ async def _transition_namespace(
     reject_if_archived: bool = False,
 ) -> dict[str, Any]:
     async with engine.begin() as connection:
-        namespace = await _read_namespace_by_slug(connection, slug)
+        namespace = await _lock_namespace_by_slug(connection, slug)
         namespace_id = int(namespace["id"])
         _assert_not_immutable(namespace)
         role = await _read_member_role(connection, namespace_id, actor_user_id)

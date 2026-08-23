@@ -314,6 +314,37 @@ async def test_namespace_lifecycle_transitions_write_audit_logs() -> None:
     assert connection.audit_rows[-1]["action"] == "RESTORE_NAMESPACE"
 
 
+@pytest.mark.anyio
+async def test_ordinary_profile_delete_and_lifecycle_lock_namespace_first() -> None:
+    update_connection = FakeNamespaceMutationConnection()
+    await update_namespace(
+        FakeEngine(update_connection),
+        slug="team-a",
+        display_name="Updated",
+        description=None,
+        actor_user_id="admin",
+    )
+    assert "FOR UPDATE" in update_connection.statements[0]
+
+    delete_connection = FakeNamespaceMutationConnection()
+    await delete_namespace(
+        FakeEngine(delete_connection), slug="team-a", actor_user_id="owner"
+    )
+    assert "FOR UPDATE" in delete_connection.statements[0]
+
+    lifecycle_connection = FakeNamespaceMutationConnection()
+    await freeze_namespace(
+        FakeEngine(lifecycle_connection),
+        slug="team-a",
+        actor_user_id="admin",
+        reason=None,
+        request_id="lock-order",
+        client_ip=None,
+        user_agent=None,
+    )
+    assert "FOR UPDATE" in lifecycle_connection.statements[0]
+
+
 def test_namespace_profile_lifecycle_routes_use_java_envelopes() -> None:
     app = create_app()
     app.state.auth_me_reader = lambda user_id: auth_user(user_id, ["SKILL_ADMIN"])

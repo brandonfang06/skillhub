@@ -1,4 +1,5 @@
 import type { components } from './generated/schema'
+import type { components as complianceComponents } from './generated/compliance-schema'
 import type { components as reviewComponents } from './generated/reviews-schema'
 import type {
   components as namespaceAnalyticsComponents,
@@ -182,7 +183,8 @@ export interface BatchMemberResponse {
 }
 
 // Skill types
-export interface SkillSummary {
+type GeneratedSkillSummary = components['schemas']['SkillSummaryResponse']
+type SkillSummaryRequired = {
   id: number
   slug: string
   displayName: string
@@ -201,6 +203,9 @@ export interface SkillSummary {
   ownerPreviewVersion?: SkillLifecycleVersion
   resolutionMode?: string
 }
+export type SkillSummary = Omit<GeneratedSkillSummary, keyof SkillSummaryRequired>
+  & SkillSummaryRequired
+  & ComplianceProjection
 
 export type LabelItem = Omit<components['schemas']['SkillLabelDto'], 'slug' | 'type' | 'displayName'> & {
   slug: string
@@ -261,6 +266,11 @@ export interface SkillLifecycleVersion {
   version: string
   status: string
 }
+
+export type ComplianceEvidence = complianceComponents['schemas']['ComplianceEvidenceResponse']
+export type ComplianceMapping = complianceComponents['schemas']['ComplianceMappingResponse']
+export type ComplianceProjection = complianceComponents['schemas']['ComplianceProjection']
+export type ComplianceSnapshot = complianceComponents['schemas']['ComplianceSnapshotResponse']
 
 export interface SkillDetail {
   id: number
@@ -326,7 +336,8 @@ export type PromotionStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type PromotionSortDirection = 'ASC' | 'DESC'
 export type PromotionSortBy = 'reviewedAt'
 
-export interface SkillVersion {
+type GeneratedSkillVersion = components['schemas']['SkillVersionResponse']
+type SkillVersionRequired = {
   id: number
   version: string
   status: string
@@ -336,8 +347,12 @@ export interface SkillVersion {
   publishedAt: string
   downloadAvailable: boolean
 }
+export type SkillVersion = Omit<GeneratedSkillVersion, keyof SkillVersionRequired>
+  & SkillVersionRequired
+  & ComplianceProjection
 
-export interface SkillVersionDetail {
+type GeneratedSkillVersionDetail = components['schemas']['SkillVersionDetailResponse']
+type SkillVersionDetailRequired = {
   id: number
   version: string
   status: string
@@ -350,6 +365,9 @@ export interface SkillVersionDetail {
   sourceProvenance?: SourceProvenance | null
   versionAttribution?: VersionAttribution | null
 }
+export type SkillVersionDetail = Omit<GeneratedSkillVersionDetail, keyof SkillVersionDetailRequired>
+  & SkillVersionDetailRequired
+  & ComplianceProjection
 
 export interface SkillFile {
   id: number

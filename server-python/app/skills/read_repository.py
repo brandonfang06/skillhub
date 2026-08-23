@@ -423,11 +423,28 @@ async def read_skill_versions(
         can_manage = can_manage_lifecycle_for_row(dict(skill_row), current_user_id, namespace_role)
         visible_statuses = lifecycle_visible_statuses(can_manage or platform_read_override)
         status_literals = ", ".join(f"'{status}'" for status in visible_statuses)
+        total = int(
+            (
+                await connection.execute(
+                    text(
+                        f"""
+                        SELECT COUNT(*)
+                        FROM skill_version
+                        WHERE skill_id = :skill_id
+                          AND status IN ({status_literals})
+                        """
+                    ),
+                    {"skill_id": skill_row["id"]},
+                )
+            ).scalar_one()
+        )
         rows = (
             await connection.execute(
                 text(
                     f"""
-                    SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready
+                    SELECT id, version, status, changelog, file_count, total_size, published_at, download_ready,
+                           CAST(parsed_metadata_json -> 'complianceSnapshot' AS text)
+                               AS compliance_snapshot_json
                     FROM skill_version
                     WHERE skill_id = :skill_id
                       AND status IN ({status_literals})
@@ -446,14 +463,18 @@ async def read_skill_versions(
                       published_at DESC NULLS LAST,
                       created_at DESC NULLS LAST,
                       id DESC
+                    LIMIT :limit OFFSET :offset
                     """
                 ),
-                {"skill_id": skill_row["id"]},
+                {
+                    "skill_id": skill_row["id"],
+                    "limit": size,
+                    "offset": page * size,
+                },
             )
         ).mappings().all()
 
-    page_rows, total = paginate_rows([dict(row) for row in rows], page, size)
-    return build_versions_page_response(page_rows, total, page, size)
+    return build_versions_page_response([dict(row) for row in rows], total, page, size)
 
 
 async def read_skill_version_detail(
@@ -883,6 +904,37 @@ async def read_clawhub_skill_detail(
     }
 
 
+def _published_version_search_join(*, include_compliance_snapshot: bool) -> str:
+    snapshot_projection = (
+        ", CAST(isv.parsed_metadata_json -> 'complianceSnapshot' AS text) AS compliance_snapshot_json"
+        if include_compliance_snapshot
+        else ""
+    )
+    return f"""
+        JOIN LATERAL (
+            SELECT isv.id,
+                   isv.version,
+                   isv.status,
+                   isv.download_ready,
+                   isv.yanked_at{snapshot_projection}
+            FROM skill_version isv
+            WHERE isv.skill_id = s.id
+              AND isv.status = 'PUBLISHED'
+              AND EXISTS (
+                  SELECT 1
+                  FROM skill_file sf
+                  WHERE sf.version_id = isv.id
+              )
+            ORDER BY
+              CASE WHEN isv.id = s.latest_version_id THEN 0 ELSE 1 END,
+              isv.published_at DESC NULLS LAST,
+              isv.created_at DESC NULLS LAST,
+              isv.id DESC
+            LIMIT 1
+        ) isv ON TRUE
+    """
+
+
 async def read_skill_search(
     engine: AsyncEngine,
     keyword: str | None,
@@ -925,29 +977,12 @@ async def read_skill_search(
         "isv.status = 'PUBLISHED'",
         "EXISTS (SELECT 1 FROM skill_file sf WHERE sf.version_id = isv.id)",
     ]
-    published_version_join_sql = """
-        JOIN LATERAL (
-            SELECT isv.id,
-                   isv.version,
-                   isv.status,
-                   isv.download_ready,
-                   isv.yanked_at
-            FROM skill_version isv
-            WHERE isv.skill_id = s.id
-              AND isv.status = 'PUBLISHED'
-              AND EXISTS (
-                  SELECT 1
-                  FROM skill_file sf
-                  WHERE sf.version_id = isv.id
-              )
-            ORDER BY
-              CASE WHEN isv.id = s.latest_version_id THEN 0 ELSE 1 END,
-              isv.published_at DESC NULLS LAST,
-              isv.created_at DESC NULLS LAST,
-              isv.id DESC
-            LIMIT 1
-        ) isv ON TRUE
-    """
+    published_version_join_sql = _published_version_search_join(
+        include_compliance_snapshot=False
+    )
+    published_version_projection_join_sql = _published_version_search_join(
+        include_compliance_snapshot=True
+    )
     if installable_only:
         filters.extend(
             [
@@ -1047,11 +1082,13 @@ async def read_skill_search(
                            isv.id AS published_version_id,
                            isv.version AS published_version,
                            isv.status AS published_version_status,
+                           isv.compliance_snapshot_json
+                               AS published_version_compliance_snapshot_json,
                            'PUBLISHED' AS resolution_mode
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
-                    {published_version_join_sql}
+                    {published_version_projection_join_sql}
                     WHERE {where_sql}
                     ORDER BY {order_sql}
                     LIMIT :limit OFFSET :offset

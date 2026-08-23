@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from app.admin.search import rebuild_search_index, upsert_skill_search_document
+from app.admin.search import _build_search_payload, rebuild_search_index, upsert_skill_search_document
 from app.main import create_app
 
 
@@ -101,6 +101,42 @@ class FakeSearchConnection:
                                     "keywords": ["ops", "agent"],
                                     "x-category": "Developer Tools",
                                     "name": "Ignored reserved name",
+                                    "x-astron-compliance": [
+                                        {
+                                            "standard": "raw-standard-must-not-index",
+                                            "evidence": [
+                                                {
+                                                    "path": "secret/evidence.md",
+                                                    "url": "https://evidence.example/private",
+                                                    "sha256": "sha256:raw-secret",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                                "complianceSnapshot": {
+                                    "schemaVersion": "1.0",
+                                    "items": [
+                                        {
+                                            "standard": "mitre-attack",
+                                            "version": "15",
+                                            "controlId": "T1059",
+                                            "title": "Command and Scripting Interpreter",
+                                            "evidence": [
+                                                {
+                                                    "type": "packaged-file",
+                                                    "path": "docs/security.md",
+                                                    "sha256": "sha256:def456",
+                                                }
+                                            ],
+                                        },
+                                        {
+                                            "standard": {
+                                                "path": "malformed-snapshot-evidence.md",
+                                                "sha256": "sha256:malformed-secret",
+                                            }
+                                        },
+                                    ],
                                 }
                             }
                         ),
@@ -146,6 +182,23 @@ def bearer_user(user_id: str = "token-admin", roles: list[str] | None = None) ->
     data["oauthProvider"] = "api_token"
     data["tokenScopes"] = ["skill:read", "token:manage", "skill:publish", "skill:delete"]
     return data
+
+
+def test_search_payload_ignores_json_integer_digit_limit_metadata() -> None:
+    huge_integer = "1" * 4301
+
+    keywords, search_text = _build_search_payload(
+        {
+            "slug": "safe-slug",
+            "summary": "safe summary",
+            "parsed_metadata_json": '{"frontmatter":{"custom":' + huge_integer + "}}",
+        },
+        [],
+    )
+
+    assert keywords == ""
+    assert "safe-slug" in search_text
+    assert "safe summary" in search_text
 
 
 def test_admin_search_rebuild_route_requires_super_admin() -> None:
@@ -247,6 +300,21 @@ async def test_rebuild_search_index_indexes_active_skills_and_writes_audit() -> 
     assert "Featured" in document["keywords"]
     assert "x-category" in document["search_text"]
     assert "Developer Tools" in document["search_text"]
+    for compliance_value in ("mitre-attack", "15", "T1059", "Command and Scripting Interpreter"):
+        assert compliance_value in document["keywords"]
+        assert compliance_value in document["search_text"]
+    for evidence_value in (
+        "raw-standard-must-not-index",
+        "secret/evidence.md",
+        "https://evidence.example/private",
+        "sha256:raw-secret",
+        "docs/security.md",
+        "sha256:def456",
+        "malformed-snapshot-evidence.md",
+        "sha256:malformed-secret",
+    ):
+        assert evidence_value not in document["keywords"]
+        assert evidence_value not in document["search_text"]
     assert document["visibility"] == "PUBLIC"
     assert document["status"] == "ACTIVE"
     assert isinstance(document["updated_at"], datetime)

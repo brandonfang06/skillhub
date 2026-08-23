@@ -18,6 +18,7 @@ from app.notifications.publisher import NotificationFanout
 from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
+from app.publish.publication_outcomes import PublicationOutcomeInput, apply_publication_outcomes
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
@@ -396,7 +397,8 @@ async def _read_version(connection: Any, skill_id: int, version: str) -> dict[st
                 """
                 SELECT id AS version_id,
                        version,
-                       status
+                       status,
+                       published_at
                 FROM skill_version
                 WHERE skill_id = :skill_id
                   AND version = :version
@@ -409,6 +411,29 @@ async def _read_version(connection: Any, skill_id: int, version: str) -> dict[st
     if row is None:
         raise SkillLifecycleError("error.skill.version.notFound", status_code=404)
     return dict(row)
+
+
+async def _read_original_confirm_publish_actor(engine: Any, version_id: int) -> str:
+    async with transaction_connection(engine) as connection:
+        row = (
+            await connection.execute(
+                text(
+                    """
+                    SELECT actor_user_id
+                    FROM audit_log
+                    WHERE action = 'CONFIRM_PUBLISH'
+                      AND target_type = 'SKILL_VERSION'
+                      AND target_id = :version_id
+                    ORDER BY created_at ASC, id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"version_id": version_id},
+            )
+        ).mappings().one_or_none()
+    if row is None or row.get("actor_user_id") is None:
+        raise SkillLifecycleError("error.skill.confirm.replay.missingAudit", status_code=409)
+    return str(row["actor_user_id"])
 
 
 async def _find_version(connection: Any, skill_id: int, version: str) -> dict[str, Any] | None:
@@ -778,10 +803,23 @@ async def withdraw_skill_version_review(engine: Any, request: SkillVersionWithdr
     return {"skillId": skill_id, "versionId": version_id, "action": "WITHDRAW_REVIEW", "status": "UPLOADED"}
 
 
-async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublishInput) -> dict[str, Any]:
+async def confirm_publish_skill_version(
+    engine: Any,
+    request: SkillConfirmPublishInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+    publication_outcome_writer: Any = apply_publication_outcomes,
+) -> dict[str, Any]:
     timestamp = _now(request.now)
+    outcome_publisher_id = request.user_id
+    outcome_created_at = timestamp
     async with transaction_connection(engine) as connection:
-        skill = await _read_skill_context(connection, request.namespace, request.slug)
+        skill = await _read_skill_context(
+            connection,
+            request.namespace,
+            request.slug,
+            lock_skill=True,
+        )
         namespace_role = await _read_namespace_role(connection, int(skill["namespace_id"]), request.user_id)
         _assert_can_manage(skill, request.user_id, namespace_role)
 
@@ -792,49 +830,77 @@ async def confirm_publish_skill_version(engine: Any, request: SkillConfirmPublis
         version = await _read_version(connection, skill_id, request.version)
         version_id = int(version["version_id"])
         version_name = str(version["version"])
-        if str(version["status"]) not in CONFIRM_PUBLISH_VERSION_STATUSES:
+        version_status = str(version["status"])
+        replay = version_status == "PUBLISHED" and skill.get("latest_version_id") == version_id
+        if version_status not in CONFIRM_PUBLISH_VERSION_STATUSES and not replay:
             raise SkillLifecycleError("error.skill.version.confirm.notUploaded")
 
-        await connection.execute(
-            text(
-                """
-                UPDATE skill_version
-                SET status = :status,
-                    published_at = :published_at
-                WHERE id = :version_id
-                """
-            ),
-            {"status": "PUBLISHED", "published_at": timestamp, "version_id": version_id},
+        if replay:
+            published_at = version.get("published_at")
+            if not isinstance(published_at, datetime):
+                raise SkillLifecycleError(
+                    "error.skill.confirm.replay.missingPublishedAt",
+                    status_code=409,
+                )
+            outcome_created_at = published_at
+        else:
+            await connection.execute(
+                text(
+                    """
+                    UPDATE skill_version
+                    SET status = :status,
+                        published_at = :published_at
+                    WHERE id = :version_id
+                    """
+                ),
+                {"status": "PUBLISHED", "published_at": timestamp, "version_id": version_id},
+            )
+            await connection.execute(
+                text(
+                    """
+                    UPDATE skill
+                    SET latest_version_id = :latest_version_id,
+                        updated_by = :updated_by,
+                        updated_at = :updated_at
+                    WHERE id = :skill_id
+                    """
+                ),
+                {
+                    "latest_version_id": version_id,
+                    "updated_by": request.user_id,
+                    "updated_at": timestamp,
+                    "skill_id": skill_id,
+                },
+            )
+            await _write_audit(
+                connection,
+                actor_user_id=request.user_id,
+                action="CONFIRM_PUBLISH",
+                target_type="SKILL_VERSION",
+                target_id=version_id,
+                request_id=request.request_id,
+                client_ip=request.client_ip,
+                user_agent=request.user_agent,
+                detail_json=json.dumps({"version": version_name}, separators=(",", ":")),
+                created_at=timestamp,
+            )
+
+    if replay:
+        outcome_publisher_id = await _read_original_confirm_publish_actor(
+            engine,
+            version_id,
         )
-        await connection.execute(
-            text(
-                """
-                UPDATE skill
-                SET latest_version_id = :latest_version_id,
-                    updated_by = :updated_by,
-                    updated_at = :updated_at
-                WHERE id = :skill_id
-                """
-            ),
-            {
-                "latest_version_id": version_id,
-                "updated_by": request.user_id,
-                "updated_at": timestamp,
-                "skill_id": skill_id,
-            },
-        )
-        await _write_audit(
-            connection,
-            actor_user_id=request.user_id,
-            action="CONFIRM_PUBLISH",
-            target_type="SKILL_VERSION",
-            target_id=version_id,
-            request_id=request.request_id,
-            client_ip=request.client_ip,
-            user_agent=request.user_agent,
-            detail_json=json.dumps({"version": version_name}, separators=(",", ":")),
-            created_at=timestamp,
-        )
+
+    await publication_outcome_writer(
+        engine,
+        PublicationOutcomeInput(
+            skill_id=skill_id,
+            version_id=version_id,
+            publisher_id=outcome_publisher_id,
+            created_at=outcome_created_at,
+        ),
+        notification_fanout,
+    )
 
     return {"skillId": skill_id, "versionId": version_id, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}
 

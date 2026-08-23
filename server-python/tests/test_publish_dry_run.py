@@ -100,6 +100,113 @@ async def test_valid_dry_run_resolves_slug_and_version() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://exa mple.com/%zz",
+        "https://example.com/a\\b",
+        "https://example.com/control\x1fcharacter",
+        "https://example.com/a[b]",
+        "https://user@example.com@evil.example/path",
+        "https://example.123/path",
+        "https://example.com:2147483648/path",
+        "https://[fe80::1%eth-0]/path",
+    ],
+)
+async def test_dry_run_rejects_java_illegal_external_evidence_urls(url: str) -> None:
+    content = (
+        "---\n"
+        "name: Agent Helper\n"
+        "description: Helps agents\n"
+        "version: 1.0.0\n"
+        "x-astron-compliance:\n"
+        "  - standard: nist-csf\n"
+        "    version: '2.0'\n"
+        "    controlId: GV.OC-03\n"
+        "    evidence:\n"
+        "      - type: external-url\n"
+        f"        url: {url!r}\n"
+        "---\n"
+        "# Skill\n"
+    ).encode()
+
+    result = await run_dry_run(
+        FakeDryRunRepository(),
+        entries=[PackageEntry("SKILL.md", content, "text/markdown")],
+    )
+
+    assert not result.valid
+    assert any("url must be an http or https URL" in error for error in result.errors)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com:/path",
+        "https://example.com:65536/path",
+        "https://example.com:2147483647/path",
+        "https://example.com/a\u200db",
+        "https://123/path",
+        "https://1abc/path",
+        "https://010.000.000.001/path",
+        "https://[fe80::1%eth_0]/path",
+        "https://[fe80::1%eth.0]/path",
+        "https://[::ffff:010.000.000.001]/path",
+        "https://[0:0:0:0:0:ffff:010.000.000.001]/path",
+    ],
+)
+async def test_dry_run_accepts_java_compatible_external_evidence_urls(url: str) -> None:
+    content = (
+        "---\n"
+        "name: Agent Helper\n"
+        "description: Helps agents\n"
+        "version: 1.0.0\n"
+        "x-astron-compliance:\n"
+        "  - standard: nist-csf\n"
+        "    version: '2.0'\n"
+        "    controlId: GV.OC-03\n"
+        "    evidence:\n"
+        "      - type: external-url\n"
+        f"        url: '{url}'\n"
+        "---\n"
+        "# Skill\n"
+    ).encode()
+
+    result = await run_dry_run(
+        FakeDryRunRepository(),
+        entries=[PackageEntry("SKILL.md", content, "text/markdown")],
+    )
+
+    assert result.valid
+
+
+@pytest.mark.anyio
+async def test_dry_run_rejects_lone_surrogate_compliance_title() -> None:
+    content = (
+        "---\n"
+        "name: Agent Helper\n"
+        "description: Helps agents\n"
+        "version: 1.0.0\n"
+        "x-astron-compliance:\n"
+        "  - standard: nist-csf\n"
+        "    version: '2.0'\n"
+        "    controlId: GV.OC-03\n"
+        '    title: "\\uD800"\n'
+        "---\n"
+        "# Skill\n"
+    ).encode()
+
+    result = await run_dry_run(
+        FakeDryRunRepository(),
+        entries=[PackageEntry("SKILL.md", content, "text/markdown")],
+    )
+
+    assert not result.valid
+    assert any("title must contain valid Unicode" in error for error in result.errors)
+
+
+@pytest.mark.anyio
 async def test_missing_namespace_returns_error_without_conflict_checks() -> None:
     repository = FakeDryRunRepository(namespace_context=None)
 

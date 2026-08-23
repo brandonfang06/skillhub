@@ -117,13 +117,24 @@ EOF
   esac
 done
 
+quote_shell_arg() {
+  printf "'"
+  printf '%s' "$1" | sed "s/'/'\\\\''/g"
+  printf "'"
+}
+
 if [ "$USE_ALIYUN" = "true" ]; then
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://imageless.oss-cn-beijing.aliyuncs.com}"
+  RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/runtime.sh"
+  RUNTIME_SOURCE_ARG=" --aliyun"
   echo "Using Aliyun OSS for runtime files: $SKILLHUB_RAW_BASE"
 else
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF}"
+  RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/scripts/runtime.sh"
+  RUNTIME_SOURCE_ARG=""
   echo "Using GitHub raw for runtime files: $SKILLHUB_RAW_BASE"
 fi
+RUNTIME_SCRIPT_URL_ARG="$(quote_shell_arg "$RUNTIME_SCRIPT_URL")"
 COMPOSE_FILE="$SKILLHUB_HOME/compose.release.yml"
 ENV_EXAMPLE_FILE="$SKILLHUB_HOME/.env.release.example"
 ENV_FILE="$SKILLHUB_HOME/.env.release"
@@ -329,7 +340,7 @@ case "$COMMAND" in
     PUBLIC_URL="${SKILLHUB_PUBLIC_BASE_URL_VALUE:-http://localhost}"
     HOME_ARG=""
     if [ "$SKILLHUB_HOME" != "$SKILLHUB_HOME_DEFAULT" ]; then
-      HOME_ARG=" --home $SKILLHUB_HOME"
+      HOME_ARG=" --home $(quote_shell_arg "$SKILLHUB_HOME")"
     fi
     cat <<EOF
 SkillHub runtime started.
@@ -337,7 +348,7 @@ Web UI: $PUBLIC_URL
 Backend API: http://localhost:8080
 Runtime dir: $SKILLHUB_HOME
 Stop with:
-  curl -fsSL $SKILLHUB_RAW_BASE/scripts/runtime.sh | sh -s -- down$HOME_ARG
+  curl -fsSL $RUNTIME_SCRIPT_URL_ARG | sh -s -- down$RUNTIME_SOURCE_ARG$HOME_ARG
 EOF
     ;;
   down)

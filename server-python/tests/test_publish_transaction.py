@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
+from app.publish.compliance import ComplianceMetadataError
 from app.publish.package import PackageEntry, SkillMetadata
 from app.publish.storage import SkillFileWriteRecord, StoredPackageResult
 from app.publish.transaction import (
-    PublishDbTransactionInput,
     PublishDbFinalizeInput,
     PublishDbPrepareInput,
+    PublishDbTransactionInput,
     build_manifest_json,
     build_parsed_metadata_json,
     create_publish_db_records,
@@ -119,7 +120,197 @@ def test_build_parsed_metadata_json_keeps_frontmatter() -> None:
         "name": "Agent Helper",
         "description": "Helps agents",
         "version": "1.0.0",
+        "frontmatter": {
+            "name": "Agent Helper",
+            "description": "Helps agents",
+            "version": "1.0.0",
+        },
+        "complianceSnapshot": {
+            "schemaVersion": "1.0",
+            "items": [],
+            "digest": "sha256:ba8568df0d89d850a1f9b9374f811b3ac2b4d05a6cf31812faca9e9148b5b731",
+        },
     }
+
+
+def test_build_parsed_metadata_json_normalizes_and_hashes_compliance_evidence() -> None:
+    evidence_content = b"MITRE evidence"
+    metadata = SkillMetadata(
+        name="Agent Helper",
+        description="Helps agents",
+        version="1.0.0",
+        frontmatter={
+            "name": "Agent Helper",
+            "description": "Helps agents",
+            "version": "1.0.0",
+            "x-custom-field": {"preserved": True},
+            "x-astron-compliance": [
+                {
+                    "standard": " MITRE-ATTACK ",
+                    "version": " v19.1 ",
+                    "controlId": " T1059 ",
+                    "title": " Command and Scripting Interpreter ",
+                    "evidence": [
+                        {"type": " PACKAGED-FILE ", "path": " references/standards.md "},
+                        {
+                            "type": " EXTERNAL-URL ",
+                            "url": " https://attack.mitre.org/techniques/T1059/ ",
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+    entries = [
+        PackageEntry("SKILL.md", b"# Demo\n", "text/markdown"),
+        PackageEntry("references/standards.md", evidence_content, "text/markdown"),
+    ]
+
+    parsed = build_parsed_metadata_json(metadata, entries)
+
+    assert parsed["frontmatter"] == metadata.frontmatter
+    assert parsed["complianceSnapshot"] == {
+        "schemaVersion": "1.0",
+        "items": [
+            {
+                "standard": "mitre-attack",
+                "version": "v19.1",
+                "controlId": "T1059",
+                "title": "Command and Scripting Interpreter",
+                "evidence": [
+                    {
+                        "type": "packaged-file",
+                        "path": "references/standards.md",
+                        "sha256": "85c516832d12f0c1c86675c2751bd37dcdbdd0573b5a8da74a1bb022089e73d3",
+                    },
+                    {
+                        "type": "external-url",
+                        "url": "https://attack.mitre.org/techniques/T1059/",
+                    },
+                ],
+            }
+        ],
+        "digest": "sha256:eaa7a19e130697f497ae448dcc62a893735cef45d3f57eb276bfda45a4dcc34d",
+    }
+
+
+def test_build_parsed_metadata_json_preserves_java_nbsp_trim_and_digest_semantics() -> None:
+    nbsp = "\u00a0"
+    metadata = SkillMetadata(
+        name="Agent Helper",
+        description="Helps agents",
+        version="1.0.0",
+        frontmatter={
+            "name": "Agent Helper",
+            "description": "Helps agents",
+            "version": "1.0.0",
+            "x-astron-compliance": [
+                {
+                    "standard": " MITRE-ATTACK ",
+                    "version": f"{nbsp}v19.1{nbsp}",
+                    "controlId": " T1059 ",
+                    "title": f"{nbsp}Command{nbsp}",
+                }
+            ],
+        },
+    )
+
+    snapshot = build_parsed_metadata_json(metadata)["complianceSnapshot"]
+
+    assert snapshot == {
+        "schemaVersion": "1.0",
+        "items": [
+            {
+                "standard": "mitre-attack",
+                "version": f"{nbsp}v19.1{nbsp}",
+                "controlId": "T1059",
+                "title": f"{nbsp}Command{nbsp}",
+                "evidence": [],
+            }
+        ],
+        "digest": "sha256:eadc80af3a58df3bad22f29d751ac7aa7f55fa06883204bc2112b4b1ecda6f8e",
+    }
+
+
+@pytest.mark.parametrize("padding", ["\u00a0", "\u2003"])
+def test_build_parsed_metadata_json_hashes_java_unicode_whitespace_evidence_path(
+    padding: str,
+) -> None:
+    evidence_path = f"{padding}references/evidence.md{padding}"
+    evidence_content = b"evidence"
+    metadata = SkillMetadata(
+        name="Agent Helper",
+        description="Helps agents",
+        version="1.0.0",
+        frontmatter={
+            "name": "Agent Helper",
+            "description": "Helps agents",
+            "version": "1.0.0",
+            "x-astron-compliance": [
+                {
+                    "standard": "soc2",
+                    "version": "2017",
+                    "controlId": "CC6.1",
+                    "evidence": [{"type": "packaged-file", "path": evidence_path}],
+                }
+            ],
+        },
+    )
+    entries = [
+        PackageEntry("SKILL.md", b"# Demo\n", "text/markdown"),
+        PackageEntry(evidence_path, evidence_content, "text/markdown"),
+    ]
+
+    snapshot = build_parsed_metadata_json(metadata, entries)["complianceSnapshot"]
+
+    assert snapshot["items"][0]["evidence"] == [
+        {
+            "type": "packaged-file",
+            "path": evidence_path,
+            "sha256": "ee8250fb76e094b34b471f13a73dbbe51d1ae142e9df59d7c0d31ec20f0a0a8e",
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com:/path",
+        "https://example.com:65536/path",
+        "https://example.com:2147483647/path",
+        "https://example.com/a\u200db",
+        "https://123/path",
+        "https://1abc/path",
+        "https://010.000.000.001/path",
+        "https://[fe80::1%eth_0]/path",
+        "https://[fe80::1%eth.0]/path",
+        "https://[::ffff:010.000.000.001]/path",
+        "https://[0:0:0:0:0:ffff:010.000.000.001]/path",
+    ],
+)
+def test_build_parsed_metadata_json_accepts_java_compatible_external_url(url: str) -> None:
+    metadata = SkillMetadata(
+        name="Agent Helper",
+        description="Helps agents",
+        version="1.0.0",
+        frontmatter={
+            "name": "Agent Helper",
+            "description": "Helps agents",
+            "version": "1.0.0",
+            "x-astron-compliance": [
+                {
+                    "standard": "soc2",
+                    "version": "2017",
+                    "controlId": "CC6.1",
+                    "evidence": [{"type": "external-url", "url": url}],
+                }
+            ],
+        },
+    )
+
+    snapshot = build_parsed_metadata_json(metadata)["complianceSnapshot"]
+
+    assert snapshot["items"][0]["evidence"] == [{"type": "external-url", "url": url}]
 
 
 @dataclass
@@ -192,6 +383,85 @@ async def test_prepare_publish_db_records_encodes_jsonb_parameters_for_asyncpg()
     assert isinstance(version_params["manifest_json"], str)
     assert json.loads(version_params["parsed_metadata_json"]) == build_parsed_metadata_json(transaction_input().metadata)
     assert json.loads(version_params["manifest_json"]) == build_manifest_json(package_entries())
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://exa mple.com/%zz",
+        "https://example.com/a\\b",
+        "https://example.com/control\x1fcharacter",
+        "https://example.com/{illegal}",
+        "https://example.com/a[b]",
+        "https://user@example.com@evil.example/path",
+        "https://example.123/path",
+        "https://example.com:2147483648/path",
+        "https://[fe80::1%eth-0]/path",
+    ],
+)
+async def test_prepare_publish_db_records_rejects_java_illegal_external_url_before_version_insert(
+    url: str,
+) -> None:
+    request = prepare_input(auto_publish=True)
+    invalid_frontmatter = dict(request.metadata.frontmatter)
+    invalid_frontmatter["x-astron-compliance"] = [
+        {
+            "standard": "soc2",
+            "version": "2017",
+            "controlId": "CC6.1",
+            "evidence": [
+                    {
+                        "type": "external-url",
+                        "url": url,
+                }
+            ],
+        }
+    ]
+    request = replace(
+        request,
+        metadata=replace(request.metadata, frontmatter=invalid_frontmatter),
+    )
+    connection = FakeConnection(
+        [
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(rows=[]),
+        ]
+    )
+
+    with pytest.raises(ComplianceMetadataError, match="http or https URL"):
+        await prepare_publish_db_records(connection, request)
+
+    assert not any("INSERT INTO skill_version" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_prepare_publish_db_records_rejects_lone_surrogate_before_version_insert() -> None:
+    request = prepare_input(auto_publish=True)
+    invalid_frontmatter = dict(request.metadata.frontmatter)
+    invalid_frontmatter["x-astron-compliance"] = [
+        {
+            "standard": "nist-csf",
+            "version": "2.0",
+            "controlId": "GV.OC-03",
+            "title": "\ud800",
+        }
+    ]
+    request = replace(
+        request,
+        metadata=replace(request.metadata, frontmatter=invalid_frontmatter),
+    )
+    connection = FakeConnection(
+        [
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(rows=[]),
+        ]
+    )
+
+    with pytest.raises(ComplianceMetadataError, match="title must contain valid Unicode"):
+        await prepare_publish_db_records(connection, request)
+
+    assert not any("INSERT INTO skill_version" in statement for statement in connection.statements)
 
 
 @pytest.mark.anyio

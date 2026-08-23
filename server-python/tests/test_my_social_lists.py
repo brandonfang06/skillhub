@@ -118,6 +118,7 @@ async def test_list_my_social_skills_maps_stars_with_java_page_defaults_and_tota
                 "publishedVersion": {"id": 77, "version": "1.0.0", "status": "PUBLISHED"},
                 "ownerPreviewVersion": None,
                 "resolutionMode": "PUBLISHED",
+                "complianceSnapshot": None,
             }
         ],
         "total": 2,

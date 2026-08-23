@@ -1,4 +1,20 @@
 {
+  "common": {
+    "expand": "展开详情",
+    "collapse": "收起详情"
+  },
+  "compliance": {
+    "title": "发布者合规声明",
+    "badgeLabel": "发布者声明：{{standard}} {{controlId}}",
+    "mappingCount": "{{count}} 项声明",
+    "schemaVersion": "Schema {{version}}",
+    "digest": "声明快照摘要",
+    "unknownStandard": "未知标准",
+    "evidence": "声明的证据",
+    "noEvidence": "该映射未声明证据。",
+    "publisherClaimNotice": "这些映射和证据引用由发布者自行声明。",
+    "notCertification": "它们未经平台验证，不代表认证结果或运行时证据。"
+  },
   "nav": {
     "landing": "首页",
     "home": "技能中心",
@@ -1450,6 +1466,33 @@
     "pageSuffix": "页",
     "goToPage": "第 {{page}} 页"
   },
+  "adminNamespaces": {
+    "title": "命名空间管理",
+    "subtitle": "查看命名空间所有权、成员、生命周期和平台管理员权限。",
+    "stats": { "label": "未筛选的生命周期汇总", "total": "全部命名空间", "active": "正常", "frozen": "已冻结", "archived": "已归档" },
+    "filter": { "keyword": "搜索", "keywordPlaceholder": "Slug、名称或描述", "status": "状态", "type": "命名空间类型", "all": "全部", "search": "应用筛选" },
+    "status": { "ACTIVE": "正常", "FROZEN": "已冻结", "ARCHIVED": "已归档" },
+    "type": { "TEAM": "团队", "GLOBAL": "全局" },
+    "role": { "OWNER": "所有者", "ADMIN": "管理员", "MEMBER": "成员" },
+    "listLabel": "命名空间", "detailLabel": "命名空间详情", "empty": "没有符合筛选条件的命名空间。",
+    "counts": "{{memberCount}} 位成员 · {{skillCount}} 个 Skills", "previous": "上一页", "next": "下一页",
+    "currentRole": "当前成员角色", "noMembership": "不是命名空间成员", "platformOverride": "平台管理员权限", "yes": "是", "no": "否",
+    "memberCount": "成员", "skillCount": "Skills", "globalReadOnly": "GLOBAL 不可更改，仅供查看。",
+    "actions": { "freeze": "冻结", "unfreeze": "解冻", "archive": "归档", "restore": "恢复" },
+    "members": { "title": "成员", "search": "搜索活跃的非成员", "searching": "搜索中…", "empty": "此命名空间没有成员。", "role": "初始角色", "add": "添加", "changeRole": "更改成员角色", "transfer": "转移所有权", "remove": "移除", "total": "共 {{total}} 位成员 · 第 {{page}} 页", "previous": "上一页成员", "next": "下一页成员" },
+    "confirm": {
+      "reason": "审计原因（可选，最多 512 个字符）",
+      "freeze": { "title": "冻结命名空间？", "description": "{{namespace}}（@{{slug}}）将暂停发布及成员变更。" },
+      "unfreeze": { "title": "解冻命名空间？", "description": "恢复 {{namespace}}（@{{slug}}）的正常操作。" },
+      "archive": { "title": "归档命名空间？", "description": "归档 {{namespace}}（@{{slug}}）并停止正常操作。" },
+      "restore": { "title": "恢复命名空间？", "description": "将 {{namespace}}（@{{slug}}）恢复为正常。" },
+      "remove": { "title": "移除成员？", "description": "从 {{namespace}}（@{{slug}}）移除 {{user}}。" },
+      "transfer": { "title": "转移所有权？", "description": "将 {{user}} 设为 {{namespace}}（@{{slug}}）的唯一所有者。" },
+      "role": { "title": "更改成员角色？", "description": "将 {{namespace}}（@{{slug}}）中的 {{user}} 更改为 {{role}}。" }
+    },
+    "success": "命名空间已更新。", "retry": "重试",
+    "error": { "list": "无法加载命名空间。", "detail": "无法加载命名空间详情。", "members": "无法加载成员。", "candidates": "无法搜索候选成员。", "mutation": "命名空间更新失败。" }
+  },
   "user": {
     "menu": {
       "dashboard": "控制台",
@@ -1465,6 +1508,7 @@
       "labels": "标签管理",
       "downloadEvents": "下载记录",
       "namespaceAnalytics": "命名空间分析",
+      "namespaceManagement": "命名空间管理",
       "servicePrincipals": "Service Accounts",
       "auditLog": "审计日志",
       "security": "安全设置",
@@ -1537,6 +1581,22 @@
     "close": "关闭"
   },
   "review": {
+    "complianceDiffTitle": "发布者合规声明变更",
+    "complianceDiffDescription": "对比已发布版本 {{baseVersion}} 与待审核版本 {{pendingVersion}}。",
+    "complianceDiffClaimNotice": "此对比只展示发布者自行提交的声明；平台未验证其认证状态或运行时证据。",
+    "complianceDiffBaseVersion": "已发布基线",
+    "complianceDiffPendingVersion": "待审版本",
+    "complianceDiffBaseDigest": "已发布快照摘要",
+    "complianceDiffPendingDigest": "待审快照摘要",
+    "complianceDiffAdded": "新增",
+    "complianceDiffRemoved": "删除",
+    "complianceDiffModified": "修改",
+    "complianceDiffAddedLabel": "新增 {{count}} 项",
+    "complianceDiffRemovedLabel": "删除 {{count}} 项",
+    "complianceDiffModifiedLabel": "修改 {{count}} 项",
+    "complianceDiffViewDetails": "查看声明详情",
+    "complianceDiffMissingFromBase": "已发布基线中没有这项声明。",
+    "complianceDiffMissingFromPending": "待审版本已移除这项声明。",
     "detail": "审核详情",
     "id": "审核 ID",
     "backToList": "返回列表",

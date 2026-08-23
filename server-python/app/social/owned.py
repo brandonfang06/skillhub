@@ -116,6 +116,7 @@ def _summary(row: dict[str, Any]) -> dict[str, Any]:
         "publishedVersion": published,
         "ownerPreviewVersion": owner_preview,
         "resolutionMode": resolution_mode,
+        "complianceSnapshot": None,
     }
 
 
