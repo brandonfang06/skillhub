@@ -343,6 +343,97 @@ async def test_execute_publish_write_notifies_reviewers_when_review_task_created
 
 
 @pytest.mark.anyio
+async def test_execute_publish_write_persists_auto_publish_outcomes_before_post_commit_fanout(
+    tmp_path,
+) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+        ]
+    )
+    engine = FakeEngine([connection])
+    written: list[tuple[Any, Any]] = []
+    published: list[tuple[Any, list[dict[str, Any]], Any]] = []
+
+    async def write_outcomes(
+        outcome_connection: Any,
+        outcome: Any,
+    ) -> list[dict[str, Any]]:
+        assert engine.transaction_events == []
+        written.append((outcome_connection, outcome))
+        return [{"recipient_id": "subscriber-a", "event_type": "SUBSCRIPTION_NEW_VERSION"}]
+
+    async def publish_outcomes(
+        fanout: Any,
+        rows: list[dict[str, Any]],
+        outcome: Any,
+    ) -> None:
+        assert engine.transaction_events == ["commit"]
+        published.append((fanout, rows, outcome))
+
+    fanout = FakeNotificationFanout()
+    request = replace(publish_input(str(tmp_path)), auto_publish=True)
+
+    result = await execute_publish_write(
+        engine,
+        request,
+        notification_fanout=fanout,
+        publication_outcome_writer=write_outcomes,
+        publication_notification_publisher=publish_outcomes,
+    )
+
+    assert result.version_status == "PUBLISHED"
+    assert len(written) == 1
+    assert written[0][0] is connection
+    assert written[0][1].skill_id == 7
+    assert written[0][1].version_id == 42
+    assert written[0][1].publisher_id == "local-user"
+    assert published == [(fanout, [{"recipient_id": "subscriber-a", "event_type": "SUBSCRIPTION_NEW_VERSION"}], written[0][1])]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("visibility", ["PUBLIC", "PRIVATE"])
+async def test_execute_publish_write_does_not_emit_publication_outcomes_before_publish(
+    tmp_path,
+    visibility: str,
+) -> None:
+    connection = FakeConnection(
+        [
+            FakeResult(row=None),
+            FakeResult(row={"id": 7, "status": "ACTIVE"}),
+            FakeResult(scalar=42),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(),
+            FakeResult(scalar=900),
+        ]
+    )
+    calls: list[Any] = []
+
+    async def write_outcomes(*args: Any) -> list[dict[str, Any]]:
+        calls.append(args)
+        return []
+
+    result = await execute_publish_write(
+        FakeEngine([connection]),
+        publish_input(str(tmp_path), visibility=visibility),
+        publication_outcome_writer=write_outcomes,
+    )
+
+    assert result.version_status == (
+        "PENDING_REVIEW" if visibility == "PUBLIC" else "UPLOADED"
+    )
+    assert calls == []
+
+
+@pytest.mark.anyio
 async def test_execute_publish_write_keeps_owner_but_uses_explicit_review_submitter(tmp_path) -> None:
     connection = FakeConnection(
         [

@@ -138,7 +138,29 @@ Compress-Archive -Path "$work\*" -DestinationPath ".dev\manual-test-skill.zip" -
 6. File preview。
 7. Version compare，如果你再上傳第二版。
 
-### 4.7 Namespace
+### 4.7 訂閱新版通知
+
+建議使用三個不同帳號：skill owner、subscriber、reviewer。這樣可以清楚
+區分訂閱通知與 owner 自己的 review 通知。
+
+1. 先發布並核准 `1.0.0`。
+2. subscriber 進入 skill detail，按 `Subscribe`，確認按鈕變成
+   `Subscribed`。
+3. 將 subscriber 現有通知標為已讀，方便觀察未讀數變化。
+4. skill owner 對同一個 namespace/slug 上傳 `1.1.0`。
+5. reviewer 核准 `1.1.0`。
+6. subscriber 應立即看到未讀 badge 增加，通知內容應為訂閱 skill 已更新，
+   並顯示 skill 名稱與 `1.1.0`。
+7. 重新整理頁面後通知仍應存在；點擊通知應導向該 skill detail。
+8. 到 `/settings/notifications` 關閉 `Publish Notifications`，再發布並
+   核准 `1.2.0`。subscriber 不應收到 `1.2.0` 的 publish 通知。
+
+通知只會在版本真正成為 `PUBLISHED` 後建立。`PENDING_REVIEW`、私人
+`UPLOADED` 或 rollback 的版本不會提前通知。實際執行 publish transition
+的 actor 會從 subscriber 通知中排除；owner 若同時是 submitter，仍可能
+另外收到 review 類別通知，這是不同事件。
+
+### 4.8 Namespace
 
 1. 進入 `http://localhost:3000/dashboard/namespaces`。
 2. 建立 team namespace，例如 `qa-team`。
@@ -146,7 +168,7 @@ Compress-Archive -Path "$work\*" -DestinationPath ".dev\manual-test-skill.zip" -
 4. 用該 namespace 上傳另一個 skill。
 5. 到 namespace detail 頁確認 skill list 與 members 正常。
 
-### 4.8 Admin
+### 4.9 Admin
 
 用 admin 測：
 
@@ -216,6 +238,28 @@ Invoke-RestMethod `
   -Body '{"comment":"Manual approval from full-Python local test."}'
 ```
 
+### 5.8 查詢訂閱新版通知
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://localhost:8080/api/web/notifications?category=PUBLISH&page=0&size=20" `
+  -Headers @{ "X-Mock-User-Id" = "<subscriber_user_id>" }
+```
+
+新版通知的 `eventType` 應為 `SUBSCRIPTION_NEW_VERSION`，`bodyJson` 應包含
+`skillId`、`versionId`、`namespace`、`slug`、`skillName` 與 `version`。
+
+### 5.9 關閉 Publish 通知
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://localhost:8080/api/web/notification-preferences" `
+  -Method Put `
+  -Headers @{ "X-Mock-User-Id" = "<subscriber_user_id>" } `
+  -ContentType "application/json" `
+  -Body '{"preferences":[{"category":"PUBLISH","channel":"IN_APP","enabled":false}]}'
+```
+
 ## 6. 停止服務
 
 如果是我幫你啟動的本機 process，可用：
@@ -239,5 +283,12 @@ Remove-Item -Recurse -Force .dev -ErrorAction SilentlyContinue
 - Web UI 不會自動帶 `X-Mock-User-Id`，UI 測試建議用 local login/register。
 - API 快速測試可用 `X-Mock-User-Id` 直接繞過 UI 登入流程。
 - Scanner 在本機 compose 中會啟動；若沒有設定 LLM key，實際 scan verdict 可能依 scanner 預設行為而定。
+- 完整 publish/review 驗證必須同時連接 PostgreSQL、Redis、scanner，並讓
+  backend scan consumer 實際處理 Redis queue。常用設定為：
+  `SKILLHUB_REDIS_URL=redis://127.0.0.1:6379/0`、
+  `SKILLHUB_SECURITY_SCANNER_ENABLED=true`、
+  `SKILLHUB_SCAN_CONSUMER_ENABLED=true`。
+- 訂閱新版通知沒有新增環境變數或 schema migration；它沿用既有
+  `notification`、`skill_subscription`、`notification_preference` 與 SSE。
 - Web/docs 目前仍有 Vite/esbuild build-toolchain audit advisory；不要用強制升級
   `esbuild@0.28.1` 修，因為目前會破壞 production build。

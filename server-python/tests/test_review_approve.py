@@ -51,6 +51,7 @@ class FakeReviewApproveConnection:
         platform_roles: set[str] | None = None,
         scan_evidence: dict[str, Any] | None = None,
         version_status: str = "PENDING_REVIEW",
+        subscribers: list[str] | None = None,
     ) -> None:
         self.current_visibility = current_visibility
         self.visibility_updated_after_submission = visibility_updated_after_submission
@@ -58,6 +59,7 @@ class FakeReviewApproveConnection:
         self.platform_roles = platform_roles or set()
         self.scan_evidence = scan_evidence
         self.version_status = version_status
+        self.subscribers = subscribers or []
         self.statements: list[str] = []
         self.params: list[dict[str, Any] | None] = []
         self.notifications: list[dict[str, Any]] = []
@@ -110,6 +112,17 @@ class FakeReviewApproveConnection:
             return FakeResult()
         if "INSERT INTO audit_log" in sql:
             return FakeResult()
+        if "FOR UPDATE OF s" in sql and "JOIN skill_version sv" in sql:
+            return FakeResult(
+                row={
+                    "skill_id": 7,
+                    "owner_id": "local-user",
+                    "slug": "agent-helper",
+                    "display_name": "Agent Helper",
+                    "namespace_slug": "team-a",
+                    "version": "1.0.0",
+                }
+            )
         if "FROM skill s" in sql and "JOIN LATERAL" in sql:
             return FakeResult(
                 row={
@@ -129,6 +142,8 @@ class FakeReviewApproveConnection:
             return FakeResult(rows=[])
         if "INSERT INTO skill_search_document" in sql:
             return FakeResult()
+        if "FROM skill_subscription" in sql:
+            return FakeResult(rows=[{"user_id": user_id} for user_id in self.subscribers])
         if "notification_preference" in sql:
             return FakeResult(row={"enabled": True})
         if "INSERT INTO notification" in sql:
@@ -136,11 +151,11 @@ class FakeReviewApproveConnection:
             row = {
                 "id": 7100 + len(self.notifications),
                 "recipient_id": values["recipient_id"],
-                "category": values["category"],
+                "category": values.get("category", "PUBLISH"),
                 "event_type": values["event_type"],
                 "title": values["title"],
                 "body_json": values["body_json"],
-                "entity_type": values["entity_type"],
+                "entity_type": values.get("entity_type", "SKILL"),
                 "entity_id": values["entity_id"],
                 "created_at": values["created_at"],
             }
@@ -151,29 +166,34 @@ class FakeReviewApproveConnection:
 
 
 class FakeBegin:
-    def __init__(self, connection: FakeReviewApproveConnection) -> None:
-        self.connection = connection
+    def __init__(self, engine: FakeEngine) -> None:
+        self.engine = engine
 
     async def __aenter__(self) -> FakeReviewApproveConnection:
-        return self.connection
+        return self.engine.connection
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.engine.transaction_events.append("commit" if exc_type is None else "rollback")
         return None
 
 
 class FakeEngine:
     def __init__(self, connection: FakeReviewApproveConnection) -> None:
         self.connection = connection
+        self.transaction_events: list[str] = []
 
     def begin(self) -> FakeBegin:
-        return FakeBegin(self.connection)
+        return FakeBegin(self)
 
 
 class FakeNotificationFanout:
-    def __init__(self) -> None:
+    def __init__(self, engine: FakeEngine | None = None) -> None:
+        self.engine = engine
         self.published: list[tuple[str, dict[str, Any]]] = []
 
     async def publish(self, user_id: str, payload: dict[str, Any]) -> None:
+        if self.engine is not None:
+            assert self.engine.transaction_events == ["commit"]
         self.published.append((user_id, payload))
 
 
@@ -391,6 +411,32 @@ async def test_approve_review_task_notifies_submitter() -> None:
                 "createdAt": "2026-06-09T11:00:00Z",
             },
         )
+    ]
+
+
+@pytest.mark.anyio
+async def test_approve_review_task_notifies_subscriber_after_publication_commit() -> None:
+    connection = FakeReviewApproveConnection(subscribers=["subscriber-a"])
+    engine = FakeEngine(connection)
+    fanout = FakeNotificationFanout(engine)
+
+    await approve_review_task(
+        engine,
+        approve_input(),
+        notification_fanout=fanout,
+    )
+
+    assert engine.transaction_events == ["commit"]
+    assert sorted(
+        (row["recipient_id"], row["event_type"])
+        for row in connection.notifications
+    ) == [
+        ("local-user", "REVIEW_APPROVED"),
+        ("subscriber-a", "SUBSCRIPTION_NEW_VERSION"),
+    ]
+    assert sorted(user_id for user_id, _payload in fanout.published) == [
+        "local-user",
+        "subscriber-a",
     ]
 
 

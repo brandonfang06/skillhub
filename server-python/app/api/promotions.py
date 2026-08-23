@@ -210,7 +210,15 @@ async def approve_promotion_route_data(
         if writer is not None:
             data = await _resolve_writer_result(writer(promotion_input))
         else:
-            data = await approve_promotion(request.app.state.db_engine, promotion_input)
+            data = await approve_promotion(
+                request.app.state.db_engine,
+                promotion_input,
+                notification_fanout=getattr(
+                    request.app.state,
+                    "notification_fanout",
+                    None,
+                ),
+            )
     except PromotionWorkflowError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return ok("\u66f4\u65b0\u6210\u529f", data, request)

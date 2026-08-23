@@ -18,7 +18,11 @@ from app.notifications.publisher import NotificationFanout
 from app.object_storage import ObjectNotFoundError, object_storage_for_base_path
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, parse_skill_metadata, validate_package
-from app.publish.publication_outcomes import PublicationOutcomeInput, apply_publication_outcomes
+from app.publish.publication_outcomes import (
+    PublicationOutcomeInput,
+    publish_publication_notifications,
+    write_publication_outcomes,
+)
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
@@ -413,24 +417,23 @@ async def _read_version(connection: Any, skill_id: int, version: str) -> dict[st
     return dict(row)
 
 
-async def _read_original_confirm_publish_actor(engine: Any, version_id: int) -> str:
-    async with transaction_connection(engine) as connection:
-        row = (
-            await connection.execute(
-                text(
-                    """
-                    SELECT actor_user_id
-                    FROM audit_log
-                    WHERE action = 'CONFIRM_PUBLISH'
-                      AND target_type = 'SKILL_VERSION'
-                      AND target_id = :version_id
-                    ORDER BY created_at ASC, id ASC
-                    LIMIT 1
-                    """
-                ),
-                {"version_id": version_id},
-            )
-        ).mappings().one_or_none()
+async def _read_original_confirm_publish_actor(connection: Any, version_id: int) -> str:
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT actor_user_id
+                FROM audit_log
+                WHERE action = 'CONFIRM_PUBLISH'
+                  AND target_type = 'SKILL_VERSION'
+                  AND target_id = :version_id
+                ORDER BY created_at ASC, id ASC
+                LIMIT 1
+                """
+            ),
+            {"version_id": version_id},
+        )
+    ).mappings().one_or_none()
     if row is None or row.get("actor_user_id") is None:
         raise SkillLifecycleError("error.skill.confirm.replay.missingAudit", status_code=409)
     return str(row["actor_user_id"])
@@ -808,7 +811,8 @@ async def confirm_publish_skill_version(
     request: SkillConfirmPublishInput,
     *,
     notification_fanout: NotificationFanout | None = None,
-    publication_outcome_writer: Any = apply_publication_outcomes,
+    publication_outcome_writer: Any = write_publication_outcomes,
+    publication_notification_publisher: Any = publish_publication_notifications,
 ) -> dict[str, Any]:
     timestamp = _now(request.now)
     outcome_publisher_id = request.user_id
@@ -843,6 +847,10 @@ async def confirm_publish_skill_version(
                     status_code=409,
                 )
             outcome_created_at = published_at
+            outcome_publisher_id = await _read_original_confirm_publish_actor(
+                connection,
+                version_id,
+            )
         else:
             await connection.execute(
                 text(
@@ -885,21 +893,21 @@ async def confirm_publish_skill_version(
                 created_at=timestamp,
             )
 
-    if replay:
-        outcome_publisher_id = await _read_original_confirm_publish_actor(
-            engine,
-            version_id,
-        )
-
-    await publication_outcome_writer(
-        engine,
-        PublicationOutcomeInput(
+        publication_outcome = PublicationOutcomeInput(
             skill_id=skill_id,
             version_id=version_id,
             publisher_id=outcome_publisher_id,
             created_at=outcome_created_at,
-        ),
+        )
+        publication_notification_rows = await publication_outcome_writer(
+            connection,
+            publication_outcome,
+        )
+
+    await publication_notification_publisher(
         notification_fanout,
+        publication_notification_rows,
+        publication_outcome,
     )
 
     return {"skillId": skill_id, "versionId": version_id, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}

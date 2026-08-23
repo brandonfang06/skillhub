@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
-
-from app.audit.writer import write_audit_log
-from app.db.unit_of_work import transaction_connection
 from sqlalchemy.exc import IntegrityError
 
+from app.audit.writer import write_audit_log
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
+from app.db.unit_of_work import transaction_connection
+from app.notifications.publisher import NotificationFanout
+from app.publish.publication_outcomes import (
+    PublicationOutcomeInput,
+    publish_publication_notifications,
+    write_publication_outcomes,
+)
 from app.promotion.query import PLATFORM_PROMOTION_ROLES, _java_instant, _promotion_response, _read_platform_roles
 
 
@@ -413,8 +419,21 @@ async def submit_promotion(engine: Any, request: PromotionSubmitInput) -> dict[s
     return _promotion_response(response_row)
 
 
-async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict[str, Any]:
+async def approve_promotion(
+    engine: Any,
+    request: PromotionApproveInput,
+    *,
+    notification_fanout: NotificationFanout | None = None,
+    publication_outcome_writer: Callable[
+        [Any, PublicationOutcomeInput], Awaitable[list[dict[str, Any]]]
+    ] = write_publication_outcomes,
+    publication_notification_publisher: Callable[
+        [NotificationFanout | None, list[dict[str, Any]], PublicationOutcomeInput],
+        Awaitable[None],
+    ] = publish_publication_notifications,
+) -> dict[str, Any]:
     reviewed_at = _now(request.now)
+    publication_notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         row = await _read_promotion_response_row(connection, request.promotion_id)
         if str(row["status"]) != "PENDING":
@@ -621,6 +640,17 @@ async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict
             },
         )
 
+        publication_outcome = PublicationOutcomeInput(
+            skill_id=target_skill_id,
+            version_id=target_version_id,
+            publisher_id=request.reviewer_id,
+            created_at=reviewed_at,
+        )
+        publication_notification_rows = await publication_outcome_writer(
+            connection,
+            publication_outcome,
+        )
+
         row["status"] = "APPROVED"
         row["target_skill_id"] = target_skill_id
         row["reviewed_by"] = request.reviewer_id
@@ -628,6 +658,11 @@ async def approve_promotion(engine: Any, request: PromotionApproveInput) -> dict
         row["review_comment"] = request.comment
         row["reviewed_at"] = reviewed_at
 
+    await publication_notification_publisher(
+        notification_fanout,
+        publication_notification_rows,
+        publication_outcome,
+    )
     response = _promotion_response(row)
     response["reviewedAt"] = _java_instant(reviewed_at)
     return response

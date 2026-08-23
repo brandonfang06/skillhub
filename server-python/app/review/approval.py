@@ -8,11 +8,15 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.search import upsert_skill_search_document
 from app.audit.writer import write_audit_log
 from app.auth.policy import NAMESPACE_MANAGER_ROLES, namespace_role_allows
 from app.db.unit_of_work import transaction_connection
 from app.notifications.publisher import NotificationFanout
+from app.publish.publication_outcomes import (
+    PublicationOutcomeInput,
+    publish_publication_notifications,
+    write_publication_outcomes,
+)
 from app.review.notifications import (
     publish_review_notifications,
     read_review_submission_recipients,
@@ -517,6 +521,8 @@ async def approve_review_task(
 ) -> dict[str, Any]:
     reviewed_at = _now(request.now)
     notification_rows: list[dict[str, Any]] = []
+    publication_notification_rows: list[dict[str, Any]] = []
+    publication_outcome: PublicationOutcomeInput
     async with transaction_connection(engine) as connection:
         task = await _read_review_task(connection, request.review_task_id)
         _assert_review_task_pending(task)
@@ -656,7 +662,16 @@ async def approve_review_task(
             detail=override_audit_detail,
             created_at=reviewed_at,
         )
-        await upsert_skill_search_document(connection, int(task["skill_id"]))
+        publication_outcome = PublicationOutcomeInput(
+            skill_id=int(task["skill_id"]),
+            version_id=int(task["skill_version_id"]),
+            publisher_id=request.reviewer_id,
+            created_at=reviewed_at,
+        )
+        publication_notification_rows = await write_publication_outcomes(
+            connection,
+            publication_outcome,
+        )
         notification_rows = await write_review_decision_notification(
             connection,
             recipient_id=str(task["submitted_by"]),
@@ -673,6 +688,11 @@ async def approve_review_task(
             created_at=reviewed_at,
         )
 
+    await publish_publication_notifications(
+        notification_fanout,
+        publication_notification_rows,
+        publication_outcome,
+    )
     await publish_review_notifications(notification_fanout, notification_rows)
     return _review_response(task, status="APPROVED", reviewer_id=request.reviewer_id, comment=request.comment, reviewed_at=reviewed_at)
 

@@ -93,6 +93,38 @@ class FakePromotionWriteConnection:
                     "target_namespace_type": "GLOBAL",
                 }
             )
+        if "FOR UPDATE OF s" in sql and "sv.status = 'PUBLISHED'" in sql:
+            return FakeResult(
+                row={
+                    "skill_id": 901,
+                    "owner_id": "submitter",
+                    "slug": "agent-helper",
+                    "display_name": "Agent Helper",
+                    "namespace_slug": "global",
+                    "version": "1.0.0",
+                }
+            )
+        if "JOIN LATERAL" in sql and "skill_search_document" not in sql:
+            return FakeResult(
+                row={
+                    "skill_id": 901,
+                    "namespace_id": 1,
+                    "namespace_slug": "global",
+                    "owner_id": "submitter",
+                    "slug": "agent-helper",
+                    "display_name": "Agent Helper",
+                    "summary": "Helps agents",
+                    "visibility": "PUBLIC",
+                    "status": "ACTIVE",
+                    "parsed_metadata_json": '{"name":"Agent Helper"}',
+                }
+            )
+        if "FROM skill_label" in sql:
+            return FakeResult(rows=[])
+        if "INSERT INTO skill_search_document" in sql:
+            return FakeResult()
+        if "FROM skill_subscription" in sql:
+            return FakeResult(rows=[])
         if "pending_count" in sql:
             return FakeResult(row={"pending_count": self.duplicate_pending, "approved_count": self.duplicate_approved})
         if "INSERT INTO promotion_request" in sql:
@@ -334,6 +366,63 @@ async def test_approve_promotion_materializes_target_skill_version_files_audits_
 
 
 @pytest.mark.anyio
+async def test_approve_promotion_writes_publication_outcomes_before_post_commit_fanout() -> None:
+    connection = FakePromotionWriteConnection(
+        platform_roles=["SUPER_ADMIN"],
+        submitted_by="submitter",
+    )
+    transaction_events: list[str] = []
+
+    class TrackingTransaction:
+        async def __aenter__(self) -> FakePromotionWriteConnection:
+            return connection
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            transaction_events.append("commit" if exc_type is None else "rollback")
+
+    class TrackingEngine:
+        def begin(self) -> TrackingTransaction:
+            return TrackingTransaction()
+
+    written: list[tuple[Any, Any]] = []
+    published: list[tuple[Any, list[dict[str, Any]], Any]] = []
+
+    async def write_outcomes(
+        outcome_connection: Any,
+        outcome: Any,
+    ) -> list[dict[str, Any]]:
+        assert transaction_events == []
+        written.append((outcome_connection, outcome))
+        return [{"recipient_id": "subscriber-a", "event_type": "SUBSCRIPTION_NEW_VERSION"}]
+
+    async def publish_outcomes(
+        fanout: Any,
+        rows: list[dict[str, Any]],
+        outcome: Any,
+    ) -> None:
+        assert transaction_events == ["commit"]
+        published.append((fanout, rows, outcome))
+
+    fanout = object()
+
+    response = await approve_promotion(
+        TrackingEngine(),
+        approve_input(),
+        notification_fanout=fanout,
+        publication_outcome_writer=write_outcomes,
+        publication_notification_publisher=publish_outcomes,
+    )
+
+    assert response["status"] == "APPROVED"
+    assert len(written) == 1
+    assert written[0][0] is connection
+    assert written[0][1].skill_id == 901
+    assert written[0][1].version_id == 902
+    assert written[0][1].publisher_id == "admin"
+    assert published == [(fanout, [{"recipient_id": "subscriber-a", "event_type": "SUBSCRIPTION_NEW_VERSION"}], written[0][1])]
+
+
+@pytest.mark.anyio
 async def test_approve_promotion_forbids_duplicate_target_skill_before_materialization() -> None:
     connection = FakePromotionWriteConnection(platform_roles=["SKILL_ADMIN"], duplicate_target=True)
 
@@ -418,6 +507,54 @@ def test_promotion_submit_and_reject_routes_return_java_envelopes() -> None:
     assert len(seen) == 3
 
 
+def test_promotion_approve_route_passes_runtime_notification_fanout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = create_app()
+    fanout = object()
+    seen: list[tuple[Any, PromotionApproveInput, Any]] = []
+
+    async def approver(
+        engine: Any,
+        promotion_input: PromotionApproveInput,
+        *,
+        notification_fanout: Any,
+    ) -> dict[str, object]:
+        seen.append((engine, promotion_input, notification_fanout))
+        return {
+            "id": promotion_input.promotion_id,
+            "sourceSkillId": 101,
+            "targetSkillId": 901,
+            "status": "APPROVED",
+        }
+
+    monkeypatch.setattr("app.api.promotions.approve_promotion", approver)
+    engine = object()
+    app.state.db_engine = engine
+    app.state.notification_fanout = fanout
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/web/promotions/301/approve",
+        json={"comment": "ship it"},
+        headers={"X-Mock-User-Id": "admin"},
+    )
+
+    assert response.status_code == 200
+    assert seen == [
+        (
+            engine,
+            PromotionApproveInput(
+                promotion_id=301,
+                reviewer_id="admin",
+                comment="ship it",
+                request_id=response.json()["requestId"],
+                client_ip="testclient",
+                user_agent="testclient",
+            ),
+            fanout,
+        )
+    ]
 def test_promotion_write_routes_require_mock_user() -> None:
     app = create_app()
     client = TestClient(app)

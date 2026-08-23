@@ -172,36 +172,52 @@ async def test_confirm_publish_updates_private_uploaded_version_latest_pointer_a
 
 
 @pytest.mark.anyio
-async def test_confirm_publish_runs_publication_outcomes_only_after_status_transaction_commits() -> None:
+async def test_confirm_publish_persists_outcomes_in_status_transaction_and_fans_out_after_commit() -> None:
     connection = FakeConfirmPublishConnection()
     engine = FakeEngine(connection)
     fanout = FakeNotificationFanout()
-    outcome_calls: list[tuple[object, object, object]] = []
+    outcome_calls: list[tuple[object, object]] = []
+    fanout_calls: list[tuple[object, object, object]] = []
 
     async def publication_outcome_writer(
-        outcome_engine: object,
+        outcome_connection: object,
         outcome: object,
+    ) -> list[dict[str, object]]:
+        assert engine.transaction_events == []
+        outcome_calls.append((outcome_connection, outcome))
+        return [{"recipient_id": "subscriber-a"}]
+
+    async def publication_notification_publisher(
         notification_fanout: object,
+        rows: object,
+        outcome: object,
     ) -> None:
         assert engine.transaction_events == ["commit"]
-        outcome_calls.append((outcome_engine, outcome, notification_fanout))
+        fanout_calls.append((notification_fanout, rows, outcome))
 
     response = await confirm_publish_skill_version(
         engine,
         confirm_input(),
         notification_fanout=fanout,
         publication_outcome_writer=publication_outcome_writer,
+        publication_notification_publisher=publication_notification_publisher,
     )
 
     assert response["status"] == "PUBLISHED"
     assert len(outcome_calls) == 1
-    assert outcome_calls[0][0] is engine
-    assert outcome_calls[0][2] is fanout
+    assert outcome_calls[0][0] is connection
     outcome = outcome_calls[0][1]
     assert outcome.skill_id == 101
     assert outcome.version_id == 42
     assert outcome.publisher_id == "owner"
     assert outcome.created_at == datetime(2026, 6, 9, 14, 30, tzinfo=UTC)
+    assert fanout_calls == [
+        (
+            fanout,
+            [{"recipient_id": "subscriber-a"}],
+            outcome,
+        )
+    ]
     skill_read = next(sql for sql in connection.statements if "FROM namespace n" in sql)
     assert "FOR UPDATE OF n, s" in skill_read
 
@@ -247,10 +263,10 @@ async def test_confirm_publish_replay_reconciles_outcomes_without_repeating_muta
     )
 
     assert response == {"skillId": 101, "versionId": 42, "action": "CONFIRM_PUBLISH", "status": "PUBLISHED"}
-    assert engine.transaction_events == ["commit", "commit"]
+    assert engine.transaction_events == ["commit"]
     assert len(outcome_calls) == 1
     assert outcome_calls[0][1].created_at == original_published_at
-    assert connection.audit_read_commit_count == 1
+    assert connection.audit_read_commit_count == 0
     assert not any("UPDATE skill_version" in statement for statement in connection.statements)
     assert not any("UPDATE skill\n" in statement for statement in connection.statements)
     assert not any("INSERT INTO audit_log" in statement for statement in connection.statements)

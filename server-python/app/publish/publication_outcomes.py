@@ -176,61 +176,83 @@ async def apply_publication_outcomes(
     notification_fanout: NotificationFanout | None,
 ) -> None:
     """Persist authoritative outcomes, then attempt at-most-once in-process SSE fanout."""
-    notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
-        context = await _read_publication_context(connection, outcome)
-        await upsert_skill_search_document(connection, outcome.skill_id)
+        notification_rows = await write_publication_outcomes(connection, outcome)
 
-        display_name = str(context.get("display_name") or context["slug"])
-        body_json = json.dumps(
-            {
-                "skillId": outcome.skill_id,
-                "versionId": outcome.version_id,
-                "namespace": str(context["namespace_slug"]),
-                "slug": str(context["slug"]),
-                "skillName": display_name,
-                "version": str(context["version"]),
-            },
-            separators=(",", ":"),
-        )
-        owner_id = str(context["owner_id"])
-        if (
-            owner_id == outcome.publisher_id
-            and await _in_app_publish_notifications_enabled(
-                connection,
-                owner_id,
-            )
-        ):
-            notification_rows.extend(
-                await _insert_publication_notification(
-                    connection,
-                    recipient_id=owner_id,
-                    event_type="SKILL_PUBLISHED",
-                    title=f"Skill published: {display_name}",
-                    body_json=body_json,
-                    skill_id=outcome.skill_id,
-                    version_id=outcome.version_id,
-                    created_at=outcome.created_at,
-                )
-            )
+    await publish_publication_notifications(
+        notification_fanout,
+        notification_rows,
+        outcome,
+    )
 
-        for subscriber_id in await _read_subscribers(
+
+async def write_publication_outcomes(
+    connection: Any,
+    outcome: PublicationOutcomeInput,
+) -> list[dict[str, Any]]:
+    context = await _read_publication_context(connection, outcome)
+    await upsert_skill_search_document(connection, outcome.skill_id)
+
+    notification_rows: list[dict[str, Any]] = []
+    display_name = str(context.get("display_name") or context["slug"])
+    body_json = json.dumps(
+        {
+            "skillId": outcome.skill_id,
+            "versionId": outcome.version_id,
+            "namespace": str(context["namespace_slug"]),
+            "slug": str(context["slug"]),
+            "skillName": display_name,
+            "version": str(context["version"]),
+        },
+        separators=(",", ":"),
+    )
+    owner_id = str(context["owner_id"])
+    if (
+        owner_id == outcome.publisher_id
+        and await _in_app_publish_notifications_enabled(
             connection,
-            skill_id=outcome.skill_id,
-            publisher_id=outcome.publisher_id,
-        ):
-            notification_rows.extend(
-                await _insert_publication_notification(
-                    connection,
-                    recipient_id=subscriber_id,
-                    event_type="SUBSCRIPTION_NEW_VERSION",
-                    title=f"Skill updated: {display_name}",
-                    body_json=body_json,
-                    skill_id=outcome.skill_id,
-                    version_id=outcome.version_id,
-                    created_at=outcome.created_at,
-                )
+            owner_id,
+        )
+    ):
+        notification_rows.extend(
+            await _insert_publication_notification(
+                connection,
+                recipient_id=owner_id,
+                event_type="SKILL_PUBLISHED",
+                title=f"Skill published: {display_name}",
+                body_json=body_json,
+                skill_id=outcome.skill_id,
+                version_id=outcome.version_id,
+                created_at=outcome.created_at,
             )
+        )
+
+    for subscriber_id in await _read_subscribers(
+        connection,
+        skill_id=outcome.skill_id,
+        publisher_id=outcome.publisher_id,
+    ):
+        notification_rows.extend(
+            await _insert_publication_notification(
+                connection,
+                recipient_id=subscriber_id,
+                event_type="SUBSCRIPTION_NEW_VERSION",
+                title=f"Skill updated: {display_name}",
+                body_json=body_json,
+                skill_id=outcome.skill_id,
+                version_id=outcome.version_id,
+                created_at=outcome.created_at,
+            )
+        )
+
+    return notification_rows
+
+
+async def publish_publication_notifications(
+    notification_fanout: NotificationFanout | None,
+    notification_rows: list[dict[str, Any]],
+    outcome: PublicationOutcomeInput,
+) -> None:
 
     try:
         await publish_notification_rows(notification_fanout, notification_rows)

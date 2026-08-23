@@ -10,6 +10,11 @@ from app.db.unit_of_work import transaction_connection
 from app.notifications.publisher import NotificationFanout
 from app.object_storage import ObjectStorage, object_storage_for_base_path
 from app.publish.package import PackageEntry, SkillMetadata
+from app.publish.publication_outcomes import (
+    PublicationOutcomeInput,
+    publish_publication_notifications,
+    write_publication_outcomes,
+)
 from app.publish.replacement import (
     ReplaceableVersion,
     StorageDeleteCompensationInput,
@@ -121,6 +126,13 @@ async def execute_publish_write(
     *,
     scan_task_publisher: ScanTaskPublisher | None = None,
     notification_fanout: NotificationFanout | None = None,
+    publication_outcome_writer: Callable[
+        [Any, PublicationOutcomeInput], Awaitable[list[dict[str, Any]]]
+    ] = write_publication_outcomes,
+    publication_notification_publisher: Callable[
+        [NotificationFanout | None, list[dict[str, Any]], PublicationOutcomeInput],
+        Awaitable[None],
+    ] = publish_publication_notifications,
     after_prepare: Callable[[Any, int, int], Awaitable[None]] | None = None,
     after_publish: Callable[[Any, int, int], Awaitable[None]] | None = None,
 ) -> PublishWriteResult:
@@ -137,6 +149,8 @@ async def execute_publish_write(
     replacement_storage_keys: list[str] = []
     replacement_cleanup = None
     notification_rows: list[dict[str, Any]] = []
+    publication_outcome: PublicationOutcomeInput | None = None
+    publication_notification_rows: list[dict[str, Any]] = []
     async with transaction_connection(engine) as connection:
         if request.replacement is not None:
             replacement_cleanup = await cleanup_replaceable_version(
@@ -261,8 +275,26 @@ async def execute_publish_write(
             )
         if after_publish is not None:
             await after_publish(connection, prepared.skill_id, prepared.version_id)
-        if prepared.latest_version_updated:
+        if prepared.version_status == "PUBLISHED":
+            publication_outcome = PublicationOutcomeInput(
+                skill_id=prepared.skill_id,
+                version_id=prepared.version_id,
+                publisher_id=request.publisher_id,
+                created_at=request.now or datetime.now(UTC),
+            )
+            publication_notification_rows = await publication_outcome_writer(
+                connection,
+                publication_outcome,
+            )
+        elif prepared.latest_version_updated:
             await upsert_skill_search_document(connection, prepared.skill_id)
+
+    if publication_outcome is not None:
+        await publication_notification_publisher(
+            notification_fanout,
+            publication_notification_rows,
+            publication_outcome,
+        )
 
     scan_task_publish_error: Exception | None = None
     if side_effects.scan_task is not None and scan_task_publisher is not None:
