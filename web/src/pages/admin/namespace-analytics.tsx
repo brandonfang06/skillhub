@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpDown, Download } from 'lucide-react'
+import { ArrowUpDown, Download, Library, ShieldCheck } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NamespaceAnalyticsItem, NamespaceAnalyticsParams } from '@/api/types'
@@ -12,6 +12,7 @@ import {
 } from '@/features/admin/namespace-analytics-search'
 import { exportNamespaceAnalyticsCsv } from '@/features/admin/export-namespace-analytics'
 import { useNamespaceAnalytics } from '@/features/admin/use-namespace-analytics'
+import { NamespaceSecurityAnalyticsView } from '@/features/admin/namespace-security-analytics-view'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { formatLocalDateTime, toLocalDateTimeInputValue } from '@/shared/lib/date-time'
 import { toast } from '@/shared/lib/toast'
@@ -35,6 +36,7 @@ import {
 } from '@/shared/ui/table'
 
 const CLEAR_SEARCH = {
+  view: 'catalog',
   namespaceType: 'ALL',
   namespaceStatus: 'ACTIVE',
   period: '30d',
@@ -92,7 +94,7 @@ function namespaceStatusLabel(status: string): string {
   return 'namespaceAnalytics.namespaceStatusActive'
 }
 
-export function NamespaceAnalyticsPage() {
+function CatalogNamespaceAnalyticsView() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate({ from: '/admin/namespace-analytics' })
   const rawSearch = useSearch({ from: '/admin/namespace-analytics' }) as Record<string, unknown>
@@ -194,12 +196,7 @@ export function NamespaceAnalyticsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-up">
-      <div>
-        <h1 className="mb-2 text-4xl font-bold font-heading">{t('namespaceAnalytics.title')}</h1>
-        <p className="max-w-4xl text-lg text-muted-foreground">{t('namespaceAnalytics.subtitle')}</p>
-      </div>
-
+    <div className="space-y-8">
       {isLoading ? (
         <div data-testid="namespace-analytics-loading" className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -418,6 +415,58 @@ export function NamespaceAnalyticsPage() {
           </div>
         </>
       ) : null}
+    </div>
+  )
+}
+
+export function NamespaceAnalyticsPage() {
+  const { t } = useTranslation()
+  const navigate = useNavigate({ from: '/admin/namespace-analytics' })
+  const rawSearch = useSearch({ from: '/admin/namespace-analytics' }) as Record<string, unknown>
+  const search = useMemo(() => parseNamespaceAnalyticsSearch(rawSearch), [rawSearch])
+
+  const showCatalog = () => navigate({ search: CLEAR_SEARCH })
+  const showSecurity = () => navigate({
+    search: {
+      view: 'security',
+      namespaceType: 'ALL',
+      namespaceStatus: 'ALL',
+      period: '30d',
+      sort: 'periodDownloads',
+      direction: 'desc',
+      page: 0,
+      size: 20,
+      severity: 'ALL',
+      skillStatus: 'ALL',
+      visibility: 'ALL',
+      hidden: 'ALL',
+      versionStatus: 'ALL',
+      securitySort: 'risk',
+      securityDirection: 'desc',
+      securityPage: 0,
+      securitySize: 20,
+    },
+  })
+
+  return (
+    <div className="space-y-8 animate-fade-up">
+      <div>
+        <h1 className="mb-2 text-4xl font-bold font-heading">{t('namespaceAnalytics.title')}</h1>
+        <p className="max-w-4xl text-lg text-muted-foreground">
+          {t(search.view === 'security' ? 'namespaceSecurity.subtitle' : 'namespaceAnalytics.subtitle')}
+        </p>
+      </div>
+      <div className="inline-flex rounded-xl border border-border bg-muted/30 p-1">
+        <Button variant={search.view === 'catalog' ? 'default' : 'ghost'} onClick={showCatalog}>
+          <Library className="mr-2 h-4 w-4" aria-hidden="true" />
+          {t('namespaceAnalytics.catalogView')}
+        </Button>
+        <Button variant={search.view === 'security' ? 'default' : 'ghost'} onClick={showSecurity}>
+          <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+          {t('namespaceAnalytics.securityView')}
+        </Button>
+      </div>
+      {search.view === 'security' ? <NamespaceSecurityAnalyticsView /> : <CatalogNamespaceAnalyticsView />}
     </div>
   )
 }

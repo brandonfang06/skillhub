@@ -6,6 +6,8 @@ import zhTW from './locales/zh-TW.json'
 const REQUIRED_KEYS = [
   'title',
   'subtitle',
+  'catalogView',
+  'securityView',
   'retentionNote',
   'summaryNamespaces',
   'summaryMaintainers',
@@ -49,6 +51,55 @@ const REQUIRED_KEYS = [
   'nextPage',
 ] as const
 
+const REQUIRED_SECURITY_KEYS = [
+  'subtitle',
+  'summaryNamespaces',
+  'summarySkills',
+  'summaryVersions',
+  'summaryFindings',
+  'severityAll',
+  'severityCritical',
+  'severityHigh',
+  'severityMedium',
+  'severityLow',
+  'severityInfo',
+  'severityUnclassified',
+  'searchPlaceholder',
+  'visibilityAll',
+  'versionStatusAll',
+  'moreFilters',
+  'skillStatusAll',
+  'hiddenAll',
+  'visibleOnly',
+  'hiddenOnly',
+  'scannerAll',
+  'hidden',
+  'owner',
+  'findingInstances',
+  'colAffectedSkills',
+  'colAffectedVersions',
+  'colMaxSeverity',
+  'colDistribution',
+  'colFindings',
+  'colLatestScan',
+  'colVersion',
+  'colVersionStatus',
+  'colScanners',
+  'colSeverity',
+  'expandNamespace',
+  'collapseNamespace',
+  'errorTitle',
+  'errorDescription',
+  'emptyTitle',
+  'emptyDescription',
+  'skillLoadError',
+  'totalSkills',
+  'previousSkillsPage',
+  'nextSkillsPage',
+  'totalNamespaces',
+  'detailDescription',
+] as const
+
 describe('namespace analytics locale contract', () => {
   it.each([
     ['en', en],
@@ -57,6 +108,9 @@ describe('namespace analytics locale contract', () => {
   ] as const)('defines every page key in %s', (_name, locale) => {
     for (const key of REQUIRED_KEYS) {
       expect(locale.namespaceAnalytics[key]).toBeTruthy()
+    }
+    for (const key of REQUIRED_SECURITY_KEYS) {
+      expect(locale.namespaceSecurity[key]).toBeTruthy()
     }
     expect(locale.user.menu.namespaceAnalytics).toBeTruthy()
   })

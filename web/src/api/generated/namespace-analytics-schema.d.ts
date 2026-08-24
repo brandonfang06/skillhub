@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/namespace-analytics/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Security Analytics Route */
+        get: operations["list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespace-analytics/security/namespaces/{namespace_id}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Security Skills Route */
+        get: operations["list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -128,6 +162,185 @@ export interface components {
             periodDownloads: number;
             /** Skillcount */
             skillCount: number;
+        };
+        /** NamespaceSecurityAnalyticsData */
+        NamespaceSecurityAnalyticsData: {
+            /** Items */
+            items: components["schemas"]["NamespaceSecurityAnalyticsItem"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            summary: components["schemas"]["NamespaceSecurityAnalyticsSummary"];
+            /** Total */
+            total: number;
+        };
+        /** NamespaceSecurityAnalyticsEnvelope */
+        NamespaceSecurityAnalyticsEnvelope: {
+            /** Code */
+            code: number;
+            data: components["schemas"]["NamespaceSecurityAnalyticsData"];
+            /** Msg */
+            msg: string;
+            /** Requestid */
+            requestId: string;
+            /** Timestamp */
+            timestamp: string;
+        };
+        /** NamespaceSecurityAnalyticsItem */
+        NamespaceSecurityAnalyticsItem: {
+            /** Affectedskillcount */
+            affectedSkillCount: number;
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Displayname */
+            displayName: string;
+            /** Findingcount */
+            findingCount: number;
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /** Namespaceid */
+            namespaceId: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "GLOBAL" | "TEAM";
+        };
+        /** NamespaceSecurityAnalyticsSummary */
+        NamespaceSecurityAnalyticsSummary: {
+            /** Affectednamespacecount */
+            affectedNamespaceCount: number;
+            /** Affectedskillcount */
+            affectedSkillCount: number;
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Findingcount */
+            findingCount: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+        };
+        /** NamespaceSecuritySeverityCounts */
+        NamespaceSecuritySeverityCounts: {
+            /** Critical */
+            critical: number;
+            /** High */
+            high: number;
+            /** Info */
+            info: number;
+            /** Low */
+            low: number;
+            /** Medium */
+            medium: number;
+            /** Unclassified */
+            unclassified: number;
+        };
+        /** NamespaceSecuritySkillItem */
+        NamespaceSecuritySkillItem: {
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Displayname */
+            displayName: string;
+            /** Findingcount */
+            findingCount: number;
+            /** Hidden */
+            hidden: boolean;
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /** Ownerdisplayname */
+            ownerDisplayName: string | null;
+            /** Ownerid */
+            ownerId: string;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /** Skillid */
+            skillId: number;
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "ARCHIVED";
+            /** Versions */
+            versions: components["schemas"]["NamespaceSecurityVersionItem"][];
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+        };
+        /** NamespaceSecuritySkillsData */
+        NamespaceSecuritySkillsData: {
+            /** Items */
+            items: components["schemas"]["NamespaceSecuritySkillItem"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** NamespaceSecuritySkillsEnvelope */
+        NamespaceSecuritySkillsEnvelope: {
+            /** Code */
+            code: number;
+            data: components["schemas"]["NamespaceSecuritySkillsData"];
+            /** Msg */
+            msg: string;
+            /** Requestid */
+            requestId: string;
+            /** Timestamp */
+            timestamp: string;
+        };
+        /** NamespaceSecurityVersionItem */
+        NamespaceSecurityVersionItem: {
+            /** Findingcount */
+            findingCount: number;
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /** Scannertypes */
+            scannerTypes: ("skill-scanner" | "custom")[];
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+            /** Version */
+            version: string;
+            /** Versionid */
+            versionId: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -222,6 +435,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                severity?: "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+                namespaceType?: "ALL" | "TEAM" | "GLOBAL";
+                namespaceStatus?: "ALL" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+                skillStatus?: "ALL" | "ACTIVE" | "ARCHIVED";
+                visibility?: "ALL" | "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+                hidden?: "ALL" | "VISIBLE" | "HIDDEN";
+                versionStatus?: "ALL" | "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+                scannerType?: ("skill-scanner" | "custom") | null;
+                sort?: "risk" | "namespace" | "affectedSkills" | "affectedVersions" | "findings" | "latestScan";
+                direction?: "asc" | "desc";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamespaceSecurityAnalyticsEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                severity?: "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+                skillStatus?: "ALL" | "ACTIVE" | "ARCHIVED";
+                visibility?: "ALL" | "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+                hidden?: "ALL" | "VISIBLE" | "HIDDEN";
+                versionStatus?: "ALL" | "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+                scannerType?: ("skill-scanner" | "custom") | null;
+                sort?: "risk" | "skill" | "affectedVersions" | "findings" | "latestScan";
+                direction?: "asc" | "desc";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamespaceSecuritySkillsEnvelope"];
                 };
             };
             /** @description Validation Error */

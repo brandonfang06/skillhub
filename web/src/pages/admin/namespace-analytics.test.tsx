@@ -62,6 +62,10 @@ vi.mock('@/features/admin/use-namespace-analytics', () => ({
   useNamespaceAnalytics: (params: unknown) => useNamespaceAnalyticsMock(params),
 }))
 
+vi.mock('@/features/admin/namespace-security-analytics-view', () => ({
+  NamespaceSecurityAnalyticsView: () => <div data-testid="namespace-security-view" />,
+}))
+
 const exportNamespaceAnalyticsCsvMock = vi.fn()
 vi.mock('@/features/admin/export-namespace-analytics', () => ({
   exportNamespaceAnalyticsCsv: (params: unknown) => exportNamespaceAnalyticsCsvMock(params),
@@ -81,6 +85,7 @@ vi.mock('@/shared/lib/toast', () => ({
 import { NamespaceAnalyticsPage } from './namespace-analytics'
 
 const defaultSearch = {
+  view: 'catalog',
   namespaceType: 'ALL',
   namespaceStatus: 'ACTIVE',
   period: '30d',
@@ -160,6 +165,34 @@ describe('NamespaceAnalyticsPage', () => {
     expect(screen.getByText('@global')).toBeTruthy()
     expect(screen.getByText('80')).toBeTruthy()
     expect(screen.getByText('12')).toBeTruthy()
+  })
+
+  it('switches to the security inventory with risk-first URL defaults', () => {
+    render(<NamespaceAnalyticsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'namespaceAnalytics.securityView' }))
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      search: {
+        view: 'security',
+        namespaceType: 'ALL',
+        namespaceStatus: 'ALL',
+        period: '30d',
+        sort: 'periodDownloads',
+        direction: 'desc',
+        page: 0,
+        size: 20,
+        severity: 'ALL',
+        skillStatus: 'ALL',
+        visibility: 'ALL',
+        hidden: 'ALL',
+        versionStatus: 'ALL',
+        securitySort: 'risk',
+        securityDirection: 'desc',
+        securityPage: 0,
+        securitySize: 20,
+      },
+    })
   })
 
   it('lets users type a multi-word namespace query before committing it', () => {

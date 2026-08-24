@@ -260,6 +260,19 @@ export type NamespaceAnalyticsPeriod = namespaceAnalyticsComponents['schemas']['
 export type NamespaceAnalyticsParams = NonNullable<
   namespaceAnalyticsOperations['list_namespace_analytics_route_api_v1_admin_namespace_analytics_get']['parameters']['query']
 >
+export type NamespaceSecurityAnalyticsData = namespaceAnalyticsComponents['schemas']['NamespaceSecurityAnalyticsData']
+export type NamespaceSecurityAnalyticsItem = namespaceAnalyticsComponents['schemas']['NamespaceSecurityAnalyticsItem']
+export type NamespaceSecurityAnalyticsSummary = namespaceAnalyticsComponents['schemas']['NamespaceSecurityAnalyticsSummary']
+export type NamespaceSecuritySeverityCounts = namespaceAnalyticsComponents['schemas']['NamespaceSecuritySeverityCounts']
+export type NamespaceSecurityAnalyticsParams = NonNullable<
+  namespaceAnalyticsOperations['list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get']['parameters']['query']
+>
+export type NamespaceSecuritySkillsData = namespaceAnalyticsComponents['schemas']['NamespaceSecuritySkillsData']
+export type NamespaceSecuritySkillItem = namespaceAnalyticsComponents['schemas']['NamespaceSecuritySkillItem']
+export type NamespaceSecurityVersionItem = namespaceAnalyticsComponents['schemas']['NamespaceSecurityVersionItem']
+export type NamespaceSecuritySkillsParams = NonNullable<
+  namespaceAnalyticsOperations['list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get']['parameters']['query']
+>
 
 export interface SkillLifecycleVersion {
   id: number

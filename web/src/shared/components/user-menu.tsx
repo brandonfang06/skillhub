@@ -208,6 +208,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
               <Link
                 to="/admin/namespace-analytics"
                 search={{
+                  view: 'catalog',
                   namespaceType: 'ALL',
                   namespaceStatus: 'ACTIVE',
                   period: '30d',

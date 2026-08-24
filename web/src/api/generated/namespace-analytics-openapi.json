@@ -222,6 +222,464 @@
         "title": "NamespaceAnalyticsSummary",
         "type": "object"
       },
+      "NamespaceSecurityAnalyticsData": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NamespaceSecurityAnalyticsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/NamespaceSecurityAnalyticsSummary"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "summary",
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "title": "NamespaceSecurityAnalyticsData",
+        "type": "object"
+      },
+      "NamespaceSecurityAnalyticsEnvelope": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "$ref": "#/components/schemas/NamespaceSecurityAnalyticsData"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "timestamp",
+          "requestId"
+        ],
+        "title": "NamespaceSecurityAnalyticsEnvelope",
+        "type": "object"
+      },
+      "NamespaceSecurityAnalyticsItem": {
+        "properties": {
+          "affectedSkillCount": {
+            "title": "Affectedskillcount",
+            "type": "integer"
+          },
+          "affectedVersionCount": {
+            "title": "Affectedversioncount",
+            "type": "integer"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "findingCount": {
+            "title": "Findingcount",
+            "type": "integer"
+          },
+          "latestScanAt": {
+            "format": "date-time",
+            "title": "Latestscanat",
+            "type": "string"
+          },
+          "maxSeverity": {
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "INFO",
+              "UNCLASSIFIED"
+            ],
+            "title": "Maxseverity",
+            "type": "string"
+          },
+          "namespaceId": {
+            "title": "Namespaceid",
+            "type": "integer"
+          },
+          "severityCounts": {
+            "$ref": "#/components/schemas/NamespaceSecuritySeverityCounts"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "FROZEN",
+              "ARCHIVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "GLOBAL",
+              "TEAM"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespaceId",
+          "slug",
+          "displayName",
+          "type",
+          "status",
+          "affectedSkillCount",
+          "affectedVersionCount",
+          "findingCount",
+          "severityCounts",
+          "maxSeverity",
+          "latestScanAt"
+        ],
+        "title": "NamespaceSecurityAnalyticsItem",
+        "type": "object"
+      },
+      "NamespaceSecurityAnalyticsSummary": {
+        "properties": {
+          "affectedNamespaceCount": {
+            "title": "Affectednamespacecount",
+            "type": "integer"
+          },
+          "affectedSkillCount": {
+            "title": "Affectedskillcount",
+            "type": "integer"
+          },
+          "affectedVersionCount": {
+            "title": "Affectedversioncount",
+            "type": "integer"
+          },
+          "findingCount": {
+            "title": "Findingcount",
+            "type": "integer"
+          },
+          "severityCounts": {
+            "$ref": "#/components/schemas/NamespaceSecuritySeverityCounts"
+          }
+        },
+        "required": [
+          "affectedNamespaceCount",
+          "affectedSkillCount",
+          "affectedVersionCount",
+          "findingCount",
+          "severityCounts"
+        ],
+        "title": "NamespaceSecurityAnalyticsSummary",
+        "type": "object"
+      },
+      "NamespaceSecuritySeverityCounts": {
+        "properties": {
+          "critical": {
+            "title": "Critical",
+            "type": "integer"
+          },
+          "high": {
+            "title": "High",
+            "type": "integer"
+          },
+          "info": {
+            "title": "Info",
+            "type": "integer"
+          },
+          "low": {
+            "title": "Low",
+            "type": "integer"
+          },
+          "medium": {
+            "title": "Medium",
+            "type": "integer"
+          },
+          "unclassified": {
+            "title": "Unclassified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "critical",
+          "high",
+          "medium",
+          "low",
+          "info",
+          "unclassified"
+        ],
+        "title": "NamespaceSecuritySeverityCounts",
+        "type": "object"
+      },
+      "NamespaceSecuritySkillItem": {
+        "properties": {
+          "affectedVersionCount": {
+            "title": "Affectedversioncount",
+            "type": "integer"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "findingCount": {
+            "title": "Findingcount",
+            "type": "integer"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "latestScanAt": {
+            "format": "date-time",
+            "title": "Latestscanat",
+            "type": "string"
+          },
+          "maxSeverity": {
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "INFO",
+              "UNCLASSIFIED"
+            ],
+            "title": "Maxseverity",
+            "type": "string"
+          },
+          "ownerDisplayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownerdisplayname"
+          },
+          "ownerId": {
+            "title": "Ownerid",
+            "type": "string"
+          },
+          "severityCounts": {
+            "$ref": "#/components/schemas/NamespaceSecuritySeverityCounts"
+          },
+          "skillId": {
+            "title": "Skillid",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/NamespaceSecurityVersionItem"
+            },
+            "title": "Versions",
+            "type": "array"
+          },
+          "visibility": {
+            "enum": [
+              "PUBLIC",
+              "NAMESPACE_ONLY",
+              "PRIVATE"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skillId",
+          "slug",
+          "displayName",
+          "ownerId",
+          "ownerDisplayName",
+          "visibility",
+          "status",
+          "hidden",
+          "affectedVersionCount",
+          "findingCount",
+          "severityCounts",
+          "maxSeverity",
+          "latestScanAt",
+          "versions"
+        ],
+        "title": "NamespaceSecuritySkillItem",
+        "type": "object"
+      },
+      "NamespaceSecuritySkillsData": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NamespaceSecuritySkillItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "title": "NamespaceSecuritySkillsData",
+        "type": "object"
+      },
+      "NamespaceSecuritySkillsEnvelope": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "$ref": "#/components/schemas/NamespaceSecuritySkillsData"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          },
+          "requestId": {
+            "title": "Requestid",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "timestamp",
+          "requestId"
+        ],
+        "title": "NamespaceSecuritySkillsEnvelope",
+        "type": "object"
+      },
+      "NamespaceSecurityVersionItem": {
+        "properties": {
+          "findingCount": {
+            "title": "Findingcount",
+            "type": "integer"
+          },
+          "latestScanAt": {
+            "format": "date-time",
+            "title": "Latestscanat",
+            "type": "string"
+          },
+          "maxSeverity": {
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "INFO",
+              "UNCLASSIFIED"
+            ],
+            "title": "Maxseverity",
+            "type": "string"
+          },
+          "scannerTypes": {
+            "items": {
+              "enum": [
+                "skill-scanner",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "title": "Scannertypes",
+            "type": "array"
+          },
+          "severityCounts": {
+            "$ref": "#/components/schemas/NamespaceSecuritySeverityCounts"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "SCANNING",
+              "SCAN_FAILED",
+              "UPLOADED",
+              "PENDING_REVIEW",
+              "PUBLISHED",
+              "REJECTED",
+              "YANKED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "versionId": {
+            "title": "Versionid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "versionId",
+          "version",
+          "status",
+          "findingCount",
+          "severityCounts",
+          "maxSeverity",
+          "latestScanAt",
+          "scannerTypes"
+        ],
+        "title": "NamespaceSecurityVersionItem",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -682,6 +1140,530 @@
           }
         },
         "summary": "Export Namespace Analytics Csv Route",
+        "tags": [
+          "Namespace Analytics"
+        ]
+      }
+    },
+    "/api/v1/admin/namespace-analytics/security": {
+      "get": {
+        "operationId": "list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW",
+                "INFO",
+                "UNCLASSIFIED"
+              ],
+              "title": "Severity",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "namespaceType",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "TEAM",
+                "GLOBAL"
+              ],
+              "title": "Namespacetype",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "namespaceStatus",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "FROZEN",
+                "ARCHIVED"
+              ],
+              "title": "Namespacestatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skillStatus",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "title": "Skillstatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "visibility",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "PUBLIC",
+                "NAMESPACE_ONLY",
+                "PRIVATE"
+              ],
+              "title": "Visibility",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hidden",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "VISIBLE",
+                "HIDDEN"
+              ],
+              "title": "Hidden",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "versionStatus",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "DRAFT",
+                "SCANNING",
+                "SCAN_FAILED",
+                "UPLOADED",
+                "PENDING_REVIEW",
+                "PUBLISHED",
+                "REJECTED",
+                "YANKED"
+              ],
+              "title": "Versionstatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scannerType",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "skill-scanner",
+                    "custom"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scannertype"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "risk",
+              "enum": [
+                "risk",
+                "namespace",
+                "affectedSkills",
+                "affectedVersions",
+                "findings",
+                "latestScan"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Mock-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Mock-User-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceSecurityAnalyticsEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Namespace Security Analytics Route",
+        "tags": [
+          "Namespace Analytics"
+        ]
+      }
+    },
+    "/api/v1/admin/namespace-analytics/security/namespaces/{namespace_id}/skills": {
+      "get": {
+        "operationId": "list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "namespace_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Namespace Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW",
+                "INFO",
+                "UNCLASSIFIED"
+              ],
+              "title": "Severity",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skillStatus",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "title": "Skillstatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "visibility",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "PUBLIC",
+                "NAMESPACE_ONLY",
+                "PRIVATE"
+              ],
+              "title": "Visibility",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hidden",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "VISIBLE",
+                "HIDDEN"
+              ],
+              "title": "Hidden",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "versionStatus",
+            "required": false,
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "DRAFT",
+                "SCANNING",
+                "SCAN_FAILED",
+                "UPLOADED",
+                "PENDING_REVIEW",
+                "PUBLISHED",
+                "REJECTED",
+                "YANKED"
+              ],
+              "title": "Versionstatus",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scannerType",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "skill-scanner",
+                    "custom"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scannertype"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "risk",
+              "enum": [
+                "risk",
+                "skill",
+                "affectedVersions",
+                "findings",
+                "latestScan"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Mock-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Mock-User-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceSecuritySkillsEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Namespace Security Skills Route",
         "tags": [
           "Namespace Analytics"
         ]

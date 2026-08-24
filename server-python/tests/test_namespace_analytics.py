@@ -734,5 +734,7 @@ def test_focused_namespace_analytics_openapi_contains_only_analytics_route() -> 
     assert list(schema["paths"]) == [
         "/api/v1/admin/namespace-analytics",
         "/api/v1/admin/namespace-analytics.csv",
+        "/api/v1/admin/namespace-analytics/security",
+        "/api/v1/admin/namespace-analytics/security/namespaces/{namespace_id}/skills",
     ]
     assert schema["info"]["title"] == "SkillHub Namespace Analytics API"
