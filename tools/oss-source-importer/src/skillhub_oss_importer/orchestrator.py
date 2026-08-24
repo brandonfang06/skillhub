@@ -16,7 +16,7 @@ def _metadata(
 ) -> dict[str, object]:
     data: dict[str, object] = {
         "repositoryUrl": config.repository_url,
-        "repositoryRevisionSha": checkout.commit_sha,
+        "repositoryRevisionSha": config.source_commit_sha,
         "sourceRefType": checkout.ref_type,
         "sourcePath": package.source_path,
         "pipelineId": config.pipeline_id,
@@ -25,7 +25,7 @@ def _metadata(
     if checkout.source_ref is not None:
         data["sourceRef"] = checkout.source_ref
     if not package.has_explicit_version:
-        data["versionOverride"] = f"git-{checkout.commit_sha}"
+        data["versionOverride"] = f"git-{config.source_commit_sha}"
     if config.trigger_login_name is not None:
         data["initiatorProviderCode"] = config.trigger_provider_code
         data["initiatorLoginName"] = config.trigger_login_name
@@ -107,9 +107,13 @@ def _report(
         "startedAt": started_at,
         "finishedAt": datetime.now(UTC).isoformat(),
         "repositoryUrl": config.repository_url,
-        "commitSha": checkout.commit_sha,
+        "commitSha": config.source_commit_sha,
+        "devGitlabCommitSha": checkout.commit_sha,
         "sourceRefType": checkout.ref_type,
         "sourceRef": checkout.source_ref,
+        "scanStatus": config.scan_status,
+        "scanCommitSha": config.scan_commit_sha,
+        "scanId": config.scan_id,
         "namespaceSlug": config.namespace_slug,
         "namespace": namespace,
         "pipelineId": config.pipeline_id,

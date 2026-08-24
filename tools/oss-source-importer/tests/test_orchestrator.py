@@ -36,12 +36,16 @@ def fixture_config(tmp_path: Path) -> SimpleNamespace:
         namespace_slug="oss-owner-repo",
         namespace_display_name="OSS-owner-repo",
         repository_url="https://github.com/owner/repo",
+        source_commit_sha="b" * 40,
         owner_provider_code="keycloak",
         owner_login_name="owner",
         trigger_provider_code="keycloak",
         trigger_login_name="alice",
         pipeline_id="1",
         job_id="2",
+        scan_status="PASSED",
+        scan_commit_sha="a" * 40,
+        scan_id="scan-123",
     )
 
 
@@ -98,11 +102,15 @@ def test_uses_commit_version_only_when_skill_has_no_explicit_version(tmp_path: P
 
     report = run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
 
-    assert metadata[0]["versionOverride"] == f"git-{'a' * 40}"
+    assert metadata[0]["versionOverride"] == f"git-{'b' * 40}"
     assert "versionOverride" not in metadata[1]
-    assert metadata[0]["repositoryRevisionSha"] == "a" * 40
+    assert metadata[0]["repositoryRevisionSha"] == "b" * 40
     assert "ciRefName" not in metadata[0]
-    assert report["commitSha"] == "a" * 40
+    assert report["commitSha"] == "b" * 40
+    assert report["devGitlabCommitSha"] == "a" * 40
+    assert report["scanStatus"] == "PASSED"
+    assert report["scanCommitSha"] == "a" * 40
+    assert report["scanId"] == "scan-123"
     assert "importerProjectCommitSha" not in report
 
 

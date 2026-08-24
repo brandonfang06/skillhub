@@ -9,7 +9,7 @@ from skillhub_oss_importer.github_source import (
     clone_repository,
 )
 
-INTERNAL_REPOSITORY_URL = "https://gitlab-ci-token:job-secret@gitlab.internal/platform/oss-source.git"
+INTERNAL_REPOSITORY_URL = "https://gitlab.internal/dev/oss-source.git"
 
 
 def test_canonicalizes_only_github_https_repository() -> None:
@@ -69,6 +69,7 @@ def test_clones_the_internal_gitlab_project_at_the_pipeline_commit(
         first_sha,
         "BRANCH",
         "main",
+        "job-secret",
     )
 
     assert checkout.commit_sha == first_sha
@@ -90,6 +91,7 @@ def test_records_the_internal_gitlab_pipeline_tag(
         second_sha,
         "TAG",
         "v1.0.0",
+        "job-secret",
     )
 
     assert checkout.commit_sha == second_sha
@@ -104,13 +106,55 @@ def test_internal_gitlab_clone_failure_does_not_leak_the_job_token(
     source, _first_sha, _second_sha = make_source_repository(tmp_path)
     route_internal_clone_to_local_repository(source, monkeypatch)
 
-    with pytest.raises(SourceError, match="Unable to clone internal GitLab project") as error:
+    with pytest.raises(SourceError, match="Unable to clone the landed Dev GitLab project") as error:
         clone_repository(
             INTERNAL_REPOSITORY_URL,
             tmp_path / "missing-commit",
             "0" * 40,
             "COMMIT",
             None,
+            "job-secret",
         )
 
     assert "job-secret" not in str(error.value)
+
+
+def test_job_token_is_not_exposed_in_git_command_arguments(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, first_sha, _second_sha = make_source_repository(tmp_path)
+    route_internal_clone_to_local_repository(source, monkeypatch)
+    original_run = subprocess.run
+    commands: list[list[str]] = []
+    environments: list[dict[str, str]] = []
+
+    def recording_run(command: list[str], *args: object, **kwargs: object):
+        commands.append(command)
+        environments.append(dict(kwargs["env"]))
+        return original_run(command, *args, **kwargs)
+
+    monkeypatch.setattr("skillhub_oss_importer.github_source.subprocess.run", recording_run)
+
+    clone_repository(
+        INTERNAL_REPOSITORY_URL,
+        tmp_path / "secure-checkout",
+        first_sha,
+        "COMMIT",
+        None,
+        "job-secret",
+    )
+
+    assert all("job-secret" not in argument for command in commands for argument in command)
+    assert any(
+        value.startswith("Authorization: Basic ")
+        for environment in environments
+        for name, value in environment.items()
+        if name.startswith("GIT_CONFIG_VALUE_")
+    )
+    assert any(
+        environment.get(f"GIT_CONFIG_VALUE_{index}") == "false"
+        for environment in environments
+        for index in range(int(environment["GIT_CONFIG_COUNT"]))
+        if environment.get(f"GIT_CONFIG_KEY_{index}") == "http.followRedirects"
+    )

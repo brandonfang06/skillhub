@@ -206,7 +206,11 @@ The final ten-minute log scan across PostgreSQL, Redis, MinIO, backend,
 scanner, root web, and subpath web found no traceback, SQL syntax or database
 operational error, unhandled exception, fatal, panic, or scanner task failure.
 
-## 2026-08-24 internal GitLab self-clone runner correction
+## 2026-08-24 superseded internal GitLab self-clone evidence
+
+This section records the earlier same-day verification only. It is superseded
+by the central `pull_pipeline` result below and is not current deployment
+guidance.
 
 The runner-side path was corrected to match the actual deployment model. The
 GitHub repository is already migrated into the internal GitLab project before
@@ -257,3 +261,69 @@ changed-source import through `/skillhub`, and a second human importer without
 skill-owner transfer. A final ten-minute scan of backend, scanner, root proxy,
 and subpath proxy logs returned zero `ERROR`, traceback, SQLSTATE, or HTTP 5xx
 matches.
+
+## 2026-08-24 central pull_pipeline runner verification
+
+The approved runtime is now:
+
+```text
+pull-pipeline-for-user
+  -> central pull_pipeline
+  -> pull_code (scan-passed Dev GitLab landing + pull-code.env)
+  -> publish_skillhub
+  -> SkillHub scanner and namespace-owner review
+```
+
+The publish job executes repository-owned Python from the central checkout,
+reads `pull-code.env` as the authoritative handoff, clones the exact Dev GitLab
+SHA, and keeps the original GitHub SHA separate for SkillHub provenance. It does
+not use the central repository's own revision as source data.
+
+Runtime package installation was removed. `run_import.py --help` passed under
+`python -S`, the project has no production Python dependencies, and the shell
+wrapper performs only Python/Git preflight before executing the checked-in
+Python file. The obsolete importer Dockerfile and runtime requirements export
+were removed.
+
+Final automated results:
+
+- importer tests: `41 passed`;
+- importer Ruff: passed;
+- Chinese operator SOP tests: `4 passed`;
+- `uv lock --check`: resolved the expected 8 development packages;
+- PowerShell smoke parser and Git Bash shell syntax: passed;
+- shell byte check: zero CRLF and `.gitattributes` enforces `eol=lf`;
+- `git diff --check`: passed.
+
+Review-driven security coverage proves:
+
+- missing, out-of-tree, oversized, invalid, conflicting, or control-character
+  handoff data fails closed;
+- a non-`PASSED` scan or scan/Dev SHA mismatch cannot submit;
+- Dev GitLab clone URLs are credential-free HTTPS;
+- `CI_JOB_TOKEN` is absent from Git command arguments, reports, and errors;
+- Git and SkillHub HTTP redirects are disabled;
+- SkillHub authorization, multipart, request ID, non-JSON, root path, and
+  `/skillhub` behavior work through the standard-library HTTP adapter.
+
+Docker daemon 29.5.2 was available. The final smoke mounted a temporary central
+pipeline checkout and a separate Dev source checkout read-only into the stock
+`python:3.12-bookworm` job container. No package install ran. PostgreSQL, Redis,
+MinIO, scanner, Python backend, root proxy, and `/skillhub` proxy were healthy,
+and the final run completed with:
+
+```text
+OSS source import smoke passed: run=54ed17c4bd22 initial=0c2cf683e796e276dd1244e00d0cf38bd2320637 changed=88778fed6dac8b8e7cdcebf0801707f34c812d16
+```
+
+The smoke verified authoritative artifact loading, exact Dev checkout, scan
+evidence, three package imports, PostgreSQL identity/audit/review/source rows,
+Redis-backed scanner processing, MinIO objects, approval and publication,
+idempotent retry, a changed source through `/skillhub`, and stable ownership
+across different human importers.
+
+One external gate remains: run the template in the organization's real central
+GitLab project and confirm the target Dev project job-token allowlist permits an
+actual HTTPS clone. Local verification used a GitLab-shaped HTTPS URL rewritten
+to the separate read-only Dev fixture, so it did not exercise the organization's
+GitLab TLS, Runner policy, or allowlist configuration.

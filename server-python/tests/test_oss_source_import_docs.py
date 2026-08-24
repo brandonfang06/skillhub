@@ -11,6 +11,14 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "SKILLHUB_BASE_URL",
         "SKILLHUB_SERVICE_TOKEN",
         "SKILLHUB_SOURCE_REPOSITORY_URL",
+        "SKILLHUB_SOURCE_COMMIT_SHA",
+        "SKILLHUB_SOURCE_REF_TYPE",
+        "SKILLHUB_SOURCE_REF",
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
+        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_SOURCE_SCAN_STATUS",
+        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
+        "SKILLHUB_SOURCE_SCAN_ID",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
         "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE",
@@ -20,11 +28,7 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "SKILLHUB_IMPORT_TIMEOUT_SECONDS",
         "SSL_CERT_FILE",
         "CI_PROJECT_DIR",
-        "CI_REPOSITORY_URL",
-        "CI_COMMIT_SHA",
-        "CI_COMMIT_TAG",
-        "CI_COMMIT_BRANCH",
-        "CI_COMMIT_REF_NAME",
+        "CI_JOB_TOKEN",
         "CI_PIPELINE_ID",
         "CI_JOB_ID",
     ):
@@ -77,20 +81,30 @@ def test_sop_explains_version_importer_attribution() -> None:
 def test_sop_explains_gitlab_shell_python_and_api_responsibilities() -> None:
     content = SOP.read_text(encoding="utf-8")
     for phrase in (
-        "已搬入 internal GitLab",
+        "pull-pipeline-for-user",
+        "`pull_pipeline`",
+        "`pull_code`",
+        "`publish_skillhub`",
+        "Dev GitLab",
+        "dotenv",
+        "唯一可信來源",
         "GitLab Runner shell",
-        "project 內的 Python 檔案",
+        "中央 repo 內的 Python 檔案",
         "不是一般 SkillHub CLI",
         "不使用 `curl`",
-        "Python `httpx`",
+        "Python 標準函式庫",
+        "不執行 `pip install`",
         "git clone",
         "公開 reverse proxy／Ingress",
         "Python FastAPI backend",
         'entrypoint: [""]',
         "GitHub URL 只用於 upstream provenance",
         "Runner 不連 GitHub",
-        "git clone 自己的 `CI_REPOSITORY_URL`",
+        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
     ):
         assert phrase in content
     assert "SKILLHUB_IMPORTER_IMAGE" not in content
-    assert "SKILLHUB_SOURCE_REF" not in content
+    assert "requirements-runtime.txt" not in content
+    assert "Python `httpx`" not in content
+    assert "CI_REPOSITORY_URL" not in content
+    assert "CI_COMMIT_SHA" not in content

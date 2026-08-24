@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+from base64 import b64encode
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -73,12 +74,28 @@ def clone_repository(
     expected_sha: str,
     ref_type: str,
     source_ref: str | None,
+    job_token: str,
 ) -> SourceCheckout:
     if destination.exists():
         raise SourceError("Git checkout destination already exists")
     environment = os.environ.copy()
     environment["GIT_TERMINAL_PROMPT"] = "0"
     environment["GIT_LFS_SKIP_SMUDGE"] = "1"
+    try:
+        config_count = int(environment.get("GIT_CONFIG_COUNT", "0"))
+    except ValueError as exc:
+        raise SourceError("Invalid inherited Git configuration") from exc
+    if config_count < 0:
+        raise SourceError("Invalid inherited Git configuration")
+    credentials = b64encode(f"gitlab-ci-token:{job_token}".encode()).decode()
+    for key, value in (
+        ("http.extraHeader", f"Authorization: Basic {credentials}"),
+        ("http.followRedirects", "false"),
+    ):
+        environment[f"GIT_CONFIG_KEY_{config_count}"] = key
+        environment[f"GIT_CONFIG_VALUE_{config_count}"] = value
+        config_count += 1
+    environment["GIT_CONFIG_COUNT"] = str(config_count)
     try:
         destination.mkdir(parents=False)
         for command in (
@@ -108,9 +125,9 @@ def clone_repository(
             .lower()
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        raise SourceError("Unable to clone internal GitLab project") from exc
+        raise SourceError("Unable to clone the landed Dev GitLab project") from exc
     if commit_sha != expected_sha.lower():
-        raise SourceError("Internal GitLab checkout does not match CI_COMMIT_SHA")
+        raise SourceError("Dev GitLab checkout does not match SKILLHUB_DEV_GITLAB_COMMIT_SHA")
     return SourceCheckout(
         checkout_dir=destination.resolve(),
         commit_sha=commit_sha,

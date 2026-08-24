@@ -1,10 +1,21 @@
-# Required project/group CI variables:
-# SKILLHUB_PYTHON_IMAGE (immutable Python 3.12 + Git image), SKILLHUB_BASE_URL,
-# SKILLHUB_SERVICE_TOKEN (an st_ service token),
-# SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE, SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME.
-# Required per-pipeline upstream identity input: SKILLHUB_SOURCE_REPOSITORY_URL.
-# GitLab supplies the actual internal clone coordinates through CI_REPOSITORY_URL
-# and CI_COMMIT_SHA; the importer never clones SKILLHUB_SOURCE_REPOSITORY_URL.
+# The central pipeline must define a `pull_code` job in an earlier stage. That
+# job publishes a dotenv artifact containing the accepted source coordinates:
+# SKILLHUB_SOURCE_REPOSITORY_URL, SKILLHUB_SOURCE_COMMIT_SHA,
+# SKILLHUB_SOURCE_REF_TYPE, optional SKILLHUB_SOURCE_REF,
+# SKILLHUB_DEV_GITLAB_REPOSITORY_URL, SKILLHUB_DEV_GITLAB_COMMIT_SHA,
+# SKILLHUB_SOURCE_SCAN_STATUS, SKILLHUB_SOURCE_SCAN_COMMIT_SHA, and optional
+# SKILLHUB_SOURCE_SCAN_ID. The scan status must be PASSED and its commit must
+# equal the Dev GitLab commit.
+# The importer reads `$CI_PROJECT_DIR/pull-code.env` itself and rejects any
+# conflicting inherited variable because higher-precedence GitLab variables can
+# override dotenv report values. The artifact file is the authoritative handoff.
+#
+# Required project/group variables: SKILLHUB_PYTHON_IMAGE (immutable Python
+# 3.12 + Git image), SKILLHUB_BASE_URL, SKILLHUB_SERVICE_TOKEN (an st_ service
+# token), SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE, and
+# SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME. GitLab supplies CI_JOB_TOKEN for the
+# cross-project Dev GitLab clone. The Dev project must allow this central
+# pipeline project to read it with the job token.
 
 .skillhub_oss_import:
   image:
@@ -12,6 +23,9 @@
     entrypoint: [""]
   variables:
     SKILLHUB_IMPORT_REPORT_PATH: "skillhub-oss-import-report.json"
+  needs:
+    - job: pull_code
+      artifacts: true
   script:
     - /bin/sh "$CI_PROJECT_DIR/deploy/gitlab/oss-source-import.sh"
   artifacts:
@@ -21,4 +35,4 @@
 
 skillhub_oss_import:
   extends: .skillhub_oss_import
-  stage: publish
+  stage: publish_skillhub

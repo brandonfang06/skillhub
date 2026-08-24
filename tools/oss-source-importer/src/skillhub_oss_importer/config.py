@@ -14,11 +14,88 @@ class ConfigError(ValueError):
     pass
 
 
+_HANDOFF_REQUIRED = frozenset(
+    {
+        "SKILLHUB_SOURCE_REPOSITORY_URL",
+        "SKILLHUB_SOURCE_COMMIT_SHA",
+        "SKILLHUB_SOURCE_REF_TYPE",
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
+        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_SOURCE_SCAN_STATUS",
+        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
+    }
+)
+_HANDOFF_OPTIONAL = frozenset(
+    {
+        "SKILLHUB_SOURCE_REF",
+        "SKILLHUB_SOURCE_SCAN_ID",
+        "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE",
+        "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME",
+    }
+)
+_HANDOFF_VARIABLES = _HANDOFF_REQUIRED | _HANDOFF_OPTIONAL
+
+
 def _required(env: Mapping[str, str], name: str) -> str:
     value = env.get(name, "").strip()
     if not value:
         raise ConfigError(f"Missing required environment variable: {name}")
     return value
+
+
+def _sha(env: Mapping[str, str], name: str) -> str:
+    value = _required(env, name).lower()
+    if not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise ConfigError(f"{name} must be a 40-character hexadecimal SHA")
+    return value
+
+
+def _load_pull_code_handoff(project_dir: Path, env: Mapping[str, str]) -> dict[str, str]:
+    handoff_path = project_dir / "pull-code.env"
+    try:
+        resolved_path = handoff_path.resolve(strict=True)
+        resolved_path.relative_to(project_dir)
+        content = resolved_path.read_bytes()
+    except (OSError, ValueError) as exc:
+        raise ConfigError("pull-code.env must be a readable file inside CI_PROJECT_DIR") from exc
+    if len(content) > 64 * 1024:
+        raise ConfigError("pull-code.env exceeds 64 KiB")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ConfigError("pull-code.env must be UTF-8") from exc
+
+    handoff: dict[str, str] = {}
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line:
+            continue
+        if "=" not in line:
+            raise ConfigError(f"Invalid pull-code.env line {line_number}")
+        name, value = line.split("=", 1)
+        if name not in _HANDOFF_VARIABLES:
+            raise ConfigError(f"Unexpected pull-code.env variable: {name}")
+        if name in handoff:
+            raise ConfigError(f"Duplicate pull-code.env variable: {name}")
+        if value != value.strip():
+            raise ConfigError(f"pull-code.env value has surrounding whitespace: {name}")
+        if any(ord(character) < 32 or ord(character) == 127 for character in value):
+            raise ConfigError(f"pull-code.env value contains control characters: {name}")
+        handoff[name] = value
+
+    missing = sorted(_HANDOFF_REQUIRED - handoff.keys())
+    if missing:
+        raise ConfigError(f"Missing pull-code.env variable: {missing[0]}")
+    for name in _HANDOFF_VARIABLES:
+        environment_value = env.get(name, "")
+        artifact_value = handoff.get(name, "")
+        if environment_value and environment_value != artifact_value:
+            raise ConfigError(f"{name} conflicts with pull-code.env")
+
+    values = dict(env)
+    for name in _HANDOFF_VARIABLES:
+        values.pop(name, None)
+    values.update(handoff)
+    return values
 
 
 @dataclass(frozen=True)
@@ -34,18 +111,25 @@ class Config:
     trigger_login_name: str | None
     project_dir: Path
     source_clone_url: str = field(repr=False)
+    gitlab_job_token: str = field(repr=False)
     source_subdirectory: Path
     report_path: Path
     timeout_seconds: float
-    commit_sha: str
+    dev_gitlab_commit_sha: str
+    source_commit_sha: str
     ref_type: str
     source_ref: str | None
+    scan_status: str
+    scan_commit_sha: str
+    scan_id: str | None
     pipeline_id: str | None
     job_id: str | None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
-        values = os.environ if env is None else env
+        environment = os.environ if env is None else env
+        project_dir = Path(_required(environment, "CI_PROJECT_DIR")).resolve()
+        values = _load_pull_code_handoff(project_dir, environment)
         base_url = _required(values, "SKILLHUB_BASE_URL").rstrip("/")
         parsed_base = urlsplit(base_url)
         if parsed_base.scheme not in {"http", "https"} or not parsed_base.netloc:
@@ -54,23 +138,41 @@ class Config:
             repository = canonicalize_repository(_required(values, "SKILLHUB_SOURCE_REPOSITORY_URL"))
         except SourceError as exc:
             raise ConfigError(str(exc)) from exc
-        project_dir = Path(_required(values, "CI_PROJECT_DIR")).resolve()
-        source_clone_url = _required(values, "CI_REPOSITORY_URL")
+        source_clone_url = _required(values, "SKILLHUB_DEV_GITLAB_REPOSITORY_URL")
         parsed_clone_url = urlsplit(source_clone_url)
-        if parsed_clone_url.scheme not in {"http", "https"} or not parsed_clone_url.netloc:
-            raise ConfigError("CI_REPOSITORY_URL must be an absolute HTTP(S) URL")
+        if (
+            parsed_clone_url.scheme != "https"
+            or not parsed_clone_url.netloc
+            or parsed_clone_url.username is not None
+            or parsed_clone_url.password is not None
+            or parsed_clone_url.query
+            or parsed_clone_url.fragment
+        ):
+            raise ConfigError(
+                "SKILLHUB_DEV_GITLAB_REPOSITORY_URL must be a credential-free absolute HTTPS URL"
+            )
         source_value = values.get("SKILLHUB_IMPORT_SOURCE_ROOT", ".").strip() or "."
         source_subdirectory = Path(source_value)
         if source_subdirectory.is_absolute() or ".." in source_subdirectory.parts:
             raise ConfigError(
                 "SKILLHUB_IMPORT_SOURCE_ROOT must be a safe relative path within the cloned repository"
             )
-        commit_sha = _required(values, "CI_COMMIT_SHA").lower()
-        if not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
-            raise ConfigError("CI_COMMIT_SHA must be a 40-character hexadecimal SHA")
-        tag = values.get("CI_COMMIT_TAG", "").strip()
-        branch = values.get("CI_COMMIT_BRANCH", "").strip()
-        ref_type, source_ref = ("TAG", tag) if tag else (("BRANCH", branch) if branch else ("COMMIT", None))
+        dev_gitlab_commit_sha = _sha(values, "SKILLHUB_DEV_GITLAB_COMMIT_SHA")
+        source_commit_sha = _sha(values, "SKILLHUB_SOURCE_COMMIT_SHA")
+        scan_status = values.get("SKILLHUB_SOURCE_SCAN_STATUS", "").strip()
+        if scan_status != "PASSED":
+            raise ConfigError("SKILLHUB_SOURCE_SCAN_STATUS must be PASSED")
+        scan_commit_sha = _sha(values, "SKILLHUB_SOURCE_SCAN_COMMIT_SHA")
+        if scan_commit_sha != dev_gitlab_commit_sha:
+            raise ConfigError("The scan commit must match SKILLHUB_DEV_GITLAB_COMMIT_SHA")
+        ref_type = _required(values, "SKILLHUB_SOURCE_REF_TYPE")
+        if ref_type not in {"TAG", "BRANCH", "COMMIT"}:
+            raise ConfigError("SKILLHUB_SOURCE_REF_TYPE must be TAG, BRANCH, or COMMIT")
+        source_ref = values.get("SKILLHUB_SOURCE_REF", "").strip() or None
+        if ref_type in {"TAG", "BRANCH"} and source_ref is None:
+            raise ConfigError("SKILLHUB_SOURCE_REF is required for TAG and BRANCH sources")
+        if ref_type == "COMMIT" and source_ref is not None:
+            raise ConfigError("SKILLHUB_SOURCE_REF must be empty for COMMIT sources")
         owner_provider = _required(values, "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE")
         report_value = values.get("SKILLHUB_IMPORT_REPORT_PATH", "skillhub-oss-import-report.json").strip()
         report_path = Path(report_value)
@@ -97,12 +199,17 @@ class Config:
             trigger_login_name=trigger_login,
             project_dir=project_dir,
             source_clone_url=source_clone_url,
+            gitlab_job_token=_required(values, "CI_JOB_TOKEN"),
             source_subdirectory=source_subdirectory,
             report_path=report_path.resolve(),
             timeout_seconds=timeout,
-            commit_sha=commit_sha,
+            dev_gitlab_commit_sha=dev_gitlab_commit_sha,
+            source_commit_sha=source_commit_sha,
             ref_type=ref_type,
             source_ref=source_ref,
+            scan_status=scan_status,
+            scan_commit_sha=scan_commit_sha,
+            scan_id=values.get("SKILLHUB_SOURCE_SCAN_ID", "").strip() or None,
             pipeline_id=values.get("CI_PIPELINE_ID", "").strip() or None,
             job_id=values.get("CI_JOB_ID", "").strip() or None,
         )

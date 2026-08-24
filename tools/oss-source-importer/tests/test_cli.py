@@ -13,15 +13,16 @@ def test_cli_maps_configuration_error_and_writes_atomic_report(tmp_path: Path, m
     assert not report.with_suffix(".json.tmp").exists()
 
 
-def test_cli_clones_the_current_internal_gitlab_project_before_import(tmp_path: Path, monkeypatch) -> None:
+def test_cli_clones_the_landed_dev_gitlab_commit_before_import(tmp_path: Path, monkeypatch) -> None:
     report_path = tmp_path / "report.json"
     config = SimpleNamespace(
         base_url="https://skillhub.example/skillhub",
         service_token="st_secret",
         timeout_seconds=60.0,
         repository_url="https://github.com/mattpocock/skills",
-        source_clone_url="https://gitlab-ci-token:secret@gitlab.internal/platform/skills.git",
-        commit_sha="a" * 40,
+        source_clone_url="https://gitlab.internal/dev/skills.git",
+        gitlab_job_token="job-secret",
+        dev_gitlab_commit_sha="a" * 40,
         ref_type="TAG",
         source_ref="v1.2.3",
         report_path=report_path,
@@ -41,11 +42,13 @@ def test_cli_clones_the_current_internal_gitlab_project_before_import(tmp_path: 
         expected_sha: str,
         ref_type: str,
         source_ref: str | None,
+        job_token: str,
     ) -> SourceCheckout:
         captured["clone_url"] = clone_url
         captured["expected_sha"] = expected_sha
         captured["ref_type"] = ref_type
         captured["source_ref"] = source_ref
+        captured["job_token"] = job_token
         destination.mkdir()
         return SourceCheckout(destination, "a" * 40, ref_type, source_ref)
 
@@ -60,10 +63,11 @@ def test_cli_clones_the_current_internal_gitlab_project_before_import(tmp_path: 
 
     assert main([]) == EXIT_SUCCESS
     assert captured == {
-        "clone_url": "https://gitlab-ci-token:secret@gitlab.internal/platform/skills.git",
+        "clone_url": "https://gitlab.internal/dev/skills.git",
         "expected_sha": "a" * 40,
         "ref_type": "TAG",
         "source_ref": "v1.2.3",
+        "job_token": "job-secret",
         "checkout_exists_during_import": True,
         "closed": True,
     }

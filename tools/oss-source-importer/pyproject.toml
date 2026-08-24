@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "skillhub-oss-source-importer"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["httpx>=0.28,<1"]
+dependencies = []
 
 [project.scripts]
 skillhub-oss-import = "skillhub_oss_importer.cli:main"

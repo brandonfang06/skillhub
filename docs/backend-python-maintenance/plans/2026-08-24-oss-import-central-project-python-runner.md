@@ -1,153 +1,144 @@
-# OSS Import Internal GitLab Self-Clone Python Runner
+# Central OSS Import Pipeline Runner
 
 Date: 2026-08-24
 
-Status: Corrected implementation verified; awaiting commit authorization
+Status: Implemented and locally verified; organization GitLab gate pending
 
 ## Decision
 
-The GitHub repository is already migrated into an internal GitLab source
-project before this stage runs. A user starts a pipeline in that project and
-provides the original HTTPS GitHub repository URL only as upstream identity.
-The project-local shell wrapper starts project-local Python code. Python clones
-the current internal GitLab project through `CI_REPOSITORY_URL`, checks out the
-exact `CI_COMMIT_SHA`, discovers and packages every exact-case `SKILL.md` root,
-and calls the existing SkillHub source-import APIs with a platform-managed
-`st_` service token.
+The organization runs OSS intake from one central `pull_pipeline` repository.
+`pull-pipeline-for-user` triggers that pipeline. Its existing `pull_code` job
+accepts only scan-passed content, lands it in Dev GitLab, and emits an immutable
+dotenv handoff. A following `publish_skillhub` job clones that exact Dev GitLab
+commit and calls the existing SkillHub source-import endpoints.
 
-The GitLab job does not use the TypeScript/Bun SkillHub CLI, an installed
-`skillhub-oss-import` console command, curl-based upload orchestration, or an
-importer-specific OCI image. Importer behavior changes ship with the GitLab
-project source and therefore do not require rebuilding an importer image.
+The publish job never clones the external GitHub or OSS GitLab source. It also
+does not treat the central pipeline's own GitLab checkout variables as source
+coordinates.
 
-## Runtime boundary
-
-The GitLab runtime image is a stable organization-approved toolchain image. It
-must provide:
-
-- Python 3.12;
-- Git;
-- CA certificates and any organization trust bundle; and
-- a POSIX shell for the GitLab job script.
-
-It does not contain SkillHub importer code. The importer code is checked out as
-part of the current GitLab source project. Runtime Python dependencies are installed
-from the project's locked dependency file, using the organization's configured
-Python package mirror when required.
-
-The call chain is:
+## Call chain
 
 ```text
-GitLab Runner shell
-  -> deploy/gitlab/oss-source-import.sh
-  -> python tools/oss-source-importer/run_import.py
-  -> git clone current internal GitLab CI_REPOSITORY_URL at CI_COMMIT_SHA
-  -> Python discovery, deterministic ZIP, and HTTP API client
-  -> public SkillHub reverse proxy/Ingress
-  -> Python FastAPI source-import endpoints
+pull-pipeline-for-user
+  -> central pull_pipeline
+  -> scan
+  -> pull_code
+       -> Dev GitLab immutable commit
+       -> pull-code.env
+  -> publish_skillhub
+       -> repository-owned Python importer
+       -> exact Dev GitLab checkout
+       -> SkillHub source-import endpoints
+  -> SkillHub scanner and namespace-owner review
 ```
 
-## Source and provenance contract
+## Runtime seam
 
-`CI_PROJECT_DIR`, `CI_REPOSITORY_URL`, and `CI_COMMIT_SHA` describe the current
-internal GitLab source project. `CI_REPOSITORY_URL` is the actual clone
-coordinate and may contain a short-lived job token, so it is never reported or
-sent to SkillHub.
+GitLab Runner checks the central repository out at `CI_PROJECT_DIR`. The shell
+wrapper and Python source run from that checkout; they are neither mounted nor
+copied into the runtime image.
 
-The required `SKILLHUB_SOURCE_REPOSITORY_URL` remains restricted to
-credential-free `https://github.com/<owner>/<repo>[.git]` URLs. It is used only
-for upstream provenance and deterministic namespace naming. Runner does not
-connect to GitHub and never clones this URL.
+The immutable organization image must provide Python 3.12, Git, CA certificates,
+and a POSIX shell. The importer uses the Python standard library for HTTP,
+multipart, JSON, TLS, and timeout handling. The production job performs no
+`pip install`, dependency synchronization, or importer-image build. `pytest`
+and `ruff` remain development-only dependencies.
 
-Python shallow-fetches `CI_COMMIT_SHA` from the internal GitLab project and
-verifies the detached checkout with `git rev-parse HEAD`. `CI_COMMIT_TAG` takes
-precedence as TAG, otherwise `CI_COMMIT_BRANCH` identifies a BRANCH; a detached
-pipeline is recorded as COMMIT. The GitLab pipeline ref selector chooses the
-source ref, so there is no separate `SKILLHUB_SOURCE_REF` variable.
+## Handoff interface
 
-Backend provenance and the deterministic `git-<40-char-source-commit>` fallback
-version use the verified internal GitLab commit. For a GitHub exact-commit link
-to remain valid, the GitHub-to-GitLab migration must preserve Git history and
-commit SHA.
+`pull_code` publishes the following trusted dotenv values:
 
-`SKILLHUB_IMPORT_SOURCE_ROOT`, when present, is a relative path inside the
-cloned repository. Absolute paths and paths escaping the checkout are rejected.
+- `SKILLHUB_SOURCE_REPOSITORY_URL`
+- `SKILLHUB_SOURCE_COMMIT_SHA`
+- `SKILLHUB_SOURCE_REF_TYPE`
+- optional `SKILLHUB_SOURCE_REF`
+- `SKILLHUB_DEV_GITLAB_REPOSITORY_URL`
+- `SKILLHUB_DEV_GITLAB_COMMIT_SHA`
+- `SKILLHUB_SOURCE_SCAN_STATUS`
+- `SKILLHUB_SOURCE_SCAN_COMMIT_SHA`
+- optional `SKILLHUB_SOURCE_SCAN_ID`
+- trusted importer identity variables when available
 
-## Preserved backend and governance behavior
+The scan status must be exactly `PASSED`. The scan commit must equal the Dev
+GitLab commit. This prevents a scan of revision A from authorizing revision B.
 
-No backend endpoint or authorization change is required. The runner-side Python
-continues to call:
+The `pull-code.env` artifact file is authoritative. GitLab exports dotenv values
+into the later job, but pipeline, project, group, and instance variables can
+override them. The importer therefore reads the file inside `CI_PROJECT_DIR`
+and rejects missing files, unknown or duplicate keys, out-of-tree paths, and
+any conflicting inherited handoff variable.
 
-- `PUT /api/cli/v1/source-imports/namespaces/{namespaceSlug}`;
-- `POST /api/cli/v1/source-imports/{namespaceSlug}/skills/validate`; and
-- `POST /api/cli/v1/source-imports/{namespaceSlug}/skills`.
+The Dev GitLab URL is credential-free HTTPS. `CI_JOB_TOKEN` is supplied separately
+by GitLab and used only through Git subprocess environment configuration. It
+must not appear in command arguments, artifacts, reports, errors, or SkillHub
+requests. HTTP and Git redirects are disabled. The Dev project must allow the
+central pipeline project to read it.
 
-The endpoints still require an `st_` service token with `source:import`.
-Initiator attribution, fallback owner behavior, stable skill ownership,
-scanner execution, namespace-owner review, idempotent skips, and no direct
-publication remain unchanged.
+## Source versus checkout identity
 
-The backend never clones GitHub repositories and never receives GitHub
-credentials. The importer never writes directly to PostgreSQL, Redis, MinIO, or
-the scanner.
+The two revisions have different roles:
 
-## GitLab variables
+- `SKILLHUB_DEV_GITLAB_COMMIT_SHA` is the content checkout and scan gate.
+- `SKILLHUB_SOURCE_COMMIT_SHA` is the original GitHub provenance revision and
+  the deterministic `git-<SHA>` fallback version.
 
-Required:
+They can differ if the landing process creates a new Git commit, but `pull_code`
+must preserve the accepted content and the scan revision must always equal the
+Dev revision. JSON reports record both revisions and the scan evidence.
 
-- `SKILLHUB_PYTHON_IMAGE`: immutable Python 3.12 + Git runtime image;
-- `SKILLHUB_BASE_URL`;
-- `SKILLHUB_SERVICE_TOKEN`;
-- `SKILLHUB_SOURCE_REPOSITORY_URL`;
-- `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE`;
-- `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME`.
+## Preserved SkillHub behavior
 
-Optional:
+No backend endpoint, schema, authorization, ownership, review, or scanner change
+is required. The importer still calls:
 
-- `SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE`;
-- `SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME`;
-- `SKILLHUB_IMPORT_SOURCE_ROOT`;
-- `SKILLHUB_IMPORT_REPORT_PATH`;
-- `SKILLHUB_IMPORT_TIMEOUT_SECONDS`;
-- standard Python package-index variables such as `PIP_INDEX_URL` and
-  `PIP_CERT` when the organization requires an internal mirror;
-- `SSL_CERT_FILE` for SkillHub/internal GitLab TLS trust where required.
+- `PUT /api/cli/v1/source-imports/namespaces/{namespaceSlug}`
+- `POST /api/cli/v1/source-imports/{namespaceSlug}/skills/validate`
+- `POST /api/cli/v1/source-imports/{namespaceSlug}/skills`
 
-GitLab supplies `CI_REPOSITORY_URL`, `CI_COMMIT_SHA`, `CI_COMMIT_TAG`,
-`CI_COMMIT_BRANCH`, `CI_COMMIT_REF_NAME`, `CI_PIPELINE_ID`, and `CI_JOB_ID`.
-The credentialed clone URL remains local; commit/ref and pipeline/job IDs appear
-in the JSON report for provenance and traceability.
+The endpoints require an `st_` service token with `source:import`. All packages
+are validated before any package is submitted. Submitted versions remain
+`PENDING_REVIEW`; existing scanner and namespace-owner approval are not bypassed.
+Idempotent retry outcomes and immutable explicit-version conflicts remain
+unchanged.
+
+## GitLab job interface
+
+The shared template defines `skillhub_oss_import` in the `publish_skillhub`
+stage and declares a hard `needs` edge to `pull_code` with artifacts enabled.
+The central pipeline must list `publish_skillhub` after `pull_code` and must not
+mark the intake gate as allowed to fail.
+
+Required project/group variables remain:
+
+- `SKILLHUB_PYTHON_IMAGE`
+- `SKILLHUB_BASE_URL`
+- `SKILLHUB_SERVICE_TOKEN`
+- `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE`
+- `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME`
+
+`CI_PROJECT_DIR`, `CI_JOB_TOKEN`, `CI_PIPELINE_ID`, and `CI_JOB_ID` are supplied
+by GitLab. The central repository's own commit and repository coordinates are
+intentionally ignored by the importer.
 
 ## Verification contract
 
-- Tests prove exact-commit internal GitLab self-clone, GitLab branch/tag/commit
-  metadata, checkout SHA verification, temporary-directory containment, no
-  submodules, safe source-root resolution, credential redaction, and clone
-  failure mapping.
-- GitLab template tests prove the stage uses `SKILLHUB_PYTHON_IMAGE` and the
-  project-local shell wrapper, with no importer image or installed SkillHub CLI.
-- Shell tests prove it invokes the project-local Python runner and locked
-  dependency setup without curl-based upload logic.
-- Existing package, orchestration, API, identity, ownership, review, scanner,
-  idempotency, and report tests remain green.
-- A real-service smoke runs PostgreSQL, Redis, MinIO, scanner, Python backend,
-  root and `/skillhub` proxies, then executes the exact shell/Python clone path.
+- Config tests reject missing Dev/upstream/scan handoff values, non-passed scans,
+  scan/Dev SHA mismatches, unsafe source roots, invalid refs, and old central
+  checkout fallback behavior.
+- Checkout tests prove exact Dev SHA, no token in command arguments, generic
+  credential-safe errors, and temporary checkout isolation.
+- Runtime tests execute `run_import.py --help` with `python -S`, proving no
+  site-packages are required.
+- HTTP tests use a real loopback server for subpath, JSON, multipart,
+  authorization, request ID, and non-JSON failure behavior.
+- The real-service smoke mounts the central pipeline checkout and Dev source as
+  separate read-only paths, then exercises PostgreSQL, Redis, MinIO, scanner,
+  backend, root proxy, and `/skillhub` proxy.
 
 ## Non-goals
 
-- No GitHub credentials, Runner-side GitHub fetch, GitHub Enterprise, SSH clone
-  URLs, webhooks, or backend-side fetch.
-- No SkillHub TypeScript CLI or OAuth Device Flow in the pipeline.
-- No importer-specific OCI image requirement.
-- No curl implementation of multipart source-import requests.
+- No external GitHub credentials or direct external clone in the publish job.
+- No shared job filesystem dependency.
+- No TypeScript SkillHub CLI or OAuth Device Flow.
 - No direct publication, scanner bypass, review bypass, owner transfer, or
-  deletion of skills missing from a later source checkout.
-
-## Verification result
-
-The earlier GitHub-clone verification is superseded by this correction. The
-final smoke used a generic Python/Git image, a GitLab-shaped credentialed
-`CI_REPOSITORY_URL`, exact `CI_COMMIT_SHA`, and the complete PostgreSQL, Redis,
-MinIO, scanner, backend, root proxy, and `/skillhub` topology. Run
-`1427888a4efb` passed, the simulated job token was absent from the report, and
-the final service log scan returned zero errors.
+  deletion of skills absent from a later source revision.

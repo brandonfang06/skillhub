@@ -42,7 +42,7 @@ deploy/k8s/
   oss-github-source-import.zh.md
 ```
 
-GitLab Runner 從 GitHub checkout 批次匯入 skills 的部署、變數與 review SOP：
+中央 GitLab pipeline 從 scan-passed Dev GitLab checkout 批次匯入 skills 的部署、變數與 review SOP：
 [oss-github-source-import.zh.md](./oss-github-source-import.zh.md)。
 
 ## Runtime

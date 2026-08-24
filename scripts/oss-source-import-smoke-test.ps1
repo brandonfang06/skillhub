@@ -17,7 +17,7 @@ $runId = ([guid]::NewGuid().ToString("N")).Substring(0, 12)
 $prefix = "oss-smoke-$runId"
 $namespaceSlug = "oss-skillhub-smoke-fixture-$runId"
 $repositoryUrl = "https://github.com/skillhub-smoke/fixture-$runId"
-$internalRepositoryUrl = "https://gitlab-ci-token:smoke-job-token@gitlab.internal/skillhub-smoke/fixture-$runId.git"
+$internalRepositoryUrl = "https://gitlab.internal/dev/fixture-$runId.git"
 $actorId = "$prefix-importer"
 $ownerId = "$prefix-owner"
 $triggerId = "$prefix-trigger"
@@ -26,9 +26,9 @@ $serviceId = "svc_$runId"
 $serviceCode = "oss-smoke-$runId"
 $rawToken = "st_${prefix}_token"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) "skillhub-oss-import-$runId"
+$pipeline = Join-Path $temporaryRoot "pipeline"
 $checkout = Join-Path $temporaryRoot "checkout"
 $reports = Join-Path $temporaryRoot "reports"
-$runtimes = Join-Path $temporaryRoot "runtimes"
 
 function Invoke-Compose {
     param([string[]]$Arguments)
@@ -85,35 +85,42 @@ function Invoke-Importer {
         [string]$ReportName,
         [string]$JobId
     )
-    $runtime = "/runtimes/$JobId"
+    $handoffPath = Join-Path $pipeline "pull-code.env"
+    $handoffLines = @(
+        "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
+        "SKILLHUB_SOURCE_COMMIT_SHA=$CommitSha",
+        "SKILLHUB_SOURCE_REF_TYPE=BRANCH",
+        "SKILLHUB_SOURCE_REF=main",
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL=$internalRepositoryUrl",
+        "SKILLHUB_DEV_GITLAB_COMMIT_SHA=$CommitSha",
+        "SKILLHUB_SOURCE_SCAN_STATUS=PASSED",
+        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=$CommitSha",
+        "SKILLHUB_SOURCE_SCAN_ID=scan-$JobId",
+        "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE=keycloak",
+        "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME=$TriggerLogin"
+    )
+    [IO.File]::WriteAllLines($handoffPath, $handoffLines, [Text.UTF8Encoding]::new($false))
     $dockerArguments = @(
         "run", "--rm",
         "--network", "${ComposeProject}_default",
-        "-v", "${checkout}:/project:ro",
+        "-v", "${pipeline}:/pipeline:ro",
+        "-v", "${checkout}:/dev-source:ro",
         "-v", "${reports}:/reports",
-        "-v", "${runtimes}:/runtimes",
         "-e", "SKILLHUB_BASE_URL=$BaseUrl",
         "-e", "SKILLHUB_SERVICE_TOKEN=$rawToken",
-        "-e", "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
         "-e", "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE=keycloak",
         "-e", "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME=$ownerId",
-        "-e", "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE=keycloak",
-        "-e", "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME=$TriggerLogin",
         "-e", "SKILLHUB_IMPORT_REPORT_PATH=/reports/$ReportName",
-        "-e", "SKILLHUB_IMPORT_RUNTIME_DIR=$runtime",
-        "-e", "CI_PROJECT_DIR=/project",
-        "-e", "CI_REPOSITORY_URL=$internalRepositoryUrl",
-        "-e", "CI_COMMIT_SHA=$CommitSha",
-        "-e", "CI_COMMIT_BRANCH=main",
-        "-e", "CI_COMMIT_REF_NAME=main",
+        "-e", "CI_PROJECT_DIR=/pipeline",
+        "-e", "CI_JOB_TOKEN=smoke-job-token",
         "-e", "CI_PIPELINE_ID=$runId",
         "-e", "CI_JOB_ID=$JobId",
         "-e", "GIT_CONFIG_COUNT=1",
-        "-e", "GIT_CONFIG_KEY_0=url.file:///project.insteadOf",
+        "-e", "GIT_CONFIG_KEY_0=url.file:///dev-source.insteadOf",
         "-e", "GIT_CONFIG_VALUE_0=$internalRepositoryUrl",
         "-e", "GIT_ALLOW_PROTOCOL=file",
         $PythonImage,
-        "/bin/sh", "/project/deploy/gitlab/oss-source-import.sh"
+        "/bin/sh", "/pipeline/deploy/gitlab/oss-source-import.sh"
     )
     & docker @dockerArguments
     if ($LASTEXITCODE -ne 0) {
@@ -129,20 +136,18 @@ function Invoke-Importer {
 
 try {
     Assert-ComposeContract
-    New-Item -ItemType Directory -Path $checkout, $reports, $runtimes -Force | Out-Null
+    New-Item -ItemType Directory -Path $checkout, $reports -Force | Out-Null
     Copy-Item -Path (Join-Path $repoRoot "tests\fixtures\oss-source-repository\*") -Destination $checkout -Recurse
-    $fixtureShellRoot = New-Item -ItemType Directory -Path (Join-Path $checkout "deploy\gitlab") -Force
-    $fixtureImporterRoot = New-Item -ItemType Directory -Path (Join-Path $checkout "tools\oss-source-importer") -Force
-    $fixturePackageRoot = New-Item -ItemType Directory `
-        -Path (Join-Path $fixtureImporterRoot.FullName "src\skillhub_oss_importer") -Force
+    $pipelineShellRoot = New-Item -ItemType Directory -Path (Join-Path $pipeline "deploy\gitlab") -Force
+    $pipelineImporterRoot = New-Item -ItemType Directory -Path (Join-Path $pipeline "tools\oss-source-importer") -Force
+    $pipelinePackageRoot = New-Item -ItemType Directory `
+        -Path (Join-Path $pipelineImporterRoot.FullName "src\skillhub_oss_importer") -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot "deploy\gitlab\oss-source-import.sh") `
-        -Destination $fixtureShellRoot.FullName
+        -Destination $pipelineShellRoot.FullName
     Copy-Item -LiteralPath (Join-Path $repoRoot "tools\oss-source-importer\run_import.py") `
-        -Destination $fixtureImporterRoot.FullName
-    Copy-Item -LiteralPath (Join-Path $repoRoot "tools\oss-source-importer\requirements-runtime.txt") `
-        -Destination $fixtureImporterRoot.FullName
+        -Destination $pipelineImporterRoot.FullName
     Copy-Item -Path (Join-Path $repoRoot "tools\oss-source-importer\src\skillhub_oss_importer\*.py") `
-        -Destination $fixturePackageRoot.FullName
+        -Destination $pipelinePackageRoot.FullName
     & git -C $checkout init -q --initial-branch=main
     & git -C $checkout config user.email smoke@example.test
     & git -C $checkout config user.name "SkillHub Smoke"
@@ -182,9 +187,12 @@ VALUES (
 
     $first = Invoke-Importer "http://web" $initialCommit $triggerId "first.json" "1"
     Assert-Equal $first.status "SUCCESS" "First import status"
-    Assert-Equal $first.commitSha $initialCommit "Cloned OSS source commit"
-    Assert-Equal $first.sourceRefType "BRANCH" "Internal GitLab source ref type"
-    Assert-Equal $first.sourceRef "main" "Internal GitLab source branch"
+    Assert-Equal $first.commitSha $initialCommit "Upstream source commit"
+    Assert-Equal $first.devGitlabCommitSha $initialCommit "Cloned Dev GitLab commit"
+    Assert-Equal $first.scanStatus "PASSED" "Source scan status"
+    Assert-Equal $first.scanCommitSha $initialCommit "Scanned Dev GitLab commit"
+    Assert-Equal $first.sourceRefType "BRANCH" "Upstream source ref type"
+    Assert-Equal $first.sourceRef "main" "Upstream source branch"
     Assert-Equal $first.skills.Count 3 "Discovered skill count"
     Assert-Equal (($first.skills.submission.outcome | Where-Object { $_ -eq "IMPORTED" }).Count) 3 "Imported count"
 

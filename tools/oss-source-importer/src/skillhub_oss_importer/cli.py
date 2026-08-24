@@ -25,7 +25,7 @@ EXIT_INTERNAL = 10
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Clone the current internal GitLab project and import every SKILL.md root"
+        description="Clone the landed Dev GitLab commit and import every SKILL.md root"
     )
     parser.add_argument("--json-report", type=Path, help="Override SKILLHUB_IMPORT_REPORT_PATH")
     return parser
@@ -45,9 +45,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             checkout = clone_repository(
                 config.source_clone_url,
                 Path(temporary_directory) / "checkout",
-                config.commit_sha,
+                config.dev_gitlab_commit_sha,
                 config.ref_type,
                 config.source_ref,
+                config.gitlab_job_token,
             )
             report = run_import(config, client, checkout)
         write_report(report_path, report)
