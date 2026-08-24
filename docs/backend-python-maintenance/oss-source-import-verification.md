@@ -205,3 +205,55 @@ the published OSS version.
 The final ten-minute log scan across PostgreSQL, Redis, MinIO, backend,
 scanner, root web, and subpath web found no traceback, SQL syntax or database
 operational error, unhandled exception, fatal, panic, or scanner task failure.
+
+## 2026-08-24 internal GitLab self-clone runner correction
+
+The runner-side path was corrected to match the actual deployment model. The
+GitHub repository is already migrated into the internal GitLab project before
+this stage. The project contains the shell and Python importer and clones itself
+through `CI_REPOSITORY_URL` at the exact `CI_COMMIT_SHA`. The user-supplied
+GitHub URL is only upstream identity/provenance and namespace input; Runner does
+not connect to GitHub. The job requires neither a dedicated importer image nor
+an installed `skillhub-oss-import` command.
+
+Focused automated results:
+
+- importer configuration, clone, discovery, package, orchestration, client,
+  GitLab template, and CLI tests: `23 passed`;
+- source-import backend/API/docs regressions: `73 passed, 1 warning`;
+- Ruff across importer source/tests and the operator-doc test: passed;
+- GitLab wrapper/template plus Chinese SOP contract tests: `7 passed`;
+- PowerShell smoke-script parse and `git diff --check`: passed.
+
+The full-stack smoke used the generic `python:3.12-bookworm` image pulled as
+digest `sha256:80f5d259a5969c86f6c92145d572de4a68c68e0edd28d4367dec0fb411b42af3`.
+The image supplied Python, Git, CA certificates, and shell only. The temporary
+internal GitLab-shaped source project contained the fixture skills plus the exact
+checked-in
+`deploy/gitlab/oss-source-import.sh` called the exact checked-in
+`tools/oss-source-importer/run_import.py`. Runtime dependencies were installed
+from `requirements-runtime.txt` into a separate writable directory.
+
+Python cloned a unique credentialed internal GitLab-shaped
+`CI_REPOSITORY_URL` into an isolated temporary checkout and shallow-fetched the
+exact `CI_COMMIT_SHA`. For the smoke only, Git rewrote that internal URL to the
+read-only mounted source project, making self-clone deterministic without any
+GitHub access. The backend received only the canonical `https://github.com/...`
+upstream identity plus verified internal GitLab source SHA/ref. The report was
+also checked to prove the simulated GitLab job token was not present.
+
+All seven required services were healthy during the run: PostgreSQL, Redis,
+MinIO, scanner, Python backend, root proxy, and `/skillhub` proxy. The smoke
+completed with:
+
+```text
+OSS source import smoke passed: run=1427888a4efb initial=7c82168239866350f804238f243e2bef4231e96d changed=d2f8176ea4239e4518001c8d5a259a0c7adeb791
+```
+
+It verified internal self-clone, exact CI commit/ref provenance, three skill
+packages, PostgreSQL identity/audit/review/source rows, Redis-backed scanner
+processing, MinIO bundle objects, root review/publish, idempotent retry,
+changed-source import through `/skillhub`, and a second human importer without
+skill-owner transfer. A final ten-minute scan of backend, scanner, root proxy,
+and subpath proxy logs returned zero `ERROR`, traceback, SQLSTATE, or HTTP 5xx
+matches.

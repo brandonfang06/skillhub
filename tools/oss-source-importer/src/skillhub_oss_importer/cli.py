@@ -3,13 +3,14 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
 from .client import AuthorizationError, SkillHubClient, TransportError
 from .config import Config, ConfigError
 from .discovery import DiscoveryError
-from .github_source import SourceError
+from .github_source import SourceError, clone_repository
 from .orchestrator import run_import
 from .report import write_report
 
@@ -23,7 +24,9 @@ EXIT_INTERNAL = 10
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Import all SKILL.md roots from a GitLab GitHub checkout")
+    parser = argparse.ArgumentParser(
+        description="Clone the current internal GitLab project and import every SKILL.md root"
+    )
     parser.add_argument("--json-report", type=Path, help="Override SKILLHUB_IMPORT_REPORT_PATH")
     return parser
 
@@ -38,7 +41,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         config = Config.from_env()
         report_path = args.json_report.resolve() if args.json_report else config.report_path
         client = SkillHubClient(config.base_url, config.service_token, config.timeout_seconds)
-        report = run_import(config, client)
+        with tempfile.TemporaryDirectory(prefix="skillhub-oss-import-") as temporary_directory:
+            checkout = clone_repository(
+                config.source_clone_url,
+                Path(temporary_directory) / "checkout",
+                config.commit_sha,
+                config.ref_type,
+                config.source_ref,
+            )
+            report = run_import(config, client, checkout)
         write_report(report_path, report)
         if report["status"] == "VALIDATION_FAILED":
             return EXIT_VALIDATION

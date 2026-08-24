@@ -5,35 +5,37 @@ from typing import Any
 
 from .client import AuthorizationError, SkillHubError, TransportError
 from .discovery import discover_skill_roots
-from .github_source import verify_checkout_revision
+from .github_source import SourceCheckout
 from .package import BuiltPackage, build_skill_package
 
 
-def _metadata(config: Any, package: BuiltPackage) -> dict[str, object]:
+def _metadata(
+    config: Any,
+    checkout: SourceCheckout,
+    package: BuiltPackage,
+) -> dict[str, object]:
     data: dict[str, object] = {
         "repositoryUrl": config.repository_url,
-        "repositoryRevisionSha": config.commit_sha,
-        "sourceRefType": config.ref_type,
+        "repositoryRevisionSha": checkout.commit_sha,
+        "sourceRefType": checkout.ref_type,
         "sourcePath": package.source_path,
         "pipelineId": config.pipeline_id,
         "jobId": config.job_id,
-        "ciRefName": config.ci_ref_name,
     }
-    if config.source_ref is not None:
-        data["sourceRef"] = config.source_ref
+    if checkout.source_ref is not None:
+        data["sourceRef"] = checkout.source_ref
     if not package.has_explicit_version:
-        data["versionOverride"] = f"git-{config.commit_sha}"
+        data["versionOverride"] = f"git-{checkout.commit_sha}"
     if config.trigger_login_name is not None:
         data["initiatorProviderCode"] = config.trigger_provider_code
         data["initiatorLoginName"] = config.trigger_login_name
     return data
 
 
-def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dict[str, object]:
+def run_import(config: Any, client: Any, checkout: SourceCheckout) -> dict[str, object]:
     started_at = datetime.now(UTC).isoformat()
-    if verify_revision:
-        verify_checkout_revision(config.project_dir, config.commit_sha)
-    roots = discover_skill_roots(config.project_dir, config.source_root)
+    source_root = (checkout.checkout_dir / config.source_subdirectory).resolve()
+    roots = discover_skill_roots(checkout.checkout_dir, source_root)
     root_paths = {root.path for root in roots}
     packages = [build_skill_package(root, root_paths) for root in roots]
     namespace = client.ensure_namespace(
@@ -53,7 +55,7 @@ def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dic
             validation = client.validate_skill(
                 config.namespace_slug,
                 package.content,
-                _metadata(config, package),
+                _metadata(config, checkout, package),
             )
             record["validation"] = validation
         except (AuthorizationError, TransportError):
@@ -63,7 +65,7 @@ def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dic
             validation_failed = True
         records.append(record)
     if validation_failed:
-        return _report(config, namespace, records, started_at, "VALIDATION_FAILED")
+        return _report(config, checkout, namespace, records, started_at, "VALIDATION_FAILED")
 
     partial = False
     for package, record in zip(packages, records, strict=True):
@@ -75,18 +77,26 @@ def run_import(config: Any, client: Any, *, verify_revision: bool = True) -> dic
             record["submission"] = client.submit_skill(
                 config.namespace_slug,
                 package.content,
-                _metadata(config, package),
+                _metadata(config, checkout, package),
             )
         except (AuthorizationError, TransportError):
             raise
         except (SkillHubError, ValueError) as exc:
             record["submissionError"] = str(exc)
             partial = True
-    return _report(config, namespace, records, started_at, "PARTIAL_SUBMISSION" if partial else "SUCCESS")
+    return _report(
+        config,
+        checkout,
+        namespace,
+        records,
+        started_at,
+        "PARTIAL_SUBMISSION" if partial else "SUCCESS",
+    )
 
 
 def _report(
     config: Any,
+    checkout: SourceCheckout,
     namespace: dict[str, object],
     records: list[dict[str, object]],
     started_at: str,
@@ -97,9 +107,9 @@ def _report(
         "startedAt": started_at,
         "finishedAt": datetime.now(UTC).isoformat(),
         "repositoryUrl": config.repository_url,
-        "commitSha": config.commit_sha,
-        "sourceRefType": config.ref_type,
-        "sourceRef": config.source_ref,
+        "commitSha": checkout.commit_sha,
+        "sourceRefType": checkout.ref_type,
+        "sourceRef": checkout.source_ref,
         "namespaceSlug": config.namespace_slug,
         "namespace": namespace,
         "pipelineId": config.pipeline_id,

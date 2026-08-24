@@ -33,13 +33,13 @@ class Config:
     trigger_provider_code: str
     trigger_login_name: str | None
     project_dir: Path
-    source_root: Path
+    source_clone_url: str = field(repr=False)
+    source_subdirectory: Path
     report_path: Path
     timeout_seconds: float
     commit_sha: str
     ref_type: str
     source_ref: str | None
-    ci_ref_name: str | None
     pipeline_id: str | None
     job_id: str | None
 
@@ -55,13 +55,16 @@ class Config:
         except SourceError as exc:
             raise ConfigError(str(exc)) from exc
         project_dir = Path(_required(values, "CI_PROJECT_DIR")).resolve()
-        source_value = values.get("SKILLHUB_IMPORT_SOURCE_ROOT", "").strip()
-        candidate = Path(source_value) if source_value else project_dir
-        if not candidate.is_absolute():
-            candidate = project_dir / candidate
-        source_root = candidate.resolve()
-        if not source_root.is_relative_to(project_dir):
-            raise ConfigError("SKILLHUB_IMPORT_SOURCE_ROOT must be within CI_PROJECT_DIR")
+        source_clone_url = _required(values, "CI_REPOSITORY_URL")
+        parsed_clone_url = urlsplit(source_clone_url)
+        if parsed_clone_url.scheme not in {"http", "https"} or not parsed_clone_url.netloc:
+            raise ConfigError("CI_REPOSITORY_URL must be an absolute HTTP(S) URL")
+        source_value = values.get("SKILLHUB_IMPORT_SOURCE_ROOT", ".").strip() or "."
+        source_subdirectory = Path(source_value)
+        if source_subdirectory.is_absolute() or ".." in source_subdirectory.parts:
+            raise ConfigError(
+                "SKILLHUB_IMPORT_SOURCE_ROOT must be a safe relative path within the cloned repository"
+            )
         commit_sha = _required(values, "CI_COMMIT_SHA").lower()
         if not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
             raise ConfigError("CI_COMMIT_SHA must be a 40-character hexadecimal SHA")
@@ -93,13 +96,13 @@ class Config:
             ),
             trigger_login_name=trigger_login,
             project_dir=project_dir,
-            source_root=source_root,
+            source_clone_url=source_clone_url,
+            source_subdirectory=source_subdirectory,
             report_path=report_path.resolve(),
             timeout_seconds=timeout,
             commit_sha=commit_sha,
             ref_type=ref_type,
             source_ref=source_ref,
-            ci_ref_name=values.get("CI_COMMIT_REF_NAME", "").strip() or None,
             pipeline_id=values.get("CI_PIPELINE_ID", "").strip() or None,
             job_id=values.get("CI_JOB_ID", "").strip() or None,
         )

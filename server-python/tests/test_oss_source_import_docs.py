@@ -7,7 +7,7 @@ SOP = ROOT / "deploy" / "k8s" / "oss-github-source-import.zh.md"
 def test_sop_documents_complete_source_import_contract() -> None:
     content = SOP.read_text(encoding="utf-8")
     for name in (
-        "SKILLHUB_IMPORTER_IMAGE",
+        "SKILLHUB_PYTHON_IMAGE",
         "SKILLHUB_BASE_URL",
         "SKILLHUB_SERVICE_TOKEN",
         "SKILLHUB_SOURCE_REPOSITORY_URL",
@@ -20,6 +20,7 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "SKILLHUB_IMPORT_TIMEOUT_SECONDS",
         "SSL_CERT_FILE",
         "CI_PROJECT_DIR",
+        "CI_REPOSITORY_URL",
         "CI_COMMIT_SHA",
         "CI_COMMIT_TAG",
         "CI_COMMIT_BRANCH",
@@ -71,3 +72,25 @@ def test_sop_explains_version_importer_attribution() -> None:
         "不會改變 skill owner",
     ):
         assert phrase in content
+
+
+def test_sop_explains_gitlab_shell_python_and_api_responsibilities() -> None:
+    content = SOP.read_text(encoding="utf-8")
+    for phrase in (
+        "已搬入 internal GitLab",
+        "GitLab Runner shell",
+        "project 內的 Python 檔案",
+        "不是一般 SkillHub CLI",
+        "不使用 `curl`",
+        "Python `httpx`",
+        "git clone",
+        "公開 reverse proxy／Ingress",
+        "Python FastAPI backend",
+        'entrypoint: [""]',
+        "GitHub URL 只用於 upstream provenance",
+        "Runner 不連 GitHub",
+        "git clone 自己的 `CI_REPOSITORY_URL`",
+    ):
+        assert phrase in content
+    assert "SKILLHUB_IMPORTER_IMAGE" not in content
+    assert "SKILLHUB_SOURCE_REF" not in content

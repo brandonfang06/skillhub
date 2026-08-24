@@ -1,5 +1,13 @@
 # OSS GitHub Source Import GitLab Implementation Plan
 
+> **2026-08-24 correction:** Runner-side tasks that assume an existing OSS checkout, a
+> dedicated importer image, or an installed `skillhub-oss-import` command are superseded
+> by `2026-08-24-oss-import-central-project-python-runner.md`. The GitHub repository is
+> already present in the internal GitLab source project. Its checked-in shell calls
+> Python, which clones `CI_REPOSITORY_URL` at `CI_COMMIT_SHA`; the supplied GitHub URL is
+> only upstream identity/provenance. Backend/API and governance tasks in this historical
+> plan remain applicable.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver a Python 3.12 GitLab Runner job that imports every checked-out GitHub skill into SkillHub through idempotent, bearer-authenticated source-import APIs while preserving scanner and namespace-owner review.

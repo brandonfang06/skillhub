@@ -3,7 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from skillhub_oss_importer.github_source import SourceError, canonicalize_repository, verify_checkout_revision
+from skillhub_oss_importer.github_source import (
+    SourceError,
+    canonicalize_repository,
+    clone_repository,
+)
+
+INTERNAL_REPOSITORY_URL = "https://gitlab-ci-token:job-secret@gitlab.internal/platform/oss-source.git"
 
 
 def test_canonicalizes_only_github_https_repository() -> None:
@@ -15,20 +21,96 @@ def test_canonicalizes_only_github_https_repository() -> None:
         canonicalize_repository("https://gitlab.com/mattpocock/skills")
 
 
-def test_verifies_checkout_head_exactly(tmp_path: Path) -> None:
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "test@example.test"], check=True)
-    subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "Test"], check=True)
-    (tmp_path / "README.md").write_text("fixture", encoding="utf-8")
-    subprocess.run(["git", "-C", str(tmp_path), "add", "README.md"], check=True)
-    subprocess.run(["git", "-C", str(tmp_path), "commit", "-qm", "fixture"], check=True)
-    head = subprocess.run(
-        ["git", "-C", str(tmp_path), "rev-parse", "HEAD"],
+def make_source_repository(tmp_path: Path) -> tuple[Path, str, str]:
+    source = tmp_path / "source"
+    subprocess.run(["git", "init", "-q", "-b", "main", str(source)], check=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.email", "test@example.test"], check=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.name", "Test"], check=True)
+    (source / "SKILL.md").write_text("---\nname: first\ndescription: first\n---\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(source), "add", "SKILL.md"], check=True)
+    subprocess.run(["git", "-C", str(source), "commit", "-qm", "first"], check=True)
+    first_sha = subprocess.run(
+        ["git", "-C", str(source), "rev-parse", "HEAD"],
         check=True,
         capture_output=True,
         text=True,
     ).stdout.strip()
+    (source / "SKILL.md").write_text("---\nname: second\ndescription: second\n---\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(source), "commit", "-qam", "second"], check=True)
+    second_sha = subprocess.run(
+        ["git", "-C", str(source), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return source, first_sha, second_sha
 
-    verify_checkout_revision(tmp_path, head)
-    with pytest.raises(SourceError, match="does not match"):
-        verify_checkout_revision(tmp_path, "0" * 40)
+
+def route_internal_clone_to_local_repository(
+    source: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", f"url.{source.as_uri()}.insteadOf")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", INTERNAL_REPOSITORY_URL)
+    monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
+
+
+def test_clones_the_internal_gitlab_project_at_the_pipeline_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, first_sha, _second_sha = make_source_repository(tmp_path)
+    route_internal_clone_to_local_repository(source, monkeypatch)
+
+    checkout = clone_repository(
+        INTERNAL_REPOSITORY_URL,
+        tmp_path / "checkout",
+        first_sha,
+        "BRANCH",
+        "main",
+    )
+
+    assert checkout.commit_sha == first_sha
+    assert checkout.ref_type == "BRANCH"
+    assert checkout.source_ref == "main"
+    assert "name: first" in (checkout.checkout_dir / "SKILL.md").read_text(encoding="utf-8")
+
+
+def test_records_the_internal_gitlab_pipeline_tag(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, _first_sha, second_sha = make_source_repository(tmp_path)
+    route_internal_clone_to_local_repository(source, monkeypatch)
+
+    checkout = clone_repository(
+        INTERNAL_REPOSITORY_URL,
+        tmp_path / "tagged-checkout",
+        second_sha,
+        "TAG",
+        "v1.0.0",
+    )
+
+    assert checkout.commit_sha == second_sha
+    assert checkout.ref_type == "TAG"
+    assert checkout.source_ref == "v1.0.0"
+
+
+def test_internal_gitlab_clone_failure_does_not_leak_the_job_token(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, _first_sha, _second_sha = make_source_repository(tmp_path)
+    route_internal_clone_to_local_repository(source, monkeypatch)
+
+    with pytest.raises(SourceError, match="Unable to clone internal GitLab project") as error:
+        clone_repository(
+            INTERNAL_REPOSITORY_URL,
+            tmp_path / "missing-commit",
+            "0" * 40,
+            "COMMIT",
+            None,
+        )
+
+    assert "job-secret" not in str(error.value)

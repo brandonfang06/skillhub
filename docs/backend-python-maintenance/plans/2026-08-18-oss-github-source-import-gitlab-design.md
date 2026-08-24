@@ -3,6 +3,15 @@
 **Status:** Approved
 **Date:** 2026-08-18
 
+> **2026-08-24 correction:** The runner-side delivery assumptions in this document are
+> superseded by
+> `2026-08-24-oss-import-central-project-python-runner.md`. The GitHub repository is
+> already migrated into the internal GitLab source project. Its local shell calls its
+> local Python file, and Python clones that project through `CI_REPOSITORY_URL` at the
+> exact `CI_COMMIT_SHA`. The user-provided GitHub URL is upstream identity/provenance,
+> not the clone target. The backend/API, scanner, review, ownership, and provenance
+> governance decisions below remain in force.
+
 ## Problem
 
 Platform users need a repeatable GitLab pipeline job that imports all agent

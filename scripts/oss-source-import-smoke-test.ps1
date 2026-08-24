@@ -1,6 +1,6 @@
 param(
     [string]$ComposeProject = "skillhub-oss-import-smoke",
-    [string]$ImporterImage = "skillhub-oss-source-importer:verify",
+    [string]$PythonImage = "python:3.12-bookworm",
     [int]$WebPort = 58080,
     [int]$SubpathWebPort = 58082
 )
@@ -17,6 +17,7 @@ $runId = ([guid]::NewGuid().ToString("N")).Substring(0, 12)
 $prefix = "oss-smoke-$runId"
 $namespaceSlug = "oss-skillhub-smoke-fixture-$runId"
 $repositoryUrl = "https://github.com/skillhub-smoke/fixture-$runId"
+$internalRepositoryUrl = "https://gitlab-ci-token:smoke-job-token@gitlab.internal/skillhub-smoke/fixture-$runId.git"
 $actorId = "$prefix-importer"
 $ownerId = "$prefix-owner"
 $triggerId = "$prefix-trigger"
@@ -27,6 +28,7 @@ $rawToken = "st_${prefix}_token"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) "skillhub-oss-import-$runId"
 $checkout = Join-Path $temporaryRoot "checkout"
 $reports = Join-Path $temporaryRoot "reports"
+$runtimes = Join-Path $temporaryRoot "runtimes"
 
 function Invoke-Compose {
     param([string[]]$Arguments)
@@ -83,11 +85,13 @@ function Invoke-Importer {
         [string]$ReportName,
         [string]$JobId
     )
+    $runtime = "/runtimes/$JobId"
     $dockerArguments = @(
         "run", "--rm",
         "--network", "${ComposeProject}_default",
-        "-v", "${checkout}:/workspace:ro",
+        "-v", "${checkout}:/project:ro",
         "-v", "${reports}:/reports",
+        "-v", "${runtimes}:/runtimes",
         "-e", "SKILLHUB_BASE_URL=$BaseUrl",
         "-e", "SKILLHUB_SERVICE_TOKEN=$rawToken",
         "-e", "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
@@ -95,28 +99,51 @@ function Invoke-Importer {
         "-e", "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME=$ownerId",
         "-e", "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE=keycloak",
         "-e", "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME=$TriggerLogin",
-        "-e", "CI_PROJECT_DIR=/workspace",
+        "-e", "SKILLHUB_IMPORT_REPORT_PATH=/reports/$ReportName",
+        "-e", "SKILLHUB_IMPORT_RUNTIME_DIR=$runtime",
+        "-e", "CI_PROJECT_DIR=/project",
+        "-e", "CI_REPOSITORY_URL=$internalRepositoryUrl",
         "-e", "CI_COMMIT_SHA=$CommitSha",
         "-e", "CI_COMMIT_BRANCH=main",
         "-e", "CI_COMMIT_REF_NAME=main",
         "-e", "CI_PIPELINE_ID=$runId",
         "-e", "CI_JOB_ID=$JobId",
-        $ImporterImage,
-        "--json-report", "/reports/$ReportName"
+        "-e", "GIT_CONFIG_COUNT=1",
+        "-e", "GIT_CONFIG_KEY_0=url.file:///project.insteadOf",
+        "-e", "GIT_CONFIG_VALUE_0=$internalRepositoryUrl",
+        "-e", "GIT_ALLOW_PROTOCOL=file",
+        $PythonImage,
+        "/bin/sh", "/project/deploy/gitlab/oss-source-import.sh"
     )
     & docker @dockerArguments
     if ($LASTEXITCODE -ne 0) {
         Get-Content (Join-Path $reports $ReportName)
         throw "Importer failed for $ReportName"
     }
-    return Get-Content (Join-Path $reports $ReportName) -Raw | ConvertFrom-Json
+    $reportContent = Get-Content (Join-Path $reports $ReportName) -Raw
+    if ($reportContent.Contains("smoke-job-token")) {
+        throw "Internal GitLab job token leaked into $ReportName"
+    }
+    return $reportContent | ConvertFrom-Json
 }
 
 try {
     Assert-ComposeContract
-    New-Item -ItemType Directory -Path $checkout, $reports -Force | Out-Null
+    New-Item -ItemType Directory -Path $checkout, $reports, $runtimes -Force | Out-Null
     Copy-Item -Path (Join-Path $repoRoot "tests\fixtures\oss-source-repository\*") -Destination $checkout -Recurse
-    & git -C $checkout init -q
+    $fixtureShellRoot = New-Item -ItemType Directory -Path (Join-Path $checkout "deploy\gitlab") -Force
+    $fixtureImporterRoot = New-Item -ItemType Directory -Path (Join-Path $checkout "tools\oss-source-importer") -Force
+    $fixturePackageRoot = New-Item -ItemType Directory `
+        -Path (Join-Path $fixtureImporterRoot.FullName "src\skillhub_oss_importer") -Force
+    Copy-Item -LiteralPath (Join-Path $repoRoot "deploy\gitlab\oss-source-import.sh") `
+        -Destination $fixtureShellRoot.FullName
+    Copy-Item -LiteralPath (Join-Path $repoRoot "tools\oss-source-importer\run_import.py") `
+        -Destination $fixtureImporterRoot.FullName
+    Copy-Item -LiteralPath (Join-Path $repoRoot "tools\oss-source-importer\requirements-runtime.txt") `
+        -Destination $fixtureImporterRoot.FullName
+    Copy-Item -Path (Join-Path $repoRoot "tools\oss-source-importer\src\skillhub_oss_importer\*.py") `
+        -Destination $fixturePackageRoot.FullName
+    & git -C $checkout init -q --initial-branch=main
     & git -C $checkout config user.email smoke@example.test
     & git -C $checkout config user.name "SkillHub Smoke"
     & git -C $checkout add .
@@ -155,6 +182,9 @@ VALUES (
 
     $first = Invoke-Importer "http://web" $initialCommit $triggerId "first.json" "1"
     Assert-Equal $first.status "SUCCESS" "First import status"
+    Assert-Equal $first.commitSha $initialCommit "Cloned OSS source commit"
+    Assert-Equal $first.sourceRefType "BRANCH" "Internal GitLab source ref type"
+    Assert-Equal $first.sourceRef "main" "Internal GitLab source branch"
     Assert-Equal $first.skills.Count 3 "Discovered skill count"
     Assert-Equal (($first.skills.submission.outcome | Where-Object { $_ -eq "IMPORTED" }).Count) 3 "Imported count"
 
@@ -222,6 +252,7 @@ ORDER BY rt.id DESC LIMIT 1;
     & git -C $checkout commit -qm "Change Alpha only"
     $changedCommit = (& git -C $checkout rev-parse HEAD).Trim()
     $changed = Invoke-Importer "http://web-subpath/skillhub" $changedCommit $triggerTwoId "changed.json" "3"
+    Assert-Equal $changed.commitSha $changedCommit "Changed OSS source commit"
     $alpha = $changed.skills | Where-Object sourcePath -eq "skills/alpha"
     Assert-Equal $alpha.submission.outcome "IMPORTED" "Changed Alpha outcome"
     Assert-Equal $alpha.submission.version "git-$changedCommit" "Changed Alpha version"

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from skillhub_oss_importer.client import AuthorizationError
+from skillhub_oss_importer.github_source import SourceCheckout
 from skillhub_oss_importer.orchestrator import run_import
 
 
@@ -31,7 +32,7 @@ class FakeClient:
 def fixture_config(tmp_path: Path) -> SimpleNamespace:
     return SimpleNamespace(
         project_dir=tmp_path,
-        source_root=tmp_path,
+        source_subdirectory=Path("."),
         namespace_slug="oss-owner-repo",
         namespace_display_name="OSS-owner-repo",
         repository_url="https://github.com/owner/repo",
@@ -39,12 +40,17 @@ def fixture_config(tmp_path: Path) -> SimpleNamespace:
         owner_login_name="owner",
         trigger_provider_code="keycloak",
         trigger_login_name="alice",
+        pipeline_id="1",
+        job_id="2",
+    )
+
+
+def fixture_checkout(tmp_path: Path) -> SourceCheckout:
+    return SourceCheckout(
+        checkout_dir=tmp_path,
         commit_sha="a" * 40,
         ref_type="COMMIT",
         source_ref=None,
-        pipeline_id="1",
-        job_id="2",
-        ci_ref_name="main",
     )
 
 
@@ -58,7 +64,7 @@ def make_skills(tmp_path: Path) -> None:
 def test_validates_every_package_before_sequential_submit(tmp_path: Path) -> None:
     make_skills(tmp_path)
     client = FakeClient(["IMPORT", "SKIPPED_UNCHANGED"])
-    report = run_import(fixture_config(tmp_path), client, verify_revision=False)
+    report = run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
     assert client.calls == ["ensure", "validate:a", "validate:b", "submit:a"]
     assert report["status"] == "SUCCESS"
 
@@ -90,16 +96,20 @@ def test_uses_commit_version_only_when_skill_has_no_explicit_version(tmp_path: P
 
     client.validate_skill = capture  # type: ignore[method-assign]
 
-    run_import(fixture_config(tmp_path), client, verify_revision=False)
+    report = run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
 
     assert metadata[0]["versionOverride"] == f"git-{'a' * 40}"
     assert "versionOverride" not in metadata[1]
+    assert metadata[0]["repositoryRevisionSha"] == "a" * 40
+    assert "ciRefName" not in metadata[0]
+    assert report["commitSha"] == "a" * 40
+    assert "importerProjectCommitSha" not in report
 
 
 def test_validation_failure_prevents_all_submissions(tmp_path: Path) -> None:
     make_skills(tmp_path)
     client = FakeClient(["IMPORT", "ERROR"])
-    report = run_import(fixture_config(tmp_path), client, verify_revision=False)
+    report = run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
     assert not any(call.startswith("submit:") for call in client.calls)
     assert report["status"] == "VALIDATION_FAILED"
 
@@ -113,4 +123,4 @@ def test_authorization_failure_keeps_stable_cli_error_class(tmp_path: Path) -> N
 
     client.validate_skill = denied  # type: ignore[method-assign]
     with pytest.raises(AuthorizationError):
-        run_import(fixture_config(tmp_path), client, verify_revision=False)
+        run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
