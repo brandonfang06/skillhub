@@ -24,9 +24,16 @@
         "additionalProperties": false,
         "properties": {
           "expiresAt": {
-            "format": "date-time",
-            "title": "Expiresat",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiresat"
           },
           "name": {
             "title": "Name",
@@ -65,9 +72,16 @@
         "additionalProperties": false,
         "properties": {
           "expiresAt": {
-            "format": "date-time",
-            "title": "Expiresat",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiresat"
           }
         },
         "required": [

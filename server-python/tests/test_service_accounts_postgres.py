@@ -101,13 +101,15 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
             engine,
             service_principal_id=principal.id,
             token_id=created.id,
-            expires_at=(now + timedelta(days=60)).isoformat(),
+            expires_at=None,
             actor_user_id=admin_id,
             actor_platform_roles=["SUPER_ADMIN"],
             token_generator=lambda _: "replacement-secret",
             now=now + timedelta(seconds=1),
         )
         assert rotated.token == "st_replacement-secret"
+        assert rotated.expires_at is None
+        assert await read_service_token_principal(engine, rotated.token) is not None
         states = await list_service_tokens(
             engine,
             service_principal_id=principal.id,
@@ -127,7 +129,7 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
         summary = next(item for item in principals if item.id == principal.id)
         assert total >= 1
         assert summary.active_token_count == 1
-        assert summary.nearest_token_expiry == rotated.expires_at
+        assert summary.nearest_token_expiry is None
 
         await update_service_principal(
             engine,
@@ -153,6 +155,17 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
                 now=now,
             )
 
+        await update_service_principal(
+            engine,
+            service_principal_id=principal.id,
+            display_name=None,
+            status="ACTIVE",
+            actor_user_id=admin_id,
+            actor_platform_roles=["SUPER_ADMIN"],
+            now=now + timedelta(seconds=2),
+        )
+        assert await read_service_token_principal(engine, rotated.token) is not None
+
         await revoke_service_token(
             engine,
             service_principal_id=principal.id,
@@ -161,6 +174,7 @@ async def test_service_token_lifecycle_is_independent_and_transactional() -> Non
             actor_platform_roles=["SUPER_ADMIN"],
             now=now,
         )
+        assert await read_service_token_principal(engine, rotated.token) is None
         await revoke_service_token(
             engine,
             service_principal_id=principal.id,

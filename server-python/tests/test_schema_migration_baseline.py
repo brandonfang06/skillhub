@@ -179,6 +179,23 @@ def test_local_migration_files_include_service_principal_auth_extension() -> Non
     assert "imported_by_service_principal_id" in sql
 
 
+def test_local_migration_makes_service_token_expiry_optional() -> None:
+    local_migrations = migrations.local_migration_files(
+        ROOT / "server-python" / "app" / "db" / "local_migration"
+    )
+
+    expiry_migration = next(
+        (item for item in local_migrations if item.identifier == "20260824_01"),
+        None,
+    )
+
+    assert expiry_migration is not None
+    assert expiry_migration.path.name == "20260824_01__service_token_optional_expiry.sql"
+    sql = expiry_migration.path.read_text(encoding="utf-8")
+    assert "ALTER TABLE service_token" in sql
+    assert "ALTER COLUMN expires_at DROP NOT NULL" in sql
+
+
 def test_existing_v43_python_database_applies_local_migrations_after_baseline() -> None:
     connection = FakeConnection(
         existing_tables={"user_account"},

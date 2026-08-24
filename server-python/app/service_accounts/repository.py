@@ -84,7 +84,10 @@ class ServiceAccountRepository:
                     SELECT principal.*,
                            COUNT(token.id) FILTER (
                                WHERE token.revoked_at IS NULL
-                                 AND token.expires_at > CURRENT_TIMESTAMP
+                                 AND (
+                                     token.expires_at IS NULL
+                                     OR token.expires_at > CURRENT_TIMESTAMP
+                                 )
                            ) AS active_token_count,
                            MIN(token.expires_at) FILTER (
                                WHERE token.revoked_at IS NULL
@@ -199,7 +202,7 @@ class ServiceAccountRepository:
         token_hash: str,
         scopes: tuple[str, ...],
         actor_user_id: str,
-        expires_at: datetime,
+        expires_at: datetime | None,
         now: datetime,
     ) -> ServiceTokenMetadata:
         row = (

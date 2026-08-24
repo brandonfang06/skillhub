@@ -24,10 +24,14 @@ Platform Admin 先登入 SkillHub，開啟 `/admin/service-principals`（subpath
 `/skillhub/admin/service-principals`）：
 
 1. 建立 ACTIVE service principal，例如 code `gitlab-oss-importer`。
-2. 建立 scope 為 `source:import`、有效期最長 365 天的 token。
+2. 建立 scope 為 `source:import` 的 token。限時 token 最長可設定為建立日起 3 個曆年，
+   頁面會顯示當下最晚可選日期；若 GitLab automation 必須使用固定憑證，也可由管理員
+   明確選擇「永不到期」。永不到期 token 會持續有效，直到被撤銷或 principal 停用，
+   因此必須另有定期輪替與撤銷程序。
 3. raw `st_` token 只顯示一次，立即存入 GitLab masked、protected variable
    `SKILLHUB_SERVICE_TOKEN`，不要寫入 repository、job log 或 artifact。
-4. 到期前從同頁輪替，先更新 GitLab variable 並驗證，再撤銷舊 token。緊急事件可停用
+4. 限時 token 應在到期前從同頁輪替；永不到期 token 也應依組織排程定期輪替。先更新
+   GitLab variable 並驗證，再撤銷舊 token。緊急事件可停用
    principal，所有 token 會立即停止通過驗證；不需要停用建立它的管理員帳號。
 
 管理 API 位於 `/api/v1/admin/service-principals`，只接受登入中的 `SUPER_ADMIN`

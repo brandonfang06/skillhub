@@ -34,7 +34,7 @@ class ServiceTokenMetadata:
     scopes: tuple[str, ...]
     created_by_user_id: str
     created_at: datetime
-    expires_at: datetime
+    expires_at: datetime | None
     last_used_at: datetime | None
     revoked_at: datetime | None
 

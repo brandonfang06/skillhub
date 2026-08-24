@@ -118,3 +118,56 @@ def test_service_principal_admin_crud_returns_typed_envelopes_and_one_time_secre
     assert rotated.json()["data"]["token"] == "st_secret"
     assert revoked.status_code == 204
     assert listing.json()["requestId"]
+
+
+def test_service_token_expiry_is_required_but_explicit_null_means_never() -> None:
+    app = admin_app()
+    captured: list[datetime | None] = []
+    now = datetime.now(UTC)
+    token = ServiceTokenMetadata(
+        2,
+        "svc_1",
+        "persistent-pipeline",
+        "st_persisten",
+        ("source:import",),
+        "admin",
+        now,
+        None,
+        None,
+        None,
+    )
+    secret = ServiceTokenSecret(**token.__dict__, token="st_persistent")
+
+    def issue(**kwargs: object) -> ServiceTokenSecret:
+        captured.append(kwargs["expires_at"])  # type: ignore[arg-type]
+        return secret
+
+    app.state.service_principal_admin["create_token"] = issue
+    app.state.service_principal_admin["rotate_token"] = issue
+    client = TestClient(app)
+    headers = {"X-Mock-User-Id": "admin"}
+    create_url = "/api/v1/admin/service-principals/svc_1/tokens"
+    rotate_url = "/api/v1/admin/service-principals/svc_1/tokens/1/rotate"
+
+    missing = client.post(
+        create_url,
+        headers=headers,
+        json={"name": "persistent-pipeline", "scopes": ["source:import"]},
+    )
+    created = client.post(
+        create_url,
+        headers=headers,
+        json={
+            "name": "persistent-pipeline",
+            "scopes": ["source:import"],
+            "expiresAt": None,
+        },
+    )
+    rotated = client.post(rotate_url, headers=headers, json={"expiresAt": None})
+
+    assert missing.status_code == 422
+    assert created.status_code == 200
+    assert created.json()["data"]["expiresAt"] is None
+    assert rotated.status_code == 200
+    assert rotated.json()["data"]["expiresAt"] is None
+    assert captured == [None, None]

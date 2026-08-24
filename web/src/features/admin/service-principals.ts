@@ -24,7 +24,7 @@ export type ServiceToken = {
   tokenPrefix: string
   scopes: string[]
   createdAt: string
-  expiresAt: string
+  expiresAt: string | null
   lastUsedAt: string | null
   revokedAt: string | null
 }

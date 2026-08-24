@@ -1,13 +1,21 @@
 import { useMemo, useState } from 'react'
-import { Copy, KeyRound, Plus, RefreshCw, ShieldOff } from 'lucide-react'
+import { Copy, KeyRound, Plus, ShieldOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   type ServicePrincipal,
+  type ServiceToken,
   type ServiceTokenSecret,
   useServicePrincipalMutations,
   useServicePrincipals,
   useServiceTokens,
 } from '@/features/admin/service-principals'
+import { ServiceTokenForm, ServiceTokenRow } from '@/features/admin/service-token-controls'
+import {
+  type ServiceTokenExpiryMode,
+  serviceTokenExpiryBounds,
+  serviceTokenExpiryValue,
+  validateServiceTokenExpiryDate,
+} from '@/features/admin/service-token-expiry'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { toast } from '@/shared/lib/toast'
 import { Button } from '@/shared/ui/button'
@@ -24,24 +32,27 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
-function expiryDefault(): string {
-  const date = new Date()
-  date.setDate(date.getDate() + 90)
-  return date.toISOString().slice(0, 10)
-}
-
 export function ServicePrincipalsPage() {
   const { t, i18n } = useTranslation()
   const principals = useServicePrincipals()
   const mutations = useServicePrincipalMutations()
+  const initialExpiryBounds = useMemo(() => serviceTokenExpiryBounds(new Date()), [])
+  const [expiryBounds, setExpiryBounds] = useState(initialExpiryBounds)
   const [createOpen, setCreateOpen] = useState(false)
   const [selected, setSelected] = useState<ServicePrincipal | null>(null)
   const [secret, setSecret] = useState<ServiceTokenSecret | null>(null)
   const [code, setCode] = useState('gitlab-oss-importer')
   const [displayName, setDisplayName] = useState('GitLab OSS Importer')
   const [tokenName, setTokenName] = useState('production')
-  const [expiresOn, setExpiresOn] = useState(expiryDefault)
+  const [expiryMode, setExpiryMode] = useState<ServiceTokenExpiryMode>('expires')
+  const [expiresOn, setExpiresOn] = useState(initialExpiryBounds.defaultValue)
   const tokens = useServiceTokens(selected?.id ?? null)
+  const expiryIssue = validateServiceTokenExpiryDate(expiresOn, expiryBounds, expiryMode)
+  const expiryError = expiryIssue === 'required'
+    ? t('servicePrincipals.expiryRequired')
+    : expiryIssue === 'range'
+      ? t('servicePrincipals.expiryRange', { min: expiryBounds.min, max: expiryBounds.max })
+      : null
   const activeCount = useMemo(
     () => principals.data?.items.filter((item) => item.status === 'ACTIVE').length ?? 0,
     [principals.data],
@@ -58,15 +69,42 @@ export function ServicePrincipalsPage() {
   }
 
   const createToken = async () => {
-    if (!selected) return
+    if (!selected || expiryIssue) return
     try {
       const created = await mutations.createToken.mutateAsync({
         id: selected.id,
         name: tokenName,
         scopes: ['source:import'],
-        expiresAt: new Date(`${expiresOn}T23:59:59Z`).toISOString(),
+        expiresAt: serviceTokenExpiryValue(expiresOn, expiryMode),
       })
       setSecret(created)
+      await tokens.refetch()
+    } catch (error) {
+      toast.error(t('servicePrincipals.error'), error instanceof Error ? error.message : '')
+    }
+  }
+
+  const rotateToken = async (token: ServiceToken) => {
+    if (expiryIssue) return
+    try {
+      const rotated = await mutations.rotateToken.mutateAsync({
+        id: token.servicePrincipalId,
+        tokenId: token.id,
+        expiresAt: serviceTokenExpiryValue(expiresOn, expiryMode),
+      })
+      setSecret(rotated)
+      await tokens.refetch()
+    } catch (error) {
+      toast.error(t('servicePrincipals.error'), error instanceof Error ? error.message : '')
+    }
+  }
+
+  const revokeToken = async (token: ServiceToken) => {
+    try {
+      await mutations.revokeToken.mutateAsync({
+        id: token.servicePrincipalId,
+        tokenId: token.id,
+      })
       await tokens.refetch()
     } catch (error) {
       toast.error(t('servicePrincipals.error'), error instanceof Error ? error.message : '')
@@ -78,6 +116,14 @@ export function ServicePrincipalsPage() {
       id: principal.id,
       status: principal.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
     })
+  }
+
+  const manageTokens = (principal: ServicePrincipal) => {
+    const nextBounds = serviceTokenExpiryBounds(new Date())
+    setExpiryBounds(nextBounds)
+    setExpiresOn(nextBounds.defaultValue)
+    setExpiryMode('expires')
+    setSelected(principal)
   }
 
   return (
@@ -106,7 +152,7 @@ export function ServicePrincipalsPage() {
                 <TableCell><span className={principal.status === 'ACTIVE' ? 'text-emerald-500' : 'text-muted-foreground'}>{principal.status}</span></TableCell>
                 <TableCell>{principal.activeTokenCount}</TableCell>
                 <TableCell>{principal.lastUsedAt ? formatLocalDateTime(principal.lastUsedAt, i18n.language) : '—'}</TableCell>
-                <TableCell className="text-right"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => setSelected(principal)}><KeyRound className="mr-2 h-4 w-4" />{t('servicePrincipals.manageTokens')}</Button><Button variant="ghost" size="sm" onClick={() => toggleStatus(principal)}><ShieldOff className="mr-2 h-4 w-4" />{principal.status === 'ACTIVE' ? t('servicePrincipals.disable') : t('servicePrincipals.enable')}</Button></div></TableCell>
+                <TableCell className="text-right"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => manageTokens(principal)}><KeyRound className="mr-2 h-4 w-4" />{t('servicePrincipals.manageTokens')}</Button><Button variant="ghost" size="sm" onClick={() => toggleStatus(principal)}><ShieldOff className="mr-2 h-4 w-4" />{principal.status === 'ACTIVE' ? t('servicePrincipals.disable') : t('servicePrincipals.enable')}</Button></div></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -114,15 +160,15 @@ export function ServicePrincipalsPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent><DialogHeader><DialogTitle>{t('servicePrincipals.create')}</DialogTitle><DialogDescription>{t('servicePrincipals.createHint')}</DialogDescription></DialogHeader><div className="space-y-4"><div><Label htmlFor="service-code">{t('servicePrincipals.code')}</Label><Input id="service-code" value={code} onChange={(event) => setCode(event.target.value)} /></div><div><Label htmlFor="service-name">{t('servicePrincipals.displayName')}</Label><Input id="service-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button><Button onClick={createPrincipal}>{t('common.create')}</Button></DialogFooter></DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>{t('servicePrincipals.create')}</DialogTitle><DialogDescription>{t('servicePrincipals.createHint')}</DialogDescription></DialogHeader><div className="space-y-4"><div><Label htmlFor="service-code">{t('servicePrincipals.code')}</Label><Input id="service-code" value={code} onChange={(event) => setCode(event.target.value)} /></div><div><Label htmlFor="service-name">{t('servicePrincipals.displayName')}</Label><Input id="service-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={() => setCreateOpen(false)}>{t('dialog.cancel')}</Button><Button disabled={mutations.createPrincipal.isPending} onClick={createPrincipal}>{t('servicePrincipals.create')}</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null) }}>
-        <DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>{selected?.displayName}</DialogTitle><DialogDescription>{t('servicePrincipals.tokenHint')}</DialogDescription></DialogHeader><div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]"><Input value={tokenName} onChange={(event) => setTokenName(event.target.value)} placeholder={t('servicePrincipals.tokenName')} /><Input type="date" value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} /><Button onClick={createToken}><Plus className="mr-2 h-4 w-4" />{t('servicePrincipals.createToken')}</Button></div><div className="space-y-2">{tokens.data?.items.map((token) => <div key={token.id} className="flex items-center justify-between rounded-lg border p-3"><div><div className="font-medium">{token.name}</div><div className="font-mono text-xs text-muted-foreground">{token.tokenPrefix}… · {formatLocalDateTime(token.expiresAt, i18n.language)}</div></div><div className="flex gap-2"><Button variant="ghost" size="sm" disabled={Boolean(token.revokedAt)} onClick={async () => { const rotated = await mutations.rotateToken.mutateAsync({ id: token.servicePrincipalId, tokenId: token.id, expiresAt: new Date(`${expiresOn}T23:59:59Z`).toISOString() }); setSecret(rotated); await tokens.refetch() }}><RefreshCw className="h-4 w-4" /></Button><Button variant="ghost" size="sm" disabled={Boolean(token.revokedAt)} onClick={async () => { await mutations.revokeToken.mutateAsync({ id: token.servicePrincipalId, tokenId: token.id }); await tokens.refetch() }}><ShieldOff className="h-4 w-4" /></Button></div></div>)}</div></DialogContent>
+        <DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>{selected?.displayName}</DialogTitle><DialogDescription>{t('servicePrincipals.tokenHint')}</DialogDescription></DialogHeader><ServiceTokenForm tokenName={tokenName} expiryMode={expiryMode} expiresOn={expiresOn} minExpiresOn={expiryBounds.min} maxExpiresOn={expiryBounds.max} expiryError={expiryError} isPending={mutations.createToken.isPending} disabled={Boolean(expiryIssue)} onTokenNameChange={setTokenName} onExpiryModeChange={setExpiryMode} onExpiresOnChange={setExpiresOn} onCreate={createToken} /><div className="space-y-2">{tokens.data?.items.map((token) => <ServiceTokenRow key={token.id} token={token} formattedExpiry={token.expiresAt ? formatLocalDateTime(token.expiresAt, i18n.language) : t('servicePrincipals.neverExpires')} rotateDisabled={Boolean(expiryIssue) || mutations.rotateToken.isPending} revokeDisabled={mutations.revokeToken.isPending} onRotate={() => rotateToken(token)} onRevoke={() => revokeToken(token)} />)}</div></DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(secret)} onOpenChange={(open) => { if (!open) setSecret(null) }}>
-        <DialogContent><DialogHeader><DialogTitle>{t('servicePrincipals.secretTitle')}</DialogTitle><DialogDescription>{t('servicePrincipals.secretWarning')}</DialogDescription></DialogHeader><div className="break-all rounded-lg bg-muted p-4 font-mono text-sm" data-testid="service-token-secret">{secret?.token}</div><DialogFooter><Button onClick={async () => { if (!secret) return; await navigator.clipboard.writeText(secret.token); toast.success(t('servicePrincipals.copied')) }}><Copy className="mr-2 h-4 w-4" />{t('servicePrincipals.copy')}</Button><Button variant="outline" onClick={() => setSecret(null)}>{t('common.done')}</Button></DialogFooter></DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>{t('servicePrincipals.secretTitle')}</DialogTitle><DialogDescription>{t('servicePrincipals.secretWarning')}</DialogDescription></DialogHeader><div className="break-all rounded-lg bg-muted p-4 font-mono text-sm" data-testid="service-token-secret">{secret?.token}</div><DialogFooter><Button onClick={async () => { if (!secret) return; await navigator.clipboard.writeText(secret.token); toast.success(t('servicePrincipals.copied')) }}><Copy className="mr-2 h-4 w-4" />{t('servicePrincipals.copy')}</Button><Button variant="outline" onClick={() => setSecret(null)}>{t('dialog.close')}</Button></DialogFooter></DialogContent>
       </Dialog>
     </div>
   )

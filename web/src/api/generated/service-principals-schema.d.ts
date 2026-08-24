@@ -104,11 +104,8 @@ export interface components {
         };
         /** CreateServiceTokenRequest */
         CreateServiceTokenRequest: {
-            /**
-             * Expiresat
-             * Format: date-time
-             */
-            expiresAt: string;
+            /** Expiresat */
+            expiresAt: string | null;
             /** Name */
             name: string;
             /** Scopes */
@@ -121,11 +118,8 @@ export interface components {
         };
         /** RotateServiceTokenRequest */
         RotateServiceTokenRequest: {
-            /**
-             * Expiresat
-             * Format: date-time
-             */
-            expiresAt: string;
+            /** Expiresat */
+            expiresAt: string | null;
         };
         /** UpdateServicePrincipalRequest */
         UpdateServicePrincipalRequest: {

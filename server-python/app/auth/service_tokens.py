@@ -58,7 +58,7 @@ async def read_service_token_principal(
                       ON principal.id = token.service_principal_id
                     WHERE token.token_hash = :token_hash
                       AND token.revoked_at IS NULL
-                      AND token.expires_at > :now
+                      AND (token.expires_at IS NULL OR token.expires_at > :now)
                       AND principal.status = 'ACTIVE'
                     LIMIT 1
                     """

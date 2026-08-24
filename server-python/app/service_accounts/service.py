@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import secrets
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -21,7 +21,7 @@ from app.service_accounts.repository import ServiceAccountRepository
 
 CODE_PATTERN = re.compile(r"^[a-z][a-z0-9-]{2,99}$")
 ALLOWED_SCOPES = {"source:import"}
-MAX_EXPIRY = timedelta(days=365)
+MAX_EXPIRY_YEARS = 3
 
 
 class ServiceAccountError(ValueError):
@@ -62,10 +62,19 @@ def normalize_scopes(values: Any) -> tuple[str, ...]:
     return normalized
 
 
+def _maximum_expiry_date(now: datetime) -> date:
+    try:
+        return now.date().replace(year=now.year + MAX_EXPIRY_YEARS)
+    except ValueError:
+        return now.date().replace(year=now.year + MAX_EXPIRY_YEARS, day=28)
+
+
 def parse_service_token_expiry(
     value: str | datetime | None, *, now: datetime
-) -> datetime:
-    if value is None or (isinstance(value, str) and not value.strip()):
+) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
         raise ServiceAccountError("validation.serviceToken.expiresAt.required")
     try:
         parsed = value if isinstance(value, datetime) else datetime.fromisoformat(value)
@@ -73,7 +82,7 @@ def parse_service_token_expiry(
         raise ServiceAccountError("validation.serviceToken.expiresAt.invalid") from exc
     parsed = parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
     parsed = parsed.astimezone(UTC)
-    if parsed <= now or parsed > now + MAX_EXPIRY:
+    if parsed <= now or parsed.date() > _maximum_expiry_date(now):
         raise ServiceAccountError("validation.serviceToken.expiresAt.range")
     return parsed
 

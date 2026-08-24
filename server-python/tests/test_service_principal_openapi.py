@@ -18,3 +18,6 @@ def test_service_principal_openapi_exposes_management_contract() -> None:
         "expiresAt",
     ]
     assert schemas["RotateServiceTokenRequest"]["required"] == ["expiresAt"]
+    for request_name in ("CreateServiceTokenRequest", "RotateServiceTokenRequest"):
+        expires_at = schemas[request_name]["properties"]["expiresAt"]
+        assert {item.get("type") for item in expires_at["anyOf"]} == {"string", "null"}

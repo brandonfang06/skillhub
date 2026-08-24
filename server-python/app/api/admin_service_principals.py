@@ -45,13 +45,13 @@ class CreateServiceTokenRequest(BaseModel):
 
     name: str
     scopes: list[str]
-    expiresAt: datetime
+    expiresAt: datetime | None
 
 
 class RotateServiceTokenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    expiresAt: datetime
+    expiresAt: datetime | None
 
 
 def _instant(value: datetime | None) -> str | None:
