@@ -7,17 +7,30 @@ import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { Bookmark, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/shared/lib/utils'
 
 interface SkillCardProps {
   skill: SkillSummary
   onClick?: () => void
   highlightStarred?: boolean
+  selectionMode?: boolean
+  selected?: boolean
+  selectionDisabled?: boolean
+  onSelectionChange?: (selected: boolean) => void
 }
 
 /**
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
-export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
+export function SkillCard({
+  skill,
+  onClick,
+  highlightStarred = true,
+  selectionMode = false,
+  selected = false,
+  selectionDisabled = false,
+  onSelectionChange,
+}: SkillCardProps) {
   const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
@@ -30,7 +43,10 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
 
   return (
     <Card
-      className="h-full p-5 cursor-pointer group relative overflow-hidden bg-white border shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
+      className={cn(
+        'h-full p-5 cursor-pointer group relative overflow-hidden bg-white border shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
+        selected && 'ring-2 ring-primary/70',
+      )}
       style={{ borderColor: 'hsl(var(--border-card))' }}
       onClick={onClick}
       onKeyDown={(event) => {
@@ -54,6 +70,18 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             </h3>
           </div>
           <div className="flex items-center gap-2">
+            {selectionMode && (
+              <input
+                type="checkbox"
+                aria-label={t('installSelection.selectSkill', { skill: skill.displayName })}
+                checked={selected}
+                disabled={selectionDisabled}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                onChange={(event) => onSelectionChange?.(event.target.checked)}
+                className="h-5 w-5 shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            )}
             <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
           </div>
         </div>

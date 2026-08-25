@@ -85,6 +85,32 @@ describe('install-command', () => {
     )
   })
 
+  it('adds deterministic non-interactive scope, Agents, and force options', () => {
+    expect(buildSkillhubInstallCommand(
+      'team-alpha',
+      'my-skill',
+      'https://skill.xfyun.cn/skillhub',
+      {
+        scope: 'project',
+        agentIds: ['cursor', 'codex', 'cursor'],
+        force: true,
+      },
+    )).toBe(
+      'npx @astron-team/skillhub@latest install my-skill --namespace team-alpha --registry https://skill.xfyun.cn/skillhub --scope project --agent codex --agent cursor --force',
+    )
+  })
+
+  it('filters unsupported Agent ids from persisted browser input', () => {
+    expect(buildSkillhubInstallCommand(
+      'global',
+      'my-skill',
+      'https://skill.xfyun.cn',
+      { scope: 'user', agentIds: ['generic', 'codex'] },
+    )).toBe(
+      'npx @astron-team/skillhub@latest install my-skill --registry https://skill.xfyun.cn --scope user --agent codex',
+    )
+  })
+
   it('uses the runtime app base url when available', () => {
     setMockWindow({ appBaseUrl: 'https://app.example.com' })
 

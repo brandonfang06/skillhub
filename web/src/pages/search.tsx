@@ -17,6 +17,13 @@ import { normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/se
 import { Button } from '@/shared/ui/button'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { buildReturnTo } from '@/shared/lib/auth-route'
+import {
+  installSelectionSkillCoordinate,
+  MAX_SELECTED_SKILLS,
+  useInstallSelectionStore,
+} from '@/features/install-selection/install-selection-store'
+import { InstallSelectionTray } from '@/features/install-selection/install-selection-tray'
+import { cn } from '@/shared/lib/utils'
 
 const PAGE_SIZE = 12
 
@@ -111,6 +118,12 @@ export function SearchPage() {
   const navigate = useNavigate()
   const searchParams = useSearch({ from: '/search' })
   const { isAuthenticated } = useAuth()
+  const isSelectionMode = useInstallSelectionStore((state) => state.isSelectionMode)
+  const selectedSkills = useInstallSelectionStore((state) => state.selectedSkills)
+  const enterSelectionMode = useInstallSelectionStore((state) => state.enterSelectionMode)
+  const addSelectedSkill = useInstallSelectionStore((state) => state.addSkill)
+  const removeSelectedSkill = useInstallSelectionStore((state) => state.removeSkill)
+  const clearSelection = useInstallSelectionStore((state) => state.clearSelection)
 
   const q = normalizeSearchQuery(searchParams.q || '')
   const namespace = (searchParams.namespace || '').replace(/^@/, '')
@@ -120,6 +133,8 @@ export function SearchPage() {
   const starredOnly = searchParams.starredOnly ?? false
   const [queryInput, setQueryInput] = useState(q)
   const previousPageRef = useRef(page)
+  const selectionEntryButtonRef = useRef<HTMLButtonElement>(null)
+  const focusSelectionEntryAfterClearRef = useRef(false)
 
   useEffect(() => {
     setQueryInput(q)
@@ -138,6 +153,13 @@ export function SearchPage() {
 
     previousPageRef.current = page
   }, [page])
+
+  useEffect(() => {
+    if (!isSelectionMode && focusSelectionEntryAfterClearRef.current) {
+      focusSelectionEntryAfterClearRef.current = false
+      selectionEntryButtonRef.current?.focus()
+    }
+  }, [isSelectionMode])
 
   const { data, isLoading, isFetching } = useSearchSkills({
     q,
@@ -214,22 +236,38 @@ export function SearchPage() {
     })
   }
 
+  const redirectToLogin = () => navigate({
+    to: '/login',
+    search: {
+      returnTo: buildReturnTo({
+        pathname: window.location.pathname,
+        searchStr: window.location.search,
+        hash: window.location.hash,
+      }),
+    },
+  })
+
   const handleStarredToggle = () => {
     if (!isAuthenticated) {
-      navigate({
-        to: '/login',
-        search: {
-          returnTo: buildReturnTo({
-            pathname: window.location.pathname,
-            searchStr: window.location.search,
-            hash: window.location.hash,
-          }),
-        },
-      })
+      redirectToLogin()
       return
     }
 
     navigate({ to: '/search', search: buildSearchRouteState({ q, namespace, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly }) })
+  }
+
+  const handleStartSelection = () => {
+    if (!isAuthenticated) {
+      redirectToLogin()
+      return
+    }
+
+    enterSelectionMode()
+  }
+
+  const handleClearSelection = () => {
+    focusSelectionEntryAfterClearRef.current = true
+    clearSelection()
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -261,7 +299,7 @@ export function SearchPage() {
   const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
 
   return (
-    <div className={APP_SHELL_PAGE_CLASS_NAME}>
+    <div className={cn(APP_SHELL_PAGE_CLASS_NAME, isSelectionMode && 'pb-28 sm:pb-20')}>
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
         <SearchBar
@@ -303,11 +341,24 @@ export function SearchPage() {
             </div>
           </div>
 
-          {resultCount > 0 && (
-            <div className="text-sm text-muted-foreground">
-              {t('search.results', { count: resultCount })}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {resultCount > 0 && (
+              <div className="text-sm text-muted-foreground">
+                {t('search.results', { count: resultCount })}
+              </div>
+            )}
+            {!isSelectionMode && (
+              <Button
+                ref={selectionEntryButtonRef}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleStartSelection}
+              >
+                {t('installSelection.start')}
+              </Button>
+            )}
+          </div>
         </div>
 
         {isUpdatingResults ? (
@@ -354,15 +405,36 @@ export function SearchPage() {
       ) : displayItems.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {displayItems.map((skill, idx) => (
-              <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
-                <SkillCard
-                  skill={skill}
-                  highlightStarred
-                  onClick={() => handleSkillClick(skill.namespace, skill.slug)}
-                />
-              </div>
-            ))}
+            {displayItems.map((skill, idx) => {
+              const selected = selectedSkills.some((item) => (
+                installSelectionSkillCoordinate(item) === installSelectionSkillCoordinate(skill)
+              ))
+              return (
+                <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
+                  <SkillCard
+                    skill={skill}
+                    highlightStarred
+                    selectionMode={isSelectionMode}
+                    selected={selected}
+                    selectionDisabled={!selected && selectedSkills.length >= MAX_SELECTED_SKILLS}
+                    onSelectionChange={(nextSelected) => {
+                      const selectionSkill = {
+                        id: skill.id,
+                        namespace: skill.namespace,
+                        slug: skill.slug,
+                        displayName: skill.displayName,
+                      }
+                      if (nextSelected) {
+                        addSelectedSkill(selectionSkill)
+                      } else {
+                        removeSelectedSkill(selectionSkill)
+                      }
+                    }}
+                    onClick={() => handleSkillClick(skill.namespace, skill.slug)}
+                  />
+                </div>
+              )
+            })}
           </div>
           {totalPages > 1 && (
             <Pagination
@@ -380,6 +452,14 @@ export function SearchPage() {
               ? (q ? t('search.noStarredResultsFor', { q }) : t('search.noStarredSkills'))
               : (q ? t('search.noResultsFor', { q }) : undefined)
           }
+        />
+      )}
+      {isSelectionMode && (
+        <InstallSelectionTray
+          selectedCount={selectedSkills.length}
+          maxSelected={MAX_SELECTED_SKILLS}
+          onClear={handleClearSelection}
+          onContinue={() => navigate({ to: '/install' })}
         />
       )}
     </div>

@@ -265,6 +265,21 @@ async function installMockApi(
       return
     }
 
+    if (path === '/api/web/skills') {
+      await fulfillJson(route, envelope({
+        items: [publicSkill],
+        total: 1,
+        page: 0,
+        size: 12,
+      }))
+      return
+    }
+
+    if (path === '/api/web/labels') {
+      await fulfillJson(route, envelope([]))
+      return
+    }
+
     if (path === '/api/v1/tokens' && route.request().method() === 'POST') {
       observed.tokenPaths.push(url.pathname)
       await fulfillJson(route, envelope({
@@ -530,6 +545,55 @@ test.describe('SkillHub production subpath deployment', () => {
     await expect(page.getByText('https://example.test/evidence/with/a/very/long/path/that/must/wrap')).toBeVisible()
     await expectNoHorizontalOverflow(page)
 
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('selects and configures multiple Skills under the prefix across reload and viewports', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: true }, observed)
+
+    await page.goto(`${basePath}/search`)
+    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+    await page.getByRole('checkbox', { name: 'Select Subpath Skill' }).check()
+    await expect(page.getByRole('status')).toHaveText('1 / 20 Skills selected')
+
+    await page.getByRole('button', { name: 'Clear selection' }).click()
+    await expect(page.getByRole('button', { name: 'Select multiple Skills' })).toBeFocused()
+
+    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+    await page.getByRole('checkbox', { name: 'Select Subpath Skill' }).check()
+    await page.reload()
+    await expect(page.getByRole('status')).toHaveText('1 / 20 Skills selected')
+
+    await page.getByRole('button', { name: 'Continue to install' }).click()
+    await expect(page).toHaveURL(`http://127.0.0.1:3190${basePath}/install`)
+    await expect(page.getByRole('heading', { name: 'Install Skills' })).toBeFocused()
+    await page.getByRole('checkbox', { name: 'Codex' }).check()
+    await expect(page.getByText(
+      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex',
+      { exact: true },
+    )).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.getByRole('button', { name: 'Clear selection' }).click()
+    await expect(page.getByRole('heading', { name: 'Install Skills' })).toBeFocused()
+    await expect(page.getByText('No Skills are selected in this browser tab.')).toBeVisible()
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
+  test('sends anonymous multi-Skill selection through login with a logical return path', async ({ page }) => {
+    const observed = createObservedRequests()
+    await installMockApi(page, { authenticated: false }, observed)
+
+    await page.goto(`${basePath}/search`)
+    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+
+    await expect(page).toHaveURL(/\/skillhub\/login\?returnTo=/)
+    const loginUrl = new URL(page.url())
+    expect(loginUrl.pathname).toBe('/skillhub/login')
+    expect(loginUrl.searchParams.get('returnTo')).toBe(
+      '/search?q=&sort=newest&page=0&starredOnly=false',
+    )
     expect(observed.apiRootEscapes).toEqual([])
   })
 

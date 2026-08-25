@@ -26,6 +26,13 @@ describe('getAppMainContentLayout', () => {
     expect(layout.contentClassName).toContain('max-w-[1200px]')
   })
 
+  it('centers the install page in the same catalog workflow frame', () => {
+    expect(getAppMainContentLayout('/install')).toEqual({
+      mainClassName: CENTERED_MAIN_CLASS_NAME,
+      contentClassName: CENTERED_SEARCH_CONTENT_CLASS_NAME,
+    })
+  })
+
   it('centers all dashboard sub-pages within a slightly narrower content frame', () => {
     const layout = getAppMainContentLayout('/dashboard/skills')
 

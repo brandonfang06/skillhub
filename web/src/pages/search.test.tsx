@@ -6,6 +6,10 @@ const navigateMock = vi.fn()
 const useSearchMock = vi.fn()
 const buttonRecords: Array<{ label: string; variant?: string | null; onClick?: (() => void) | undefined }> = []
 const paginationProps: Array<{ onPageChange: (page: number) => void }> = []
+const authState = {
+  isAuthenticated: true,
+  user: { userId: 'user-1' } as { userId: string } | null,
+}
 let namespaceFilterProps: { value: string; onValueChange: (value: string) => void } | null = null
 
 vi.mock('@tanstack/react-router', () => ({
@@ -29,9 +33,7 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({
-    isAuthenticated: true,
-  }),
+  useAuth: () => authState,
 }))
 
 vi.mock('@/features/search/search-bar', () => ({
@@ -114,6 +116,7 @@ vi.mock('@/shared/hooks/use-user-queries', () => ({
 }))
 
 import { SearchPage } from './search'
+import { installSelectionStore } from '@/features/install-selection/install-selection-store'
 
 function findButton(label: string) {
   const record = buttonRecords.find((item) => item.label === label)
@@ -129,6 +132,10 @@ describe('SearchPage', () => {
     buttonRecords.length = 0
     paginationProps.length = 0
     namespaceFilterProps = null
+    authState.isAuthenticated = true
+    authState.user = { userId: 'user-1' }
+    installSelectionStore.getState().bindOwner(null)
+    installSelectionStore.getState().bindOwner('user-1')
     useSearchMock.mockReturnValue({
       q: 'agent',
       label: 'code-generation',
@@ -301,4 +308,5 @@ describe('SearchPage', () => {
     expect(html).toContain('search.noResults')
     expect(html).not.toContain('search.enterKeyword')
   })
+
 })

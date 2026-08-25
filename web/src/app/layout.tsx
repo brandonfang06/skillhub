@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/use-auth'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { UserMenu } from '@/shared/components/user-menu'
 import { NotificationBell } from '@/features/notification/notification-bell'
+import { useInstallSelectionStore } from '@/features/install-selection/install-selection-store'
 import { getAppHeaderClassName } from './layout-header-style'
 import { getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
@@ -23,9 +24,16 @@ export function Layout() {
     }),
   })
   const { user, isLoading } = useAuth()
+  const bindInstallSelectionOwner = useInstallSelectionStore((state) => state.bindOwner)
   const [isHeaderElevated, setIsHeaderElevated] = useState(false)
   const contentLayoutPathname = resolveAppMainContentPathname(pathname, resolvedPathname)
   const mainContentLayout = getAppMainContentLayout(contentLayoutPathname)
+
+  useEffect(() => {
+    if (!isLoading) {
+      bindInstallSelectionOwner(user?.userId ?? null)
+    }
+  }, [bindInstallSelectionOwner, isLoading, user?.userId])
 
   useEffect(() => {
     const updateHeaderElevation = () => {

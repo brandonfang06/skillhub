@@ -1,6 +1,8 @@
+/** @vitest-environment jsdom */
 import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as mod from './skill-card'
 import { SkillCard } from './skill-card'
 
@@ -23,8 +25,25 @@ vi.mock('@/shared/components/namespace-badge', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { skill?: string }) => (
+      key === 'installSelection.selectSkill' ? `${key}:${options?.skill ?? ''}` : key
+    ),
+  }),
 }))
+
+const skill = {
+  id: 1,
+  slug: 'demo',
+  displayName: 'Demo Skill',
+  summary: 'summary',
+  downloadCount: 1,
+  starCount: 2,
+  ratingCount: 0,
+  namespace: 'global',
+  updatedAt: '2026-08-25T00:00:00Z',
+  canSubmitPromotion: false,
+}
 
 /**
  * skill-card.tsx exports a single React component (SkillCard).
@@ -35,6 +54,8 @@ vi.mock('react-i18next', () => ({
  * if the export contract changes.
  */
 describe('skill-card module exports', () => {
+  afterEach(() => cleanup())
+
   it('exports the SkillCard component', () => {
     expect(mod.SkillCard).toBeDefined()
     expect(typeof mod.SkillCard).toBe('function')
@@ -93,5 +114,30 @@ describe('skill-card module exports', () => {
     )
 
     expect(html).not.toContain('data-compliance-claim-badge')
+  })
+
+  it('selects through an opt-in checkbox without navigating the skill card', () => {
+    const onClick = vi.fn()
+    const onSelectionChange = vi.fn()
+    render(createElement(mod.SkillCard, {
+      skill,
+      onClick,
+      selectionMode: true,
+      selected: false,
+      onSelectionChange,
+    }))
+
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'installSelection.selectSkill:Demo Skill',
+    }))
+
+    expect(onSelectionChange).toHaveBeenCalledWith(true)
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it('does not render selection controls outside selection mode', () => {
+    render(createElement(mod.SkillCard, { skill, onClick: vi.fn() }))
+
+    expect(screen.queryByRole('checkbox')).toBeNull()
   })
 })
