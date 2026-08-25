@@ -1,8 +1,9 @@
 param(
     [string]$ComposeProject = "skillhub-oss-import-smoke",
-    [string]$PythonImage = "python:3.12-bookworm",
+    [string]$PythonImage = "python:3.8-bookworm",
     [int]$WebPort = 58080,
-    [int]$SubpathWebPort = 58082
+    [int]$SubpathWebPort = 58082,
+    [switch]$KeepTemporaryRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -80,7 +81,6 @@ function Assert-ComposeContract {
 function Invoke-Importer {
     param(
         [string]$BaseUrl,
-        [string]$CommitSha,
         [string]$TriggerLogin,
         [string]$ReportName,
         [string]$JobId
@@ -88,13 +88,11 @@ function Invoke-Importer {
     $handoffPath = Join-Path $pipeline "pull-code.env"
     $handoffLines = @(
         "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
-        "SKILLHUB_SOURCE_COMMIT_SHA=$CommitSha",
         "SKILLHUB_SOURCE_REF_TYPE=BRANCH",
         "SKILLHUB_SOURCE_REF=main",
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL=$internalRepositoryUrl",
-        "SKILLHUB_DEV_GITLAB_COMMIT_SHA=$CommitSha",
+        "SKILLHUB_DEV_GITLAB_BRANCH=main",
         "SKILLHUB_SOURCE_SCAN_STATUS=PASSED",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=$CommitSha",
         "SKILLHUB_SOURCE_SCAN_ID=scan-$JobId",
         "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE=keycloak",
         "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME=$TriggerLogin"
@@ -185,12 +183,10 @@ VALUES (
 );
 "@ | Out-Null
 
-    $first = Invoke-Importer "http://web" $initialCommit $triggerId "first.json" "1"
+    $first = Invoke-Importer "http://web" $triggerId "first.json" "1"
     Assert-Equal $first.status "SUCCESS" "First import status"
-    Assert-Equal $first.commitSha $initialCommit "Upstream source commit"
-    Assert-Equal $first.devGitlabCommitSha $initialCommit "Cloned Dev GitLab commit"
+    Assert-Equal $first.commitSha $initialCommit "Cloned Dev GitLab commit"
     Assert-Equal $first.scanStatus "PASSED" "Source scan status"
-    Assert-Equal $first.scanCommitSha $initialCommit "Scanned Dev GitLab commit"
     Assert-Equal $first.sourceRefType "BRANCH" "Upstream source ref type"
     Assert-Equal $first.sourceRef "main" "Upstream source branch"
     Assert-Equal $first.skills.Count 3 "Discovered skill count"
@@ -251,7 +247,7 @@ ORDER BY rt.id DESC LIMIT 1;
     Assert-Equal $publicDetail.data.status "PUBLISHED" "Approved version status"
     Assert-Equal $publicDetail.data.sourceProvenance.repositoryRevisionSha $initialCommit "Published provenance SHA"
 
-    $retry = Invoke-Importer "http://web" $initialCommit $triggerId "retry.json" "2"
+    $retry = Invoke-Importer "http://web" $triggerId "retry.json" "2"
     Assert-Equal (($retry.skills.validation.outcome | Where-Object { $_ -notlike "SKIPPED_*" }).Count) 0 "Retry outcomes"
 
     Add-Content -LiteralPath (Join-Path $checkout "skills\alpha\reference.md") `
@@ -259,11 +255,13 @@ ORDER BY rt.id DESC LIMIT 1;
     & git -C $checkout add skills/alpha/reference.md
     & git -C $checkout commit -qm "Change Alpha only"
     $changedCommit = (& git -C $checkout rev-parse HEAD).Trim()
-    $changed = Invoke-Importer "http://web-subpath/skillhub" $changedCommit $triggerTwoId "changed.json" "3"
-    Assert-Equal $changed.commitSha $changedCommit "Changed OSS source commit"
+    $changed = Invoke-Importer "http://web-subpath/skillhub" $triggerTwoId "changed.json" "3"
+    Assert-Equal $changed.commitSha $changedCommit "Changed Dev GitLab commit"
     $alpha = $changed.skills | Where-Object sourcePath -eq "skills/alpha"
     Assert-Equal $alpha.submission.outcome "IMPORTED" "Changed Alpha outcome"
-    Assert-Equal $alpha.submission.version "git-$changedCommit" "Changed Alpha version"
+    if ($alpha.submission.version -notmatch "^\d{14}$") {
+        throw "Changed Alpha version is not a UTC timestamp: $($alpha.submission.version)"
+    }
     Assert-Equal $alpha.submission.stableOwner.loginName $null "Stable owner response hides internal identity coordinates"
     Assert-Equal $alpha.submission.reviewSubmitter.loginName $triggerTwoId "Second review submitter"
     Assert-Equal (($changed.skills | Where-Object sourcePath -ne "skills/alpha" | Where-Object { $_.validation.outcome -notlike "SKIPPED_*" }).Count) 0 "Unchanged skill outcomes"
@@ -274,11 +272,16 @@ ORDER BY rt.id DESC LIMIT 1;
 }
 finally {
     if (Test-Path -LiteralPath $temporaryRoot) {
-        $resolvedTemporary = [IO.Path]::GetFullPath($temporaryRoot)
-        $systemTemporary = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
-        if (-not $resolvedTemporary.StartsWith($systemTemporary, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to remove non-temporary smoke path: $resolvedTemporary"
+        if ($KeepTemporaryRoot) {
+            Write-Output "OSS source import smoke temporary root retained: $temporaryRoot"
         }
-        Remove-Item -LiteralPath $resolvedTemporary -Recurse -Force
+        else {
+            $resolvedTemporary = [IO.Path]::GetFullPath($temporaryRoot)
+            $systemTemporary = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+            if (-not $resolvedTemporary.StartsWith($systemTemporary, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Refusing to remove non-temporary smoke path: $resolvedTemporary"
+            }
+            Remove-Item -LiteralPath $resolvedTemporary -Recurse -Force
+        }
     }
 }

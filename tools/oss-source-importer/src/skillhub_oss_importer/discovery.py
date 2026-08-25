@@ -18,8 +18,10 @@ class SkillRoot:
 def discover_skill_roots(project_dir: Path, source_root: Path) -> list[SkillRoot]:
     project = project_dir.resolve()
     source = source_root.resolve()
-    if not source.is_relative_to(project):
-        raise DiscoveryError("Source root must stay within the project checkout")
+    try:
+        source.relative_to(project)
+    except ValueError as exc:
+        raise DiscoveryError("Source root must stay within the project checkout") from exc
     roots: list[SkillRoot] = []
     for current, directories, files in os.walk(source, topdown=True, followlinks=False):
         current_path = Path(current)

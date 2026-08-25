@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
@@ -6,13 +8,11 @@ from skillhub_oss_importer.config import Config, ConfigError
 
 HANDOFF_VARIABLES = (
     "SKILLHUB_SOURCE_REPOSITORY_URL",
-    "SKILLHUB_SOURCE_COMMIT_SHA",
     "SKILLHUB_SOURCE_REF_TYPE",
     "SKILLHUB_SOURCE_REF",
     "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
-    "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+    "SKILLHUB_DEV_GITLAB_BRANCH",
     "SKILLHUB_SOURCE_SCAN_STATUS",
-    "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
     "SKILLHUB_SOURCE_SCAN_ID",
 )
 
@@ -32,15 +32,13 @@ def valid_env(tmp_path: Path) -> dict[str, str]:
         "SKILLHUB_BASE_URL": "https://skillhub.example/skillhub/",
         "SKILLHUB_SERVICE_TOKEN": "st_secret-token",
         "SKILLHUB_SOURCE_REPOSITORY_URL": "https://github.com/MattPocock/Skills.git",
-        "SKILLHUB_SOURCE_COMMIT_SHA": "B" * 40,
         "SKILLHUB_SOURCE_REF_TYPE": "BRANCH",
         "SKILLHUB_SOURCE_REF": "main",
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL": (
             "https://gitlab.internal/dev/oss-mattpocock-skills.git"
         ),
-        "SKILLHUB_DEV_GITLAB_COMMIT_SHA": "A" * 40,
+        "SKILLHUB_DEV_GITLAB_BRANCH": "main",
         "SKILLHUB_SOURCE_SCAN_STATUS": "PASSED",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA": "A" * 40,
         "SKILLHUB_SOURCE_SCAN_ID": "scan-123",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE": "keycloak",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME": "platform-owner",
@@ -61,12 +59,10 @@ def test_reads_required_contract_and_preserves_subpath(tmp_path: Path) -> None:
     assert config.project_dir == tmp_path.resolve()
     assert config.source_subdirectory == Path(".")
     assert config.source_clone_url == "https://gitlab.internal/dev/oss-mattpocock-skills.git"
-    assert config.dev_gitlab_commit_sha == "a" * 40
-    assert config.source_commit_sha == "b" * 40
+    assert config.dev_gitlab_branch == "main"
     assert config.ref_type == "BRANCH"
     assert config.source_ref == "main"
     assert config.scan_status == "PASSED"
-    assert config.scan_commit_sha == "a" * 40
     assert config.scan_id == "scan-123"
     assert config.trigger_provider_code == "keycloak"
     assert "secret-token" not in repr(config)
@@ -119,11 +115,20 @@ def test_requires_an_explicit_passed_scan_status(tmp_path: Path, status: str) ->
         Config.from_env(env)
 
 
-def test_rejects_scan_for_a_different_dev_gitlab_commit(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "name",
+    (
+        "SKILLHUB_SOURCE_COMMIT_SHA",
+        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
+    ),
+)
+def test_rejects_former_sha_handoff_variables(tmp_path: Path, name: str) -> None:
     env = valid_env(tmp_path)
-    set_handoff_value(tmp_path, env, "SKILLHUB_SOURCE_SCAN_COMMIT_SHA", "C" * 40)
+    with (tmp_path / "pull-code.env").open("a", encoding="utf-8") as stream:
+        stream.write(f"{name}={'c' * 40}\n")
 
-    with pytest.raises(ConfigError, match="scan commit must match"):
+    with pytest.raises(ConfigError, match=f"Unexpected pull-code.env variable: {name}"):
         Config.from_env(env)
 
 
@@ -140,9 +145,18 @@ def test_requires_ref_for_branch_and_tag_but_not_commit(tmp_path: Path) -> None:
 
 def test_rejects_environment_override_of_the_pull_code_artifact(tmp_path: Path) -> None:
     env = valid_env(tmp_path)
-    env["SKILLHUB_DEV_GITLAB_COMMIT_SHA"] = "C" * 40
+    env["SKILLHUB_DEV_GITLAB_BRANCH"] = "release"
 
     with pytest.raises(ConfigError, match="conflicts with pull-code.env"):
+        Config.from_env(env)
+
+
+@pytest.mark.parametrize("branch", ["../main", "-unsafe"])
+def test_rejects_unsafe_dev_gitlab_branch(tmp_path: Path, branch: str) -> None:
+    env = valid_env(tmp_path)
+    set_handoff_value(tmp_path, env, "SKILLHUB_DEV_GITLAB_BRANCH", branch)
+
+    with pytest.raises(ConfigError, match="valid Git branch"):
         Config.from_env(env)
 
 

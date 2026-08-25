@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import subprocess
 from pathlib import Path
 
@@ -35,6 +37,7 @@ def make_source_repository(tmp_path: Path) -> tuple[Path, str, str]:
         capture_output=True,
         text=True,
     ).stdout.strip()
+    subprocess.run(["git", "-C", str(source), "branch", "release", first_sha], check=True)
     (source / "SKILL.md").write_text("---\nname: second\ndescription: second\n---\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(source), "commit", "-qam", "second"], check=True)
     second_sha = subprocess.run(
@@ -56,7 +59,7 @@ def route_internal_clone_to_local_repository(
     monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
 
 
-def test_clones_the_internal_gitlab_project_at_the_pipeline_commit(
+def test_clones_the_requested_internal_gitlab_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -66,7 +69,7 @@ def test_clones_the_internal_gitlab_project_at_the_pipeline_commit(
     checkout = clone_repository(
         INTERNAL_REPOSITORY_URL,
         tmp_path / "checkout",
-        first_sha,
+        "release",
         "BRANCH",
         "main",
         "job-secret",
@@ -88,7 +91,7 @@ def test_records_the_internal_gitlab_pipeline_tag(
     checkout = clone_repository(
         INTERNAL_REPOSITORY_URL,
         tmp_path / "tagged-checkout",
-        second_sha,
+        "main",
         "TAG",
         "v1.0.0",
         "job-secret",
@@ -109,8 +112,8 @@ def test_internal_gitlab_clone_failure_does_not_leak_the_job_token(
     with pytest.raises(SourceError, match="Unable to clone the landed Dev GitLab project") as error:
         clone_repository(
             INTERNAL_REPOSITORY_URL,
-            tmp_path / "missing-commit",
-            "0" * 40,
+            tmp_path / "missing-branch",
+            "missing",
             "COMMIT",
             None,
             "job-secret",
@@ -123,7 +126,7 @@ def test_job_token_is_not_exposed_in_git_command_arguments(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    source, first_sha, _second_sha = make_source_repository(tmp_path)
+    source, _first_sha, _second_sha = make_source_repository(tmp_path)
     route_internal_clone_to_local_repository(source, monkeypatch)
     original_run = subprocess.run
     commands: list[list[str]] = []
@@ -139,13 +142,14 @@ def test_job_token_is_not_exposed_in_git_command_arguments(
     clone_repository(
         INTERNAL_REPOSITORY_URL,
         tmp_path / "secure-checkout",
-        first_sha,
+        "main",
         "COMMIT",
         None,
         "job-secret",
     )
 
     assert all("job-secret" not in argument for command in commands for argument in command)
+    assert any(command[-1] == "refs/heads/main" for command in commands if "fetch" in command)
     assert any(
         value.startswith("Authorization: Basic ")
         for environment in environments

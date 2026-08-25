@@ -41,7 +41,7 @@ Python 檔案複製到另一個 project，因此 `.sh` 與 `.py` 必須確實存
 
 Runtime image 只需提供：
 
-- Python 3.12；
+- Python 3.8；
 - Git；
 - CA certificates 與組織信任鏈；
 - POSIX shell。
@@ -53,7 +53,7 @@ Importer 的正式 runtime 只用 Python 標準函式庫，不使用 `curl`，�
 ```text
 GitLab Runner shell
   -> 中央 repo 內的 Python 檔案
-  -> git clone Dev GitLab 精確 commit
+  -> git clone Dev GitLab protected branch
   -> 公開 reverse proxy／Ingress
   -> Python FastAPI backend
 ```
@@ -122,13 +122,11 @@ scan gate 的手動 job。
 
 ```dotenv
 SKILLHUB_SOURCE_REPOSITORY_URL=https://github.com/example/skills
-SKILLHUB_SOURCE_COMMIT_SHA=1111111111111111111111111111111111111111
 SKILLHUB_SOURCE_REF_TYPE=BRANCH
 SKILLHUB_SOURCE_REF=main
 SKILLHUB_DEV_GITLAB_REPOSITORY_URL=https://gitlab.example/dev/example-skills.git
-SKILLHUB_DEV_GITLAB_COMMIT_SHA=2222222222222222222222222222222222222222
+SKILLHUB_DEV_GITLAB_BRANCH=main
 SKILLHUB_SOURCE_SCAN_STATUS=PASSED
-SKILLHUB_SOURCE_SCAN_COMMIT_SHA=2222222222222222222222222222222222222222
 SKILLHUB_SOURCE_SCAN_ID=scan-12345
 SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE=keycloak
 SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME=alice
@@ -143,18 +141,23 @@ artifact 不一致都會 fail fast。不要在 project/group variables 預先定
 | Variable | 規則 |
 | --- | --- |
 | `SKILLHUB_SOURCE_REPOSITORY_URL` | 原始、無 credential 的 `https://github.com/<owner>/<repo>`；GitHub URL 只用於 upstream provenance、namespace 命名與 UI 連結。 |
-| `SKILLHUB_SOURCE_COMMIT_SHA` | 原始 GitHub 40-hex commit；寫入 SkillHub provenance，無明示版號時產生 `git-<SHA>`。 |
 | `SKILLHUB_SOURCE_REF_TYPE` | 只能是 `TAG`、`BRANCH` 或 `COMMIT`。 |
 | `SKILLHUB_SOURCE_REF` | `TAG`／`BRANCH` 必填；`COMMIT` 必須留空。 |
 | `SKILLHUB_DEV_GITLAB_REPOSITORY_URL` | `pull_code` 落地後的無 credential HTTPS clone URL；HTTP 會被拒絕，避免 job token 明文傳輸。 |
-| `SKILLHUB_DEV_GITLAB_COMMIT_SHA` | publish job 真正 checkout 的 Dev GitLab 40-hex commit。 |
+| `SKILLHUB_DEV_GITLAB_BRANCH` | `pull_code` 落地的 Dev GitLab protected branch；只能由受控落地流程更新。 |
 | `SKILLHUB_SOURCE_SCAN_STATUS` | 必須精確為 `PASSED`，其他值 fail fast。 |
-| `SKILLHUB_SOURCE_SCAN_COMMIT_SHA` | 必須等於 `SKILLHUB_DEV_GITLAB_COMMIT_SHA`，防止掃描 A 卻發布 B。 |
 | `SKILLHUB_SOURCE_SCAN_ID` | 選填；寫入 JSON report 供稽核。 |
 
-Runner 不連 GitHub。實際 ZIP 一律來自 Dev GitLab checkout；原始 GitHub URL 與 SHA 僅保留
-來源追溯。`pull_code` 必須保證 scan 對應的就是落地內容，不得在 scan 後未重新掃描就改寫
-檔案。若落地流程改變 Git commit SHA，兩組 SHA 可以不同，但 scan SHA 一定要等於 Dev SHA。
+Runner 不連 GitHub。實際 ZIP 一律來自 Dev GitLab branch checkout；原始 GitHub URL 僅用於
+來源追溯與 namespace identity。`pull_code` 必須保證只有 scan 通過的內容才會落地，且 branch
+必須禁止人工或其他 job 在落地後、publish 前改寫。Importer 在 clone 後自行取得 HEAD SHA，
+只用於既有 SkillHub provenance API 與 report，不是 handoff variable。落地時必須保留原始 Git
+commit object 與 hash，不可把檔案重新 commit 成另一個 SHA；SkillHub 會以 derived SHA 組合原始
+GitHub browse URL，若改寫 commit，UI 的來源連結就會失效。
+
+若多條 pipeline 會寫入同一個 Dev branch，必須把每一條 pipeline 的 `pull_code` 到
+`publish_skillhub` 整段序列化，或改用每次 pipeline 專屬且 immutable 的 landing branch。只鎖
+`pull_code` 或只鎖 `publish_skillhub` 都不夠，否則較晚的 landing 可能被較早的 publish job 抓走。
 
 ## 4. Project／group variables
 
@@ -162,7 +165,7 @@ Runner 不連 GitHub。實際 ZIP 一律來自 Dev GitLab checkout；原始 GitH
 
 | Variable | 用途 |
 | --- | --- |
-| `SKILLHUB_PYTHON_IMAGE` | 組織核准、immutable 的 Python 3.12 + Git image，使用固定 tag 或 digest，不用 `latest`。 |
+| `SKILLHUB_PYTHON_IMAGE` | 組織核准、immutable 的 Python 3.8 + Git image，使用固定 tag 或 digest，不用 `latest`。 |
 | `SKILLHUB_BASE_URL` | 使用者可到達的 SkillHub base，例如 `https://skillhub.example.com/skillhub`；不要自行加 `/api`。 |
 | `SKILLHUB_SERVICE_TOKEN` | Platform Admin 建立的 `st_` token，必須有 `source:import` scope，設為 masked/protected。 |
 | `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE` | fallback owner provider，通常為 `keycloak`。 |
@@ -220,13 +223,14 @@ namespace owner 代為送審。`Imported by` 依**選定版本**顯示。service
 ## 6. 匯入與 review 行為
 
 1. Python 使用 `SKILLHUB_DEV_GITLAB_REPOSITORY_URL`，由 `CI_JOB_TOKEN` 驗證身分，shallow-fetch
-   `SKILLHUB_DEV_GITLAB_COMMIT_SHA` 並 detached checkout。
-2. `git rev-parse HEAD` 必須精確等於 Dev SHA；不抓 submodules，也不使用共享 job 目錄。
+   `refs/heads/$SKILLHUB_DEV_GITLAB_BRANCH` 並 detached checkout。
+2. Clone 後以 `git rev-parse HEAD` 取得 provenance revision；不抓 submodules，也不使用共享 job 目錄。
 3. 找出 exact-case `SKILL.md`；每個 skill root 獨立 ZIP，nested root 不重複塞進 parent ZIP。
 4. Ensure namespace 一次，再 validate 所有 packages；任一 validation 失敗時提交數必須為 0。
 5. 全部 validation 通過後循序 submit。SkillHub 仍執行 scanner 與 namespace owner review。
 6. 相同來源與內容重跑可回 `SKIPPED_ALREADY_IMPORTED` 或 `SKIPPED_UNCHANGED`，視為成功。
 7. explicit version 同版不同內容時必須在來源升版，不能覆寫既有 immutable version。
+8. `SKILL.md` 未提供 version 時，由 backend 沿用一般 publish 的 UTC `YYYYMMDDHHMMSS` fallback。
 
 公開 `/skillhub` 部署可設定：
 
@@ -241,9 +245,8 @@ Importer 會呼叫 `https://skillhub.example.com/skillhub/api/...`。若直接�
 
 Report artifact 使用 `when: always`，包含：
 
-- 原始 `repositoryUrl`、`commitSha`、`sourceRefType`、`sourceRef`；
-- `devGitlabCommitSha`；
-- `scanStatus`、`scanCommitSha`、`scanId`；
+- `repositoryUrl`、clone 後取得的 `commitSha`、`sourceRefType`、`sourceRef`；
+- `scanStatus`、`scanId`；
 - namespace、pipeline/job ID；
 - 每個 skill 的 validation/submission outcome、coordinate、version、review task 與 `requestId`。
 
@@ -252,11 +255,11 @@ Report 不得包含 service token、job token 或 credentialed URL。
 | Exit | 意義 |
 | --- | --- |
 | `0` | 全部 imported／skipped。 |
-| `2` | 缺少或錯誤的 variables、scan 狀態或 SHA 契約。 |
+| `2` | 缺少或錯誤的 variables、branch 或 scan 狀態。 |
 | `3` | Dev GitLab clone、discovery、package 或 validation 失敗。 |
 | `4` | Service token 無效、過期、已撤銷或缺少 `source:import`。 |
 | `5` | DNS、timeout、TLS 等 transport failure。 |
-| `6` | 部分提交；保留 report，以相同 Dev SHA 安全重跑。 |
+| `6` | 部分提交；保留 report，修正失敗原因後重跑 protected branch。 |
 | `10` | 未預期 importer 錯誤。 |
 
 - `0 個 SKILL.md`：確認大小寫與 `SKILLHUB_IMPORT_SOURCE_ROOT`。

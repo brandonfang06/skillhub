@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Literal, Protocol, cast
 
 from sqlalchemy.exc import IntegrityError
 
-from app.publish.dry_run import slugify
+from app.publish.dry_run import auto_version, slugify
 from app.publish.orchestration import (
     PublishWriteInput,
     PublishWriteResult,
@@ -114,6 +115,7 @@ class ValidateSourceSkillInput:
     request_id: str | None = None
     client_ip: str | None = None
     user_agent: str | None = None
+    now: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -350,7 +352,9 @@ async def ensure_source_namespace_in_transaction(
 
 
 def _resolve_effective_version(
-    source_version: str | None, version_override: str | None
+    source_version: str | None,
+    version_override: str | None,
+    now: datetime | None,
 ) -> str:
     explicit_version = (source_version or "").strip()
     override = (version_override or "").strip()
@@ -361,9 +365,7 @@ def _resolve_effective_version(
             )
         return explicit_version
     if not override:
-        raise SourceImportValidationError(
-            "A version override is required when SKILL.md has no version"
-        )
+        return auto_version(now)
     if len(override) > 64:
         raise SourceImportValidationError("The version override exceeds 64 characters")
     return override
@@ -419,7 +421,7 @@ async def validate_source_skill_in_transaction(
         raise SourceImportValidationError(", ".join(package_validation.warnings))
     metadata = package_validation.metadata
     effective_version = _resolve_effective_version(
-        metadata.version, request.version_override
+        metadata.version, request.version_override, request.now
     )
     try:
         resolved_slug = slugify(metadata.name)

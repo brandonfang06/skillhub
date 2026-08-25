@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import pytest
 
@@ -112,6 +113,7 @@ def validation_input(
     entries: list[PackageEntry] | None = None,
     version_override: str | None = "git-" + "a" * 40,
     initiator: SourceIdentity | None = None,
+    now: datetime | None = None,
 ) -> ValidateSourceSkillInput:
     return ValidateSourceSkillInput(
         namespace_slug="oss-mattpocock-skills",
@@ -124,6 +126,7 @@ def validation_input(
         service_actor=SourceServiceActor(
             "svc_importer", "gitlab-oss-importer", "GitLab OSS Importer"
         ),
+        now=now,
     )
 
 
@@ -176,9 +179,16 @@ async def test_preserves_explicit_version_and_rejects_override() -> None:
 
 
 @pytest.mark.anyio
-async def test_requires_override_when_source_version_is_missing() -> None:
-    with pytest.raises(SourceImportValidationError, match="version override"):
-        await validate_source_skill_in_transaction(FakeValidationRepository(), validation_input(version_override=None))
+async def test_missing_source_version_uses_publish_timestamp_fallback() -> None:
+    plan = await validate_source_skill_in_transaction(
+        FakeValidationRepository(),
+        validation_input(
+            version_override=None,
+            now=datetime(2026, 8, 25, 12, 34, 56, tzinfo=UTC),
+        ),
+    )
+
+    assert plan.package.effective_version == "20260825123456"
 
 
 @pytest.mark.anyio

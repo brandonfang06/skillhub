@@ -327,3 +327,53 @@ GitLab project and confirm the target Dev project job-token allowlist permits an
 actual HTTPS clone. Local verification used a GitLab-shaped HTTPS URL rewritten
 to the separate read-only Dev fixture, so it did not exercise the organization's
 GitLab TLS, Runner policy, or allowlist configuration.
+
+## 2026-08-25 branch handoff and Python 3.8 verification
+
+The central importer no longer accepts source, Dev GitLab, or scan commit SHA
+handoff variables. `pull-code.env` supplies the protected Dev GitLab branch;
+the importer shallow-fetches that branch, detached-checks out `FETCH_HEAD`, and
+derives the checked-out revision locally. The landing flow must preserve the
+upstream commit object because SkillHub combines that derived revision with the
+original GitHub URL for its provenance browse link.
+
+The importer sends no `versionOverride`. When `SKILL.md` has no explicit
+version, the Python backend now uses the existing publish workflow's UTC
+`YYYYMMDDHHMMSS` fallback. Explicit versions and immutable-version conflict
+behavior are unchanged.
+
+The production importer remains standard-library-only and declares Python 3.8
+support. Compatibility changes removed Python 3.9+ and 3.10+ runtime APIs. A
+stock `python:3.8-bookworm` container ran the checked-in entrypoint with
+`python -S` and no package installation; `run_import.py --help` exited 0.
+
+Final automated results:
+
+- importer tests: `44 passed` after the branch-name boundary was tightened to
+  reject leading `-`;
+- importer Ruff: passed;
+- source-import backend tests: `23 passed`;
+- complete backend suite: `1616 passed, 45 skipped`;
+- Chinese operator contract tests: `4 passed`;
+- `uv lock --check --offline`: resolved 14 development packages;
+- release Compose config and `git diff --check`: passed.
+
+Docker 29.5.2 rebuilt and recreated the Python backend while PostgreSQL, Redis,
+MinIO, scanner, root proxy, and `/skillhub` proxy remained healthy. The complete
+smoke then ran the importer under Python 3.8 with no runtime install and finished:
+
+```text
+OSS source import smoke passed: run=2641d1fab016 initial=260d44a8357f3e29b67ff644d6961c00c111bb70 changed=e238434a39aa5f0dc2a01fa70f1ce1c1093ce4c2
+```
+
+The smoke verified branch checkout, locally derived provenance, three imports,
+the timestamp version fallback, PostgreSQL provenance/audit/review data,
+Redis-backed scanning, MinIO objects, approval and publication, idempotent
+retry, changed-source import through `/skillhub`, and stable ownership. Its
+temporary root was retained rather than recursively removed:
+`C:\Users\USER\AppData\Local\Temp\skillhub-oss-import-2641d1fab016`.
+
+The remaining organization-only gate is unchanged: the real GitLab runner must
+verify its approved Python 3.8 image, enterprise CA/TLS path, cross-project job
+token allowlist, protected branch policy, commit-preserving landing flow, and
+serialization or immutable per-pipeline branches when imports can overlap.

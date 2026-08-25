@@ -11,13 +11,11 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "SKILLHUB_BASE_URL",
         "SKILLHUB_SERVICE_TOKEN",
         "SKILLHUB_SOURCE_REPOSITORY_URL",
-        "SKILLHUB_SOURCE_COMMIT_SHA",
         "SKILLHUB_SOURCE_REF_TYPE",
         "SKILLHUB_SOURCE_REF",
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
-        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_DEV_GITLAB_BRANCH",
         "SKILLHUB_SOURCE_SCAN_STATUS",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
         "SKILLHUB_SOURCE_SCAN_ID",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
@@ -93,6 +91,7 @@ def test_sop_explains_gitlab_shell_python_and_api_responsibilities() -> None:
         "不是一般 SkillHub CLI",
         "不使用 `curl`",
         "Python 標準函式庫",
+        "Python 3.8",
         "不執行 `pip install`",
         "git clone",
         "公開 reverse proxy／Ingress",
@@ -100,7 +99,8 @@ def test_sop_explains_gitlab_shell_python_and_api_responsibilities() -> None:
         'entrypoint: [""]',
         "GitHub URL 只用於 upstream provenance",
         "Runner 不連 GitHub",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
+        "protected branch",
+        "YYYYMMDDHHMMSS",
     ):
         assert phrase in content
     assert "SKILLHUB_IMPORTER_IMAGE" not in content
@@ -108,3 +108,6 @@ def test_sop_explains_gitlab_shell_python_and_api_responsibilities() -> None:
     assert "Python `httpx`" not in content
     assert "CI_REPOSITORY_URL" not in content
     assert "CI_COMMIT_SHA" not in content
+    assert "SKILLHUB_SOURCE_COMMIT_SHA" not in content
+    assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA" not in content
+    assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA" not in content

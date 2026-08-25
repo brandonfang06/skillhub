@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,7 +15,7 @@ def test_cli_maps_configuration_error_and_writes_atomic_report(tmp_path: Path, m
     assert not report.with_suffix(".json.tmp").exists()
 
 
-def test_cli_clones_the_landed_dev_gitlab_commit_before_import(tmp_path: Path, monkeypatch) -> None:
+def test_cli_clones_the_landed_dev_gitlab_branch_before_import(tmp_path: Path, monkeypatch) -> None:
     report_path = tmp_path / "report.json"
     config = SimpleNamespace(
         base_url="https://skillhub.example/skillhub",
@@ -22,7 +24,7 @@ def test_cli_clones_the_landed_dev_gitlab_commit_before_import(tmp_path: Path, m
         repository_url="https://github.com/mattpocock/skills",
         source_clone_url="https://gitlab.internal/dev/skills.git",
         gitlab_job_token="job-secret",
-        dev_gitlab_commit_sha="a" * 40,
+        dev_gitlab_branch="release/accepted",
         ref_type="TAG",
         source_ref="v1.2.3",
         report_path=report_path,
@@ -39,13 +41,13 @@ def test_cli_clones_the_landed_dev_gitlab_commit_before_import(tmp_path: Path, m
     def fake_clone(
         clone_url: str,
         destination: Path,
-        expected_sha: str,
+        branch: str,
         ref_type: str,
         source_ref: str | None,
         job_token: str,
     ) -> SourceCheckout:
         captured["clone_url"] = clone_url
-        captured["expected_sha"] = expected_sha
+        captured["branch"] = branch
         captured["ref_type"] = ref_type
         captured["source_ref"] = source_ref
         captured["job_token"] = job_token
@@ -64,7 +66,7 @@ def test_cli_clones_the_landed_dev_gitlab_commit_before_import(tmp_path: Path, m
     assert main([]) == EXIT_SUCCESS
     assert captured == {
         "clone_url": "https://gitlab.internal/dev/skills.git",
-        "expected_sha": "a" * 40,
+        "branch": "release/accepted",
         "ref_type": "TAG",
         "source_ref": "v1.2.3",
         "job_token": "job-secret",

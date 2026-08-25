@@ -71,7 +71,7 @@ def canonicalize_repository(raw_url: str) -> GitHubRepository:
 def clone_repository(
     clone_url: str,
     destination: Path,
-    expected_sha: str,
+    branch: str,
     ref_type: str,
     source_ref: str | None,
     job_token: str,
@@ -101,7 +101,17 @@ def clone_repository(
         for command in (
             ["git", "init", "-q", str(destination)],
             ["git", "-C", str(destination), "remote", "add", "origin", clone_url],
-            ["git", "-C", str(destination), "fetch", "--depth", "1", "--no-tags", "origin", expected_sha],
+            [
+                "git",
+                "-C",
+                str(destination),
+                "fetch",
+                "--depth",
+                "1",
+                "--no-tags",
+                "origin",
+                f"refs/heads/{branch}",
+            ],
             ["git", "-C", str(destination), "checkout", "--detach", "-q", "FETCH_HEAD"],
         ):
             subprocess.run(
@@ -126,8 +136,6 @@ def clone_repository(
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise SourceError("Unable to clone the landed Dev GitLab project") from exc
-    if commit_sha != expected_sha.lower():
-        raise SourceError("Dev GitLab checkout does not match SKILLHUB_DEV_GITLAB_COMMIT_SHA")
     return SourceCheckout(
         checkout_dir=destination.resolve(),
         commit_sha=commit_sha,

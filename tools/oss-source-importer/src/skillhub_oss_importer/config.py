@@ -17,12 +17,10 @@ class ConfigError(ValueError):
 _HANDOFF_REQUIRED = frozenset(
     {
         "SKILLHUB_SOURCE_REPOSITORY_URL",
-        "SKILLHUB_SOURCE_COMMIT_SHA",
         "SKILLHUB_SOURCE_REF_TYPE",
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
-        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_DEV_GITLAB_BRANCH",
         "SKILLHUB_SOURCE_SCAN_STATUS",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
     }
 )
 _HANDOFF_OPTIONAL = frozenset(
@@ -34,6 +32,7 @@ _HANDOFF_OPTIONAL = frozenset(
     }
 )
 _HANDOFF_VARIABLES = _HANDOFF_REQUIRED | _HANDOFF_OPTIONAL
+_GIT_BRANCH_PATTERN = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}")
 
 
 def _required(env: Mapping[str, str], name: str) -> str:
@@ -43,10 +42,18 @@ def _required(env: Mapping[str, str], name: str) -> str:
     return value
 
 
-def _sha(env: Mapping[str, str], name: str) -> str:
-    value = _required(env, name).lower()
-    if not re.fullmatch(r"[0-9a-f]{40}", value):
-        raise ConfigError(f"{name} must be a 40-character hexadecimal SHA")
+def _git_branch(env: Mapping[str, str], name: str) -> str:
+    value = _required(env, name)
+    parts = value.split("/")
+    if (
+        not _GIT_BRANCH_PATTERN.fullmatch(value)
+        or ".." in value
+        or "//" in value
+        or "@{" in value
+        or value.endswith(("/", "."))
+        or any(part.startswith(".") or part.endswith(".lock") for part in parts)
+    ):
+        raise ConfigError(f"{name} must be a valid Git branch")
     return value
 
 
@@ -115,12 +122,10 @@ class Config:
     source_subdirectory: Path
     report_path: Path
     timeout_seconds: float
-    dev_gitlab_commit_sha: str
-    source_commit_sha: str
+    dev_gitlab_branch: str
     ref_type: str
     source_ref: str | None
     scan_status: str
-    scan_commit_sha: str
     scan_id: str | None
     pipeline_id: str | None
     job_id: str | None
@@ -157,14 +162,10 @@ class Config:
             raise ConfigError(
                 "SKILLHUB_IMPORT_SOURCE_ROOT must be a safe relative path within the cloned repository"
             )
-        dev_gitlab_commit_sha = _sha(values, "SKILLHUB_DEV_GITLAB_COMMIT_SHA")
-        source_commit_sha = _sha(values, "SKILLHUB_SOURCE_COMMIT_SHA")
+        dev_gitlab_branch = _git_branch(values, "SKILLHUB_DEV_GITLAB_BRANCH")
         scan_status = values.get("SKILLHUB_SOURCE_SCAN_STATUS", "").strip()
         if scan_status != "PASSED":
             raise ConfigError("SKILLHUB_SOURCE_SCAN_STATUS must be PASSED")
-        scan_commit_sha = _sha(values, "SKILLHUB_SOURCE_SCAN_COMMIT_SHA")
-        if scan_commit_sha != dev_gitlab_commit_sha:
-            raise ConfigError("The scan commit must match SKILLHUB_DEV_GITLAB_COMMIT_SHA")
         ref_type = _required(values, "SKILLHUB_SOURCE_REF_TYPE")
         if ref_type not in {"TAG", "BRANCH", "COMMIT"}:
             raise ConfigError("SKILLHUB_SOURCE_REF_TYPE must be TAG, BRANCH, or COMMIT")
@@ -203,12 +204,10 @@ class Config:
             source_subdirectory=source_subdirectory,
             report_path=report_path.resolve(),
             timeout_seconds=timeout,
-            dev_gitlab_commit_sha=dev_gitlab_commit_sha,
-            source_commit_sha=source_commit_sha,
+            dev_gitlab_branch=dev_gitlab_branch,
             ref_type=ref_type,
             source_ref=source_ref,
             scan_status=scan_status,
-            scan_commit_sha=scan_commit_sha,
             scan_id=values.get("SKILLHUB_SOURCE_SCAN_ID", "").strip() or None,
             pipeline_id=values.get("CI_PIPELINE_ID", "").strip() or None,
             job_id=values.get("CI_JOB_ID", "").strip() or None,

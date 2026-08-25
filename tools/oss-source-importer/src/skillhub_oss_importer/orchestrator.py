@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from .client import AuthorizationError, SkillHubError, TransportError
@@ -16,7 +16,7 @@ def _metadata(
 ) -> dict[str, object]:
     data: dict[str, object] = {
         "repositoryUrl": config.repository_url,
-        "repositoryRevisionSha": config.source_commit_sha,
+        "repositoryRevisionSha": checkout.commit_sha,
         "sourceRefType": checkout.ref_type,
         "sourcePath": package.source_path,
         "pipelineId": config.pipeline_id,
@@ -24,8 +24,6 @@ def _metadata(
     }
     if checkout.source_ref is not None:
         data["sourceRef"] = checkout.source_ref
-    if not package.has_explicit_version:
-        data["versionOverride"] = f"git-{config.source_commit_sha}"
     if config.trigger_login_name is not None:
         data["initiatorProviderCode"] = config.trigger_provider_code
         data["initiatorLoginName"] = config.trigger_login_name
@@ -33,7 +31,7 @@ def _metadata(
 
 
 def run_import(config: Any, client: Any, checkout: SourceCheckout) -> dict[str, object]:
-    started_at = datetime.now(UTC).isoformat()
+    started_at = datetime.now(timezone.utc).isoformat()
     source_root = (checkout.checkout_dir / config.source_subdirectory).resolve()
     roots = discover_skill_roots(checkout.checkout_dir, source_root)
     root_paths = {root.path for root in roots}
@@ -68,7 +66,7 @@ def run_import(config: Any, client: Any, checkout: SourceCheckout) -> dict[str, 
         return _report(config, checkout, namespace, records, started_at, "VALIDATION_FAILED")
 
     partial = False
-    for package, record in zip(packages, records, strict=True):
+    for package, record in zip(packages, records):
         validation = record["validation"]
         if isinstance(validation, dict) and str(validation.get("outcome", "")).startswith("SKIPPED_"):
             record["submission"] = validation
@@ -105,14 +103,12 @@ def _report(
     return {
         "status": status,
         "startedAt": started_at,
-        "finishedAt": datetime.now(UTC).isoformat(),
+        "finishedAt": datetime.now(timezone.utc).isoformat(),
         "repositoryUrl": config.repository_url,
-        "commitSha": config.source_commit_sha,
-        "devGitlabCommitSha": checkout.commit_sha,
+        "commitSha": checkout.commit_sha,
         "sourceRefType": checkout.ref_type,
         "sourceRef": checkout.source_ref,
         "scanStatus": config.scan_status,
-        "scanCommitSha": config.scan_commit_sha,
         "scanId": config.scan_id,
         "namespaceSlug": config.namespace_slug,
         "namespace": namespace,

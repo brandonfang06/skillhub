@@ -1,8 +1,12 @@
 import os
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised by the Python 3.8 gate
+    import tomli as tomllib
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -47,12 +51,10 @@ def test_template_documents_required_pipeline_variables() -> None:
         "SKILLHUB_BASE_URL",
         "SKILLHUB_SERVICE_TOKEN",
         "SKILLHUB_SOURCE_REPOSITORY_URL",
-        "SKILLHUB_SOURCE_COMMIT_SHA",
         "SKILLHUB_SOURCE_REF_TYPE",
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
-        "SKILLHUB_DEV_GITLAB_COMMIT_SHA",
+        "SKILLHUB_DEV_GITLAB_BRANCH",
         "SKILLHUB_SOURCE_SCAN_STATUS",
-        "SKILLHUB_SOURCE_SCAN_COMMIT_SHA",
         "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
         "CI_JOB_TOKEN",
@@ -60,6 +62,9 @@ def test_template_documents_required_pipeline_variables() -> None:
         assert name in template
     assert "CI_REPOSITORY_URL" not in template
     assert "CI_COMMIT_SHA" not in template
+    assert "SKILLHUB_SOURCE_COMMIT_SHA" not in template
+    assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA" not in template
+    assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA" not in template
 
 
 def test_project_runner_uses_only_the_python_standard_library_at_runtime() -> None:
@@ -67,6 +72,7 @@ def test_project_runner_uses_only_the_python_standard_library_at_runtime() -> No
         (ROOT / "tools" / "oss-source-importer" / "pyproject.toml").read_text(encoding="utf-8")
     )
     assert project["project"]["dependencies"] == []
+    assert project["project"]["requires-python"] == ">=3.8"
     assert not (ROOT / "tools" / "oss-source-importer" / "requirements-runtime.txt").exists()
     assert not (ROOT / "tools" / "oss-source-importer" / "Dockerfile").exists()
 
@@ -90,13 +96,16 @@ def test_project_runner_uses_only_the_python_standard_library_at_runtime() -> No
 
 def test_smoke_separates_the_central_pipeline_checkout_from_the_dev_source() -> None:
     smoke = (ROOT / "scripts" / "oss-source-import-smoke-test.ps1").read_text(encoding="utf-8")
+    assert '"python:3.8-bookworm"' in smoke
     assert ":/pipeline:ro" in smoke
     assert ":/dev-source:ro" in smoke
     assert "CI_PROJECT_DIR=/pipeline" in smoke
     assert "SKILLHUB_DEV_GITLAB_REPOSITORY_URL=" in smoke
-    assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA=" in smoke
+    assert "SKILLHUB_DEV_GITLAB_BRANCH=main" in smoke
     assert "SKILLHUB_SOURCE_SCAN_STATUS=PASSED" in smoke
-    assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=" in smoke
+    assert "SKILLHUB_SOURCE_COMMIT_SHA=" not in smoke
+    assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA=" not in smoke
+    assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=" not in smoke
     assert '${pipeline}:/pipeline:ro' in smoke
     assert 'Join-Path $pipeline "pull-code.env"' in smoke
     assert "requirements-runtime.txt" not in smoke
