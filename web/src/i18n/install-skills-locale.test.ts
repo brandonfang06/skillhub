@@ -14,29 +14,22 @@ const SELECTION_KEYS = [
 
 const PAGE_KEYS = [
   'title',
-  'subtitle',
   'backToSearch',
   'empty',
   'selectedHeading',
   'removeSkill',
+  'targetsHeading',
   'scopeHeading',
   'scopeUser',
   'scopeProject',
   'projectWarning',
   'agentsHeading',
-  'agentsHint',
-  'genericUnsupported',
+  'agentPlaceholder',
   'selectAgentRequired',
-  'forceLabel',
-  'forceHint',
-  'forceWarning',
-  'identityHeading',
-  'identityHint',
   'commandsHeading',
   'commandsHint',
   'copyAll',
   'copyCommand',
-  'resultHint',
 ] as const
 
 describe('multi-skill install locale contract', () => {
@@ -51,6 +44,11 @@ describe('multi-skill install locale contract', () => {
     for (const key of PAGE_KEYS) {
       expect(locale.installSkills[key]).toBeTruthy()
     }
+  })
+
+  it.each([en, zh, zhTW])('removes retired Force and terminal-identity decision copy', (locale) => {
+    expect(locale.installSkills).not.toHaveProperty('forceLabel')
+    expect(locale.installSkills).not.toHaveProperty('identityHeading')
   })
 
   it('uses clear Traditional Chinese product wording', () => {

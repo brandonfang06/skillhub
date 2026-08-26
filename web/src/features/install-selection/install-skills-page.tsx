@@ -55,26 +55,24 @@ export function InstallSkillsPage() {
   const previousSelectedCountRef = useRef<number | null>(null)
   const selectedSkills = useInstallSelectionStore((state) => state.selectedSkills)
   const scope = useInstallSelectionStore((state) => state.scope)
-  const selectedAgentIds = useInstallSelectionStore((state) => state.selectedAgentIds)
-  const force = useInstallSelectionStore((state) => state.force)
+  const selectedAgentId = useInstallSelectionStore((state) => state.selectedAgentId)
   const removeSkill = useInstallSelectionStore((state) => state.removeSkill)
   const clearSelection = useInstallSelectionStore((state) => state.clearSelection)
   const setScope = useInstallSelectionStore((state) => state.setScope)
-  const toggleAgent = useInstallSelectionStore((state) => state.toggleAgent)
-  const setForce = useInstallSelectionStore((state) => state.setForce)
+  const setAgent = useInstallSelectionStore((state) => state.setAgent)
   const [copiedAll, copyAll] = useCopyToClipboard()
   const registryUrl = useMemo(() => getCliRegistryUrl(), [])
-  const hasSelectedAgent = selectedAgentIds.length > 0
+  const hasSelectedAgent = selectedAgentId !== null
   const commands = useMemo(
     () => selectedSkills.map((skill) => ({
       skill,
       command: buildSkillhubInstallCommand(skill.namespace, skill.slug, registryUrl, {
         scope,
-        agentIds: selectedAgentIds,
-        force,
+        agentId: selectedAgentId ?? undefined,
+        force: true,
       }),
     })),
-    [force, registryUrl, scope, selectedAgentIds, selectedSkills],
+    [registryUrl, scope, selectedAgentId, selectedSkills],
   )
 
   useEffect(() => {
@@ -94,8 +92,8 @@ export function InstallSkillsPage() {
   }
 
   return (
-    <div className={`${APP_SHELL_PAGE_CLASS_NAME} max-w-5xl mx-auto`}>
-      <div className="space-y-2">
+    <div className={`${APP_SHELL_PAGE_CLASS_NAME} max-w-5xl mx-auto !space-y-4`}>
+      <div className="space-y-1">
         <Button
           type="button"
           variant="ghost"
@@ -108,12 +106,9 @@ export function InstallSkillsPage() {
           <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
           {t('installSkills.backToSearch')}
         </Button>
-        <h1 ref={headingRef} tabIndex={-1} className="text-3xl font-bold tracking-tight outline-none">
+        <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-bold tracking-tight outline-none">
           {t('installSkills.title')}
         </h1>
-        <p className="text-muted-foreground">
-          {t('installSkills.subtitle')}
-        </p>
       </div>
 
       {selectedSkills.length === 0 ? (
@@ -122,125 +117,65 @@ export function InstallSkillsPage() {
         </Card>
       ) : (
         <>
-          <Card className="p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">
-                {t('installSkills.selectedHeading', { count: selectedSkills.length })}
-              </h2>
-              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                {t('installSelection.clear')}
-              </Button>
-            </div>
-            <ul className="divide-y">
-              {selectedSkills.map((skill) => (
-                <li key={`${skill.namespace}/${skill.slug}`} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{skill.displayName}</p>
-                    <p className="truncate font-mono text-xs text-muted-foreground">
-                      {skill.namespace}/{skill.slug}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t('installSkills.removeSkill', { skill: skill.displayName })}
-                    onClick={() => removeSkill(skill)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </Card>
-
-          <Card className="space-y-6 p-5">
-            <fieldset>
-              <legend className="mb-3 font-semibold">{t('installSkills.scopeHeading')}</legend>
-              <div className="flex flex-wrap gap-5">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="install-scope"
-                    checked={scope === 'user'}
-                    onChange={() => setScope('user')}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {t('installSkills.scopeUser')}
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="install-scope"
-                    checked={scope === 'project'}
-                    onChange={() => setScope('project')}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  {t('installSkills.scopeProject')}
-                </label>
-              </div>
-              {scope === 'project' && (
-                <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                  {t('installSkills.projectWarning')}
-                </p>
-              )}
-            </fieldset>
-
-            <fieldset>
-              <legend className="mb-1 font-semibold">{t('installSkills.agentsHeading')}</legend>
-              <p className="mb-3 text-sm text-muted-foreground">{t('installSkills.agentsHint')}</p>
-              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                {SUPPORTED_INSTALL_AGENTS.map((agent) => (
-                  <label key={agent.id} className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+          <Card className="space-y-3 p-4">
+            <h2 className="text-lg font-semibold">{t('installSkills.targetsHeading')}</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <fieldset>
+                <legend className="mb-2 text-sm font-semibold">{t('installSkills.scopeHeading')}</legend>
+                <div className="flex flex-wrap gap-5">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
-                      type="checkbox"
-                      checked={selectedAgentIds.includes(agent.id)}
-                      onChange={() => toggleAgent(agent.id)}
+                      type="radio"
+                      name="install-scope"
+                      checked={scope === 'user'}
+                      onChange={() => setScope('user')}
                       className="h-4 w-4 accent-primary"
                     />
-                    {agent.label}
+                    {t('installSkills.scopeUser')}
                   </label>
-                ))}
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="install-scope"
+                      checked={scope === 'project'}
+                      onChange={() => setScope('project')}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {t('installSkills.scopeProject')}
+                  </label>
+                </div>
+                {scope === 'project' && (
+                  <p className="mt-2 text-xs font-medium text-amber-800">
+                    {t('installSkills.projectWarning')}
+                  </p>
+                )}
+              </fieldset>
+
+              <div>
+                <label htmlFor="install-agent" className="mb-2 block text-sm font-semibold">
+                  {t('installSkills.agentsHeading')}
+                </label>
+                <select
+                  id="install-agent"
+                  value={selectedAgentId ?? ''}
+                  onChange={(event) => setAgent(event.target.value || null)}
+                  className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <option value="">{t('installSkills.agentPlaceholder')}</option>
+                  {SUPPORTED_INSTALL_AGENTS.map((agent) => (
+                    <option key={agent.id} value={agent.id}>{agent.label}</option>
+                  ))}
+                </select>
+                {!hasSelectedAgent && (
+                  <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+                    {t('installSkills.selectAgentRequired')}
+                  </p>
+                )}
               </div>
-              <p className="mt-3 text-sm text-muted-foreground">{t('installSkills.genericUnsupported')}</p>
-              {!hasSelectedAgent && (
-                <p role="alert" className="mt-2 text-sm font-medium text-destructive">
-                  {t('installSkills.selectAgentRequired')}
-                </p>
-              )}
-            </fieldset>
+            </div>
           </Card>
 
-          <Card className="space-y-3 p-5">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                aria-label={t('installSkills.forceLabel')}
-                checked={force}
-                onChange={(event) => setForce(event.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-primary"
-              />
-              <span>
-                <span className="block font-semibold">{t('installSkills.forceLabel')}</span>
-                <span className="block text-sm text-muted-foreground">{t('installSkills.forceHint')}</span>
-              </span>
-            </label>
-            {force && (
-              <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">
-                {t('installSkills.forceWarning')}
-              </p>
-            )}
-          </Card>
-
-          <Card className="space-y-3 p-5">
-            <h2 className="text-lg font-semibold">{t('installSkills.identityHeading')}</h2>
-            <p className="text-sm text-muted-foreground">{t('installSkills.identityHint')}</p>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/40 px-4 py-3 text-sm">
-              <code className="font-mono">npx @astron-team/skillhub@latest whoami --registry {registryUrl}</code>
-            </pre>
-          </Card>
-
-          <Card className="space-y-4 p-5">
+          <Card className="space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{t('installSkills.commandsHeading')}</h2>
@@ -252,7 +187,7 @@ export function InstallSkillsPage() {
               </Button>
             </div>
             {hasSelectedAgent ? (
-              <div className="space-y-3">
+              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                 {commands.map(({ command, skill }) => (
                   <CommandRow
                     key={`${skill.namespace}/${skill.slug}`}
@@ -263,11 +198,47 @@ export function InstallSkillsPage() {
                 ))}
               </div>
             ) : (
-              <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed p-3 text-center text-sm text-muted-foreground">
                 {t('installSkills.selectAgentRequired')}
               </p>
             )}
-            <p className="text-sm text-muted-foreground">{t('installSkills.resultHint')}</p>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-end">
+              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                {t('installSelection.clear')}
+              </Button>
+            </div>
+            <details>
+              <summary className="cursor-pointer select-none font-semibold">
+                {t('installSkills.selectedHeading', { count: selectedSkills.length })}
+              </summary>
+              <ul
+                data-visible-skill-rows="3"
+                className="mt-2 max-h-48 divide-y overflow-y-auto border-t"
+              >
+                {selectedSkills.map((skill) => (
+                  <li key={`${skill.namespace}/${skill.slug}`} className="flex min-h-16 items-center justify-between gap-4 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{skill.displayName}</p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {skill.namespace}/{skill.slug}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('installSkills.removeSkill', { skill: skill.displayName })}
+                      onClick={() => removeSkill(skill)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </Card>
         </>
       )}

@@ -54,7 +54,7 @@ describe('InstallSkillsPage', () => {
     })
   })
 
-  it('requires an Agent, then renders sorted commands for one shared target', () => {
+  it('requires one Agent, then copies sorted commands with force already enabled', () => {
     installSelectionStore.getState().addSkill({
       id: 2,
       namespace: 'team-z',
@@ -74,11 +74,13 @@ describe('InstallSkillsPage', () => {
     expect(copyAll.disabled).toBe(true)
     expect(container.textContent).toContain('installSkills.selectAgentRequired')
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Codex' }))
+    fireEvent.change(screen.getByLabelText('installSkills.agentsHeading'), {
+      target: { value: 'codex' },
+    })
 
     const userCommands = [
-      'npx @astron-team/skillhub@latest install alpha --registry https://skillhub.example.com/skillhub --scope user --agent codex',
-      'npx @astron-team/skillhub@latest install zeta --namespace team-z --registry https://skillhub.example.com/skillhub --scope user --agent codex',
+      'npx @astron-team/skillhub@latest install alpha --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
+      'npx @astron-team/skillhub@latest install zeta --namespace team-z --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
     ]
     expect(container.textContent).toContain(userCommands[0])
     expect(container.textContent).toContain(userCommands[1])
@@ -88,7 +90,32 @@ describe('InstallSkillsPage', () => {
     expect(copyMock).toHaveBeenCalledWith(userCommands.join('\n'))
   })
 
-  it('applies project scope and force to every command with an overwrite warning', () => {
+  it('puts targets first, commands second, and selected Skills in a collapsed three-row disclosure', () => {
+    installSelectionStore.getState().addSkill({
+      id: 1,
+      namespace: 'global',
+      slug: 'alpha',
+      displayName: 'Alpha',
+    })
+    installSelectionStore.getState().addSkill({ id: 2, namespace: 'global', slug: 'beta', displayName: 'Beta' })
+    installSelectionStore.getState().addSkill({ id: 3, namespace: 'global', slug: 'gamma', displayName: 'Gamma' })
+    installSelectionStore.getState().addSkill({ id: 4, namespace: 'global', slug: 'omega', displayName: 'Omega' })
+    const { container } = render(<InstallSkillsPage />)
+
+    const targets = screen.getByRole('heading', { name: 'installSkills.targetsHeading' })
+    const commands = screen.getByRole('heading', { name: 'installSkills.commandsHeading' })
+    const selected = container.querySelector('details')
+
+    expect(targets.compareDocumentPosition(commands) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(commands.compareDocumentPosition(selected!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(selected?.hasAttribute('open')).toBe(false)
+    expect(selected?.querySelector('[data-visible-skill-rows="3"]')).not.toBeNull()
+    expect(screen.queryByRole('checkbox', { name: 'installSkills.forceLabel' })).toBeNull()
+    expect(container.textContent).not.toContain('installSkills.identityHeading')
+    expect(container.textContent).not.toContain('whoami')
+  })
+
+  it('applies project scope and removes a Skill from the compact disclosure', () => {
     installSelectionStore.getState().addSkill({
       id: 1,
       namespace: 'global',
@@ -97,29 +124,16 @@ describe('InstallSkillsPage', () => {
     })
     const { container } = render(<InstallSkillsPage />)
 
+    fireEvent.change(screen.getByLabelText('installSkills.agentsHeading'), {
+      target: { value: 'codex' },
+    })
     fireEvent.click(screen.getByRole('radio', { name: 'installSkills.scopeProject' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Codex' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'installSkills.forceLabel' }))
 
     expect(container.textContent).toContain('installSkills.projectWarning')
-    expect(container.textContent).toContain('installSkills.forceWarning')
     expect(container.textContent).toContain(
       'install alpha --registry https://skillhub.example.com/skillhub --scope project --agent codex --force',
     )
-  })
 
-  it('removes a selected skill and keeps CLI identity guidance visible', () => {
-    installSelectionStore.getState().addSkill({
-      id: 1,
-      namespace: 'global',
-      slug: 'alpha',
-      displayName: 'Alpha',
-    })
-    const { container } = render(<InstallSkillsPage />)
-
-    expect(container.textContent).toContain(
-      'npx @astron-team/skillhub@latest whoami --registry https://skillhub.example.com/skillhub',
-    )
     fireEvent.click(screen.getByRole('button', { name: 'installSkills.removeSkill:Alpha' }))
 
     expect(installSelectionStore.getState().selectedSkills).toEqual([])

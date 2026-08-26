@@ -91,8 +91,7 @@ describe('install selection store', () => {
       displayName: 'Alpha',
     })
     firstStore.getState().setScope('project')
-    firstStore.getState().toggleAgent('codex')
-    firstStore.getState().setForce(true)
+    firstStore.getState().setAgent('codex')
 
     const restoredStore = createInstallSelectionStore(storage)
 
@@ -101,8 +100,7 @@ describe('install selection store', () => {
       isSelectionMode: false,
       selectedSkills: [],
       scope: 'user',
-      selectedAgentIds: [],
-      force: false,
+      selectedAgentId: null,
     })
 
     restoredStore.getState().bindOwner('user-a')
@@ -111,8 +109,7 @@ describe('install selection store', () => {
       ownerUserId: 'user-a',
       isSelectionMode: true,
       scope: 'project',
-      selectedAgentIds: ['codex'],
-      force: true,
+      selectedAgentId: 'codex',
     })
     expect(restoredStore.getState().selectedSkills).toHaveLength(1)
 
@@ -123,8 +120,7 @@ describe('install selection store', () => {
       isSelectionMode: false,
       selectedSkills: [],
       scope: 'user',
-      selectedAgentIds: [],
-      force: false,
+      selectedAgentId: null,
     })
   })
 
@@ -142,14 +138,13 @@ describe('install selection store', () => {
     const values = new Map<string, string>([[
       INSTALL_SELECTION_STORAGE_KEY,
       JSON.stringify({
-        version: 1,
+        version: 2,
         state: {
           ownerUserId: 'user-a',
           isSelectionMode: true,
           selectedSkills,
           scope: 'user',
-          selectedAgentIds: ['codex'],
-          force: false,
+          selectedAgentId: 'codex',
         },
       }),
     ]])
@@ -169,7 +164,7 @@ describe('install selection store', () => {
     expect(store.getState().selectedSkills.some((skill) => skill.slug === 'skill-19')).toBe(false)
   })
 
-  it('drops unsupported Agent ids at the session-storage boundary', () => {
+  it('migrates old multi-Agent state to the first supported Agent in detector order', () => {
     const values = new Map<string, string>([[
       INSTALL_SELECTION_STORAGE_KEY,
       JSON.stringify({
@@ -179,7 +174,7 @@ describe('install selection store', () => {
           isSelectionMode: true,
           selectedSkills: [],
           scope: 'user',
-          selectedAgentIds: ['generic', 'codex', 'unsupported'],
+          selectedAgentIds: ['generic', 'cursor', 'codex', 'unsupported'],
           force: false,
         },
       }),
@@ -192,10 +187,15 @@ describe('install selection store', () => {
 
     store.getState().bindOwner('user-a')
 
-    expect(store.getState().selectedAgentIds).toEqual(['codex'])
+    expect(store.getState().selectedAgentId).toBe('codex')
 
-    store.getState().toggleAgent('generic')
+    store.getState().setAgent('cursor')
+    expect(store.getState().selectedAgentId).toBe('cursor')
 
-    expect(store.getState().selectedAgentIds).toEqual(['codex'])
+    store.getState().setAgent('generic')
+    expect(store.getState().selectedAgentId).toBe('cursor')
+
+    store.getState().setAgent(null)
+    expect(store.getState().selectedAgentId).toBeNull()
   })
 })

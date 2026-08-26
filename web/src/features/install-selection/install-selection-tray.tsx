@@ -18,8 +18,8 @@ export function InstallSelectionTray({
   const { t } = useTranslation()
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="sticky top-3 z-30 rounded-xl border bg-background/95 px-4 py-3 shadow-md backdrop-blur">
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p role="status" aria-live="polite" className="font-medium">
             {t('installSelection.count', { count: selectedCount, max: maxSelected })}

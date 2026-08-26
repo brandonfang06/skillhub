@@ -1,6 +1,8 @@
+/** @vitest-environment jsdom */
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
 const useSearchMock = vi.fn()
@@ -281,6 +283,25 @@ describe('SearchPage', () => {
 
     expect(html).toContain('skill-card')
     expect(html).not.toContain('empty-state')
+  })
+
+  afterEach(() => cleanup())
+
+  it('renders the install continuation action above the Skill results', () => {
+    installSelectionStore.getState().enterSelectionMode()
+    installSelectionStore.getState().addSkill({
+      id: 1,
+      namespace: 'global',
+      slug: 'demo',
+      displayName: 'Demo Skill',
+    })
+    expect(installSelectionStore.getState().isSelectionMode).toBe(true)
+
+    const { container } = render(<SearchPage />)
+    const html = container.innerHTML
+
+    expect(html.indexOf('installSelection.continue')).toBeGreaterThan(-1)
+    expect(html.indexOf('installSelection.continue')).toBeLessThan(html.indexOf('skill-card'))
   })
 
   it('shows a generic empty state when the default discovery list is empty', () => {

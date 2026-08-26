@@ -11,6 +11,23 @@ install UI.
 
 No commit or push is part of this plan.
 
+## 2026-08-26 Follow-up
+
+The approved design amendment changes the frontend implementation baseline:
+
+- replace persisted Agent arrays and checkbox UI with one supported Agent ID;
+- migrate an existing tab state by retaining the first supported Agent in CLI
+  detector order;
+- always append `--force` and remove the Force state/control;
+- move the Search continuation row above results;
+- order the Install page as targets, commands, and a collapsed three-row
+  selected-Skills disclosure; and
+- remove terminal-identity guidance.
+
+Verification must execute the generated single-Agent command with the published
+npm 0.1.9 bundle. Repository-only CLI tests are supplementary and cannot prove
+the public artifact contract.
+
 ## Public Test Seams
 
 1. Pure command renderer: coordinates plus shared target options produce exact

@@ -135,6 +135,23 @@ describe('skill-card module exports', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it('places the selection checkbox immediately before the Skill heading', () => {
+    render(createElement(mod.SkillCard, {
+      skill,
+      selectionMode: true,
+      selected: false,
+      onSelectionChange: vi.fn(),
+    }))
+
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'installSelection.selectSkill:Demo Skill',
+    })
+    const heading = screen.getByRole('heading', { name: 'Demo Skill' })
+
+    expect(checkbox.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(checkbox.parentElement).toBe(heading.parentElement)
+  })
+
   it('does not render selection controls outside selection mode', () => {
     render(createElement(mod.SkillCard, { skill, onClick: vi.fn() }))
 

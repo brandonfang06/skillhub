@@ -64,12 +64,7 @@ export function SkillCard({
     >
       <div className="flex h-full flex-col">
         <div className="flex items-start justify-between mb-3">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors" style={{ color: 'hsl(var(--foreground))' }}>
-              {skill.displayName}
-            </h3>
-          </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-start gap-3">
             {selectionMode && (
               <input
                 type="checkbox"
@@ -79,9 +74,14 @@ export function SkillCard({
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
                 onChange={(event) => onSelectionChange?.(event.target.checked)}
-                className="h-5 w-5 shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-50"
               />
             )}
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors" style={{ color: 'hsl(var(--foreground))' }}>
+              {skill.displayName}
+            </h3>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
           </div>
         </div>

@@ -2,6 +2,59 @@
 
 Date: 2026-08-25
 
+## 2026-08-26 Compact Single-Agent Follow-up
+
+This follow-up supersedes the original multi-Agent, optional-Force, terminal
+identity, and install-page ordering decisions recorded below. The public npm
+package `@astron-team/skillhub@0.1.9` rejects repeated explicit `--agent`
+arguments with `multiple install targets detected`, so the Web workflow now
+keeps multi-Skill selection but allows exactly one Agent target.
+
+The compact workflow was verified with these results:
+
+- the Skill checkbox renders immediately left of its title;
+- the Search continuation action is sticky above the result list and remains
+  within the initial desktop/mobile viewport;
+- the Install page orders target controls, copyable commands, and a collapsed
+  selected-Skills disclosure whose list is capped at three visible rows;
+- commands always include one normalized `--agent` and `--force`;
+- the Force control and terminal identity section are no longer rendered; and
+- English, Simplified Chinese, and Traditional Chinese expose the same contract.
+
+Automated verification passed:
+
+- focused Vitest: 7 files, 66 tests;
+- full Vitest: 232 files, 955 tests;
+- `corepack pnpm run typecheck`;
+- `corepack pnpm run lint`;
+- `corepack pnpm run build` with 2,422 modules transformed; and
+- `corepack pnpm run test:e2e:subpath`: 26/26 desktop and mobile tests.
+
+The exact updated Web source was built as
+`skillhub-web:oss-import-smoke` (`sha256:0103baf459c4e5555c03d1a73d0df21904516ef086037352a9b80464c08a05df`).
+Both root and `/skillhub` containers ran that digest. PostgreSQL, Redis, MinIO,
+scanner, FastAPI, root Web, and `/skillhub` Web were all healthy; the root and
+subpath install routes returned HTTP 200. Browser checks found no console error
+and confirmed the protected root/subpath routes retained the correct login
+boundary.
+
+Finally, the exact public-package shape was exercised against the real stack:
+
+```text
+npx @astron-team/skillhub@latest install alpha-smoke-skill \
+  --namespace oss-skillhub-smoke-fixture-2641d1fab016 \
+  --registry http://127.0.0.1:58082/skillhub \
+  --scope project --agent codex --force --token <short-lived-token> --json
+```
+
+The command exited 0 and installed for the single `codex` target. PostgreSQL
+recorded `local_skill_download_event.id = 5` for user `docker-admin`, source
+`cli`, and resolved version `20260825092850`. The 15-minute validation token
+(`api_token.id = 12`) was revoked immediately, the temporary project directory
+was removed, and zero matching validation tokens remained active.
+
+## Historical 2026-08-25 Baseline
+
 ## Scope
 
 - Added an authenticated multi-select mode to `/search` with a 20-Skill limit,
@@ -73,16 +126,12 @@ was revoked immediately. After acceptance PostgreSQL had zero
 `idle in transaction` sessions; the observed distribution was one active
 inspection session and six idle pooled connections.
 
-## Security Boundary And Limitation
+## Historical Security Boundary And Limitation
 
-The generated public npm command was verified in browser output and the real
-backend route/event path was verified directly. A success run did not hand the
-fresh bearer to an `npx`-downloaded external package process because the tool
-safety review rejected that secret exposure. This is not an application-code
-gap: the Web emits no token, and the existing CLI-authenticated download route
-is the unchanged tracking boundary. A separately approved external-package
-acceptance may be run later with another short-lived token if policy requires
-literal npm-process coverage.
+The original run did not hand a bearer to an `npx`-downloaded package process.
+That historical limitation is now closed by the 2026-08-26 short-lived-token
+acceptance above; the token was revoked immediately after the literal public
+npm package completed.
 
 ## Review Resolution
 

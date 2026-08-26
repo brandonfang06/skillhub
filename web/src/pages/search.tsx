@@ -299,7 +299,7 @@ export function SearchPage() {
   const resultCount = starredOnly ? filteredStarredSkills.length : (data?.total ?? 0)
 
   return (
-    <div className={cn(APP_SHELL_PAGE_CLASS_NAME, isSelectionMode && 'pb-28 sm:pb-20')}>
+    <div className={cn(APP_SHELL_PAGE_CLASS_NAME)}>
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
         <SearchBar
@@ -399,6 +399,15 @@ export function SearchPage() {
         </div>
       </div>
 
+      {isSelectionMode && (
+        <InstallSelectionTray
+          selectedCount={selectedSkills.length}
+          maxSelected={MAX_SELECTED_SKILLS}
+          onClear={handleClearSelection}
+          onContinue={() => navigate({ to: '/install' })}
+        />
+      )}
+
       {/* Results */}
       {isPageLoading ? (
         <SkeletonList count={PAGE_SIZE} />
@@ -452,14 +461,6 @@ export function SearchPage() {
               ? (q ? t('search.noStarredResultsFor', { q }) : t('search.noStarredSkills'))
               : (q ? t('search.noResultsFor', { q }) : undefined)
           }
-        />
-      )}
-      {isSelectionMode && (
-        <InstallSelectionTray
-          selectedCount={selectedSkills.length}
-          maxSelected={MAX_SELECTED_SKILLS}
-          onClear={handleClearSelection}
-          onContinue={() => navigate({ to: '/install' })}
         />
       )}
     </div>

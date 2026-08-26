@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
-import { normalizeInstallAgentIds } from './install-agents'
+import { normalizeInstallAgentId, normalizeInstallAgentIds } from './install-agents'
 
 export const MAX_SELECTED_SKILLS = 20
 export const INSTALL_SELECTION_STORAGE_KEY = 'skillhub.install-selection.v1'
@@ -25,26 +25,32 @@ export interface InstallSelectionState {
   isSelectionMode: boolean
   selectedSkills: InstallSelectionSkill[]
   scope: InstallScope
-  selectedAgentIds: string[]
-  force: boolean
+  selectedAgentId: string | null
   bindOwner: (userId: string | null) => void
   enterSelectionMode: () => void
   addSkill: (skill: InstallSelectionSkill) => void
   removeSkill: (skill: Pick<InstallSelectionSkill, 'namespace' | 'slug'>) => void
   clearSelection: () => void
   setScope: (scope: InstallScope) => void
-  toggleAgent: (agentId: string) => void
-  setForce: (force: boolean) => void
+  setAgent: (agentId: string | null) => void
 }
 
 type PersistedInstallSelectionState = Pick<
   InstallSelectionState,
-  'ownerUserId' | 'isSelectionMode' | 'selectedSkills' | 'scope' | 'selectedAgentIds' | 'force'
+  'ownerUserId' | 'isSelectionMode' | 'selectedSkills' | 'scope' | 'selectedAgentId'
 >
 
 interface PersistedInstallSelectionEnvelope {
-  version: 1
+  version: 2
   state: PersistedInstallSelectionState
+}
+
+interface LegacyPersistedInstallSelectionState {
+  ownerUserId?: unknown
+  isSelectionMode?: unknown
+  selectedSkills?: unknown
+  scope?: unknown
+  selectedAgentIds?: unknown
 }
 
 export function installSelectionSkillCoordinate(
@@ -67,8 +73,7 @@ function defaultState(ownerUserId: string | null = null): PersistedInstallSelect
     isSelectionMode: false,
     selectedSkills: [],
     scope: 'user',
-    selectedAgentIds: [],
-    force: false,
+    selectedAgentId: null,
   }
 }
 
@@ -100,26 +105,38 @@ function readPersistedState(storage?: InstallSelectionStorage): PersistedInstall
   try {
     const rawValue = storage.getItem(INSTALL_SELECTION_STORAGE_KEY)
     if (!rawValue) return defaultState()
-    const envelope = JSON.parse(rawValue) as Partial<PersistedInstallSelectionEnvelope>
-    if (envelope.version !== 1 || !envelope.state || typeof envelope.state !== 'object') {
+    const envelope = JSON.parse(rawValue) as {
+      version?: unknown
+      state?: LegacyPersistedInstallSelectionState
+    }
+    if (
+      (envelope.version !== 1 && envelope.version !== 2)
+      || !envelope.state
+      || typeof envelope.state !== 'object'
+    ) {
       storage.removeItem(INSTALL_SELECTION_STORAGE_KEY)
       return defaultState()
     }
-    const state = envelope.state as Partial<PersistedInstallSelectionState>
+    const state = envelope.state
     const ownerUserId = typeof state.ownerUserId === 'string' ? state.ownerUserId : null
     const selectedSkills = Array.isArray(state.selectedSkills)
       ? normalizeSelectedSkills(state.selectedSkills)
       : []
-    const selectedAgentIds = Array.isArray(state.selectedAgentIds)
-      ? normalizeInstallAgentIds(state.selectedAgentIds.filter((value): value is string => typeof value === 'string'))
-      : []
+    const selectedAgentId = envelope.version === 2
+      ? normalizeInstallAgentId((state as { selectedAgentId?: unknown }).selectedAgentId)
+      : (
+          Array.isArray(state.selectedAgentIds)
+            ? normalizeInstallAgentIds(
+                state.selectedAgentIds.filter((value): value is string => typeof value === 'string'),
+              )[0] ?? null
+            : null
+        )
     return {
       ownerUserId,
       isSelectionMode: ownerUserId !== null && state.isSelectionMode === true,
       selectedSkills: ownerUserId === null ? [] : selectedSkills,
       scope: state.scope === 'project' ? 'project' : 'user',
-      selectedAgentIds: ownerUserId === null ? [] : selectedAgentIds,
-      force: ownerUserId !== null && state.force === true,
+      selectedAgentId: ownerUserId === null ? null : selectedAgentId,
     }
   } catch {
     storage.removeItem(INSTALL_SELECTION_STORAGE_KEY)
@@ -129,14 +146,13 @@ function readPersistedState(storage?: InstallSelectionStorage): PersistedInstall
 
 function writePersistedState(storage: InstallSelectionStorage, state: InstallSelectionState): void {
   const envelope: PersistedInstallSelectionEnvelope = {
-    version: 1,
+    version: 2,
     state: {
       ownerUserId: state.ownerUserId,
       isSelectionMode: state.isSelectionMode,
       selectedSkills: state.selectedSkills,
       scope: state.scope,
-      selectedAgentIds: state.selectedAgentIds,
-      force: state.force,
+      selectedAgentId: state.selectedAgentId,
     },
   }
   storage.setItem(INSTALL_SELECTION_STORAGE_KEY, JSON.stringify(envelope))
@@ -184,15 +200,11 @@ export function createInstallSelectionStore(storage?: InstallSelectionStorage) {
       selectedSkills: [],
     }),
     setScope: (scope) => set({ scope }),
-    toggleAgent: (agentId) => set((state) => {
-      if (normalizeInstallAgentIds([agentId]).length === 0) return state
-      return {
-        selectedAgentIds: state.selectedAgentIds.includes(agentId)
-          ? state.selectedAgentIds.filter((value) => value !== agentId)
-          : normalizeInstallAgentIds([...state.selectedAgentIds, agentId]),
-      }
+    setAgent: (agentId) => set((state) => {
+      if (agentId === null) return { selectedAgentId: null }
+      const normalizedAgentId = normalizeInstallAgentId(agentId)
+      return normalizedAgentId ? { selectedAgentId: normalizedAgentId } : state
     }),
-    setForce: (force) => set({ force }),
   }))
 
   if (storage) {

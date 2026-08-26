@@ -6,6 +6,44 @@ Approved for implementation on 2026-08-25. The user completed the
 `grill-with-docs` decision sequence, delegated the remaining implementation
 details, and authorized development and verification without commit or push.
 
+## 2026-08-26 Approved Compatibility And Compactness Amendment
+
+This amendment supersedes conflicting Agent, Force, Search-tray, Install-page
+ordering, and terminal-identity guidance below.
+
+- The published npm artifact is the contract. `@astron-team/skillhub@latest`
+  currently resolves to 0.1.9 and accepts one explicit Agent target per
+  non-interactive scoped install. Although newer repository source can return
+  multiple explicit targets, that behavior is not present in the published
+  bundle and cannot be used by this Web flow.
+- Skills remain multi-select, but the shared Agent target is required and
+  single-select. The Web emits exactly one `--agent <id>` per generated command.
+  It does not change, build, fork, or publish the CLI.
+- Every generated command always includes `--force`. The page does not expose a
+  Force checkbox. The command copy briefly explains that the latest published
+  version replaces the existing target directory and local changes.
+- In Skill cards, the selection checkbox is immediately left of the primary
+  Skill heading rather than grouped with the namespace badge.
+- While Search selection mode is active, selected count, clear, and **Continue
+  to install** are rendered above the result grid in a compact sticky action
+  row. The user must not need to reach the bottom of the results to continue.
+- The Install page is vertically compact and ordered as: (1) shared Scope and
+  single Agent target, (2) copyable commands, and (3) a selected-Skills
+  disclosure. The disclosure is collapsed by default; when opened, its list is
+  capped at the height of three Skill rows and scrolls internally.
+- The separate Force control/card and **Verify the Terminal identity** card are
+  removed. Existing CLI authentication and per-download attribution behavior
+  remain unchanged; removing explanatory UI does not weaken the backend
+  authentication boundary.
+- Target controls use compact single-choice inputs. Copy remains disabled until
+  one supported Agent is selected. Scope continues to default to `user`.
+
+The amendment exists because the earlier design inferred repeatable explicit
+Agent installation from repository source and CLI help text. A real published
+0.1.9 invocation with `--agent codex --agent cursor` instead exits with
+`multiple install targets detected`, while the same command with one Agent
+succeeds against the real Python backend and PostgreSQL-backed catalog.
+
 ## Relationship To The Collection Design
 
 This design revisits only the prior decision that an arbitrary cross-search
@@ -315,3 +353,5 @@ event semantics.
 - An **Add to install list** action on skill detail pages.
 - Enforcing equality between the Web list composer and the CLI installer.
 - Custom install-directory input and `--dir` command generation.
+- Web multi-Agent commands until a public npm release is verified to support
+  multiple explicit install targets.

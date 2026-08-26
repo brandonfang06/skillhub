@@ -8,7 +8,7 @@ import {
   getBrowserAppUrl,
   getCliRegistryUrl as getRuntimeCliRegistryUrl,
 } from '@/shared/lib/runtime-config'
-import { normalizeInstallAgentIds } from '@/features/install-selection/install-agents'
+import { normalizeInstallAgentId } from '@/features/install-selection/install-agents'
 import type { InstallScope } from '@/features/install-selection/install-selection-store'
 
 interface InstallCommandProps {
@@ -36,7 +36,7 @@ export function buildInstallCommand(namespace: string, slug: string, baseUrl: st
 
 interface SkillhubInstallCommandOptions {
   scope?: InstallScope
-  agentIds?: readonly string[]
+  agentId?: string
   force?: boolean
 }
 
@@ -48,11 +48,10 @@ export function buildSkillhubInstallCommand(
 ): string {
   const namespaceArg = namespace === 'global' ? '' : ` --namespace ${namespace}`
   const scopeArg = options.scope ? ` --scope ${options.scope}` : ''
-  const agentArgs = normalizeInstallAgentIds(options.agentIds ?? [])
-    .map((agentId) => ` --agent ${agentId}`)
-    .join('')
+  const agentId = normalizeInstallAgentId(options.agentId)
+  const agentArg = agentId ? ` --agent ${agentId}` : ''
   const forceArg = options.force ? ' --force' : ''
-  return `npx @astron-team/skillhub@latest install ${slug}${namespaceArg} --registry ${baseUrl}${scopeArg}${agentArgs}${forceArg}`
+  return `npx @astron-team/skillhub@latest install ${slug}${namespaceArg} --registry ${baseUrl}${scopeArg}${agentArg}${forceArg}`
 }
 
 interface CommandBlockProps {

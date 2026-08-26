@@ -85,18 +85,18 @@ describe('install-command', () => {
     )
   })
 
-  it('adds deterministic non-interactive scope, Agents, and force options', () => {
+  it('adds one deterministic non-interactive Agent and force option', () => {
     expect(buildSkillhubInstallCommand(
       'team-alpha',
       'my-skill',
       'https://skill.xfyun.cn/skillhub',
       {
         scope: 'project',
-        agentIds: ['cursor', 'codex', 'cursor'],
+        agentId: 'codex',
         force: true,
       },
     )).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --namespace team-alpha --registry https://skill.xfyun.cn/skillhub --scope project --agent codex --agent cursor --force',
+      'npx @astron-team/skillhub@latest install my-skill --namespace team-alpha --registry https://skill.xfyun.cn/skillhub --scope project --agent codex --force',
     )
   })
 
@@ -105,9 +105,9 @@ describe('install-command', () => {
       'global',
       'my-skill',
       'https://skill.xfyun.cn',
-      { scope: 'user', agentIds: ['generic', 'codex'] },
+      { scope: 'user', agentId: 'generic', force: true },
     )).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --registry https://skill.xfyun.cn --scope user --agent codex',
+      'npx @astron-team/skillhub@latest install my-skill --registry https://skill.xfyun.cn --scope user --force',
     )
   })
 

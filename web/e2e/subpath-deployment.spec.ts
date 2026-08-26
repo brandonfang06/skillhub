@@ -554,8 +554,19 @@ test.describe('SkillHub production subpath deployment', () => {
 
     await page.goto(`${basePath}/search`)
     await page.getByRole('button', { name: 'Select multiple Skills' }).click()
-    await page.getByRole('checkbox', { name: 'Select Subpath Skill' }).check()
+    const skillCheckbox = page.getByRole('checkbox', { name: 'Select Subpath Skill' })
+    const skillHeading = page.getByRole('heading', { name: 'Subpath Skill', exact: true })
+    await skillCheckbox.check()
     await expect(page.getByRole('status')).toHaveText('1 / 20 Skills selected')
+    const checkboxBox = await skillCheckbox.boundingBox()
+    const headingBox = await skillHeading.boundingBox()
+    expect(checkboxBox!.x).toBeLessThan(headingBox!.x)
+    expect(checkboxBox!.y).toBeLessThan(headingBox!.y + headingBox!.height)
+
+    const continueButton = page.getByRole('button', { name: 'Continue to install' })
+    await expect(continueButton).toBeInViewport()
+    const continueBox = await continueButton.boundingBox()
+    expect(continueBox!.y).toBeLessThan(checkboxBox!.y)
 
     await page.getByRole('button', { name: 'Clear selection' }).click()
     await expect(page.getByRole('button', { name: 'Select multiple Skills' })).toBeFocused()
@@ -565,14 +576,25 @@ test.describe('SkillHub production subpath deployment', () => {
     await page.reload()
     await expect(page.getByRole('status')).toHaveText('1 / 20 Skills selected')
 
-    await page.getByRole('button', { name: 'Continue to install' }).click()
+    await continueButton.click()
     await expect(page).toHaveURL(`http://127.0.0.1:3190${basePath}/install`)
     await expect(page.getByRole('heading', { name: 'Install Skills' })).toBeFocused()
-    await page.getByRole('checkbox', { name: 'Codex' }).check()
+    await page.getByLabel('Agent targets').selectOption('codex')
     await expect(page.getByText(
-      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex',
+      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex --force',
       { exact: true },
     )).toBeVisible()
+    const targetsHeading = page.getByRole('heading', { name: 'Install target' })
+    const commandsHeading = page.getByRole('heading', { name: 'Terminal commands' })
+    const selectedSummary = page.getByText('1 Skills selected', { exact: true })
+    const targetBox = await targetsHeading.boundingBox()
+    const commandsBox = await commandsHeading.boundingBox()
+    const selectedBox = await selectedSummary.boundingBox()
+    expect(targetBox!.y).toBeLessThan(commandsBox!.y)
+    expect(commandsBox!.y).toBeLessThan(selectedBox!.y)
+    expect(selectedBox!.y + selectedBox!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
+    await expect(page.getByText('Verify the Terminal identity')).toHaveCount(0)
+    await expect(page.getByRole('checkbox', { name: 'Update/reinstall existing Skills to the latest version' })).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
 
     await page.getByRole('button', { name: 'Clear selection' }).click()

@@ -19,6 +19,12 @@ const SUPPORTED_INSTALL_AGENT_IDS = new Set<string>(
   SUPPORTED_INSTALL_AGENTS.map((agent) => agent.id),
 )
 
+export function normalizeInstallAgentId(agentId: unknown): string | null {
+  return typeof agentId === 'string' && SUPPORTED_INSTALL_AGENT_IDS.has(agentId)
+    ? agentId
+    : null
+}
+
 export function normalizeInstallAgentIds(agentIds: readonly string[]): string[] {
   const selectedIds = new Set(agentIds.filter((agentId) => SUPPORTED_INSTALL_AGENT_IDS.has(agentId)))
   return SUPPORTED_INSTALL_AGENTS
