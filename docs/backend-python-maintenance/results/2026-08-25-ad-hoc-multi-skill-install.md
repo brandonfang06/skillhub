@@ -2,6 +2,42 @@
 
 Date: 2026-08-25
 
+## 2026-08-26 UX Discoverability Follow-up
+
+The Search entry is now a large primary **Install multiple Skills** call to
+action with an existing list-plus icon, visible “select up to 20 and copy
+install commands” explanation, and forward affordance. Its accessible name
+remains the concise action title. Equivalent copy is present in English,
+Simplified Chinese, and Traditional Chinese.
+
+The Install page selected-Skills disclosure is now open on first render. Its
+summary uses the existing list/check, muted-surface, focus-ring, and chevron
+patterns; the list remains collapsible and capped at three visible rows before
+internal scrolling. Selection, command, tracking, API, and public CLI behavior
+did not change.
+
+Verification passed after the final responsive wrapper correction:
+
+- focused Vitest: 3 files, 21 tests;
+- full Vitest: 232 files, 956 tests;
+- `corepack pnpm run typecheck`;
+- `corepack pnpm run lint`;
+- `corepack pnpm run build` with 2,422 modules transformed; and
+- `corepack pnpm run test:e2e:subpath`: 28/28 desktop and mobile tests,
+  including a dedicated Traditional Chinese layout case.
+
+The final Web image
+`sha256:2b9948fdd38663a55e60c682ce5609ea5b868bb390cc98fc3e3078d48eb47963`
+ran in both root and `/skillhub` containers. PostgreSQL, Redis, MinIO, scanner,
+FastAPI, root Web, and subpath Web were healthy; root Search, subpath Search,
+and the FastAPI health endpoint returned HTTP 200. Recent backend and Web logs
+contained no SQL, traceback, exception, or nginx error.
+
+Real 390 x 844 browser acceptance measured the Traditional Chinese call to
+action at 350.4 x 64 px in both root and `/skillhub`, with the normal 16 px page
+inset, readable title/hint/icon/arrow composition, no horizontal overflow, and
+no console error. The temporary viewport override was reset after acceptance.
+
 ## 2026-08-26 Compact Single-Agent Follow-up
 
 This follow-up supersedes the original multi-Agent, optional-Force, terminal

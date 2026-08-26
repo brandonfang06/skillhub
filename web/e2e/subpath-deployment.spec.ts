@@ -553,7 +553,12 @@ test.describe('SkillHub production subpath deployment', () => {
     await installMockApi(page, { authenticated: true }, observed)
 
     await page.goto(`${basePath}/search`)
-    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+    const multiInstallButton = page.getByRole('button', { name: 'Install multiple Skills' })
+    await expect(page.getByText('Select up to 20 and copy install commands')).toBeVisible()
+    const multiInstallBox = await multiInstallButton.boundingBox()
+    expect(multiInstallBox!.width).toBeGreaterThanOrEqual(280)
+    expect(multiInstallBox!.height).toBeGreaterThanOrEqual(60)
+    await multiInstallButton.click()
     const skillCheckbox = page.getByRole('checkbox', { name: 'Select Subpath Skill' })
     const skillHeading = page.getByRole('heading', { name: 'Subpath Skill', exact: true })
     await skillCheckbox.check()
@@ -569,9 +574,9 @@ test.describe('SkillHub production subpath deployment', () => {
     expect(continueBox!.y).toBeLessThan(checkboxBox!.y)
 
     await page.getByRole('button', { name: 'Clear selection' }).click()
-    await expect(page.getByRole('button', { name: 'Select multiple Skills' })).toBeFocused()
+    await expect(multiInstallButton).toBeFocused()
 
-    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+    await multiInstallButton.click()
     await page.getByRole('checkbox', { name: 'Select Subpath Skill' }).check()
     await page.reload()
     await expect(page.getByRole('status')).toHaveText('1 / 20 Skills selected')
@@ -587,6 +592,8 @@ test.describe('SkillHub production subpath deployment', () => {
     const targetsHeading = page.getByRole('heading', { name: 'Install target' })
     const commandsHeading = page.getByRole('heading', { name: 'Terminal commands' })
     const selectedSummary = page.getByText('1 Skills selected', { exact: true })
+    const selectedDisclosure = page.locator('details').filter({ hasText: '1 Skills selected' })
+    await expect(selectedDisclosure).toHaveAttribute('open', '')
     const targetBox = await targetsHeading.boundingBox()
     const commandsBox = await commandsHeading.boundingBox()
     const selectedBox = await selectedSummary.boundingBox()
@@ -603,12 +610,27 @@ test.describe('SkillHub production subpath deployment', () => {
     expect(observed.apiRootEscapes).toEqual([])
   })
 
+  test('keeps the Traditional Chinese multi-install entry readable without crowding', async ({ page }) => {
+    const observed = createObservedRequests()
+    await page.addInitScript(() => window.localStorage.setItem('i18nextLng', 'zh-TW'))
+    await installMockApi(page, { authenticated: true }, observed)
+
+    await page.goto(`${basePath}/search`)
+    const multiInstallButton = page.getByRole('button', { name: '批次安裝多個 Skills' })
+    await expect(page.getByText('一次選取最多 20 個，並複製安裝指令')).toBeVisible()
+    const multiInstallBox = await multiInstallButton.boundingBox()
+    expect(multiInstallBox!.width).toBeGreaterThanOrEqual(280)
+    expect(multiInstallBox!.height).toBeGreaterThanOrEqual(60)
+    await expectNoHorizontalOverflow(page)
+    expect(observed.apiRootEscapes).toEqual([])
+  })
+
   test('sends anonymous multi-Skill selection through login with a logical return path', async ({ page }) => {
     const observed = createObservedRequests()
     await installMockApi(page, { authenticated: false }, observed)
 
     await page.goto(`${basePath}/search`)
-    await page.getByRole('button', { name: 'Select multiple Skills' }).click()
+    await page.getByRole('button', { name: 'Install multiple Skills' }).click()
 
     await expect(page).toHaveURL(/\/skillhub\/login\?returnTo=/)
     const loginUrl = new URL(page.url())

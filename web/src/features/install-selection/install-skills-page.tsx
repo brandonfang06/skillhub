@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { ArrowLeft, Check, Copy, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, ListChecks, Trash2 } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
@@ -205,18 +205,26 @@ export function InstallSkillsPage() {
           </Card>
 
           <Card className="p-4">
-            <div className="flex items-center justify-end">
-              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                {t('installSelection.clear')}
-              </Button>
-            </div>
-            <details>
-              <summary className="cursor-pointer select-none font-semibold">
-                {t('installSkills.selectedHeading', { count: selectedSkills.length })}
+            <details open className="group">
+              <summary className="flex cursor-pointer list-none select-none items-center justify-between rounded-xl bg-muted/50 px-3 py-2.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <ListChecks className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="font-semibold">
+                    {t('installSkills.selectedHeading', { count: selectedSkills.length })}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
+              <div className="mt-2 flex items-center justify-end">
+                <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                  {t('installSelection.clear')}
+                </Button>
+              </div>
               <ul
                 data-visible-skill-rows="3"
-                className="mt-2 max-h-48 divide-y overflow-y-auto border-t"
+                className="max-h-48 divide-y overflow-y-auto border-t"
               >
                 {selectedSkills.map((skill) => (
                   <li key={`${skill.namespace}/${skill.slug}`} className="flex min-h-16 items-center justify-between gap-4 py-2">

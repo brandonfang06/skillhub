@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Loader2 } from 'lucide-react'
+import { ArrowRight, ListPlus, Loader2 } from 'lucide-react'
 import type { SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { SearchBar } from '@/features/search/search-bar'
@@ -341,9 +341,9 @@ export function SearchPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             {resultCount > 0 && (
-              <div className="text-sm text-muted-foreground">
+              <div className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
                 {t('search.results', { count: resultCount })}
               </div>
             )}
@@ -351,11 +351,23 @@ export function SearchPage() {
               <Button
                 ref={selectionEntryButtonRef}
                 type="button"
-                variant="outline"
-                size="sm"
+                aria-label={t('installSelection.start')}
+                size="lg"
+                className="group h-auto min-h-16 w-full justify-start gap-3 whitespace-normal rounded-2xl px-4 py-3 text-left shadow-lg shadow-primary/20 sm:min-w-80"
                 onClick={handleStartSelection}
               >
-                {t('installSelection.start')}
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <ListPlus className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                  <span className="text-sm font-semibold sm:text-base">
+                    {t('installSelection.start')}
+                  </span>
+                  <span className="text-xs font-normal leading-snug text-white/80">
+                    {t('installSelection.startHint')}
+                  </span>
+                </span>
+                <ArrowRight className="ml-auto h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </Button>
             )}
           </div>

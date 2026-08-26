@@ -44,6 +44,27 @@ Agent installation from repository source and CLI help text. A real published
 `multiple install targets detected`, while the same command with one Agent
 succeeds against the real Python backend and PostgreSQL-backed catalog.
 
+## 2026-08-26 UX Discoverability Amendment
+
+This later amendment supersedes only the Search entry treatment and the
+selected-Skills disclosure default above. It does not change selection state,
+commands, authentication, tracking, Agent support, or the three-row list cap.
+
+- The Search entry is a large primary call to action, not a small secondary
+  outline control. Its action-first title says that it installs multiple Skills,
+  and visible supporting copy explains that the user can select up to 20 and
+  copy install commands.
+- The call to action uses the existing Button and lucide icon systems, remains
+  full-width on narrow screens, and has a minimum rendered target of 280 px by
+  60 px in the supported desktop/mobile layouts.
+- English, Simplified Chinese, and Traditional Chinese carry equivalent title
+  and supporting copy. The concise title remains the accessible button name.
+- The selected-Skills disclosure is open on first render so the user can
+  immediately review the chosen Skills. It remains collapsible and its list
+  still displays at most three rows before scrolling internally.
+- Existing focus recovery, clear/remove actions, command ordering, and root
+  plus `/skillhub` routing are unchanged.
+
 ## Relationship To The Collection Design
 
 This design revisits only the prior decision that an arbitrary cross-search

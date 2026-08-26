@@ -5,6 +5,7 @@ import zhTW from './locales/zh-TW.json'
 
 const SELECTION_KEYS = [
   'start',
+  'startHint',
   'selectSkill',
   'count',
   'limitReached',
@@ -52,7 +53,8 @@ describe('multi-skill install locale contract', () => {
   })
 
   it('uses clear Traditional Chinese product wording', () => {
-    expect(zhTW.installSelection.start).toBe('選取多個 Skills')
+    expect(zhTW.installSelection.start).toBe('批次安裝多個 Skills')
+    expect(zhTW.installSelection.startHint).toBe('一次選取最多 20 個，並複製安裝指令')
     expect(zhTW.installSkills.title).toBe('安裝 Skills')
     expect(zhTW.installSkills.copyAll).toBe('複製全部指令')
   })

@@ -28,6 +28,18 @@ Verification must execute the generated single-Agent command with the published
 npm 0.1.9 bundle. Repository-only CLI tests are supplementary and cannot prove
 the public artifact contract.
 
+## 2026-08-26 UX Follow-up
+
+- Recompose the Search entry with the existing large primary Button, list-plus
+  icon, action title, concise explanation, and forward affordance.
+- Keep the title as the accessible name and verify a minimum rendered size of
+  280 px by 60 px across desktop and 390 x 844 mobile Chromium.
+- Default the selected-Skills native disclosure to open and refine its summary
+  with existing list/check and chevron patterns.
+- Retain the three-row internal scroll cap and all clear/remove behavior.
+- Add i18n parity and behavioral tests; rerun full Vitest, typecheck, lint,
+  production build, and full subpath Playwright before real-service acceptance.
+
 ## Public Test Seams
 
 1. Pure command renderer: coordinates plus shared target options produce exact

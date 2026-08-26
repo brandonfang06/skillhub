@@ -215,7 +215,8 @@
     "noMatchingNamespaces": "没有匹配的命名空间"
   },
   "installSelection": {
-    "start": "选择多个 Skills",
+    "start": "批量安装多个 Skills",
+    "startHint": "一次选择最多 20 个，并复制安装指令",
     "selectSkill": "选择 {{skill}}",
     "count": "已选择 {{count}} / {{max}} 个 Skills",
     "limitReached": "已达到 {{max}} 个 Skills 的上限，请先移除一个再继续选择。",

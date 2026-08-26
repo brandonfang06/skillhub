@@ -90,7 +90,7 @@ describe('InstallSkillsPage', () => {
     expect(copyMock).toHaveBeenCalledWith(userCommands.join('\n'))
   })
 
-  it('puts targets first, commands second, and selected Skills in a collapsed three-row disclosure', () => {
+  it('puts targets first, commands second, and selected Skills in an open three-row disclosure', () => {
     installSelectionStore.getState().addSkill({
       id: 1,
       namespace: 'global',
@@ -108,7 +108,7 @@ describe('InstallSkillsPage', () => {
 
     expect(targets.compareDocumentPosition(commands) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(commands.compareDocumentPosition(selected!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(selected?.hasAttribute('open')).toBe(false)
+    expect(selected?.hasAttribute('open')).toBe(true)
     expect(selected?.querySelector('[data-visible-skill-rows="3"]')).not.toBeNull()
     expect(screen.queryByRole('checkbox', { name: 'installSkills.forceLabel' })).toBeNull()
     expect(container.textContent).not.toContain('installSkills.identityHeading')

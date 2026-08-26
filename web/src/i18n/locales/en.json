@@ -215,7 +215,8 @@
     "noMatchingNamespaces": "No matching namespaces"
   },
   "installSelection": {
-    "start": "Select multiple Skills",
+    "start": "Install multiple Skills",
+    "startHint": "Select up to 20 and copy install commands",
     "selectSkill": "Select {{skill}}",
     "count": "{{count}} / {{max}} Skills selected",
     "limitReached": "You reached the {{max}}-Skill limit. Remove one before selecting another.",

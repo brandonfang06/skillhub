@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigateMock = vi.fn()
@@ -286,6 +286,13 @@ describe('SearchPage', () => {
   })
 
   afterEach(() => cleanup())
+
+  it('explains the multi-install workflow before selection starts', () => {
+    render(<SearchPage />)
+
+    expect(screen.getByText('installSelection.start')).toBeDefined()
+    expect(screen.getByText('installSelection.startHint')).toBeDefined()
+  })
 
   it('renders the install continuation action above the Skill results', () => {
     installSelectionStore.getState().enterSelectionMode()
