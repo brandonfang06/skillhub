@@ -19,6 +19,7 @@ $prefix = "oss-smoke-$runId"
 $namespaceSlug = "oss-skillhub-smoke-fixture-$runId"
 $repositoryUrl = "https://github.com/skillhub-smoke/fixture-$runId"
 $internalRepositoryUrl = "https://gitlab.internal/dev/fixture-$runId.git"
+$internalRepositoryCredentialedUrl = "https://smoke-user:smoke-p%40ss@gitlab.internal/dev/fixture-$runId.git"
 $actorId = "$prefix-importer"
 $ownerId = "$prefix-owner"
 $triggerId = "$prefix-trigger"
@@ -90,7 +91,7 @@ function Invoke-Importer {
         "SKILLHUB_SOURCE_REPOSITORY_URL=$repositoryUrl",
         "SKILLHUB_SOURCE_REF_TYPE=BRANCH",
         "SKILLHUB_SOURCE_REF=main",
-        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL=$internalRepositoryUrl",
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL=$internalRepositoryCredentialedUrl",
         "SKILLHUB_DEV_GITLAB_BRANCH=main",
         "SKILLHUB_SOURCE_SCAN_STATUS=PASSED",
         "SKILLHUB_SOURCE_SCAN_ID=scan-$JobId",
@@ -106,7 +107,6 @@ function Invoke-Importer {
         "-v", "${reports}:/reports",
         "-e", "SKILLHUB_BASE_URL=$BaseUrl",
         "-e", "SKILLHUB_SERVICE_TOKEN=$rawToken",
-        "-e", "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE=keycloak",
         "-e", "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME=$ownerId",
         "-e", "SKILLHUB_IMPORT_REPORT_PATH=/reports/$ReportName",
         "-e", "CI_PROJECT_DIR=/pipeline",
@@ -128,7 +128,13 @@ function Invoke-Importer {
     }
     $dockerExitCode = $LASTEXITCODE
     $jobLog = $jobLogLines -join [Environment]::NewLine
-    if ($jobLog.Contains($rawToken) -or $jobLog.Contains("smoke-job-token")) {
+    if (
+        $jobLog.Contains($rawToken) -or
+        $jobLog.Contains("smoke-job-token") -or
+        $jobLog.Contains("smoke-user") -or
+        $jobLog.Contains("smoke-p%40ss") -or
+        $jobLog.Contains("smoke-p@ss")
+    ) {
         throw "GitLab job log leaked a credential"
     }
     if ($dockerExitCode -ne 0) {
@@ -146,8 +152,13 @@ function Invoke-Importer {
         }
     }
     $reportContent = Get-Content (Join-Path $reports $ReportName) -Raw
-    if ($reportContent.Contains("smoke-job-token")) {
-        throw "Internal GitLab job token leaked into $ReportName"
+    if (
+        $reportContent.Contains("smoke-job-token") -or
+        $reportContent.Contains("smoke-user") -or
+        $reportContent.Contains("smoke-p%40ss") -or
+        $reportContent.Contains("smoke-p@ss")
+    ) {
+        throw "Internal GitLab credential leaked into $ReportName"
     }
     return $reportContent | ConvertFrom-Json
 }

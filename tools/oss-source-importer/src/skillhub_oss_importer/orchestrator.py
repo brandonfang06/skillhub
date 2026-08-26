@@ -11,6 +11,7 @@ from .job_logging import job_value
 from .package import BuiltPackage, build_skill_package
 
 logger = logging.getLogger(__name__)
+FALLBACK_OWNER_PROVIDER_CODE = "keycloak"
 
 
 def _metadata(
@@ -54,7 +55,7 @@ def run_import(config: Any, client: Any, checkout: SourceCheckout) -> dict[str, 
         {
             "repositoryUrl": config.repository_url,
             "displayName": config.namespace_display_name,
-            "fallbackOwnerProviderCode": config.owner_provider_code,
+            "fallbackOwnerProviderCode": FALLBACK_OWNER_PROVIDER_CODE,
             "fallbackOwnerLoginName": config.owner_login_name,
         },
     )

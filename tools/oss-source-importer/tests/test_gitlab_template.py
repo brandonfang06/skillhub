@@ -55,11 +55,11 @@ def test_template_documents_required_pipeline_variables() -> None:
         "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
         "SKILLHUB_DEV_GITLAB_BRANCH",
         "SKILLHUB_SOURCE_SCAN_STATUS",
-        "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
         "CI_JOB_TOKEN",
     ):
         assert name in template
+    assert "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE" not in template
     assert "CI_REPOSITORY_URL" not in template
     assert "CI_COMMIT_SHA" not in template
     assert "SKILLHUB_SOURCE_COMMIT_SHA" not in template
@@ -106,6 +106,8 @@ def test_smoke_separates_the_central_pipeline_checkout_from_the_dev_source() -> 
     assert "SKILLHUB_SOURCE_COMMIT_SHA=" not in smoke
     assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA=" not in smoke
     assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=" not in smoke
+    assert "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE" not in smoke
+    assert "$internalRepositoryCredentialedUrl" in smoke
     assert "$jobLogLines" in smoke
     assert '"event=importer_started"' in smoke
     assert '"event=import_completed"' in smoke

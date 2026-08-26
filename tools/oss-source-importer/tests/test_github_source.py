@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from base64 import b64decode
 from pathlib import Path
 
 import pytest
@@ -173,3 +174,53 @@ def test_job_token_is_not_exposed_in_git_command_arguments(
         for index in range(int(environment["GIT_CONFIG_COUNT"]))
         if environment.get(f"GIT_CONFIG_KEY_{index}") == "http.followRedirects"
     )
+
+
+def test_credentialed_clone_url_uses_header_without_leaking_userinfo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+) -> None:
+    source, _first_sha, _second_sha = make_source_repository(tmp_path)
+    route_internal_clone_to_local_repository(source, monkeypatch)
+    credentialed_url = "https://pipeline-user:p%40ss@gitlab.internal/dev/oss-source.git"
+    original_run = subprocess.run
+    commands: list[list[str]] = []
+    environments: list[dict[str, str]] = []
+
+    def recording_run(command: list[str], *args: object, **kwargs: object):
+        commands.append(command)
+        environments.append(dict(kwargs["env"]))
+        return original_run(command, *args, **kwargs)
+
+    monkeypatch.setattr("skillhub_oss_importer.github_source.subprocess.run", recording_run)
+
+    with caplog.at_level(logging.INFO, logger="skillhub_oss_importer.github_source"):
+        checkout = clone_repository(
+            credentialed_url,
+            tmp_path / "credentialed-checkout",
+            "main",
+            "BRANCH",
+            "main",
+            "unused-job-secret",
+        )
+
+    command_text = "\n".join(" ".join(command) for command in commands)
+    git_config = (checkout.checkout_dir / ".git" / "config").read_text(encoding="utf-8")
+    job_log = "\n".join(record.getMessage() for record in caplog.records)
+    assert "pipeline-user" not in command_text
+    assert "p%40ss" not in command_text
+    assert "pipeline-user" not in git_config
+    assert "p%40ss" not in git_config
+    assert "pipeline-user" not in job_log
+    assert "p%40ss" not in job_log
+    authorization_prefix = "Authorization: Basic "
+    authorization_values = [
+        value[len(authorization_prefix) :]
+        for environment in environments
+        for name, value in environment.items()
+        if name.startswith("GIT_CONFIG_VALUE_") and value.startswith(authorization_prefix)
+    ]
+    assert {b64decode(value).decode() for value in authorization_values} == {
+        "pipeline-user:p@ss"
+    }

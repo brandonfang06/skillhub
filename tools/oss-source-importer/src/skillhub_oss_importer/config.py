@@ -112,7 +112,6 @@ class Config:
     repository_url: str
     namespace_slug: str
     namespace_display_name: str
-    owner_provider_code: str
     owner_login_name: str
     trigger_provider_code: str
     trigger_login_name: str | None
@@ -144,17 +143,20 @@ class Config:
         except SourceError as exc:
             raise ConfigError(str(exc)) from exc
         source_clone_url = _required(values, "SKILLHUB_DEV_GITLAB_REPOSITORY_URL")
-        parsed_clone_url = urlsplit(source_clone_url)
+        try:
+            parsed_clone_url = urlsplit(source_clone_url)
+        except ValueError as exc:
+            raise ConfigError(
+                "SKILLHUB_DEV_GITLAB_REPOSITORY_URL must be an absolute HTTPS URL"
+            ) from exc
         if (
             parsed_clone_url.scheme != "https"
-            or not parsed_clone_url.netloc
-            or parsed_clone_url.username is not None
-            or parsed_clone_url.password is not None
+            or not parsed_clone_url.hostname
             or parsed_clone_url.query
             or parsed_clone_url.fragment
         ):
             raise ConfigError(
-                "SKILLHUB_DEV_GITLAB_REPOSITORY_URL must be a credential-free absolute HTTPS URL"
+                "SKILLHUB_DEV_GITLAB_REPOSITORY_URL must be an absolute HTTPS URL"
             )
         source_value = values.get("SKILLHUB_IMPORT_SOURCE_ROOT", ".").strip() or "."
         source_subdirectory = Path(source_value)
@@ -174,7 +176,6 @@ class Config:
             raise ConfigError("SKILLHUB_SOURCE_REF is required for TAG and BRANCH sources")
         if ref_type == "COMMIT" and source_ref is not None:
             raise ConfigError("SKILLHUB_SOURCE_REF must be empty for COMMIT sources")
-        owner_provider = _required(values, "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE")
         report_value = values.get("SKILLHUB_IMPORT_REPORT_PATH", "skillhub-oss-import-report.json").strip()
         report_path = Path(report_value)
         if not report_path.is_absolute():
@@ -192,10 +193,9 @@ class Config:
             repository_url=repository.canonical_url,
             namespace_slug=repository.namespace_slug,
             namespace_display_name=repository.namespace_display_name,
-            owner_provider_code=owner_provider,
             owner_login_name=_required(values, "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME"),
             trigger_provider_code=(
-                values.get("SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE", "").strip() or owner_provider
+                values.get("SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE", "").strip() or "keycloak"
             ),
             trigger_login_name=trigger_login,
             project_dir=project_dir,

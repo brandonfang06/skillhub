@@ -7,7 +7,7 @@ import subprocess
 from base64 import b64encode
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 from .job_logging import job_value
 
@@ -73,6 +73,19 @@ def canonicalize_repository(raw_url: str) -> GitHubRepository:
     )
 
 
+def clone_url_without_userinfo(clone_url: str) -> str:
+    parsed = urlsplit(clone_url)
+    netloc = parsed.netloc.rsplit("@", 1)[-1]
+    return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
+
+def _clone_credentials(clone_url: str, job_token: str) -> tuple[str, str]:
+    parsed = urlsplit(clone_url)
+    if parsed.username is not None or parsed.password is not None:
+        return unquote(parsed.username or ""), unquote(parsed.password or "")
+    return "gitlab-ci-token", job_token
+
+
 def clone_repository(
     clone_url: str,
     destination: Path,
@@ -92,7 +105,8 @@ def clone_repository(
         raise SourceError("Invalid inherited Git configuration") from exc
     if config_count < 0:
         raise SourceError("Invalid inherited Git configuration")
-    credentials = b64encode(f"gitlab-ci-token:{job_token}".encode()).decode()
+    username, password = _clone_credentials(clone_url, job_token)
+    credentials = b64encode(f"{username}:{password}".encode()).decode()
     for key, value in (
         ("http.extraHeader", f"Authorization: Basic {credentials}"),
         ("http.followRedirects", "false"),
@@ -106,7 +120,18 @@ def clone_repository(
         destination.mkdir(parents=False)
         for stage, command in (
             ("init", ["git", "init", "-q", str(destination)]),
-            ("remote", ["git", "-C", str(destination), "remote", "add", "origin", clone_url]),
+            (
+                "remote",
+                [
+                    "git",
+                    "-C",
+                    str(destination),
+                    "remote",
+                    "add",
+                    "origin",
+                    clone_url_without_userinfo(clone_url),
+                ],
+            ),
             (
                 "fetch",
                 [

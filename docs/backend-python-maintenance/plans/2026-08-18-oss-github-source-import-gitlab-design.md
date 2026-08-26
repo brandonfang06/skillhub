@@ -444,7 +444,6 @@ names. Operators may map existing organization variables into them in YAML.
 | `SKILLHUB_BASE_URL` | No | Public application base, including `/skillhub` when configured; no trailing API path. |
 | `SKILLHUB_API_TOKEN` | Yes | Masked/protected service-account token with `source:import`. |
 | `SKILLHUB_SOURCE_REPOSITORY_URL` | No | User-supplied canonicalizable GitHub repository URL. |
-| `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE` | No | OAuth registration/provider code used only to create a missing namespace, normally `keycloak`. |
 | `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME` | No | Fallback namespace owner's Keycloak `preferred_username`. |
 
 ### Required CI integration variable
@@ -458,7 +457,7 @@ names. Operators may map existing organization variables into them in YAML.
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME` | No | Triggering user's Keycloak `preferred_username`; blank/unmatched falls back to current namespace OWNER for version submission and first-skill ownership. |
-| `SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE` | No | Defaults to `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE`. |
+| `SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE` | No | Defaults to the fixed provider code `keycloak`. |
 
 The caller maps organization-specific GitLab/OIDC variables into these names.
 The importer does not assume that a human display name, GitLab numeric user ID,
@@ -495,7 +494,6 @@ variables:
   SKILLHUB_IMPORTER_IMAGE: "registry.example.com/platform/skillhub-oss-importer:1.0.0"
   SKILLHUB_BASE_URL: "https://skills.example.com/skillhub"
   SKILLHUB_SOURCE_REPOSITORY_URL: "$USER_SELECTED_GITHUB_REPOSITORY_URL"
-  SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE: "keycloak"
   SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME: "$PLATFORM_OSS_FALLBACK_OWNER"
   SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE: "keycloak"
   SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME: "$ORGANIZATION_PREFERRED_USERNAME"

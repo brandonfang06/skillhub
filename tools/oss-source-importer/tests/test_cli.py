@@ -151,7 +151,7 @@ def test_cli_clones_the_landed_dev_gitlab_branch_before_import(
         service_token="st_secret",
         timeout_seconds=60.0,
         repository_url="https://github.com/mattpocock/skills",
-        source_clone_url="https://gitlab.internal/dev/skills.git",
+        source_clone_url="https://pipeline-user:p%40ss@gitlab.internal/dev/skills.git",
         gitlab_job_token="job-secret",
         dev_gitlab_branch="release/accepted",
         ref_type="TAG",
@@ -198,7 +198,7 @@ def test_cli_clones_the_landed_dev_gitlab_branch_before_import(
 
     assert main([]) == EXIT_SUCCESS
     assert captured == {
-        "clone_url": "https://gitlab.internal/dev/skills.git",
+        "clone_url": "https://pipeline-user:p%40ss@gitlab.internal/dev/skills.git",
         "branch": "release/accepted",
         "ref_type": "TAG",
         "source_ref": "v1.2.3",
@@ -219,3 +219,6 @@ def test_cli_clones_the_landed_dev_gitlab_branch_before_import(
     assert 'event=importer_finished status="SUCCESS" exit_code=0' in job_log
     assert "st_secret" not in job_log
     assert "job-secret" not in job_log
+    assert "pipeline-user" not in job_log
+    assert "p%40ss" not in job_log
+    assert 'repository="https://gitlab.internal/dev/skills.git"' in job_log

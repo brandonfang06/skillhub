@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import json
+import shutil
+import ssl
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 
 import pytest
+from tls_runtime_probe import run_probe
 
-from skillhub_oss_importer.client import AuthorizationError, SkillHubClient, SkillHubError
+from skillhub_oss_importer.client import (
+    AuthorizationError,
+    SkillHubClient,
+    SkillHubError,
+    _skillhub_https_context,
+)
 
 
 @contextmanager
@@ -102,3 +111,36 @@ def test_does_not_follow_redirects_or_forward_the_service_token() -> None:
 
     assert len(source_requests) == 1
     assert target_requests == []
+
+
+def test_default_skillhub_https_context_bypasses_certificate_verification() -> None:
+    assert _skillhub_https_context.check_hostname is False
+    assert _skillhub_https_context.verify_mode == ssl.CERT_NONE
+
+
+@pytest.mark.skipif(shutil.which("openssl") is None, reason="OpenSSL is not installed")
+def test_client_calls_skillhub_through_an_untrusted_https_certificate(tmp_path) -> None:
+    certificate = tmp_path / "certificate.pem"
+    private_key = tmp_path / "private-key.pem"
+    subprocess.run(
+        [
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-nodes",
+            "-days",
+            "1",
+            "-subj",
+            "/CN=untrusted.internal",
+            "-keyout",
+            str(private_key),
+            "-out",
+            str(certificate),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=30,
+    )
+    run_probe(certificate, private_key)

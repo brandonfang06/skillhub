@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import ssl
 from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 from uuid import uuid4
 
 
@@ -25,7 +26,13 @@ class _NoRedirectHandler(HTTPRedirectHandler):
         return None
 
 
-_open_without_redirects = build_opener(_NoRedirectHandler()).open
+_skillhub_https_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+_skillhub_https_context.check_hostname = False
+_skillhub_https_context.verify_mode = ssl.CERT_NONE
+_open_without_redirects = build_opener(
+    _NoRedirectHandler(),
+    HTTPSHandler(context=_skillhub_https_context),
+).open
 
 
 class SkillHubClient:

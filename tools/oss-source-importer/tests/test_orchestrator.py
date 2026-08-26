@@ -16,9 +16,11 @@ class FakeClient:
         self.validation_outcomes = iter(validation_outcomes)
         self.calls: list[str] = []
         self.metadata: list[dict[str, object]] = []
+        self.namespace_body: dict[str, object] | None = None
 
-    def ensure_namespace(self, _slug: str, _body: dict[str, object]) -> dict[str, object]:
+    def ensure_namespace(self, _slug: str, body: dict[str, object]) -> dict[str, object]:
         self.calls.append("ensure")
+        self.namespace_body = body
         return {"outcome": "CREATED"}
 
     def validate_skill(self, _slug: str, _content: bytes, metadata: dict[str, object]) -> dict[str, object]:
@@ -42,7 +44,6 @@ def fixture_config(tmp_path: Path) -> SimpleNamespace:
         namespace_slug="oss-owner-repo",
         namespace_display_name="OSS-owner-repo",
         repository_url="https://github.com/owner/repo",
-        owner_provider_code="keycloak",
         owner_login_name="owner",
         trigger_provider_code="keycloak",
         trigger_login_name="alice",
@@ -75,6 +76,12 @@ def test_validates_every_package_before_sequential_submit(tmp_path: Path, caplog
     with caplog.at_level(logging.INFO, logger="skillhub_oss_importer.orchestrator"):
         report = run_import(fixture_config(tmp_path), client, fixture_checkout(tmp_path))
     assert client.calls == ["ensure", "validate:a", "validate:b", "submit:a"]
+    assert client.namespace_body == {
+        "repositoryUrl": "https://github.com/owner/repo",
+        "displayName": "OSS-owner-repo",
+        "fallbackOwnerProviderCode": "keycloak",
+        "fallbackOwnerLoginName": "owner",
+    }
     assert report["status"] == "SUCCESS"
     job_log = "\n".join(record.getMessage() for record in caplog.records)
     assert "event=discovery_completed skills=2" in job_log

@@ -40,7 +40,6 @@ def valid_env(tmp_path: Path) -> dict[str, str]:
         "SKILLHUB_DEV_GITLAB_BRANCH": "main",
         "SKILLHUB_SOURCE_SCAN_STATUS": "PASSED",
         "SKILLHUB_SOURCE_SCAN_ID": "scan-123",
-        "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE": "keycloak",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME": "platform-owner",
         "CI_PROJECT_DIR": str(tmp_path),
         "CI_JOB_TOKEN": "job-secret",
@@ -177,8 +176,56 @@ def test_rejects_unencrypted_dev_gitlab_clone_url(tmp_path: Path) -> None:
         "http://gitlab.internal/dev/skills.git",
     )
 
-    with pytest.raises(ConfigError, match="credential-free absolute HTTPS URL"):
+    with pytest.raises(ConfigError, match="absolute HTTPS URL"):
         Config.from_env(env)
+
+
+def test_accepts_credentialed_dev_gitlab_clone_url(tmp_path: Path) -> None:
+    env = valid_env(tmp_path)
+    credentialed_url = "https://pipeline-user:p%40ss@gitlab.internal/dev/skills.git"
+    set_handoff_value(
+        tmp_path,
+        env,
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
+        credentialed_url,
+    )
+
+    assert Config.from_env(env).source_clone_url == credentialed_url
+
+
+def test_rejects_credentialed_dev_gitlab_url_without_a_hostname(tmp_path: Path) -> None:
+    env = valid_env(tmp_path)
+    set_handoff_value(
+        tmp_path,
+        env,
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
+        "https://pipeline-user:password@",
+    )
+
+    with pytest.raises(ConfigError, match="absolute HTTPS URL"):
+        Config.from_env(env)
+
+
+def test_rejects_malformed_dev_gitlab_url_as_configuration_error(tmp_path: Path) -> None:
+    env = valid_env(tmp_path)
+    set_handoff_value(
+        tmp_path,
+        env,
+        "SKILLHUB_DEV_GITLAB_REPOSITORY_URL",
+        "https://[invalid",
+    )
+
+    with pytest.raises(ConfigError, match="absolute HTTPS URL"):
+        Config.from_env(env)
+
+
+def test_trigger_provider_defaults_to_keycloak_without_owner_provider_variable(
+    tmp_path: Path,
+) -> None:
+    config = Config.from_env(valid_env(tmp_path))
+
+    assert config.trigger_provider_code == "keycloak"
+    assert not hasattr(config, "owner_provider_code")
 
 
 def test_rejects_control_characters_in_the_pull_code_artifact(tmp_path: Path) -> None:

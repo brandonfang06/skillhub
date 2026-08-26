@@ -17,7 +17,6 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "SKILLHUB_DEV_GITLAB_BRANCH",
         "SKILLHUB_SOURCE_SCAN_STATUS",
         "SKILLHUB_SOURCE_SCAN_ID",
-        "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE",
         "SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME",
         "SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE",
         "SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME",
@@ -31,6 +30,7 @@ def test_sop_documents_complete_source_import_contract() -> None:
         "CI_JOB_ID",
     ):
         assert name in content
+    assert "SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE" not in content
     for endpoint in (
         "/api/cli/v1/source-imports/namespaces/{namespaceSlug}",
         "/api/cli/v1/source-imports/{namespaceSlug}/skills/validate",
@@ -61,6 +61,7 @@ def test_sop_explains_identity_review_subpath_and_failures() -> None:
         "憑證",
         "0 個 SKILL.md",
         "GitLab job log",
+        "固定略過 server certificate 與 hostname",
         "event=validation_completed",
         "event=import_completed",
         "JSON report",

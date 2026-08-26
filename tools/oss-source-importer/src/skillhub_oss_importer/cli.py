@@ -11,7 +11,7 @@ from pathlib import Path
 from .client import AuthorizationError, SkillHubClient, TransportError
 from .config import Config, ConfigError
 from .discovery import DiscoveryError
-from .github_source import SourceError, clone_repository
+from .github_source import SourceError, clone_repository, clone_url_without_userinfo
 from .job_logging import configured_job_logging, job_value
 from .orchestrator import run_import
 from .report import write_report
@@ -79,7 +79,7 @@ def _run(args: argparse.Namespace) -> int:
         logger.info(
             "event=config_loaded repository=%s skillhub_base_url=%s timeout_seconds=%s "
             "dev_branch=%s ref_type=%s source_ref=%s namespace=%s scan_id=%s pipeline_id=%s "
-            "job_id=%s",
+            "job_id=%s skillhub_tls_verify=false",
             job_value(config.repository_url),
             job_value(config.base_url),
             config.timeout_seconds,
@@ -97,7 +97,7 @@ def _run(args: argparse.Namespace) -> int:
         with tempfile.TemporaryDirectory(prefix="skillhub-oss-import-") as temporary_directory:
             logger.info(
                 "event=clone_started repository=%s dev_branch=%s",
-                job_value(config.source_clone_url),
+                job_value(clone_url_without_userinfo(config.source_clone_url)),
                 job_value(config.dev_gitlab_branch),
             )
             checkout = clone_repository(

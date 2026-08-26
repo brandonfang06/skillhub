@@ -117,8 +117,8 @@ scan gate 的手動 job。
 
 ## 3. pull_code dotenv 契約
 
-`pull_code` 必須以可信任的單行值產生以下 artifact；不得把 access token、credentialed URL
-或換行字元寫進 dotenv：
+`pull_code` 必須以可信任的單行值產生以下 artifact，不得包含換行字元。若 Dev GitLab URL
+含 username/password，`pull-code.env` 本身就是敏感 artifact，必須限制下載權限與保存期限：
 
 ```dotenv
 SKILLHUB_SOURCE_REPOSITORY_URL=https://github.com/example/skills
@@ -143,7 +143,7 @@ artifact 不一致都會 fail fast。不要在 project/group variables 預先定
 | `SKILLHUB_SOURCE_REPOSITORY_URL` | 原始、無 credential 的 `https://github.com/<owner>/<repo>`；GitHub URL 只用於 upstream provenance、namespace 命名與 UI 連結。 |
 | `SKILLHUB_SOURCE_REF_TYPE` | 只能是 `TAG`、`BRANCH` 或 `COMMIT`。 |
 | `SKILLHUB_SOURCE_REF` | `TAG`／`BRANCH` 必填；`COMMIT` 必須留空。 |
-| `SKILLHUB_DEV_GITLAB_REPOSITORY_URL` | `pull_code` 落地後的無 credential HTTPS clone URL；HTTP 會被拒絕，避免 job token 明文傳輸。 |
+| `SKILLHUB_DEV_GITLAB_REPOSITORY_URL` | `pull_code` 落地後的 HTTPS clone URL；可含 URL-encoded username/password。Importer 會移除 URL userinfo，再以暫時 Basic header 驗證。HTTP 仍會被拒絕。 |
 | `SKILLHUB_DEV_GITLAB_BRANCH` | `pull_code` 落地的 Dev GitLab protected branch；只能由受控落地流程更新。 |
 | `SKILLHUB_SOURCE_SCAN_STATUS` | 必須精確為 `PASSED`，其他值 fail fast。 |
 | `SKILLHUB_SOURCE_SCAN_ID` | 選填；寫入 JSON report 供稽核。 |
@@ -168,7 +168,6 @@ GitHub browse URL，若改寫 commit，UI 的來源連結就會失效。
 | `SKILLHUB_PYTHON_IMAGE` | 組織核准、immutable 的 Python 3.8 + Git image，使用固定 tag 或 digest，不用 `latest`。 |
 | `SKILLHUB_BASE_URL` | 使用者可到達的 SkillHub base，例如 `https://skillhub.example.com/skillhub`；不要自行加 `/api`。 |
 | `SKILLHUB_SERVICE_TOKEN` | Platform Admin 建立的 `st_` token，必須有 `source:import` scope，設為 masked/protected。 |
-| `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE` | fallback owner provider，通常為 `keycloak`。 |
 | `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME` | fallback owner 的 exact `preferred_username`。 |
 
 `SKILLHUB_API_TOKEN` 不會 fallback。即使 `sk_` personal token 的 user 是 `SUPER_ADMIN`，
@@ -178,24 +177,26 @@ source-import endpoints 仍會拒絕。
 
 | Variable | 預設／用途 |
 | --- | --- |
-| `SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE` | 預設與 owner provider 相同。 |
+| `SKILLHUB_IMPORT_TRIGGER_PROVIDER_CODE` | 預設為 `keycloak`。 |
 | `SKILLHUB_IMPORT_TRIGGER_LOGIN_NAME` | 可信觸發流程提供的使用者 `preferred_username`。 |
 | `SKILLHUB_IMPORT_SOURCE_ROOT` | Dev checkout 內相對子目錄，預設 `.`；禁止絕對路徑與 `..` escape。 |
 | `SKILLHUB_IMPORT_REPORT_PATH` | 預設 `skillhub-oss-import-report.json`。 |
 | `SKILLHUB_IMPORT_TIMEOUT_SECONDS` | 單次 HTTP timeout，預設 60 秒。 |
-| `SSL_CERT_FILE` | Internal GitLab 或 SkillHub 使用企業 CA 時指定完整 CA bundle。 |
+| `SSL_CERT_FILE` | Internal GitLab 的 Git TLS client 支援此設定時，可指定完整企業 CA bundle。SkillHub API client 不使用它。 |
 
 GitLab 自動提供 `CI_PROJECT_DIR`、`CI_JOB_TOKEN`、`CI_PIPELINE_ID` 與 `CI_JOB_ID`。
-`CI_PROJECT_DIR` 只代表中央 `pull_pipeline` checkout；它不是待匯入來源。`CI_JOB_TOKEN`
-只用於讀取 Dev GitLab，不會寫入 report、dotenv 或傳給 SkillHub。
+`CI_PROJECT_DIR` 只代表中央 `pull_pipeline` checkout；它不是待匯入來源。credentialed URL
+存在時其 username/password 優先於 `CI_JOB_TOKEN`；否則才以 job token 讀取 Dev GitLab。
+兩者都不會寫入 report 或傳給 SkillHub。
 
-Dev GitLab project 必須允許中央 pipeline project 使用 job token 讀 repository，且觸發 pipeline
-的使用者必須具有來源 project 所需權限。若組織政策完全禁止 cross-project job token，本版
-流程會 fail closed；需先另外設計並驗證替代 credential adapter，不能把 personal/project token
-直接塞入 `pull-code.env` 或 clone URL。
+使用 `CI_JOB_TOKEN` 時，Dev GitLab project 必須允許中央 pipeline project 讀 repository，且觸發
+pipeline 的使用者必須具有來源 project 所需權限。若改用 credentialed URL，必須使用最小權限、
+可輪替的 read-only credential，並把 dotenv artifact 視為 secret。
 
-Clone 時 authentication header 只存在於 Git subprocess environment，command arguments 與
-temporary Git remote 都不含 token；HTTP redirect 也會被拒絕。
+Clone 時 authentication header 只存在於 Git subprocess environment，command arguments、
+job log 與 temporary Git remote 都不含 credential；HTTP redirect 也會被拒絕。GitLab clone
+仍驗證 TLS。SkillHub API client 則依內網部署需求固定略過 server certificate 與 hostname
+驗證；service token 與 skill package 仍透過 HTTPS 加密，但無法防止內網中間人攻擊。
 
 ## 5. SkillHub 與身分前置條件
 
@@ -212,7 +213,7 @@ Platform Admin 在 `/admin/service-principals` 建立 ACTIVE principal 與 token
 `/skillhub/admin/service-principals`。限時 token 最長為建立日起 **3 個曆年**，也可以選擇
 **永不到期**。無論期限為何都要有定期**輪替**與緊急**撤銷**程序。
 
-`SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE` 通常填 `keycloak`。`tsso` 是 OAuth client ID，
+Fallback owner provider 固定為 `keycloak`，不需要額外環境變數。`tsso` 是 OAuth client ID，
 不是 SkillHub provider code。Owner 與 trigger login 都使用 exact `preferred_username`，且該
 user 必須曾登入 SkillHub、identity 為 ACTIVE 且唯一。
 
@@ -222,8 +223,8 @@ namespace owner 代為送審。`Imported by` 依**選定版本**顯示。service
 
 ## 6. 匯入與 review 行為
 
-1. Python 使用 `SKILLHUB_DEV_GITLAB_REPOSITORY_URL`，由 `CI_JOB_TOKEN` 驗證身分，shallow-fetch
-   `refs/heads/$SKILLHUB_DEV_GITLAB_BRANCH` 並 detached checkout。
+1. Python 使用 `SKILLHUB_DEV_GITLAB_REPOSITORY_URL`，由 URL credential 或 `CI_JOB_TOKEN`
+   驗證身分，shallow-fetch `refs/heads/$SKILLHUB_DEV_GITLAB_BRANCH` 並 detached checkout。
 2. Clone 後以 `git rev-parse HEAD` 取得 provenance revision；不抓 submodules，也不使用共享 job 目錄。
 3. 找出 exact-case `SKILL.md`；每個 skill root 獨立 ZIP，nested root 不重複塞進 parent ZIP。
 4. Ensure namespace 一次，再 validate 所有 packages；任一 validation 失敗時提交數必須為 0。

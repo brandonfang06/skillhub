@@ -76,11 +76,14 @@ override them. The importer therefore reads the file inside `CI_PROJECT_DIR`
 and rejects missing files, unknown or duplicate keys, out-of-tree paths, and
 any conflicting inherited handoff variable.
 
-The Dev GitLab URL is credential-free HTTPS. `CI_JOB_TOKEN` is supplied separately
-by GitLab and used only through Git subprocess environment configuration. It
-must not appear in command arguments, artifacts, reports, errors, or SkillHub
-requests. HTTP and Git redirects are disabled. The Dev project must allow the
-central pipeline project to read it.
+The Dev GitLab URL is HTTPS and may contain URL-encoded username/password
+userinfo. When userinfo is present, the importer removes it from the Git remote
+and command arguments and supplies the decoded credentials through a temporary
+Basic authorization header. Otherwise, `CI_JOB_TOKEN` is used through the same
+Git subprocess environment configuration. Credentials must not appear in
+command arguments, reports, errors, or SkillHub requests. A credentialed
+`pull-code.env` remains a sensitive artifact and needs restricted access and
+retention. HTTP and Git redirects are disabled.
 
 ## Checkout identity and version fallback
 
@@ -122,7 +125,6 @@ Required project/group variables remain:
 - `SKILLHUB_PYTHON_IMAGE`
 - `SKILLHUB_BASE_URL`
 - `SKILLHUB_SERVICE_TOKEN`
-- `SKILLHUB_NAMESPACE_OWNER_PROVIDER_CODE`
 - `SKILLHUB_NAMESPACE_OWNER_LOGIN_NAME`
 
 `CI_PROJECT_DIR`, `CI_JOB_TOKEN`, `CI_PIPELINE_ID`, and `CI_JOB_ID` are supplied
