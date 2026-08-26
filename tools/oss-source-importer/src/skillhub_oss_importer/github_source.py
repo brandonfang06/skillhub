@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 import subprocess
@@ -7,6 +8,10 @@ from base64 import b64encode
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
+
+from .job_logging import job_value
+
+logger = logging.getLogger(__name__)
 
 
 class SourceError(ValueError):
@@ -96,24 +101,32 @@ def clone_repository(
         environment[f"GIT_CONFIG_VALUE_{config_count}"] = value
         config_count += 1
     environment["GIT_CONFIG_COUNT"] = str(config_count)
+    stage = "prepare"
     try:
         destination.mkdir(parents=False)
-        for command in (
-            ["git", "init", "-q", str(destination)],
-            ["git", "-C", str(destination), "remote", "add", "origin", clone_url],
-            [
-                "git",
-                "-C",
-                str(destination),
+        for stage, command in (
+            ("init", ["git", "init", "-q", str(destination)]),
+            ("remote", ["git", "-C", str(destination), "remote", "add", "origin", clone_url]),
+            (
                 "fetch",
-                "--depth",
-                "1",
-                "--no-tags",
-                "origin",
-                f"refs/heads/{branch}",
-            ],
-            ["git", "-C", str(destination), "checkout", "--detach", "-q", "FETCH_HEAD"],
+                [
+                    "git",
+                    "-C",
+                    str(destination),
+                    "fetch",
+                    "--depth",
+                    "1",
+                    "--no-tags",
+                    "origin",
+                    f"refs/heads/{branch}",
+                ],
+            ),
+            (
+                "checkout",
+                ["git", "-C", str(destination), "checkout", "--detach", "-q", "FETCH_HEAD"],
+            ),
         ):
+            logger.info("event=git_stage_started stage=%s", job_value(stage))
             subprocess.run(
                 command,
                 check=True,
@@ -122,6 +135,9 @@ def clone_repository(
                 timeout=300,
                 env=environment,
             )
+            logger.info("event=git_stage_completed stage=%s", job_value(stage))
+        stage = "revision"
+        logger.info("event=git_stage_started stage=%s", job_value(stage))
         commit_sha = (
             subprocess.run(
                 ["git", "-c", f"safe.directory={destination}", "-C", str(destination), "rev-parse", "HEAD"],
@@ -134,8 +150,14 @@ def clone_repository(
             .stdout.strip()
             .lower()
         )
+        logger.info("event=git_stage_completed stage=%s", job_value(stage))
     except (OSError, subprocess.SubprocessError) as exc:
-        raise SourceError("Unable to clone the landed Dev GitLab project") from exc
+        logger.error(
+            "event=git_stage_failed stage=%s error_type=%s",
+            job_value(stage),
+            job_value(type(exc).__name__),
+        )
+        raise SourceError(f"Unable to clone the landed Dev GitLab project during {stage}") from exc
     return SourceCheckout(
         checkout_dir=destination.resolve(),
         commit_sha=commit_sha,

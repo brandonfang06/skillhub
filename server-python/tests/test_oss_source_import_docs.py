@@ -60,9 +60,15 @@ def test_sop_explains_identity_review_subpath_and_failures() -> None:
         "部分提交",
         "憑證",
         "0 個 SKILL.md",
+        "GitLab job log",
+        "event=validation_completed",
+        "event=import_completed",
+        "JSON report",
     ):
         assert phrase in content
     assert "`SKILLHUB_API_TOKEN` 不會 fallback" in content
+    assert "scan SHA" not in content
+    assert "Dev SHA" not in content
 
 
 def test_sop_explains_version_importer_attribution() -> None:

@@ -14,8 +14,8 @@ pull-pipeline-for-user
        將接受的內容推到 Dev GitLab
        產生 pull-code.env dotenv artifact
   -> publish_skillhub
-       從 Dev GitLab clone 精確 commit
-       驗證 checkout SHA 與 scan SHA
+       從 Dev GitLab clone protected landing branch
+       從 checkout 推導 provenance revision
        呼叫 SkillHub source-import API
   -> SkillHub scanner
   -> namespace owner review
@@ -243,6 +243,20 @@ Importer 會呼叫 `https://skillhub.example.com/skillhub/api/...`。若直接�
 
 ## 7. Report、exit code 與排錯
 
+Importer 會把 UTC timestamp、level 與單行 `key=value` event 直接寫入 GitLab job log，
+不需要先下載 artifact 才能判斷進度。主要事件包括：
+
+- `event=config_loaded`、`event=clone_started`、`event=clone_completed`；
+- `event=git_stage_started`／`completed`／`failed`，可區分 init、remote、fetch、checkout、revision；
+- `event=discovery_completed`、`event=packaging_completed`、`event=namespace_completed`；
+- 每個 skill 的 `event=validation_completed`、`submission_completed`、`submission_skipped` 或失敗事件；
+- `event=import_completed` 的 skills／validated／submitted／skipped／failed 統計；
+- `event=report_written` 與帶有 final status、exit code 的 `event=importer_finished`。
+
+skill outcome、version 與 `requestId` 會直接顯示，方便對照 backend log。動態值會 JSON quote
+並限制長度，避免換行或 control character 偽造 log line。GitLab job log 與 JSON report 都不得
+包含 service token、job token、Authorization header、ZIP／SKILL.md 內容或完整 API payload。
+
 Report artifact 使用 `when: always`，包含：
 
 - `repositoryUrl`、clone 後取得的 `commitSha`、`sourceRefType`、`sourceRef`；
@@ -263,10 +277,10 @@ Report 不得包含 service token、job token 或 credentialed URL。
 | `10` | 未預期 importer 錯誤。 |
 
 - `0 個 SKILL.md`：確認大小寫與 `SKILLHUB_IMPORT_SOURCE_ROOT`。
-- scan mismatch：確認 `pull_code.env` 的 scan SHA 與 Dev SHA 來自同一落地 revision。
-- Clone 失敗：確認 Dev URL、commit 存在、job-token allowlist、Runner Git/DNS 與企業憑證。
+- landing mismatch：確認 protected branch 在 `pull_code` 到 `publish_skillhub` 之間未被其他 pipeline 改寫。
+- Clone 失敗：依 job log 的 git stage 確認 Dev URL、branch、job-token allowlist、Runner Git/DNS 與企業憑證。
 - Identity not found／disabled／ambiguous：確認 `keycloak` 與 exact `preferred_username`。
 - Namespace/source collision：同一 namespace 不可綁不同 GitHub repository。
-- 部分提交：不要人工刪資料；用同一組原始 SHA、Dev SHA 與 report 重跑，成功項目會 idempotent skip。
+- 部分提交：不要人工刪資料；用同一個 protected landing branch 與 report 重跑，成功項目會 idempotent skip。
 - SQL／500：用 report 的 `requestId` 查 backend log，並確認 migration、PostgreSQL、Redis、
   MinIO/S3 與 scanner 健康。

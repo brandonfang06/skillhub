@@ -106,6 +106,11 @@ def test_smoke_separates_the_central_pipeline_checkout_from_the_dev_source() -> 
     assert "SKILLHUB_SOURCE_COMMIT_SHA=" not in smoke
     assert "SKILLHUB_DEV_GITLAB_COMMIT_SHA=" not in smoke
     assert "SKILLHUB_SOURCE_SCAN_COMMIT_SHA=" not in smoke
+    assert "$jobLogLines" in smoke
+    assert '"event=importer_started"' in smoke
+    assert '"event=import_completed"' in smoke
+    assert '"event=importer_finished"' in smoke
+    assert "GitLab job log leaked a credential" in smoke
     assert '${pipeline}:/pipeline:ro' in smoke
     assert 'Join-Path $pipeline "pull-code.env"' in smoke
     assert "requirements-runtime.txt" not in smoke

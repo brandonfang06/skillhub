@@ -120,10 +120,30 @@ function Invoke-Importer {
         $PythonImage,
         "/bin/sh", "/pipeline/deploy/gitlab/oss-source-import.sh"
     )
-    & docker @dockerArguments
-    if ($LASTEXITCODE -ne 0) {
+    $jobLogLines = [Collections.Generic.List[string]]::new()
+    & docker @dockerArguments | ForEach-Object {
+        $line = [string]$_
+        $jobLogLines.Add($line)
+        Write-Host $line
+    }
+    $dockerExitCode = $LASTEXITCODE
+    $jobLog = $jobLogLines -join [Environment]::NewLine
+    if ($jobLog.Contains($rawToken) -or $jobLog.Contains("smoke-job-token")) {
+        throw "GitLab job log leaked a credential"
+    }
+    if ($dockerExitCode -ne 0) {
         Get-Content (Join-Path $reports $ReportName)
         throw "Importer failed for $ReportName"
+    }
+    foreach ($expectedEvent in @(
+        "event=importer_started",
+        "event=import_completed",
+        "event=report_written",
+        "event=importer_finished"
+    )) {
+        if (-not $jobLog.Contains($expectedEvent)) {
+            throw "GitLab job log is missing $expectedEvent"
+        }
     }
     $reportContent = Get-Content (Join-Path $reports $ReportName) -Raw
     if ($reportContent.Contains("smoke-job-token")) {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 
@@ -105,11 +106,17 @@ def test_records_the_internal_gitlab_pipeline_tag(
 def test_internal_gitlab_clone_failure_does_not_leak_the_job_token(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    caplog,
 ) -> None:
     source, _first_sha, _second_sha = make_source_repository(tmp_path)
     route_internal_clone_to_local_repository(source, monkeypatch)
 
-    with pytest.raises(SourceError, match="Unable to clone the landed Dev GitLab project") as error:
+    with caplog.at_level(
+        logging.INFO, logger="skillhub_oss_importer.github_source"
+    ), pytest.raises(
+        SourceError,
+        match="Unable to clone the landed Dev GitLab project during fetch",
+    ) as error:
         clone_repository(
             INTERNAL_REPOSITORY_URL,
             tmp_path / "missing-branch",
@@ -120,6 +127,10 @@ def test_internal_gitlab_clone_failure_does_not_leak_the_job_token(
         )
 
     assert "job-secret" not in str(error.value)
+    job_log = "\n".join(record.getMessage() for record in caplog.records)
+    assert 'event=git_stage_started stage="fetch"' in job_log
+    assert 'event=git_stage_failed stage="fetch" error_type="CalledProcessError"' in job_log
+    assert "job-secret" not in job_log
 
 
 def test_job_token_is_not_exposed_in_git_command_arguments(

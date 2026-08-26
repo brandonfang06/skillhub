@@ -377,3 +377,45 @@ The remaining organization-only gate is unchanged: the real GitLab runner must
 verify its approved Python 3.8 image, enterprise CA/TLS path, cross-project job
 token allowlist, protected branch policy, commit-preserving landing flow, and
 serialization or immutable per-pipeline branches when imports can overlap.
+
+## 2026-08-26 GitLab job log verification
+
+The importer now emits UTC, single-line job events for validated configuration,
+Git clone stages, discovery, packaging, namespace setup, every skill validation
+and submission, idempotent skips, report persistence, final status, exit code,
+and aggregate counts. Dynamic values are JSON-quoted and bounded. Tests prove
+that control characters cannot inject another log line and that SkillHub and
+GitLab tokens never appear in console output.
+
+Known failures log their stable status, exception class, safe error, and exit
+code. Unexpected failures expose only the exception class. If the JSON report
+path is not writable, the console now records `event=report_write_failed` and
+the CLI still returns exit `10` instead of writing a fallback artifact elsewhere
+or escaping with an uncontrolled exit.
+
+Final automated results:
+
+- importer tests: `50 passed`;
+- importer Ruff: passed;
+- Chinese operator contract tests: `4 passed`;
+- stock `python:3.8-bookworm` with `python -S`: entrypoint help passed with no
+  runtime installation;
+- PowerShell smoke contract: job events present and both credential values
+  absent.
+
+The first runtime attempt exposed that the long-running smoke backend used a
+stale image without the already-pushed timestamp fallback. The backend image
+was rebuilt from current `dev` and only the server container was recreated;
+PostgreSQL, Redis, MinIO, scanner, root proxy, `/skillhub` proxy, and their data
+were preserved. The final complete smoke passed:
+
+```text
+OSS source import smoke passed: run=7533d96ebbf0 initial=7cc2db2d2c7f4105480ec7180e461a81d6ad40b6 changed=7a2f655c31e6e3e30038f5fe40cbc7b136f442fa
+```
+
+Its visible job output proved three initial imports, three idempotent retry
+skips, and a `/skillhub` changed run with one import and two skips. PostgreSQL,
+Redis-backed scanning, MinIO objects, approval/publication, ownership, request
+IDs, timestamp fallback, root path, and subpath behavior remained valid. The
+final temporary root was retained:
+`C:\Users\USER\AppData\Local\Temp\skillhub-oss-import-7533d96ebbf0`.
