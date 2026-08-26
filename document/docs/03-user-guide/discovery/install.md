@@ -50,4 +50,5 @@ clawhub install team-name--my-skill
 
 ## 下一步
 
+- [批量安装多个 Skills](./multi-skill-install) - 从搜索结果一次选择并安装多个 Skills
 - [评分与收藏](./ratings) - 反馈和收藏技能

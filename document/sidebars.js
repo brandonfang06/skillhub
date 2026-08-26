@@ -72,6 +72,7 @@ const sidebars = {
           items: [
             'user-guide/discovery/search',
             'user-guide/discovery/install',
+            'user-guide/discovery/multi-skill-install',
             'user-guide/discovery/ratings',
           ],
         },

@@ -50,4 +50,5 @@ After installation, skills are automatically discovered and loaded by Claude Cod
 
 ## Next Steps
 
+- [Install Multiple Skills](./multi-skill-install) - Select and install multiple Skills from Search
 - [Ratings & Stars](./ratings) - Feedback and favorite skills
