@@ -65,6 +65,42 @@ commands, authentication, tracking, Agent support, or the three-row list cap.
 - Existing focus recovery, clear/remove actions, command ordering, and root
   plus `/skillhub` routing are unchanged.
 
+## 2026-08-27 Terminal Interactive Target Amendment
+
+This amendment adds a released-CLI-compatible route to Generic and multiple
+Agent targets without changing the default direct workflow or publishing a
+custom CLI.
+
+- The Install page presents two mutually exclusive target modes. **Direct
+  Agent** remains the default and requires exactly one explicit supported Agent.
+  **Choose in Terminal** is an opt-in mode for multiple detected Agents and the
+  Generic fallback.
+- Both modes retain the Web-selected `user` or `project` Scope and apply it to
+  every generated command. Interactive mode omits every `--agent` argument but
+  continues to include `--scope` and `--force`.
+- In a real interactive Terminal, public npm CLI 0.1.9 then opens its shipped
+  `Select install targets` multiselect for each Skill command. The choices may
+  include detected Agent-specific directories and Generic at `.agents/skills`.
+- Interactive mode retains **Copy all commands** and per-Skill copy actions.
+  Visible guidance states that every Skill asks for targets separately, all
+  chosen target directories are replaced by the latest published version, and
+  the mode is unsuitable for CI, background jobs, or other non-interactive
+  execution.
+- Direct mode keeps its existing exact command contract and stored Agent. Mode
+  switching does not delete the direct Agent choice, so returning to Direct
+  restores the user's prior selection.
+- Each Skill remains one independent CLI invocation. Copying creates no event;
+  each successful CLI download retains the existing one-event-per-Skill
+  tracking behavior even when that invocation writes to multiple targets.
+- The feature manual must document both modes, the per-Skill prompt, Generic,
+  non-interactive limitation, retained Scope/Force behavior, and CLI identity
+  attribution.
+
+The Web must not emit `--agent generic`, repeated explicit `--agent` arguments,
+shell-specific prompt automation, or a custom `--dir` workaround. Those forms
+either fail in the released package, distort the shared command contract, or
+reintroduce organization-owned CLI publication.
+
 ## Relationship To The Collection Design
 
 This design revisits only the prior decision that an arbitrary cross-search
@@ -374,5 +410,5 @@ event semantics.
 - An **Add to install list** action on skill detail pages.
 - Enforcing equality between the Web list composer and the CLI installer.
 - Custom install-directory input and `--dir` command generation.
-- Web multi-Agent commands until a public npm release is verified to support
-  multiple explicit install targets.
+- Non-interactive Web-generated multi-Agent arguments until a public npm
+  release is verified to support multiple explicit install targets.

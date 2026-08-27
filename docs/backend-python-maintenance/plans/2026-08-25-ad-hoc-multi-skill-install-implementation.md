@@ -40,6 +40,25 @@ the public artifact contract.
 - Add i18n parity and behavioral tests; rerun full Vitest, typecheck, lint,
   production build, and full subpath Playwright before real-service acceptance.
 
+## 2026-08-27 Terminal Interactive Target Follow-up
+
+- Add a persisted target mode with `direct` as the safe default and
+  `interactive` as the only alternative. Preserve the stored direct Agent when
+  switching modes.
+- Keep direct-mode commands unchanged. In interactive mode, reuse the pure
+  command renderer with Scope and Force but no Agent argument.
+- Render accessible single-choice mode controls and concise interactive
+  guidance before command copying. Copy-all and individual actions remain
+  enabled in interactive mode without requiring a direct Agent.
+- Add equivalent English, Simplified Chinese, and Traditional Chinese copy and
+  locale contract tests.
+- Update both Docusaurus feature-manual locales and build the documentation
+  site.
+- Extend root/subpath browser coverage and execute the exact generated
+  interactive shape with the public npm package in a PTY against the healthy
+  PostgreSQL-backed stack. No CLI source or backend contract changes are in
+  scope.
+
 ## Public Test Seams
 
 1. Pure command renderer: coordinates plus shared target options produce exact
@@ -48,8 +67,8 @@ the public artifact contract.
    limit, deduplication, sort, options, clear, and identity reset.
 3. Search workflow: authenticated entry, card selection, limit feedback,
    persistent tray, clear, and navigation.
-4. Install page: empty state, removal, Scope, Agent multiselect, force warning,
-   identity guidance, and copy actions.
+4. Install page: empty state, removal, Scope, direct/interactive target mode,
+   direct Agent validation, interactive guidance, and copy actions.
 5. Runtime integration: public npm CLI downloads through the real FastAPI route
    and writes existing per-skill events to real PostgreSQL.
 
@@ -143,6 +162,7 @@ Mocks remain supplementary and cannot replace this phase.
 - No Collection resource or curator/discovery pages.
 - No backend endpoint, schema, or migration for the ephemeral list.
 - No CLI modification, build, fork, release, or npm publication.
-- No batch Generic, `--dir`, pinned skill version, shell-specific wrapper,
-  browser credential handoff, or Web/CLI identity equality enforcement.
+- No explicit `--agent generic`, repeated explicit Agent arguments, `--dir`,
+  pinned skill version, shell-specific prompt automation, browser credential
+  handoff, or Web/CLI identity equality enforcement.
 - No synthetic copy/install analytics and no claim that copied text was run.

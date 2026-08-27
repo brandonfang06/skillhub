@@ -90,6 +90,42 @@ describe('InstallSkillsPage', () => {
     expect(copyMock).toHaveBeenCalledWith(userCommands.join('\n'))
   })
 
+  it('lets the Terminal choose multiple Agents or Generic without losing the direct Agent', () => {
+    installSelectionStore.getState().addSkill({
+      id: 1,
+      namespace: 'global',
+      slug: 'alpha',
+      displayName: 'Alpha',
+    })
+
+    const { container } = render(<InstallSkillsPage />)
+    fireEvent.change(screen.getByLabelText('installSkills.agentsHeading'), {
+      target: { value: 'codex' },
+    })
+
+    fireEvent.click(screen.getByRole('radio', { name: 'installSkills.modeInteractive' }))
+
+    const interactiveCommand = (
+      'npx @astron-team/skillhub@latest install alpha '
+      + '--registry https://skillhub.example.com/skillhub --scope user --force'
+    )
+    expect(screen.queryByLabelText('installSkills.agentsHeading')).toBeNull()
+    expect(screen.getByText('installSkills.interactiveWarning')).toBeDefined()
+    expect(container.textContent).toContain(interactiveCommand)
+    expect(container.textContent).not.toContain('--agent codex')
+
+    const copyAll = screen.getByRole('button', { name: 'installSkills.copyAll' }) as HTMLButtonElement
+    expect(copyAll.disabled).toBe(false)
+    fireEvent.click(copyAll)
+    expect(copyMock).toHaveBeenCalledWith(interactiveCommand)
+
+    fireEvent.click(screen.getByRole('radio', { name: 'installSkills.modeDirect' }))
+
+    const directAgentSelect = screen.getByLabelText('installSkills.agentsHeading') as HTMLSelectElement
+    expect(directAgentSelect.value).toBe('codex')
+    expect(container.textContent).toContain(`${interactiveCommand.replace(' --force', ' --agent codex --force')}`)
+  })
+
   it('puts targets first, commands second, and selected Skills in an open three-row disclosure', () => {
     installSelectionStore.getState().addSkill({
       id: 1,

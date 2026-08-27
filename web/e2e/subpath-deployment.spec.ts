@@ -589,6 +589,20 @@ test.describe('SkillHub production subpath deployment', () => {
       'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex --force',
       { exact: true },
     )).toBeVisible()
+    const directMode = page.getByRole('radio', { name: 'Direct Agent' })
+    const interactiveMode = page.getByRole('radio', { name: 'Terminal interactive' })
+    await expect(directMode).toBeChecked()
+    await interactiveMode.check()
+    await expect(page.getByLabel('Agent targets')).toHaveCount(0)
+    await expect(page.getByText(
+      'Each Skill asks once in an interactive Terminal; choose multiple Agents or Generic there. Latest versions replace all selected target directories. Not for CI or background jobs.',
+      { exact: true },
+    )).toBeVisible()
+    await expect(page.getByText(
+      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --force',
+      { exact: true },
+    )).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Copy all commands' })).toBeEnabled()
     const targetsHeading = page.getByRole('heading', { name: 'Install target' })
     const commandsHeading = page.getByRole('heading', { name: 'Terminal commands' })
     const selectedSummary = page.getByText('1 Skills selected', { exact: true })
@@ -600,6 +614,8 @@ test.describe('SkillHub production subpath deployment', () => {
     expect(targetBox!.y).toBeLessThan(commandsBox!.y)
     expect(commandsBox!.y).toBeLessThan(selectedBox!.y)
     expect(selectedBox!.y + selectedBox!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
+    await directMode.check()
+    await expect(page.getByLabel('Agent targets')).toHaveValue('codex')
     await expect(page.getByText('Verify the Terminal identity')).toHaveCount(0)
     await expect(page.getByRole('checkbox', { name: 'Update/reinstall existing Skills to the latest version' })).toHaveCount(0)
     await expectNoHorizontalOverflow(page)

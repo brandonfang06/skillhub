@@ -20,6 +20,10 @@ const PAGE_KEYS = [
   'selectedHeading',
   'removeSkill',
   'targetsHeading',
+  'modeHeading',
+  'modeDirect',
+  'modeInteractive',
+  'interactiveWarning',
   'scopeHeading',
   'scopeUser',
   'scopeProject',
@@ -57,5 +61,9 @@ describe('multi-skill install locale contract', () => {
     expect(zhTW.installSelection.startHint).toBe('一次選取最多 20 個，並複製安裝指令')
     expect(zhTW.installSkills.title).toBe('安裝 Skills')
     expect(zhTW.installSkills.copyAll).toBe('複製全部指令')
+    expect(zhTW.installSkills.modeInteractive).toBe('終端機互動選擇')
+    expect(zhTW.installSkills.interactiveWarning).toContain('每個 Skill')
+    expect(zhTW.installSkills.interactiveWarning).toContain('Generic')
+    expect(zhTW.installSkills.interactiveWarning).toContain('不適用於 CI')
   })
 })

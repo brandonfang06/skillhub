@@ -92,6 +92,7 @@ describe('install selection store', () => {
     })
     firstStore.getState().setScope('project')
     firstStore.getState().setAgent('codex')
+    firstStore.getState().setTargetMode('interactive')
 
     const restoredStore = createInstallSelectionStore(storage)
 
@@ -101,6 +102,7 @@ describe('install selection store', () => {
       selectedSkills: [],
       scope: 'user',
       selectedAgentId: null,
+      targetMode: 'direct',
     })
 
     restoredStore.getState().bindOwner('user-a')
@@ -110,6 +112,7 @@ describe('install selection store', () => {
       isSelectionMode: true,
       scope: 'project',
       selectedAgentId: 'codex',
+      targetMode: 'interactive',
     })
     expect(restoredStore.getState().selectedSkills).toHaveLength(1)
 
@@ -121,6 +124,27 @@ describe('install selection store', () => {
       selectedSkills: [],
       scope: 'user',
       selectedAgentId: null,
+      targetMode: 'direct',
+    })
+  })
+
+  it('keeps the direct Agent while switching to Terminal-interactive targets', () => {
+    const store = createInstallSelectionStore()
+    store.getState().bindOwner('user-a')
+    store.getState().setAgent('codex')
+
+    store.getState().setTargetMode('interactive')
+
+    expect(store.getState()).toMatchObject({
+      selectedAgentId: 'codex',
+      targetMode: 'interactive',
+    })
+
+    store.getState().setTargetMode('direct')
+
+    expect(store.getState()).toMatchObject({
+      selectedAgentId: 'codex',
+      targetMode: 'direct',
     })
   })
 

@@ -56,23 +56,25 @@ export function InstallSkillsPage() {
   const selectedSkills = useInstallSelectionStore((state) => state.selectedSkills)
   const scope = useInstallSelectionStore((state) => state.scope)
   const selectedAgentId = useInstallSelectionStore((state) => state.selectedAgentId)
+  const targetMode = useInstallSelectionStore((state) => state.targetMode)
   const removeSkill = useInstallSelectionStore((state) => state.removeSkill)
   const clearSelection = useInstallSelectionStore((state) => state.clearSelection)
   const setScope = useInstallSelectionStore((state) => state.setScope)
   const setAgent = useInstallSelectionStore((state) => state.setAgent)
+  const setTargetMode = useInstallSelectionStore((state) => state.setTargetMode)
   const [copiedAll, copyAll] = useCopyToClipboard()
   const registryUrl = useMemo(() => getCliRegistryUrl(), [])
-  const hasSelectedAgent = selectedAgentId !== null
+  const canCopyCommands = targetMode === 'interactive' || selectedAgentId !== null
   const commands = useMemo(
     () => selectedSkills.map((skill) => ({
       skill,
       command: buildSkillhubInstallCommand(skill.namespace, skill.slug, registryUrl, {
         scope,
-        agentId: selectedAgentId ?? undefined,
+        agentId: targetMode === 'direct' ? selectedAgentId ?? undefined : undefined,
         force: true,
       }),
     })),
-    [registryUrl, scope, selectedAgentId, selectedSkills],
+    [registryUrl, scope, selectedAgentId, selectedSkills, targetMode],
   )
 
   useEffect(() => {
@@ -119,10 +121,36 @@ export function InstallSkillsPage() {
         <>
           <Card className="space-y-3 p-4">
             <h2 className="text-lg font-semibold">{t('installSkills.targetsHeading')}</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <fieldset>
+                <legend className="mb-2 text-sm font-semibold">{t('installSkills.modeHeading')}</legend>
+                <div className="flex flex-col gap-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="install-target-mode"
+                      checked={targetMode === 'direct'}
+                      onChange={() => setTargetMode('direct')}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {t('installSkills.modeDirect')}
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="install-target-mode"
+                      checked={targetMode === 'interactive'}
+                      onChange={() => setTargetMode('interactive')}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {t('installSkills.modeInteractive')}
+                  </label>
+                </div>
+              </fieldset>
+
               <fieldset>
                 <legend className="mb-2 text-sm font-semibold">{t('installSkills.scopeHeading')}</legend>
-                <div className="flex flex-wrap gap-5">
+                <div className="flex flex-col gap-2 lg:flex-row lg:gap-5">
                   <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
                       type="radio"
@@ -151,27 +179,33 @@ export function InstallSkillsPage() {
                 )}
               </fieldset>
 
-              <div>
-                <label htmlFor="install-agent" className="mb-2 block text-sm font-semibold">
-                  {t('installSkills.agentsHeading')}
-                </label>
-                <select
-                  id="install-agent"
-                  value={selectedAgentId ?? ''}
-                  onChange={(event) => setAgent(event.target.value || null)}
-                  className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                >
-                  <option value="">{t('installSkills.agentPlaceholder')}</option>
-                  {SUPPORTED_INSTALL_AGENTS.map((agent) => (
-                    <option key={agent.id} value={agent.id}>{agent.label}</option>
-                  ))}
-                </select>
-                {!hasSelectedAgent && (
-                  <p role="alert" className="mt-2 text-xs font-medium text-destructive">
-                    {t('installSkills.selectAgentRequired')}
-                  </p>
-                )}
-              </div>
+              {targetMode === 'direct' ? (
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="install-agent" className="mb-2 block text-sm font-semibold">
+                    {t('installSkills.agentsHeading')}
+                  </label>
+                  <select
+                    id="install-agent"
+                    value={selectedAgentId ?? ''}
+                    onChange={(event) => setAgent(event.target.value || null)}
+                    className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
+                    <option value="">{t('installSkills.agentPlaceholder')}</option>
+                    {SUPPORTED_INSTALL_AGENTS.map((agent) => (
+                      <option key={agent.id} value={agent.id}>{agent.label}</option>
+                    ))}
+                  </select>
+                  {selectedAgentId === null && (
+                    <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+                      {t('installSkills.selectAgentRequired')}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div role="note" className="col-span-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 md:col-span-1">
+                  {t('installSkills.interactiveWarning')}
+                </div>
+              )}
             </div>
           </Card>
 
@@ -181,19 +215,19 @@ export function InstallSkillsPage() {
                 <h2 className="text-lg font-semibold">{t('installSkills.commandsHeading')}</h2>
                 <p className="text-sm text-muted-foreground">{t('installSkills.commandsHint')}</p>
               </div>
-              <Button type="button" disabled={!hasSelectedAgent} onClick={handleCopyAll}>
+              <Button type="button" disabled={!canCopyCommands} onClick={handleCopyAll}>
                 {copiedAll ? <Check className="mr-2 h-4 w-4" aria-hidden="true" /> : <Copy className="mr-2 h-4 w-4" aria-hidden="true" />}
                 {copiedAll ? t('copyButton.copied') : t('installSkills.copyAll')}
               </Button>
             </div>
-            {hasSelectedAgent ? (
+            {canCopyCommands ? (
               <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                 {commands.map(({ command, skill }) => (
                   <CommandRow
                     key={`${skill.namespace}/${skill.slug}`}
                     command={command}
                     skillName={skill.displayName}
-                    copyDisabled={!hasSelectedAgent}
+                    copyDisabled={!canCopyCommands}
                   />
                 ))}
               </div>

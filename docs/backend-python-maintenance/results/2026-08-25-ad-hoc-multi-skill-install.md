@@ -2,6 +2,60 @@
 
 Date: 2026-08-25
 
+## 2026-08-27 Terminal Interactive Target Follow-up
+
+The authenticated Install page now keeps **Direct Agent** as its default and
+adds an opt-in **Terminal interactive** mode. Direct mode still requires one
+explicit supported Agent. Interactive mode keeps the Web-selected Scope and
+`--force`, omits `--agent`, enables copy-all and per-Skill copy, and visibly
+states that every Skill opens its own target prompt, multiple Agents and
+Generic may be selected, existing target directories are replaced, and the
+mode is not for CI or background jobs.
+
+The mode is stored in the existing authenticated tab-scoped selection state.
+The persistence envelope advanced to version 3; older versions migrate to the
+safe Direct default. Switching modes retains the direct Agent choice. English,
+Simplified Chinese, and Traditional Chinese expose the same behavior, and the
+bilingual Docusaurus feature manual documents both paths.
+
+TDD and automated verification passed:
+
+- focused Vitest: 3 files, 19 tests;
+- full Vitest: 232 files, 958 tests;
+- `corepack pnpm run typecheck`;
+- `corepack pnpm run lint`;
+- `corepack pnpm run build` with 2,422 modules transformed;
+- Simplified Chinese and English Docusaurus production builds; and
+- `corepack pnpm run test:e2e:subpath`: 28/28 desktop/mobile tests.
+
+The first mobile integration run correctly caught the new warning pushing the
+selected-Skills summary to 906 px in an 844 px viewport. Method and Scope were
+recomposed into a compact two-column mobile grid without removing any warning.
+The focused desktop/mobile seam then passed 2/2, and the full E2E suite retained
+the initial-viewport and no-horizontal-overflow guarantees.
+
+The exact updated Web source was built as `skillhub-web:oss-import-smoke`
+(`sha256:38d38122ccadd55fd4d7eee5083ba9a5ce7c3ef3096f6f2f73a30f3a20a12e67`)
+and recreated in both root and `/skillhub` containers. PostgreSQL, Redis, MinIO,
+scanner, FastAPI, root Web, and subpath Web were healthy. Root `/install`,
+subpath `/skillhub/install`, and backend health returned HTTP 200. Recent
+backend/Web logs contained no SQL, traceback, exception, or nginx error, and
+PostgreSQL reported zero `idle in transaction` sessions.
+
+Real 390 x 844 in-app-browser acceptance measured the subpath multi-install
+entry at 350.4 x 64 px with a 16 px page inset, no horizontal overflow, and no
+browser warning/error. The temporary viewport override was reset and the test
+tab was closed.
+
+Finally, the exact public npm 0.1.9 interactive command shape was executed
+against the real subpath registry with an isolated user home. Its shipped
+target multiselect exposed both Codex and Generic; selecting both installed the
+same Skill into the two contained target directories and created exactly one
+new PostgreSQL download event (`id = 6`, `user_id = docker-admin`,
+`source = cli`). The 15-minute validation token (`api_token.id = 13`) was
+revoked, both isolated install directories and the temporary verifier were
+removed, and no matching active token or temporary path remained.
+
 ## 2026-08-26 UX Discoverability Follow-up
 
 The Search entry is now a large primary **Install multiple Skills** call to
