@@ -26,6 +26,8 @@ testing.
 - Persist plans/results under `docs/`; do not leave design decisions only in
   chat.
 - Prefer small, direct changes that match the existing Python/TypeScript code.
+- Apply `docs/security.md` to every feature and bug fix; record material
+  CIA impact, changed trust boundaries, and security verification.
 - Do not reintroduce Java, Maven, Spring Boot, or a hybrid Java/Python runtime.
 - Do not manually edit generated files.
 
@@ -73,6 +75,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 - Historical Java-to-Python migration archive: `docs/backend-python-migration/`.
 - Deployment/operator docs: `deploy/k8s/`.
 - Product/user docs: `docs/skillhub/`, `document/`, and `web/src/docs/`.
+- Security engineering guideline: `docs/security.md`.
 
 ## Git And Verification
 
