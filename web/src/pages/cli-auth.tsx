@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
@@ -11,19 +11,44 @@ import { getCliRegistryUrl } from '@/shared/lib/runtime-config'
 // Parse the original URL params captured before TanStack Router rewrites
 const ORIGINAL_PARAMS = new URLSearchParams(ORIGINAL_URL_SEARCH)
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1'])
+
 export function getCliAuthRegistryUrl(): string {
   return getCliRegistryUrl()
 }
 
-function isValidRedirectUri(uri: string): boolean {
+export function resolveLoopbackRedirectUri(uri: string): URL | null {
   try {
     const url = new URL(uri)
-    // Only allow localhost/127.0.0.1/::1 on HTTP
-    const validHosts = ['localhost', '127.0.0.1', '[::1]', '::1']
-    return url.protocol === 'http:' && validHosts.includes(url.hostname.toLowerCase())
+    const isLoopbackHttp = url.protocol === 'http:'
+      && LOOPBACK_HOSTS.has(url.hostname.toLowerCase())
+    if (!isLoopbackHttp || url.username || url.password) {
+      return null
+    }
+    url.hash = ''
+    return url
   } catch {
-    return false
+    return null
   }
+}
+
+interface CliRedirectCredentials {
+  token: string
+  registry: string
+  state: string
+}
+
+export function buildCliRedirectUrl(
+  redirectTarget: URL,
+  credentials: CliRedirectCredentials,
+): string {
+  const target = new URL(redirectTarget.href)
+  target.hash = new URLSearchParams({
+    token: credentials.token,
+    registry: credentials.registry,
+    state: credentials.state,
+  }).toString()
+  return target.href
 }
 
 function decodeLabel(labelB64?: string, labelPlain?: string): string {
@@ -54,13 +79,10 @@ export function CliAuthPage() {
   const labelB64 = ORIGINAL_PARAMS.get('label_b64')?.trim() || undefined
   const labelPlain = ORIGINAL_PARAMS.get('label')?.trim() || undefined
   const label = decodeLabel(labelB64, labelPlain)
-
-  // Debug: log search params and raw URL
-  console.log('CLI Auth - Original search (from router.tsx):', ORIGINAL_URL_SEARCH)
-  console.log('CLI Auth - Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR')
-  console.log('CLI Auth - redirectUri:', redirectUri)
-  console.log('CLI Auth - state:', state)
-  console.log('CLI Auth - label:', label)
+  const redirectTarget = useMemo(
+    () => redirectUri ? resolveLoopbackRedirectUri(redirectUri) : null,
+    [redirectUri],
+  )
 
   useEffect(() => {
     // Check authentication status
@@ -88,7 +110,7 @@ export function CliAuthPage() {
     }
 
     // Validate redirect_uri
-    if (!redirectUri || !isValidRedirectUri(redirectUri)) {
+    if (!redirectTarget) {
       setStatus('error')
       setErrorMessage(t('cliAuth.invalidRedirectUri'))
       return
@@ -117,23 +139,18 @@ export function CliAuthPage() {
         setToken(response.token)
         setStatus('redirecting')
 
-        // Construct redirect URL with token in hash fragment
-        const registryUrl = getCliAuthRegistryUrl()
-        const hashParams = new URLSearchParams()
-        hashParams.set('token', response.token)
-        hashParams.set('registry', registryUrl)
-        hashParams.set('state', state)
-
-        const redirectUrl = `${redirectUri}#${hashParams.toString()}`
-
         // Redirect to CLI's loopback server
-        window.location.assign(redirectUrl)
+        window.location.assign(buildCliRedirectUrl(redirectTarget, {
+          token: response.token,
+          registry: getCliAuthRegistryUrl(),
+          state,
+        }))
       })
       .catch((error) => {
         setStatus('error')
         setErrorMessage(error instanceof Error ? error.message : t('cliAuth.tokenCreationFailed'))
       })
-  }, [user, redirectUri, state, label, t])
+  }, [user, redirectUri, redirectTarget, state, label, t])
 
   if (status === 'validating') {
     return (

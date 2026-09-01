@@ -1,13 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-// Layout is a component-only file with no exported pure functions or constants.
-// We verify that the named export exists for the router to consume.
+const linkProps = vi.hoisted(() => [] as Array<Record<string, unknown>>)
 
 vi.mock('@tanstack/react-router', () => ({
   Outlet: () => null,
-  Link: ({ children }: { children: unknown }) => children,
+  Link: ({ children, ...props }: { children: unknown; [key: string]: unknown }) => {
+    linkProps.push(props)
+    return children
+  },
   useRouterState: () => ({ pathname: '/', resolvedPathname: '/' }),
 }))
 
@@ -55,6 +57,10 @@ vi.mock('./layout-main-content', () => ({
 
 import { Layout } from './layout'
 
+beforeEach(() => {
+  linkProps.length = 0
+})
+
 describe('Layout', () => {
   it('exports a named Layout component function', () => {
     expect(typeof Layout).toBe('function')
@@ -76,5 +82,12 @@ describe('Layout', () => {
     expect(html).not.toContain('footer.terms')
     expect(html).not.toContain('Privacy Policy')
     expect(html).not.toContain('Terms of Service')
+  })
+
+  it('links anonymous users to login without an empty return target', () => {
+    renderToStaticMarkup(createElement(Layout))
+
+    expect(linkProps).toContainEqual(expect.objectContaining({ to: '/login' }))
+    expect(linkProps.find((props) => props.to === '/login')).not.toHaveProperty('search')
   })
 })

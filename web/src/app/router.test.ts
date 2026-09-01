@@ -20,7 +20,35 @@ vi.mock('@/shared/lib/search-query', () => ({
   normalizeSearchQuery: (q: string) => q.trim(),
 }))
 
-import { ORIGINAL_URL_SEARCH, createAppRouter, router } from './router'
+import {
+  ORIGINAL_URL_SEARCH,
+  createAppRouter,
+  normalizeLoginSearch,
+  router,
+} from './router'
+
+describe('normalizeLoginSearch', () => {
+  it('omits a missing or empty return target', () => {
+    expect(normalizeLoginSearch({})).toEqual({
+      returnTo: undefined,
+      reason: undefined,
+    })
+    expect(normalizeLoginSearch({ returnTo: '' })).toEqual({
+      returnTo: undefined,
+      reason: undefined,
+    })
+  })
+
+  it('preserves a non-empty return target and reason', () => {
+    expect(normalizeLoginSearch({
+      returnTo: '/dashboard',
+      reason: 'session-expired',
+    })).toEqual({
+      returnTo: '/dashboard',
+      reason: 'session-expired',
+    })
+  })
+})
 
 describe('ORIGINAL_URL_SEARCH', () => {
   it('is a string (captured from window.location.search at load time)', () => {

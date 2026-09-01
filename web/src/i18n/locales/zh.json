@@ -1423,7 +1423,8 @@
   "upload": {
     "dropHint": "放开以上传文件...",
     "dragHint": "拖拽 ZIP 文件到此处，或点击选择",
-    "formatHint": "仅支持 .zip 格式"
+    "formatHint": "仅支持 .zip 格式",
+    "folderHint": "或选择一个文件夹进行打包上传"
   },
   "layout": {
     "footerDescription": "技能注册中心，为开发者提供高效的技能管理和分发平台。"
@@ -1535,7 +1536,9 @@
     "starredAction": "点击取消收藏",
     "unstarTitle": "取消收藏",
     "unstarDescription": "确定要取消收藏技能“{{name}}”吗？",
-    "unstarConfirm": "取消收藏"
+    "unstarConfirm": "取消收藏",
+    "ownerLabel": "所有者：{{owner}}",
+    "updatedLabel": "更新于 {{time}}"
   },
   "copyButton": {
     "copied": "已复制",
@@ -1627,6 +1630,7 @@
     },
     "file": "技能包文件",
     "removeSelectedFile": "删除已选文件",
+    "packaging": "正在打包文件夹...",
     "publishing": "发布中...",
     "confirm": "确认发布",
     "success": "发布成功",
@@ -1648,7 +1652,17 @@
     "warningConfirmCancel": "返回修改",
     "frontmatterFailedTitle": "SKILL.md 格式有误",
     "frontmatterFailedDescription": "请检查 SKILL.md 顶部 frontmatter 的 YAML 格式。若字段值中包含冒号，请用引号包裹。",
-    "selectRequired": "请选择命名空间和文件"
+    "selectRequired": "请选择命名空间和文件",
+    "folderPackagingFailed": "无法打包所选文件夹，请重试。",
+    "folderPackagingErrors": {
+      "empty": "所选文件夹中没有可发布的文件。",
+      "unsafePath": "文件夹包含不安全的路径：{{path}}。",
+      "duplicatePath": "文件夹包含重复路径：{{path}}。",
+      "pathTooLong": "所选路径过长，无法打包：{{path}}。",
+      "tooManyFiles": "文件夹中的可发布文件超过 {{limit}} 个。",
+      "fileTooLarge": "{{path}} 超过单个文件 {{sizeLimit}} 的限制。",
+      "packageTooLarge": "文件夹超过解压后总大小 {{sizeLimit}} 的限制。"
+    }
   },
   "toast": {
     "success": "成功",

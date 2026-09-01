@@ -180,6 +180,18 @@ const rootRoute = createRootRoute({
 
 const requireAuth = createRequireAuth(getCurrentUser)
 
+export function normalizeLoginSearch(search: Record<string, unknown>): {
+  returnTo?: string
+  reason?: string
+} {
+  return {
+    returnTo: typeof search.returnTo === 'string' && search.returnTo
+      ? search.returnTo
+      : undefined,
+    reason: typeof search.reason === 'string' ? search.reason : undefined,
+  }
+}
+
 const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -195,10 +207,7 @@ const skillsRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'login',
-  validateSearch: (search: Record<string, unknown>): { returnTo: string; reason?: string } => ({
-    returnTo: typeof search.returnTo === 'string' ? search.returnTo : '',
-    reason: typeof search.reason === 'string' ? search.reason : undefined,
-  }),
+  validateSearch: normalizeLoginSearch,
   component: LoginPage,
 })
 

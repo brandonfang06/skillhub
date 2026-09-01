@@ -6,6 +6,7 @@ const useNotificationListMock = vi.fn()
 const useMarkAllReadMock = vi.fn()
 const useMarkReadMock = vi.fn()
 const useDeleteReadNotificationMock = vi.fn()
+const formatRelativeTimeMock = vi.fn((_dateStr: string, _language: string) => '5 minutes ago')
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -39,6 +40,10 @@ vi.mock('@/features/notification/notification-content', () => ({
 
 vi.mock('@/features/notification/notification-target', () => ({
   resolveNotificationTarget: () => '/dashboard/notifications',
+}))
+
+vi.mock('@/shared/lib/format-relative-time', () => ({
+  formatRelativeTime: (dateStr: string, language: string) => formatRelativeTimeMock(dateStr, language),
 }))
 
 import { NotificationsPage } from './notifications'
@@ -88,6 +93,8 @@ describe('NotificationsPage', () => {
     expect(html).toContain('notification.deleteRead')
     expect(html).toContain('Read notification')
     expect(html).toContain('Unread notification')
+    expect(html).toContain('5 minutes ago')
+    expect(formatRelativeTimeMock).toHaveBeenCalledWith('2026-03-23T00:00:00Z', 'en')
   })
 
   it('shows pagination when the backend total exceeds one page', () => {

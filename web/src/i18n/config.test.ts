@@ -33,6 +33,10 @@ vi.mock('./locales/zh-TW.json', () => ({
   default: { greeting: '哈囉' },
 }))
 
+vi.mock('./locales/ru.json', () => ({
+  default: { greeting: 'Привет' },
+}))
+
 // Import triggers the side-effect initialization
 await import('./config')
 
@@ -58,15 +62,17 @@ describe('i18n config', () => {
     expect(initOptions.detection.caches).toEqual(['localStorage'])
   })
 
-  it('registers english, simplified chinese, and traditional chinese resource bundles', () => {
+  it('registers english, russian, simplified chinese, and traditional chinese resource bundles', () => {
     const initOptions = initMock.mock.calls[0][0]
     expect(initOptions.resources).toHaveProperty('en')
+    expect(initOptions.resources).toHaveProperty('ru')
     expect(initOptions.resources).toHaveProperty('zh')
     expect(initOptions.resources).toHaveProperty('zh-TW')
     expect(initOptions.resources).toHaveProperty('zh-Hant')
     expect(initOptions.resources).toHaveProperty('zh-HK')
     expect(initOptions.resources).toHaveProperty('zh-MO')
     expect(initOptions.resources.en).toHaveProperty('translation')
+    expect(initOptions.resources.ru).toHaveProperty('translation')
     expect(initOptions.resources.zh).toHaveProperty('translation')
     expect(initOptions.resources['zh-TW']).toHaveProperty('translation')
     expect(initOptions.resources['zh-Hant'].translation).toBe(initOptions.resources['zh-TW'].translation)

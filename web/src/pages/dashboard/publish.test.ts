@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const useSearchMock = vi.fn()
 const selectRecords: Array<{ value?: string }> = []
 const namespacePickerRecords: Array<{ value: string }> = []
-const { publishMutationMock, toastErrorMock } = vi.hoisted(() => ({
+const { packageFolderAsZipMock, publishMutationMock, toastErrorMock } = vi.hoisted(() => ({
+  packageFolderAsZipMock: vi.fn(),
   publishMutationMock: vi.fn(),
   toastErrorMock: vi.fn(),
 }))
@@ -28,13 +29,48 @@ vi.mock('react-i18next', async () => {
 })
 
 vi.mock('@/features/publish/upload-zone', () => ({
-  UploadZone: ({ onFileSelect }: { onFileSelect: (file: File) => void }) =>
+  UploadZone: ({
+    onFileSelect,
+    onFolderSelect,
+    disabled,
+  }: {
+    onFileSelect: (file: File) => void
+    onFolderSelect?: (files: File[]) => void
+    disabled?: boolean
+  }) =>
     createElement(
-      'button',
-      { type: 'button', onClick: () => onFileSelect(new File(['skill'], 'skill.zip')) },
-      'choose-file',
+      'div',
+      null,
+      createElement(
+        'button',
+        {
+          type: 'button',
+          disabled,
+          onClick: () => onFileSelect(new File(['skill'], 'skill.zip')),
+        },
+        'choose-file',
+      ),
+      createElement(
+        'button',
+        {
+          type: 'button',
+          disabled,
+          onClick: () => onFolderSelect?.([new File(['skill'], 'SKILL.md')]),
+        },
+        'choose-folder',
+      ),
     ),
 }))
+
+vi.mock('@/features/publish/folder-zip', async () => {
+  const actual = await vi.importActual<typeof import('@/features/publish/folder-zip')>(
+    '@/features/publish/folder-zip',
+  )
+  return {
+    ...actual,
+    packageFolderAsZip: packageFolderAsZipMock,
+  }
+})
 
 vi.mock('@/features/publish/namespace-picker', () => ({
   NamespacePicker: ({
@@ -109,6 +145,7 @@ vi.mock('@/api/client', () => ({
 }))
 
 import { ApiError } from '@/api/client'
+import { FolderPackagingError } from '@/features/publish/folder-zip'
 import { PublishPage } from './publish'
 
 afterEach(cleanup)
@@ -117,6 +154,7 @@ describe('PublishPage', () => {
   beforeEach(() => {
     selectRecords.length = 0
     namespacePickerRecords.length = 0
+    packageFolderAsZipMock.mockReset()
     publishMutationMock.mockReset()
     toastErrorMock.mockReset()
     useSearchMock.mockReturnValue({
@@ -186,5 +224,54 @@ describe('PublishPage', () => {
         visibility: 'PUBLIC',
       }))
     })
+  })
+
+  it('packages a selected folder and publishes the resulting ZIP', async () => {
+    const packagedFile = new File(['packaged'], 'folder-skill.zip', {
+      type: 'application/zip',
+    })
+    packageFolderAsZipMock.mockResolvedValue(packagedFile)
+    publishMutationMock.mockResolvedValue({
+      namespace: 'team-ai',
+      slug: 'folder-skill',
+      version: '1.0.0',
+      status: 'PENDING_REVIEW',
+    })
+
+    render(createElement(PublishPage))
+    fireEvent.click(screen.getByText('choose-folder'))
+    await screen.findByText(/folder-skill\.zip/)
+    fireEvent.click(screen.getByText('publish.confirm'))
+
+    await waitFor(() => {
+      expect(packageFolderAsZipMock).toHaveBeenCalledTimes(1)
+      expect(publishMutationMock).toHaveBeenCalledWith(expect.objectContaining({
+        file: packagedFile,
+      }))
+    })
+  })
+
+  it('shows a specific folder-boundary error and does not publish a stale ZIP', async () => {
+    packageFolderAsZipMock.mockRejectedValue(
+      new FolderPackagingError('file-too-large', {
+        path: 'folder-skill/assets/large.bin',
+        limit: 10 * 1024 * 1024,
+      }),
+    )
+
+    render(createElement(PublishPage))
+    fireEvent.click(screen.getByText('choose-file'))
+    fireEvent.click(screen.getByText('choose-folder'))
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'publish.folderPackagingErrors.fileTooLarge',
+      )
+    })
+    expect(screen.queryByText(/skill\.zip/)).toBeNull()
+    expect(
+      (screen.getByText('publish.confirm') as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(publishMutationMock).not.toHaveBeenCalled()
   })
 })

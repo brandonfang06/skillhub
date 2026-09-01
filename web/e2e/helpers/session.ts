@@ -1,4 +1,5 @@
 import { expect, type Page, type TestInfo } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 
 const password = 'Passw0rd!123'
 const cachedUserByWorker = new Map<number, string>()
@@ -37,7 +38,7 @@ function usernameForWorker(testInfo?: TestInfo): string {
 
 function uniqueUsernameForWorker(testInfo?: TestInfo): string {
   const worker = testInfo?.parallelIndex ?? 0
-  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
+  const suffix = `${Date.now().toString(36)}${randomUUID().slice(0, 8)}`
   return `e2e_w${worker}_${suffix}`
 }
 

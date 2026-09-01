@@ -58,6 +58,19 @@ describe('handleApiError', () => {
     expect(window.location.href).toBe('/login?reason=accountDisabled')
   })
 
+  it('recognizes a Russian disabled-account response while another locale is active', async () => {
+    const { ApiError, handleApiError } = await import('./api-error')
+
+    handleApiError(new ApiError(
+      'Эта учётная запись отключена',
+      401,
+      'Эта учётная запись отключена',
+    ))
+
+    expect(errorSpy).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('/login?reason=accountDisabled')
+  })
+
   it('keeps unauthorized redirects inside the runtime application base', async () => {
     vi.stubGlobal('window', {
       __SKILLHUB_RUNTIME_CONFIG__: { basePath: '/skillhub' },

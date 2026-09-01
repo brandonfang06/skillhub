@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SELECT_CONTENT_CLASS_NAME,
+  SELECT_CONTENT_SIDE_OFFSET,
   SELECT_ITEM_CLASS_NAME,
   SELECT_SCROLL_BUTTON_CLASS_NAME,
   SELECT_TRIGGER_CLASS_NAME,
@@ -30,6 +31,15 @@ describe('shared select contract', () => {
     expect(SELECT_CONTENT_CLASS_NAME).toContain('shadow-md')
     expect(SELECT_ITEM_CLASS_NAME).toContain('pl-8')
     expect(SELECT_ITEM_CLASS_NAME).toContain('rounded-md')
+  })
+
+  it('keeps long option lists inside the available viewport', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain(
+      'max-h-[var(--radix-select-content-available-height)]',
+    )
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-y-auto')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-x-hidden')
+    expect(SELECT_CONTENT_SIDE_OFFSET).toBe(4)
   })
 
   it('uses pointer cursors for expanded select interactions', () => {

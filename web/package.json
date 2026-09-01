@@ -31,7 +31,7 @@
     "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "generate-api": "openapi-typescript http://localhost:8080/v3/api-docs -o src/api/generated/schema.d.ts",
+    "generate-api": "openapi-typescript http://localhost:8080/openapi.json -o src/api/generated/schema.d.ts",
     "generate-api:reviews": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_review_openapi ../web/src/api/generated/reviews-openapi.json && cd ../web && openapi-typescript src/api/generated/reviews-openapi.json -o src/api/generated/reviews-schema.d.ts",
     "generate-api:compliance": "cd ../server-python && uv run --no-cache --frozen python -m scripts.export_compliance_openapi ../web/src/api/generated/compliance-openapi.json && cd ../web && openapi-typescript src/api/generated/compliance-openapi.json -o src/api/generated/compliance-schema.d.ts",
     "check-api:compliance": "openapi-typescript src/api/generated/compliance-openapi.json -o src/api/generated/compliance-schema.d.ts --check",

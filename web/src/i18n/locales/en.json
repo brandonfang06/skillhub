@@ -1435,7 +1435,8 @@
   "upload": {
     "dropHint": "Drop to upload...",
     "dragHint": "Drag a ZIP file here, or click to select",
-    "formatHint": "Only .zip format supported"
+    "formatHint": "Only .zip format supported",
+    "folderHint": "Or select a folder to package and upload"
   },
   "layout": {
     "footerDescription": "Skill registry, providing efficient skill management and distribution for developers."
@@ -1547,7 +1548,9 @@
     "starredAction": "Click to unstar",
     "unstarTitle": "Remove from starred",
     "unstarDescription": "Are you sure you want to remove \"{{name}}\" from your starred skills?",
-    "unstarConfirm": "Remove"
+    "unstarConfirm": "Remove",
+    "ownerLabel": "Owner: {{owner}}",
+    "updatedLabel": "Updated {{time}}"
   },
   "copyButton": {
     "copied": "Copied",
@@ -1639,6 +1642,7 @@
     },
     "file": "Skill Package File",
     "removeSelectedFile": "Remove selected file",
+    "packaging": "Packaging folder...",
     "publishing": "Publishing...",
     "confirm": "Confirm Publish",
     "success": "Published Successfully",
@@ -1660,7 +1664,17 @@
     "warningConfirmCancel": "Go back and fix",
     "frontmatterFailedTitle": "SKILL.md format is invalid",
     "frontmatterFailedDescription": "Please check the YAML frontmatter at the top of SKILL.md. If a field value contains a colon, wrap it in quotes.",
-    "selectRequired": "Please select namespace and file"
+    "selectRequired": "Please select namespace and file",
+    "folderPackagingFailed": "Could not package the selected folder. Please try again.",
+    "folderPackagingErrors": {
+      "empty": "The selected folder contains no publishable files.",
+      "unsafePath": "The folder contains an unsafe path: {{path}}.",
+      "duplicatePath": "The folder contains a duplicate path: {{path}}.",
+      "pathTooLong": "A selected path is too long to package: {{path}}.",
+      "tooManyFiles": "The folder has more than {{limit}} publishable files.",
+      "fileTooLarge": "{{path}} exceeds the {{sizeLimit}} per-file limit.",
+      "packageTooLarge": "The folder exceeds the {{sizeLimit}} total unpacked-size limit."
+    }
   },
   "toast": {
     "success": "Success",

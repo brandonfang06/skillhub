@@ -22,10 +22,21 @@ describe('language-switcher module exports', () => {
     expect(mod.resolveSupportedLanguageCode('zh-MO')).toBe('zh-TW')
     expect(mod.resolveSupportedLanguageCode('zh-CN')).toBe('zh')
     expect(mod.resolveSupportedLanguageCode('en-US')).toBe('en')
+    expect(mod.resolveSupportedLanguageCode('ru-RU')).toBe('ru')
   })
 
-  it('offers traditional chinese, simplified chinese, and english', () => {
-    expect(mod.languages.map((language) => language.code)).toEqual(['zh-TW', 'zh', 'en'])
-    expect(mod.languages.map((language) => language.name)).toEqual(['繁體中文', '简体中文', 'English'])
+  it('offers traditional chinese, simplified chinese, english, and russian', () => {
+    expect(mod.languages.map((language) => language.code)).toEqual([
+      'zh-TW',
+      'zh',
+      'en',
+      'ru',
+    ])
+    expect(mod.languages.map((language) => language.name)).toEqual([
+      '繁體中文',
+      '简体中文',
+      'English',
+      'Русский',
+    ])
   })
 })

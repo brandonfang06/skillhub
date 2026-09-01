@@ -13,13 +13,15 @@ export const SELECT_TRIGGER_CLASS_NAME = cn(
 )
 
 export const SELECT_CONTENT_CLASS_NAME = cn(
-  'z-50 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
+  'z-50 max-h-[var(--radix-select-content-available-height)] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
   'data-[state=open]:animate-in data-[state=closed]:animate-out',
   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
   'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2',
   'data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2'
 )
+
+export const SELECT_CONTENT_SIDE_OFFSET = 4
 
 export const SELECT_ITEM_CLASS_NAME = cn(
   'relative flex w-full cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-8 text-sm outline-none',
@@ -89,14 +91,13 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+>(({ className, children, position = 'popper', sideOffset = SELECT_CONTENT_SIDE_OFFSET, ...props }, ref) => (
   <SelectPrimitive.Portal container={getPortalContainer()}>
     <SelectPrimitive.Content
       ref={ref}
+      sideOffset={sideOffset}
       className={cn(
         SELECT_CONTENT_CLASS_NAME,
-        position === 'popper'
-          && 'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
         className
       )}
       position={position}

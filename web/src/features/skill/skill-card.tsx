@@ -5,9 +5,10 @@ import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
-import { Bookmark, FileText } from 'lucide-react'
+import { Bookmark, Clock, FileText, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
+import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 
 interface SkillCardProps {
   skill: SkillSummary
@@ -31,7 +32,7 @@ export function SkillCard({
   selectionDisabled = false,
   onSelectionChange,
 }: SkillCardProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
   const { data: starStatus } = useStar(skill.id, highlightStarred && isAuthenticated)
   const showStarredHighlight = highlightStarred && isAuthenticated && starStatus?.starred
@@ -40,6 +41,10 @@ export function SkillCard({
   const complianceItems = skill.complianceSnapshot?.items?.filter(
     (item) => item.standard || item.controlId,
   ) ?? []
+  const ownerLabel = skill.ownerDisplayName || skill.ownerId
+  const updatedTime = skill.updatedAt
+    ? formatRelativeTime(skill.updatedAt, i18n.language)
+    : ''
 
   return (
     <Card
@@ -146,6 +151,28 @@ export function SkillCard({
             </span>
           )}
         </div>
+        {(ownerLabel || updatedTime) && (
+          <div className="mt-2 flex items-center gap-3 border-t border-border/50 pt-2 text-xs text-muted-foreground">
+            {ownerLabel && (
+              <span
+                className="flex min-w-0 items-center gap-1"
+                aria-label={t('skillCard.ownerLabel', { owner: ownerLabel })}
+              >
+                <User className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{ownerLabel}</span>
+              </span>
+            )}
+            {updatedTime && (
+              <span
+                className="flex shrink-0 items-center gap-1"
+                aria-label={t('skillCard.updatedLabel', { time: updatedTime })}
+              >
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {updatedTime}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   )

@@ -1,10 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// DashboardPage is a component-only page that wires auth context, skill previews,
-// and token list. No exported pure functions or constants beyond the component.
+const linkProps = vi.hoisted(() => [] as Array<Record<string, unknown>>)
+const useMySkillsMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: unknown }) => children,
+  Link: ({ children, ...props }: { children: unknown; [key: string]: unknown }) => {
+    linkProps.push(props)
+    return children
+  },
 }))
 
 vi.mock('react-i18next', async () => {
@@ -24,10 +27,7 @@ vi.mock('@/features/auth/use-auth', () => ({
 }))
 
 vi.mock('@/shared/hooks/use-user-queries', () => ({
-  useMySkills: () => ({
-    data: { items: [], total: 0, page: 0, size: 5 },
-    isLoading: false,
-  }),
+  useMySkills: useMySkillsMock,
 }))
 
 vi.mock('@/shared/lib/governance-access', () => ({
@@ -57,6 +57,14 @@ vi.mock('@/app/page-shell-style', () => ({
 import { renderToStaticMarkup } from 'react-dom/server'
 import { DashboardPage } from './dashboard'
 
+beforeEach(() => {
+  linkProps.length = 0
+  useMySkillsMock.mockReturnValue({
+    data: { items: [], total: 0, page: 0, size: 5 },
+    isLoading: false,
+  })
+})
+
 describe('DashboardPage', () => {
   it('exports a named component function', () => {
     expect(typeof DashboardPage).toBe('function')
@@ -73,5 +81,29 @@ describe('DashboardPage', () => {
     const html = renderToStaticMarkup(<DashboardPage />)
 
     expect(html).toContain('mySkills.title')
+  })
+
+  it('passes an unencoded slug to the named skill route', () => {
+    useMySkillsMock.mockReturnValue({
+      data: {
+        items: [{
+          id: 1,
+          namespace: 'team-ai',
+          slug: 'skill%name',
+          displayName: 'Skill name',
+        }],
+        total: 1,
+        page: 0,
+        size: 5,
+      },
+      isLoading: false,
+    })
+
+    renderToStaticMarkup(<DashboardPage />)
+
+    expect(linkProps).toContainEqual(expect.objectContaining({
+      to: '/space/$namespace/$slug',
+      params: { namespace: 'team-ai', slug: 'skill%name' },
+    }))
   })
 })

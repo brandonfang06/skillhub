@@ -4,6 +4,7 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import en from './locales/en.json'
 import zh from './locales/zh.json'
 import zhTW from './locales/zh-TW.json'
+import ru from './locales/ru.json'
 
 /**
  * Initializes i18next for the browser app. Language preference is restored from
@@ -17,6 +18,7 @@ i18n
     resources: {
       en: { translation: en },
       zh: { translation: zh },
+      ru: { translation: ru },
       'zh-TW': { translation: zhTW },
       'zh-Hant': { translation: zhTW },
       'zh-HK': { translation: zhTW },

@@ -8,4 +8,10 @@ describe('playground content security policy', () => {
 
     expect(policy.split(/\s+/)).toContain('https:')
   })
+
+  it('loads self-hosted fonts through a subpath-safe relative URL', () => {
+    expect(indexHtml).toContain('href="./fonts/fonts.css"')
+    expect(indexHtml).not.toContain('fonts.googleapis.com')
+    expect(indexHtml).not.toContain('fonts.gstatic.com')
+  })
 })

@@ -4,1584 +4,17 @@
  */
 
 export interface paths {
-    "/api/v1/skills/{skillId}/subscription": {
+    "/api/v1/account/merge/initiate": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["checkSubscribed"];
-        put: operations["subscribeSkill"];
-        post?: never;
-        delete: operations["unsubscribeSkill"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{skillId}/subscription": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["checkSubscribed_1"];
-        put: operations["subscribeSkill_1"];
-        post?: never;
-        delete: operations["unsubscribeSkill_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{skillId}/star": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["checkStarred"];
-        put: operations["starSkill"];
-        post?: never;
-        delete: operations["unstarSkill"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{skillId}/star": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["checkStarred_1"];
-        put: operations["starSkill_1"];
-        post?: never;
-        delete: operations["unstarSkill_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{skillId}/rating": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getUserRating"];
-        put: operations["rateSkill"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{skillId}/rating": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getUserRating_1"];
-        put: operations["rateSkill_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/tags/{tagName}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["createOrMoveTag"];
-        post?: never;
-        delete: operations["deleteTag"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["createOrMoveTag_1"];
-        post?: never;
-        delete: operations["deleteTag_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/labels/{labelSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["attachLabel"];
-        post?: never;
-        delete: operations["detachLabel"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/labels/{labelSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["attachLabel_1"];
-        post?: never;
-        delete: operations["detachLabel_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["markRead"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notifications/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["markRead_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications/read-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["markAllRead"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notifications/read-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["markAllRead_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notification-preferences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getPreferences"];
-        put: operations["updatePreferences"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notification-preferences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getPreferences_1"];
-        put: operations["updatePreferences_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/members/{userId}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateMemberRole"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/members/{userId}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateMemberRole_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getNamespace"];
-        put: operations["updateNamespace"];
-        post?: never;
-        delete: operations["deleteNamespace"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getNamespace_1"];
-        put: operations["updateNamespace_1"];
-        post?: never;
-        delete: operations["deleteNamespace_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tokens/{id}/expiration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateExpiration"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateUserStatus"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateUserRole"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/labels/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateLabel"];
-        post?: never;
-        delete: operations["deleteLabel"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/labels/sort-order": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateSortOrder"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["withdrawReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["withdrawReview_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rereleaseVersion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}/rerelease": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rereleaseVersion_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/unarchive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unarchiveSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/unarchive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unarchiveSkill_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/submit-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submitForReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/submit-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submitForReview_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submitReport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submitReport_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/confirm-publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["confirmPublish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/confirm-publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["confirmPublish_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["archiveSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["archiveSkill_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["publish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["publish_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/withdraw": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["withdrawReview_2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/withdraw": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["withdrawReview_3"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectReview_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approveReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approveReview_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listReviews"];
-        put?: never;
-        post: operations["submitReview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listReviews_1"];
-        put?: never;
-        post: operations["submitReview_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectPromotion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/promotions/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectPromotion_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approvePromotion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/promotions/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approvePromotion_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPromotions"];
-        put?: never;
-        post: operations["submitPromotion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/promotions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPromotions_1"];
-        put?: never;
-        post: operations["submitPromotion_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/unfreeze": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unfreezeNamespace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/unfreeze": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unfreezeNamespace_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["restoreNamespace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["restoreNamespace_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/members/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["batchAddMembers"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/members/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["batchAddMembers_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMembers"];
-        put?: never;
-        post: operations["addMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMembers_1"];
-        put?: never;
-        post: operations["addMember_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/freeze": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["freezeNamespace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/freeze": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["freezeNamespace_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["archiveNamespace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["archiveNamespace_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listNamespaces"];
-        put?: never;
-        post: operations["createNamespace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listNamespaces_1"];
-        put?: never;
-        post: operations["createNamespace_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/governance/notifications/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["markNotificationRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/governance/notifications/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["markNotificationRead_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tokens": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_2"];
-        put?: never;
-        post: operations["create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/stars/{canonicalSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["starSkill_2"];
-        delete: operations["unstarSkill_2"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listSkills"];
-        put?: never;
-        post: operations["publishSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{canonicalSlug}/undelete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["undeleteSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["publish_2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/device/authorize": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["authorizeDevice"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/session/bootstrap": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["bootstrapSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/local/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["register"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/local/password-reset/request": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["requestPasswordReset"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/local/password-reset/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["confirmPasswordReset"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/local/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/local/change-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["changePassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/direct/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["directLogin"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["pollToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/device/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["requestDeviceCode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/password-reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["triggerPasswordReset"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/enable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["enableUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/disable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["disableUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/users/{userId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approveUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/skills/{skillId}/unhide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unhideSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/skills/{skillId}/hide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["hideSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/skills/versions/{versionId}/yank": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["yankVersion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/skill-reports/{reportId}/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["resolveReport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/skill-reports/{reportId}/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["dismissReport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/search/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rebuildAll"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/profile-reviews/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["reject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/profile-reviews/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
         get?: never;
-        put?: never;
-        post: operations["approve"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listLabels_2"];
         put?: never;
-        post: operations["createLabel"];
+        /** Initiate Account Merge Route */
+        post: operations["initiate_account_merge_route_api_v1_account_merge_initiate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1597,23 +30,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["verify"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/account/merge/initiate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["initiate"];
+        /** Verify Account Merge Route */
+        post: operations["verify_account_merge_route_api_v1_account_merge_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1629,14 +47,154 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["confirm"];
+        /** Confirm Account Merge Route */
+        post: operations["confirm_account_merge_route_api_v1_account_merge_confirm_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/cli/v1/skills/{namespace}/publish": {
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Audit Logs Route */
+        get: operations["list_admin_audit_logs_route_api_v1_admin_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Labels Route */
+        get: operations["list_admin_labels_route_api_v1_admin_labels_get"];
+        put?: never;
+        /** Create Admin Label Route */
+        post: operations["create_admin_label_route_api_v1_admin_labels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/labels/sort-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Admin Label Sort Order Route */
+        put: operations["update_admin_label_sort_order_route_api_v1_admin_labels_sort_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/labels/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Admin Label Route */
+        put: operations["update_admin_label_route_api_v1_admin_labels__slug__put"];
+        post?: never;
+        /** Delete Admin Label Route */
+        delete: operations["delete_admin_label_route_api_v1_admin_labels__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Namespaces Route */
+        get: operations["list_admin_namespaces_route_api_v1_admin_namespaces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Admin Namespace Route */
+        get: operations["get_admin_namespace_route_api_v1_admin_namespaces__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Namespace Members Route */
+        get: operations["list_admin_namespace_members_route_api_v1_admin_namespaces__slug__members_get"];
+        put?: never;
+        /** Add Admin Namespace Member Route */
+        post: operations["add_admin_namespace_member_route_api_v1_admin_namespaces__slug__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Admin Namespace Member Candidates Route */
+        get: operations["search_admin_namespace_member_candidates_route_api_v1_admin_namespaces__slug__member_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members/batch": {
         parameters: {
             query?: never;
             header?: never;
@@ -1645,14 +203,32 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["publish_3"];
+        /** Batch Add Admin Namespace Members Route */
+        post: operations["batch_add_admin_namespace_members_route_api_v1_admin_namespaces__slug__members_batch_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/cli/v1/skills/{namespace}/publish/validate": {
+    "/api/v1/admin/namespaces/{slug}/members/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Admin Namespace Member Role Route */
+        put: operations["update_admin_namespace_member_role_route_api_v1_admin_namespaces__slug__members__userId__role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespaces/{slug}/members/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1661,1093 +237,108 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["validatePublish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/user/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getProfile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["updateProfile"];
-        trace?: never;
-    };
-    "/api/web/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["search"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listFiles"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listFiles_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getFileContent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getFileContent_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadVersion"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadVersion_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/{version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getVersionDetail"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteVersion"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/{version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getVersionDetail_1"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteVersion_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions/compare": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["compareVersions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions/compare": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["compareVersions_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listVersions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listVersions_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listFilesByTag"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listFilesByTag_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getFileContentByTag"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getFileContentByTag_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadByTag"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadByTag_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/tags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listTags"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/tags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listTags_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["resolveVersion"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["resolveVersion_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listLabels"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listLabels_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadLatest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadLatest_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{namespace}/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getSkillDetail"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteSkill_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/skills/{namespace}/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getSkillDetail_1"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteSkill"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/skill-detail": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewSkillDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/skill-detail": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewSkillDetail_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewFile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewFile_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadReviewVersion"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadReviewVersion_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getReviewDetail_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPendingReviews"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPendingReviews_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reviews/my-submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySubmissions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/reviews/my-submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySubmissions_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/promotions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getPromotionDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getPromotionDetail_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/promotions/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPendingPromotions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/promotions/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listPendingPromotions_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notifications/unread-count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["unreadCount"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications/unread-count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["unreadCount_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications/sse": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["sse"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notifications/sse": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["sse_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/member-candidates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["searchMemberCandidates"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/namespaces/{slug}/member-candidates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["searchMemberCandidates_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/me/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySubscriptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySubscriptions_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/me/stars": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMyStars"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/stars": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMyStars_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySkills"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/me/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMySkills_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/namespaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMyNamespaces"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/me/namespaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listMyNamespaces_1"];
-        put?: never;
         post?: never;
-        delete?: never;
+        /** Remove Admin Namespace Member Route */
+        delete: operations["remove_admin_namespace_member_route_api_v1_admin_namespaces__slug__members__userId__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/labels": {
+    "/api/v1/admin/namespaces/{slug}/transfer-ownership": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listVisibleLabels"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Transfer Admin Namespace Ownership Route */
+        post: operations["transfer_admin_namespace_ownership_route_api_v1_admin_namespaces__slug__transfer_ownership_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/labels": {
+    "/api/v1/admin/namespaces/{slug}/freeze": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listVisibleLabels_1"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Freeze Admin Namespace Route */
+        post: operations["freeze_admin_namespace_route_api_v1_admin_namespaces__slug__freeze_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/governance/summary": {
+    "/api/v1/admin/namespaces/{slug}/unfreeze": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["summary"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Unfreeze Admin Namespace Route */
+        post: operations["unfreeze_admin_namespace_route_api_v1_admin_namespaces__slug__unfreeze_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/governance/summary": {
+    "/api/v1/admin/namespaces/{slug}/archive": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["summary_1"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Archive Admin Namespace Route */
+        post: operations["archive_admin_namespace_route_api_v1_admin_namespaces__slug__archive_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/governance/notifications": {
+    "/api/v1/admin/namespaces/{slug}/restore": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["notifications"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Restore Admin Namespace Route */
+        post: operations["restore_admin_namespace_route_api_v1_admin_namespaces__slug__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/governance/notifications": {
+    "/api/v1/admin/skill-reports": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["notifications_1"];
+        /** List Admin Skill Reports Route */
+        get: operations["list_admin_skill_reports_route_api_v1_admin_skill_reports_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2756,46 +347,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/governance/inbox": {
+    "/api/v1/admin/skill-reports/{report_id}/resolve": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["inbox"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Resolve Admin Skill Report Route */
+        post: operations["resolve_admin_skill_report_route_api_v1_admin_skill_reports__report_id__resolve_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/governance/inbox": {
+    "/api/v1/admin/skill-reports/{report_id}/dismiss": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["inbox_1"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Dismiss Admin Skill Report Route */
+        post: operations["dismiss_admin_skill_report_route_api_v1_admin_skill_reports__report_id__dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/governance/activity": {
+    "/api/v1/admin/profile-reviews": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["activity"];
+        /** List Admin Profile Reviews Route */
+        get: operations["list_admin_profile_reviews_route_api_v1_admin_profile_reviews_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2804,206 +398,204 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/governance/activity": {
+    "/api/v1/admin/profile-reviews/{request_id}/approve": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["activity_1"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Approve Admin Profile Review Route */
+        post: operations["approve_admin_profile_review_route_api_v1_admin_profile_reviews__request_id__approve_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/whoami": {
+    "/api/v1/admin/profile-reviews/{request_id}/reject": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["whoami"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Reject Admin Profile Review Route */
+        post: operations["reject_admin_profile_review_route_api_v1_admin_profile_reviews__request_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/{skillId}/versions/{versionId}/security-audit": {
+    "/api/v1/admin/search/rebuild": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getSecurityAudits"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Rebuild Admin Search Route */
+        post: operations["rebuild_admin_search_route_api_v1_admin_search_rebuild_post"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/skills/{canonicalSlug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getSkill"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteSkill_2"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/search": {
+    "/api/v1/admin/service-principals": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["search_1"];
+        /** List Service Principals Route */
+        get: operations["list_service_principals_route_api_v1_admin_service_principals_get"];
         put?: never;
-        post?: never;
+        /** Create Service Principal Route */
+        post: operations["create_service_principal_route_api_v1_admin_service_principals_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/resolve": {
+    "/api/v1/admin/service-principals/{service_principal_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["resolveByQuery"];
+        get?: never;
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Service Principal Route */
+        patch: operations["update_service_principal_route_api_v1_admin_service_principals__service_principal_id__patch"];
         trace?: never;
     };
-    "/api/v1/resolve/{canonicalSlug}": {
+    "/api/v1/admin/service-principals/{service_principal_id}/tokens": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["resolve"];
+        /** List Service Tokens Route */
+        get: operations["list_service_tokens_route_api_v1_admin_service_principals__service_principal_id__tokens_get"];
         put?: never;
-        post?: never;
+        /** Create Service Token Route */
+        post: operations["create_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/health": {
+    "/api/v1/admin/service-principals/{service_principal_id}/tokens/{token_id}/rotate": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["health"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Rotate Service Token Route */
+        post: operations["rotate_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens__token_id__rotate_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/download": {
+    "/api/v1/admin/service-principals/{service_principal_id}/tokens/{token_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["downloadByQuery"];
+        get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** Revoke Service Token Route */
+        delete: operations["revoke_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens__token_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/download/{canonicalSlug}": {
+    "/api/v1/admin/skills/{skill_id}/hide": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["downloadByPath"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Hide Skill */
+        post: operations["hide_skill_api_v1_admin_skills__skill_id__hide_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/providers": {
+    "/api/v1/admin/skills/{skill_id}/unhide": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["providers"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Unhide Skill */
+        post: operations["unhide_skill_api_v1_admin_skills__skill_id__unhide_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/methods": {
+    "/api/v1/admin/skills/versions/{version_id}/yank": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["methods"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Yank Skill Version */
+        post: operations["yank_skill_version_api_v1_admin_skills_versions__version_id__yank_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/me": {
+    "/api/v1/admin/skills/{skill_id}/resource-diagnostics": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["me"];
+        /** Get Skill Resource Diagnostics */
+        get: operations["get_skill_resource_diagnostics_api_v1_admin_skills__skill_id__resource_diagnostics_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3019,7 +611,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listUsers"];
+        /** List Admin Users Route */
+        get: operations["list_admin_users_route_api_v1_admin_users_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3028,14 +621,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/skill-reports": {
+    "/api/v1/admin/users/{user_id}/role": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listReports"];
+        get?: never;
+        /** Update Admin User Role Route */
+        put: operations["update_admin_user_role_route_api_v1_admin_users__user_id__role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Admin User Status Route */
+        put: operations["update_admin_user_status_route_api_v1_admin_users__user_id__status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Admin User Route */
+        post: operations["approve_admin_user_route_api_v1_admin_users__user_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable Admin User Route */
+        post: operations["disable_admin_user_route_api_v1_admin_users__user_id__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable Admin User Route */
+        post: operations["enable_admin_user_route_api_v1_admin_users__user_id__enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Admin User Password Reset Route */
+        post: operations["trigger_admin_user_password_reset_route_api_v1_admin_users__user_id__password_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current User */
+        get: operations["get_current_user_api_v1_auth_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3044,94 +740,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/profile-reviews": {
+    "/api/v1/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/audit-logs": {
+    "/api/v1/whoami": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listAuditLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadVersion_2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cli/v1/skills/{namespace}/{slug}/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["resolve_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cli/v1/skills/{namespace}/{slug}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["downloadLatest_2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cli/v1/skills/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["search_2"];
+        /** Get Clawhub Whoami */
+        get: operations["get_clawhub_whoami_api_v1_whoami_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3147,7 +781,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["whoami_1"];
+        /** Get Cli Whoami */
+        get: operations["get_cli_whoami_api_cli_v1_auth_whoami_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3156,14 +791,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/.well-known/clawhub.json": {
+    "/api/v1/auth/providers": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["clawhubConfig"];
+        /** Get Auth Providers */
+        get: operations["get_auth_providers_api_v1_auth_providers_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3172,55 +808,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/web/skills/id/{skillId}": {
+    "/api/v1/auth/methods": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Auth Methods */
+        get: operations["get_auth_methods_api_v1_auth_methods_get"];
         put?: never;
         post?: never;
-        delete: operations["deleteSkillById"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/notifications/{id}": {
+    "/oauth2/authorization/{registration_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Oauth Authorization Boundary */
+        get: operations["oauth_authorization_boundary_oauth2_authorization__registration_id__get"];
         put?: never;
         post?: never;
-        delete: operations["deleteRead"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/notifications/{id}": {
+    "/login/oauth2/code/{registration_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Oauth Callback */
+        get: operations["oauth_callback_login_oauth2_code__registration_id__get"];
         put?: never;
         post?: never;
-        delete: operations["deleteRead_1"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/namespaces/{slug}/members/{userId}": {
+    "/api/v1/auth/direct/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -3229,14 +868,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete: operations["removeMember"];
+        /** Direct Login */
+        post: operations["direct_login_api_v1_auth_direct_login_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/web/namespaces/{slug}/members/{userId}": {
+    "/api/v1/auth/session/bootstrap": {
         parameters: {
             query?: never;
             header?: never;
@@ -3245,14 +885,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete: operations["removeMember_1"];
+        /** Session Bootstrap */
+        post: operations["session_bootstrap_api_v1_auth_session_bootstrap_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tokens/{id}": {
+    "/api/v1/auth/device/code": {
         parameters: {
             query?: never;
             header?: never;
@@ -3261,14 +902,708 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete: operations["revoke"];
+        /** Request Device Code Route */
+        post: operations["request_device_code_route_api_v1_auth_device_code_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/skills/id/{skillId}": {
+    "/api/v1/device/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize Device Route */
+        post: operations["authorize_device_route_api_v1_device_authorize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/device/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Poll Device Token Route */
+        post: operations["poll_device_token_route_api_v1_auth_device_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/download-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Download Events Route */
+        get: operations["list_admin_download_events_route_api_v1_admin_download_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/download-events.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Admin Download Events Csv Route */
+        get: operations["export_admin_download_events_csv_route_api_v1_admin_download_events_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/download-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Download Events Route */
+        get: operations["list_skill_download_events_route_api_web_skills__namespace___slug__download_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Summary Route */
+        get: operations["governance_summary_route_api_web_governance_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Summary Route */
+        get: operations["governance_summary_route_api_v1_governance_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Inbox Route */
+        get: operations["governance_inbox_route_api_web_governance_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Inbox Route */
+        get: operations["governance_inbox_route_api_v1_governance_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Activity Route */
+        get: operations["governance_activity_route_api_web_governance_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Activity Route */
+        get: operations["governance_activity_route_api_v1_governance_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Notifications Route */
+        get: operations["governance_notifications_route_api_web_governance_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance Notifications Route */
+        get: operations["governance_notifications_route_api_v1_governance_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/governance/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Governance Notification Mark Read Route */
+        post: operations["governance_notification_mark_read_route_api_web_governance_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Governance Notification Mark Read Route */
+        post: operations["governance_notification_mark_read_route_api_v1_governance_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health */
+        get: operations["health_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/prometheus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prometheus Metrics */
+        get: operations["prometheus_metrics_api_v1_metrics_prometheus_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespace-analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Analytics Route */
+        get: operations["list_namespace_analytics_route_api_v1_admin_namespace_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespace-analytics.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Namespace Analytics Csv Route */
+        get: operations["export_namespace_analytics_csv_route_api_v1_admin_namespace_analytics_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespace-analytics/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Security Analytics Route */
+        get: operations["list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/namespace-analytics/security/namespaces/{namespace_id}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Security Skills Route */
+        get: operations["list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Visible Labels */
+        get: operations["list_visible_labels_api_web_labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Visible Labels */
+        get: operations["list_visible_labels_api_v1_labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Labels */
+        get: operations["list_skill_labels_api_web_skills__namespace___slug__labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Labels */
+        get: operations["list_skill_labels_api_v1_skills__namespace___slug__labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/labels/{label_slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Attach Skill Label Route */
+        put: operations["attach_skill_label_route_api_web_skills__namespace___slug__labels__label_slug__put"];
+        post?: never;
+        /** Detach Skill Label Route */
+        delete: operations["detach_skill_label_route_api_web_skills__namespace___slug__labels__label_slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/labels/{label_slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Attach Skill Label Route */
+        put: operations["attach_skill_label_route_api_v1_skills__namespace___slug__labels__label_slug__put"];
+        post?: never;
+        /** Detach Skill Label Route */
+        delete: operations["detach_skill_label_route_api_v1_skills__namespace___slug__labels__label_slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Skills Route */
+        get: operations["list_my_skills_route_api_web_me_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Skills Route */
+        get: operations["list_my_skills_route_api_v1_me_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/stars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Stars Route */
+        get: operations["list_my_stars_route_api_web_me_stars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/stars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Stars Route */
+        get: operations["list_my_stars_route_api_v1_me_stars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Subscriptions Route */
+        get: operations["list_my_subscriptions_route_api_web_me_subscriptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Subscriptions Route */
+        get: operations["list_my_subscriptions_route_api_v1_me_subscriptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stars/{canonical_slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clawhub Star Route */
+        post: operations["clawhub_star_route_api_v1_stars__canonical_slug__post"];
+        /** Clawhub Unstar Route */
+        delete: operations["clawhub_unstar_route_api_v1_stars__canonical_slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{skill_id}/star": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Star Route */
+        get: operations["check_skill_star_route_api_web_skills__skill_id__star_get"];
+        /** Star Skill Route */
+        put: operations["star_skill_route_api_web_skills__skill_id__star_put"];
+        post?: never;
+        /** Unstar Skill Route */
+        delete: operations["unstar_skill_route_api_web_skills__skill_id__star_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/star": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Star Route */
+        get: operations["check_skill_star_route_api_v1_skills__skill_id__star_get"];
+        /** Star Skill Route */
+        put: operations["star_skill_route_api_v1_skills__skill_id__star_put"];
+        post?: never;
+        /** Unstar Skill Route */
+        delete: operations["unstar_skill_route_api_v1_skills__skill_id__star_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{skill_id}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Subscription Route */
+        get: operations["check_skill_subscription_route_api_web_skills__skill_id__subscription_get"];
+        /** Subscribe Skill Route */
+        put: operations["subscribe_skill_route_api_web_skills__skill_id__subscription_put"];
+        post?: never;
+        /** Unsubscribe Skill Route */
+        delete: operations["unsubscribe_skill_route_api_web_skills__skill_id__subscription_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Subscription Route */
+        get: operations["check_skill_subscription_route_api_v1_skills__skill_id__subscription_get"];
+        /** Subscribe Skill Route */
+        put: operations["subscribe_skill_route_api_v1_skills__skill_id__subscription_put"];
+        post?: never;
+        /** Unsubscribe Skill Route */
+        delete: operations["unsubscribe_skill_route_api_v1_skills__skill_id__subscription_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{skill_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Rating Route */
+        get: operations["check_skill_rating_route_api_web_skills__skill_id__rating_get"];
+        /** Rate Skill Route */
+        put: operations["rate_skill_route_api_web_skills__skill_id__rating_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Skill Rating Route */
+        get: operations["check_skill_rating_route_api_v1_skills__skill_id__rating_get"];
+        /** Rate Skill Route */
+        put: operations["rate_skill_route_api_v1_skills__skill_id__rating_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/visibility": {
         parameters: {
             query?: never;
             header?: never;
@@ -3278,7 +1613,163 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["deleteSkillById_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Skill Visibility Route */
+        patch: operations["update_skill_visibility_route_api_web_skills__namespace___slug__visibility_patch"];
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Skill Visibility Route */
+        patch: operations["update_skill_visibility_route_api_v1_skills__namespace___slug__visibility_patch"];
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Skill V1 */
+        post: operations["archive_skill_v1_api_v1_skills__namespace___slug__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Skill Web */
+        post: operations["archive_skill_web_api_web_skills__namespace___slug__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Skill V1 */
+        post: operations["unarchive_skill_v1_api_v1_skills__namespace___slug__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Skill Web */
+        post: operations["unarchive_skill_web_api_web_skills__namespace___slug__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/id/{skill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Hard Delete Skill By Id V1 */
+        delete: operations["hard_delete_skill_by_id_v1_api_v1_skills_id__skill_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/id/{skill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Hard Delete Skill By Id Web */
+        delete: operations["hard_delete_skill_by_id_web_api_web_skills_id__skill_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Detail */
+        get: operations["get_skill_detail_api_v1_skills__namespace___slug__get"];
+        put?: never;
+        post?: never;
+        /** Hard Delete Skill V1 */
+        delete: operations["hard_delete_skill_v1_api_v1_skills__namespace___slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Detail */
+        get: operations["get_skill_detail_api_web_skills__namespace___slug__get"];
+        put?: never;
+        post?: never;
+        /** Hard Delete Skill Web */
+        delete: operations["hard_delete_skill_web_api_web_skills__namespace___slug__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3294,7 +1785,2461 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["deleteRemote"];
+        /** Cli Delete Skill */
+        delete: operations["cli_delete_skill_api_cli_v1_skills__namespace___slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Version Detail */
+        get: operations["get_skill_version_detail_api_v1_skills__namespace___slug__versions__version__get"];
+        put?: never;
+        post?: never;
+        /** Delete Skill Version V1 */
+        delete: operations["delete_skill_version_v1_api_v1_skills__namespace___slug__versions__version__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Version Detail */
+        get: operations["get_skill_version_detail_api_web_skills__namespace___slug__versions__version__get"];
+        put?: never;
+        post?: never;
+        /** Delete Skill Version Web */
+        delete: operations["delete_skill_version_web_api_web_skills__namespace___slug__versions__version__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Skill Version Review V1 */
+        post: operations["withdraw_skill_version_review_v1_api_v1_skills__namespace___slug__versions__version__withdraw_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/withdraw-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Skill Version Review Web */
+        post: operations["withdraw_skill_version_review_web_api_web_skills__namespace___slug__versions__version__withdraw_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rerelease V1 */
+        post: operations["rerelease_v1_api_v1_skills__namespace___slug__versions__version__rerelease_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/rerelease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rerelease Web */
+        post: operations["rerelease_web_api_web_skills__namespace___slug__versions__version__rerelease_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/confirm-publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Publish V1 */
+        post: operations["confirm_publish_v1_api_v1_skills__namespace___slug__confirm_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/confirm-publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Publish Web */
+        post: operations["confirm_publish_web_api_web_skills__namespace___slug__confirm_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Review V1 */
+        post: operations["submit_review_v1_api_v1_skills__namespace___slug__submit_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Review Web */
+        post: operations["submit_review_web_api_web_skills__namespace___slug__submit_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/local/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Local Account Route */
+        post: operations["register_local_account_route_api_v1_auth_local_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/local/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login Local Account Route */
+        post: operations["login_local_account_route_api_v1_auth_local_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/local/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Local Password Route */
+        post: operations["change_local_password_route_api_v1_auth_local_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/local/password-reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Local Password Reset Route */
+        post: operations["request_local_password_reset_route_api_v1_auth_local_password_reset_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/local/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Local Password Reset Route */
+        post: operations["confirm_local_password_reset_route_api_v1_auth_local_password_reset_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespaces Route */
+        get: operations["list_namespaces_route_api_web_namespaces_get"];
+        put?: never;
+        /** Create Namespace Route */
+        post: operations["create_namespace_route_api_web_namespaces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespaces Route */
+        get: operations["list_namespaces_route_api_v1_namespaces_get"];
+        put?: never;
+        /** Create Namespace Route */
+        post: operations["create_namespace_route_api_v1_namespaces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/me/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Namespaces Route */
+        get: operations["list_my_namespaces_route_api_web_me_namespaces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Namespaces Route */
+        get: operations["list_my_namespaces_route_api_v1_me_namespaces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Members Route */
+        get: operations["list_namespace_members_route_api_web_namespaces__slug__members_get"];
+        put?: never;
+        /** Add Namespace Member Route */
+        post: operations["add_namespace_member_route_api_web_namespaces__slug__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Namespace Members Route */
+        get: operations["list_namespace_members_route_api_v1_namespaces__slug__members_get"];
+        put?: never;
+        /** Add Namespace Member Route */
+        post: operations["add_namespace_member_route_api_v1_namespaces__slug__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Namespace Member Candidates Route */
+        get: operations["search_namespace_member_candidates_route_api_web_namespaces__slug__member_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Namespace Member Candidates Route */
+        get: operations["search_namespace_member_candidates_route_api_v1_namespaces__slug__member_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch Add Namespace Members Route */
+        post: operations["batch_add_namespace_members_route_api_web_namespaces__slug__members_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch Add Namespace Members Route */
+        post: operations["batch_add_namespace_members_route_api_v1_namespaces__slug__members_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{member_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Namespace Member Route */
+        delete: operations["remove_namespace_member_route_api_web_namespaces__slug__members__member_user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members/{member_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Namespace Member Route */
+        delete: operations["remove_namespace_member_route_api_v1_namespaces__slug__members__member_user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{member_user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Namespace Member Role Route */
+        put: operations["update_namespace_member_role_route_api_web_namespaces__slug__members__member_user_id__role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/members/{member_user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Namespace Member Role Route */
+        put: operations["update_namespace_member_role_route_api_v1_namespaces__slug__members__member_user_id__role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Namespace Route */
+        get: operations["get_namespace_route_api_web_namespaces__slug__get"];
+        /** Update Namespace Route */
+        put: operations["update_namespace_route_api_web_namespaces__slug__put"];
+        post?: never;
+        /** Delete Namespace Route */
+        delete: operations["delete_namespace_route_api_web_namespaces__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Namespace Route */
+        get: operations["get_namespace_route_api_v1_namespaces__slug__get"];
+        /** Update Namespace Route */
+        put: operations["update_namespace_route_api_v1_namespaces__slug__put"];
+        post?: never;
+        /** Delete Namespace Route */
+        delete: operations["delete_namespace_route_api_v1_namespaces__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Freeze Namespace Route */
+        post: operations["freeze_namespace_route_api_web_namespaces__slug__freeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Freeze Namespace Route */
+        post: operations["freeze_namespace_route_api_v1_namespaces__slug__freeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unfreeze Namespace Route */
+        post: operations["unfreeze_namespace_route_api_web_namespaces__slug__unfreeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unfreeze Namespace Route */
+        post: operations["unfreeze_namespace_route_api_v1_namespaces__slug__unfreeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Namespace Route */
+        post: operations["archive_namespace_route_api_web_namespaces__slug__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Namespace Route */
+        post: operations["archive_namespace_route_api_v1_namespaces__slug__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Namespace Route */
+        post: operations["restore_namespace_route_api_web_namespaces__slug__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Namespace Route */
+        post: operations["restore_namespace_route_api_v1_namespaces__slug__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer Namespace Ownership Route */
+        post: operations["transfer_namespace_ownership_route_api_web_namespaces__slug__transfer_ownership_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/namespaces/{slug}/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer Namespace Ownership Route */
+        post: operations["transfer_namespace_ownership_route_api_v1_namespaces__slug__transfer_ownership_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications/sse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notification Sse Route */
+        get: operations["notification_sse_route_api_web_notifications_sse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/sse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notification Sse Route */
+        get: operations["notification_sse_route_api_v1_notifications_sse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications Route */
+        get: operations["list_notifications_route_api_web_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications Route */
+        get: operations["list_notifications_route_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unread Count Route */
+        get: operations["unread_count_route_api_web_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unread Count Route */
+        get: operations["unread_count_route_api_v1_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mark Read Route */
+        put: operations["mark_read_route_api_web_notifications__notification_id__read_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mark Read Route */
+        put: operations["mark_read_route_api_v1_notifications__notification_id__read_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mark All Read Route */
+        put: operations["mark_all_read_route_api_web_notifications_read_all_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Mark All Read Route */
+        put: operations["mark_all_read_route_api_v1_notifications_read_all_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notifications/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Read Route */
+        delete: operations["delete_read_route_api_web_notifications__notification_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Read Route */
+        delete: operations["delete_read_route_api_v1_notifications__notification_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notification Preferences Route */
+        get: operations["get_notification_preferences_route_api_web_notification_preferences_get"];
+        /** Update Notification Preferences Route */
+        put: operations["update_notification_preferences_route_api_web_notification_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notification Preferences Route */
+        get: operations["get_notification_preferences_route_api_v1_notification_preferences_get"];
+        /** Update Notification Preferences Route */
+        put: operations["update_notification_preferences_route_api_v1_notification_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Promotions Route */
+        get: operations["list_promotions_route_api_web_promotions_get"];
+        put?: never;
+        /** Submit Promotion Route */
+        post: operations["submit_promotion_route_api_web_promotions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Promotions Route */
+        get: operations["list_promotions_route_api_v1_promotions_get"];
+        put?: never;
+        /** Submit Promotion Route */
+        post: operations["submit_promotion_route_api_v1_promotions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pending Promotions Route */
+        get: operations["list_pending_promotions_route_api_web_promotions_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pending Promotions Route */
+        get: operations["list_pending_promotions_route_api_v1_promotions_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/{promotion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Promotion Detail Route */
+        get: operations["get_promotion_detail_route_api_web_promotions__promotion_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{promotion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Promotion Detail Route */
+        get: operations["get_promotion_detail_route_api_v1_promotions__promotion_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/{promotion_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Promotion Route */
+        post: operations["approve_promotion_route_api_web_promotions__promotion_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{promotion_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Promotion Route */
+        post: operations["approve_promotion_route_api_v1_promotions__promotion_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/promotions/{promotion_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Promotion Route */
+        post: operations["reject_promotion_route_api_web_promotions__promotion_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/promotions/{promotion_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Promotion Route */
+        post: operations["reject_promotion_route_api_v1_promotions__promotion_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/playground-capability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Playground Capability */
+        post: operations["create_playground_capability_api_web_skills__namespace___slug__playground_capability_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/playground/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Playground Context */
+        get: operations["get_playground_context_api_web_playground_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/{namespace}/publish/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Cli Publish */
+        post: operations["validate_cli_publish_api_cli_v1_skills__namespace__publish_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Cli Skill */
+        post: operations["publish_cli_skill_api_web_skills__namespace__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Cli Skill */
+        post: operations["publish_cli_skill_api_v1_skills__namespace__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/{namespace}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Cli Skill */
+        post: operations["publish_cli_skill_api_cli_v1_skills__namespace__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Legacy Skill */
+        post: operations["publish_legacy_skill_api_v1_publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Clawhub Skills */
+        get: operations["list_clawhub_skills_api_v1_skills_get"];
+        put?: never;
+        /** Publish Clawhub Root Skill */
+        post: operations["publish_clawhub_root_skill_api_v1_skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/versions/{version_id}/security-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Security Audits Route */
+        get: operations["get_security_audits_route_api_v1_skills__skill_id__versions__version_id__security_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Skill Report V1 Route */
+        post: operations["submit_skill_report_v1_route_api_v1_skills__namespace___slug__reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Skill Report Web Route */
+        post: operations["submit_skill_report_web_route_api_web_skills__namespace___slug__reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/source-imports/namespaces/{namespaceSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Ensure Source Namespace Route */
+        put: operations["ensure_source_namespace_route_api_cli_v1_source_imports_namespaces__namespaceSlug__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/source-imports/{namespaceSlug}/skills/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Source Skill Route */
+        post: operations["validate_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/source-imports/{namespaceSlug}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Source Skill Route */
+        post: operations["submit_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tokens Route */
+        get: operations["list_tokens_route_api_v1_tokens_get"];
+        put?: never;
+        /** Create Token Route */
+        post: operations["create_token_route_api_v1_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Token Route */
+        delete: operations["revoke_token_route_api_v1_tokens__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tokens/{id}/expiration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Token Expiration Route */
+        put: operations["update_token_expiration_route_api_v1_tokens__id__expiration_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Profile Route */
+        get: operations["get_user_profile_route_api_v1_user_profile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update User Profile Route */
+        patch: operations["update_user_profile_route_api_v1_user_profile_patch"];
+        trace?: never;
+    };
+    "/api/web/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reviews Route */
+        get: operations["list_reviews_route_api_web_reviews_get"];
+        put?: never;
+        /** Submit Review Route */
+        post: operations["submit_review_route_api_web_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reviews Route */
+        get: operations["list_reviews_route_api_v1_reviews_get"];
+        put?: never;
+        /** Submit Review Route */
+        post: operations["submit_review_route_api_v1_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pending Reviews Route */
+        get: operations["list_pending_reviews_route_api_web_reviews_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pending Reviews Route */
+        get: operations["list_pending_reviews_route_api_v1_reviews_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/my-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Submissions Route */
+        get: operations["list_my_submissions_route_api_web_reviews_my_submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/my-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Submissions Route */
+        get: operations["list_my_submissions_route_api_v1_reviews_my_submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/skill-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Skill Detail Route */
+        get: operations["get_review_skill_detail_route_api_web_reviews__review_task_id__skill_detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/skill-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Skill Detail Route */
+        get: operations["get_review_skill_detail_route_api_v1_reviews__review_task_id__skill_detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review File Route */
+        get: operations["get_review_file_route_api_web_reviews__review_task_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review File Route */
+        get: operations["get_review_file_route_api_v1_reviews__review_task_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Download Route */
+        get: operations["get_review_download_route_api_web_reviews__review_task_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Download Route */
+        get: operations["get_review_download_route_api_v1_reviews__review_task_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Detail Route */
+        get: operations["get_review_detail_route_api_web_reviews__review_task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Detail Route */
+        get: operations["get_review_detail_route_api_v1_reviews__review_task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/batch-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Reviews Batch Route */
+        post: operations["decide_reviews_batch_route_api_web_reviews_batch_decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Review Route */
+        post: operations["approve_review_route_api_web_reviews__review_task_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Review Route */
+        post: operations["approve_review_route_api_v1_reviews__review_task_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Review Route */
+        post: operations["reject_review_route_api_web_reviews__review_task_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Review Route */
+        post: operations["reject_review_route_api_v1_reviews__review_task_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Review Route */
+        post: operations["withdraw_review_route_api_web_reviews__review_task_id__withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Review Route */
+        post: operations["withdraw_review_route_api_v1_reviews__review_task_id__withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Clawhub Skill By Query */
+        get: operations["download_clawhub_skill_by_query_api_v1_download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/download/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Clawhub Skill By Path */
+        get: operations["download_clawhub_skill_by_path_api_v1_download__canonicalSlug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Skills */
+        get: operations["search_skills_api_web_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/search/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Namespace Candidates */
+        get: operations["search_namespace_candidates_api_web_search_namespaces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Clawhub Skills */
+        get: operations["search_clawhub_skills_api_v1_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Cli Skills */
+        get: operations["search_cli_skills_api_cli_v1_skills_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/namespaces/{namespace}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cli Namespace Skills */
+        get: operations["list_cli_namespace_skills_api_cli_v1_namespaces__namespace__skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Clawhub Skill By Query */
+        get: operations["resolve_clawhub_skill_by_query_api_v1_resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/{namespace}/{slug}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Cli Skill */
+        get: operations["resolve_cli_skill_api_cli_v1_skills__namespace___slug__resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resolve/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Clawhub Skill By Path */
+        get: operations["resolve_clawhub_skill_by_path_api_v1_resolve__canonicalSlug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{canonicalSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Clawhub Skill Detail */
+        get: operations["get_clawhub_skill_detail_api_v1_skills__canonicalSlug__get"];
+        put?: never;
+        post?: never;
+        /** Delete Clawhub Skill Placeholder */
+        delete: operations["delete_clawhub_skill_placeholder_api_v1_skills__canonicalSlug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{canonicalSlug}/undelete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undelete Clawhub Skill Placeholder */
+        post: operations["undelete_clawhub_skill_placeholder_api_v1_skills__canonicalSlug__undelete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Skill Version */
+        get: operations["resolve_skill_version_api_web_skills__namespace___slug__resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Skill Version */
+        get: operations["resolve_skill_version_api_v1_skills__namespace___slug__resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare Skill Versions */
+        get: operations["compare_skill_versions_api_web_skills__namespace___slug__versions_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare Skill Versions */
+        get: operations["compare_skill_versions_api_v1_skills__namespace___slug__versions_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Versions */
+        get: operations["list_skill_versions_api_web_skills__namespace___slug__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Versions */
+        get: operations["list_skill_versions_api_v1_skills__namespace___slug__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Version Files */
+        get: operations["list_skill_version_files_api_web_skills__namespace___slug__versions__version__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Version Files */
+        get: operations["list_skill_version_files_api_v1_skills__namespace___slug__versions__version__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Tag Files */
+        get: operations["list_skill_tag_files_api_web_skills__namespace___slug__tags__tagName__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Tag Files */
+        get: operations["list_skill_tag_files_api_v1_skills__namespace___slug__tags__tagName__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Tags Route */
+        get: operations["list_skill_tags_route_api_web_skills__namespace___slug__tags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Tags Route */
+        get: operations["list_skill_tags_route_api_v1_skills__namespace___slug__tags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Create Or Move Skill Tag Route */
+        put: operations["create_or_move_skill_tag_route_api_web_skills__namespace___slug__tags__tagName__put"];
+        post?: never;
+        /** Delete Skill Tag Route */
+        delete: operations["delete_skill_tag_route_api_web_skills__namespace___slug__tags__tagName__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Create Or Move Skill Tag Route */
+        put: operations["create_or_move_skill_tag_route_api_v1_skills__namespace___slug__tags__tagName__put"];
+        post?: never;
+        /** Delete Skill Tag Route */
+        delete: operations["delete_skill_tag_route_api_v1_skills__namespace___slug__tags__tagName__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Version File Content */
+        get: operations["get_skill_version_file_content_api_web_skills__namespace___slug__versions__version__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Version File Content */
+        get: operations["get_skill_version_file_content_api_v1_skills__namespace___slug__versions__version__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Tag File Content */
+        get: operations["get_skill_tag_file_content_api_web_skills__namespace___slug__tags__tagName__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Tag File Content */
+        get: operations["get_skill_tag_file_content_api_v1_skills__namespace___slug__tags__tagName__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Latest */
+        get: operations["download_skill_latest_api_web_skills__namespace___slug__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Latest */
+        get: operations["download_skill_latest_api_v1_skills__namespace___slug__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Version */
+        get: operations["download_skill_version_api_web_skills__namespace___slug__versions__version__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Version */
+        get: operations["download_skill_version_api_v1_skills__namespace___slug__versions__version__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/{namespace}/{slug}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Cli Skill Latest */
+        get: operations["download_cli_skill_latest_api_cli_v1_skills__namespace___slug__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Cli Skill Version */
+        get: operations["download_cli_skill_version_api_cli_v1_skills__namespace___slug__versions__version__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Tag */
+        get: operations["download_skill_tag_api_web_skills__namespace___slug__tags__tagName__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Skill Tag */
+        get: operations["download_skill_tag_api_v1_skills__namespace___slug__tags__tagName__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/clawhub.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Clawhub Config */
+        get: operations["clawhub_config__well_known_clawhub_json_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3304,1729 +4249,1256 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        ApiResponseVoid: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: Record<string, never>;
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** AdminNamespaceBatchMemberData */
+        AdminNamespaceBatchMemberData: {
+            /** Totalcount */
+            totalCount: number;
+            /** Successcount */
+            successCount: number;
+            /** Failurecount */
+            failureCount: number;
+            /** Results */
+            results: components["schemas"]["AdminNamespaceBatchMemberResult"][];
         };
+        /** AdminNamespaceBatchMemberEnvelope */
+        AdminNamespaceBatchMemberEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceBatchMemberData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceBatchMemberRequest */
+        AdminNamespaceBatchMemberRequest: {
+            /** Members */
+            members: components["schemas"]["AdminNamespaceMemberRequest"][];
+        };
+        /** AdminNamespaceBatchMemberResult */
+        AdminNamespaceBatchMemberResult: {
+            /** Userid */
+            userId: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /** Success */
+            success: boolean;
+            /** Error */
+            error: string | null;
+        };
+        /** AdminNamespaceCandidate */
+        AdminNamespaceCandidate: {
+            /** Userid */
+            userId: string;
+            /** Displayname */
+            displayName: string;
+            /** Email */
+            email: string | null;
+            /**
+             * Status
+             * @constant
+             */
+            status: "ACTIVE";
+        };
+        /** AdminNamespaceCandidateListEnvelope */
+        AdminNamespaceCandidateListEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            /** Data */
+            data: components["schemas"]["AdminNamespaceCandidate"][];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceDetailEnvelope */
+        AdminNamespaceDetailEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceSummary"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceLifecycleRequest */
+        AdminNamespaceLifecycleRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** AdminNamespaceListData */
+        AdminNamespaceListData: {
+            /** Items */
+            items: components["schemas"]["AdminNamespaceSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            stats: components["schemas"]["AdminNamespaceListStats"];
+        };
+        /** AdminNamespaceListEnvelope */
+        AdminNamespaceListEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceListData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceListStats */
+        AdminNamespaceListStats: {
+            /** Total */
+            total: number;
+            /** Active */
+            active: number;
+            /** Frozen */
+            frozen: number;
+            /** Archived */
+            archived: number;
+        };
+        /** AdminNamespaceMember */
+        AdminNamespaceMember: {
+            /** Id */
+            id: number;
+            /** Namespaceid */
+            namespaceId: number;
+            /** Userid */
+            userId: string;
+            /** Displayname */
+            displayName: string | null;
+            /** Email */
+            email: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "OWNER" | "ADMIN" | "MEMBER";
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** AdminNamespaceMemberEnvelope */
+        AdminNamespaceMemberEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceMember"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceMemberPage */
+        AdminNamespaceMemberPage: {
+            /** Items */
+            items: components["schemas"]["AdminNamespaceMember"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
+        /** AdminNamespaceMemberPageEnvelope */
+        AdminNamespaceMemberPageEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceMemberPage"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespaceMemberRequest */
+        AdminNamespaceMemberRequest: {
+            /** Userid */
+            userId: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "ADMIN" | "MEMBER";
+        };
+        /** AdminNamespaceMessage */
+        AdminNamespaceMessage: {
+            /** Message */
+            message: string;
+        };
+        /** AdminNamespaceMessageEnvelope */
+        AdminNamespaceMessageEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["AdminNamespaceMessage"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** AdminNamespacePermissions */
+        AdminNamespacePermissions: {
+            /** Currentuserrole */
+            currentUserRole: ("OWNER" | "ADMIN" | "MEMBER") | null;
+            /** Platformoverride */
+            platformOverride: boolean;
+            /** Immutable */
+            immutable: boolean;
+            /** Canmanagemembers */
+            canManageMembers: boolean;
+            /** Cangovernnamespace */
+            canGovernNamespace: boolean;
+            /** Canpublish */
+            canPublish: boolean;
+            /** Cantransferownership */
+            canTransferOwnership: boolean;
+            /** Canfreeze */
+            canFreeze: boolean;
+            /** Canunfreeze */
+            canUnfreeze: boolean;
+            /** Canarchive */
+            canArchive: boolean;
+            /** Canrestore */
+            canRestore: boolean;
+        };
+        /** AdminNamespaceStats */
+        AdminNamespaceStats: {
+            /** Membercount */
+            memberCount: number;
+            /** Skillcount */
+            skillCount: number;
+        };
+        /** AdminNamespaceSummary */
+        AdminNamespaceSummary: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            /** Description */
+            description: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "TEAM" | "GLOBAL";
+            /** Avatarurl */
+            avatarUrl: string | null;
+            /** Createdby */
+            createdBy: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            stats: components["schemas"]["AdminNamespaceStats"];
+            permissions: components["schemas"]["AdminNamespacePermissions"];
+        };
+        /** AdminNamespaceTransferOwnershipRequest */
+        AdminNamespaceTransferOwnershipRequest: {
+            /** Newownerid */
+            newOwnerId: string;
+        };
+        /** AdminNamespaceUpdateMemberRoleRequest */
+        AdminNamespaceUpdateMemberRoleRequest: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "ADMIN" | "MEMBER";
+        };
+        /** AdminSkillActionRequest */
+        AdminSkillActionRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ApiResponseReviewTaskResponse */
+        ApiResponseReviewTaskResponse: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["ReviewTaskResponse"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** ArchivedReviewFileResponse */
+        ArchivedReviewFileResponse: {
+            /** Path */
+            path: string;
+            /** Size */
+            size: number;
+            /** Contenttype */
+            contentType?: string | null;
+            /** Sha256 */
+            sha256: string;
+        };
+        /** ArchivedReviewSnapshotResponse */
+        ArchivedReviewSnapshotResponse: {
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Manifest */
+            manifest?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Files */
+            files: components["schemas"]["ArchivedReviewFileResponse"][];
+            /** Scannersummary */
+            scannerSummary: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** Body_publish_clawhub_root_skill_api_v1_skills_post */
+        Body_publish_clawhub_root_skill_api_v1_skills_post: {
+            /** Payload */
+            payload: string;
+            /** Files */
+            files: string[];
+            /**
+             * Confirmwarnings
+             * @default false
+             */
+            confirmWarnings: boolean;
+        };
+        /** Body_publish_cli_skill_api_cli_v1_skills__namespace__publish_post */
+        Body_publish_cli_skill_api_cli_v1_skills__namespace__publish_post: {
+            /** File */
+            file: string;
+            /** Visibility */
+            visibility?: string | null;
+            /**
+             * Rejectexistingversion
+             * @default false
+             */
+            rejectExistingVersion: boolean;
+        };
+        /** Body_publish_cli_skill_api_v1_skills__namespace__publish_post */
+        Body_publish_cli_skill_api_v1_skills__namespace__publish_post: {
+            /** File */
+            file: string;
+            /** Visibility */
+            visibility?: string | null;
+            /**
+             * Rejectexistingversion
+             * @default false
+             */
+            rejectExistingVersion: boolean;
+        };
+        /** Body_publish_cli_skill_api_web_skills__namespace__publish_post */
+        Body_publish_cli_skill_api_web_skills__namespace__publish_post: {
+            /** File */
+            file: string;
+            /** Visibility */
+            visibility?: string | null;
+            /**
+             * Rejectexistingversion
+             * @default false
+             */
+            rejectExistingVersion: boolean;
+        };
+        /** Body_publish_legacy_skill_api_v1_publish_post */
+        Body_publish_legacy_skill_api_v1_publish_post: {
+            /** File */
+            file: string;
+            /** Namespace */
+            namespace: string;
+            /**
+             * Confirmwarnings
+             * @default false
+             */
+            confirmWarnings: boolean;
+        };
+        /** Body_submit_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_post */
+        Body_submit_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_post: {
+            /** File */
+            file: string;
+            /** Metadata */
+            metadata: string;
+        };
+        /** Body_validate_cli_publish_api_cli_v1_skills__namespace__publish_validate_post */
+        Body_validate_cli_publish_api_cli_v1_skills__namespace__publish_validate_post: {
+            /** File */
+            file: string;
+            /** Visibility */
+            visibility?: string | null;
+            /**
+             * Rejectexistingversion
+             * @default false
+             */
+            rejectExistingVersion: boolean;
+        };
+        /** Body_validate_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_validate_post */
+        Body_validate_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_validate_post: {
+            /** File */
+            file: string;
+            /** Metadata */
+            metadata: string;
+        };
+        /** CapabilityRequest */
+        CapabilityRequest: {
+            /** Version */
+            version: string;
+        };
+        /** CapabilityResponse */
+        CapabilityResponse: {
+            /** Token */
+            token: string;
+            /** Expiresat */
+            expiresAt: number;
+        };
+        /** CreateServicePrincipalRequest */
+        CreateServicePrincipalRequest: {
+            /** Code */
+            code: string;
+            /** Displayname */
+            displayName: string;
+        };
+        /** CreateServiceTokenRequest */
+        CreateServiceTokenRequest: {
+            /** Name */
+            name: string;
+            /** Scopes */
+            scopes: string[];
+            /** Expiresat */
+            expiresAt: string | null;
+        };
+        /** EnsureSourceNamespaceData */
+        EnsureSourceNamespaceData: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "CREATED" | "EXISTING";
+            /** Namespaceslug */
+            namespaceSlug: string;
+            /** Displayname */
+            displayName: string;
+            /** Status */
+            status: string;
+            /** Repositoryurl */
+            repositoryUrl: string;
+            owner: components["schemas"]["SourceIdentityResponse"];
+        };
+        /** EnsureSourceNamespaceEnvelope */
+        EnsureSourceNamespaceEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["EnsureSourceNamespaceData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** EnsureSourceNamespaceRequest */
+        EnsureSourceNamespaceRequest: {
+            /** Repositoryurl */
+            repositoryUrl: string;
+            /** Displayname */
+            displayName: string;
+            /** Fallbackownerprovidercode */
+            fallbackOwnerProviderCode: string;
+            /** Fallbackownerloginname */
+            fallbackOwnerLoginName: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** NamespaceAnalyticsData */
+        NamespaceAnalyticsData: {
+            summary: components["schemas"]["NamespaceAnalyticsSummary"];
+            period: components["schemas"]["NamespaceAnalyticsPeriod"];
+            /** Items */
+            items: components["schemas"]["NamespaceAnalyticsItem"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** NamespaceAnalyticsEnvelope */
+        NamespaceAnalyticsEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["NamespaceAnalyticsData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** NamespaceAnalyticsItem */
+        NamespaceAnalyticsItem: {
+            /** Namespaceid */
+            namespaceId: number;
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "GLOBAL" | "TEAM";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            /** Maintainercount */
+            maintainerCount: number;
+            /** Skillcount */
+            skillCount: number;
+            /** Lifetimedownloads */
+            lifetimeDownloads: number;
+            /** Perioddownloads */
+            periodDownloads: number;
+        };
+        /** NamespaceAnalyticsPeriod */
+        NamespaceAnalyticsPeriod: {
+            /**
+             * Starttime
+             * Format: date-time
+             */
+            startTime: string;
+            /**
+             * Endtime
+             * Format: date-time
+             */
+            endTime: string;
+            /** Source */
+            source: ("web" | "cli" | "api") | null;
+            /** Retentionmonths */
+            retentionMonths: number;
+        };
+        /** NamespaceAnalyticsSummary */
+        NamespaceAnalyticsSummary: {
+            /** Namespacecount */
+            namespaceCount: number;
+            /** Maintainercount */
+            maintainerCount: number;
+            /** Skillcount */
+            skillCount: number;
+            /** Lifetimedownloads */
+            lifetimeDownloads: number;
+            /** Perioddownloads */
+            periodDownloads: number;
+        };
+        /** NamespaceSecurityAnalyticsData */
+        NamespaceSecurityAnalyticsData: {
+            summary: components["schemas"]["NamespaceSecurityAnalyticsSummary"];
+            /** Items */
+            items: components["schemas"]["NamespaceSecurityAnalyticsItem"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** NamespaceSecurityAnalyticsEnvelope */
+        NamespaceSecurityAnalyticsEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["NamespaceSecurityAnalyticsData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** NamespaceSecurityAnalyticsItem */
+        NamespaceSecurityAnalyticsItem: {
+            /** Namespaceid */
+            namespaceId: number;
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "GLOBAL" | "TEAM";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "FROZEN" | "ARCHIVED";
+            /** Affectedskillcount */
+            affectedSkillCount: number;
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Findingcount */
+            findingCount: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+        };
+        /** NamespaceSecurityAnalyticsSummary */
+        NamespaceSecurityAnalyticsSummary: {
+            /** Affectednamespacecount */
+            affectedNamespaceCount: number;
+            /** Affectedskillcount */
+            affectedSkillCount: number;
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Findingcount */
+            findingCount: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+        };
+        /** NamespaceSecuritySeverityCounts */
+        NamespaceSecuritySeverityCounts: {
+            /** Critical */
+            critical: number;
+            /** High */
+            high: number;
+            /** Medium */
+            medium: number;
+            /** Low */
+            low: number;
+            /** Info */
+            info: number;
+            /** Unclassified */
+            unclassified: number;
+        };
+        /** NamespaceSecuritySkillItem */
+        NamespaceSecuritySkillItem: {
+            /** Skillid */
+            skillId: number;
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /** Ownerid */
+            ownerId: string;
+            /** Ownerdisplayname */
+            ownerDisplayName: string | null;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "ARCHIVED";
+            /** Hidden */
+            hidden: boolean;
+            /** Affectedversioncount */
+            affectedVersionCount: number;
+            /** Findingcount */
+            findingCount: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+            /** Versions */
+            versions: components["schemas"]["NamespaceSecurityVersionItem"][];
+        };
+        /** NamespaceSecuritySkillsData */
+        NamespaceSecuritySkillsData: {
+            /** Items */
+            items: components["schemas"]["NamespaceSecuritySkillItem"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** NamespaceSecuritySkillsEnvelope */
+        NamespaceSecuritySkillsEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["NamespaceSecuritySkillsData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
+        };
+        /** NamespaceSecurityVersionItem */
+        NamespaceSecurityVersionItem: {
+            /** Versionid */
+            versionId: number;
+            /** Version */
+            version: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+            /** Findingcount */
+            findingCount: number;
+            severityCounts: components["schemas"]["NamespaceSecuritySeverityCounts"];
+            /**
+             * Maxseverity
+             * @enum {string}
+             */
+            maxSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+            /**
+             * Latestscanat
+             * Format: date-time
+             */
+            latestScanAt: string;
+            /** Scannertypes */
+            scannerTypes: ("skill-scanner" | "custom")[];
+        };
+        /** PlaygroundContextResponse */
+        PlaygroundContextResponse: {
+            skill: components["schemas"]["PlaygroundSkill"];
+            /** Files */
+            files: components["schemas"]["PlaygroundFile"][];
+        };
+        /** PlaygroundFile */
+        PlaygroundFile: {
+            /** Path */
+            path: string;
+            /**
+             * Content
+             * @default
+             */
+            content: string;
+            /**
+             * Includedinprompt
+             * @default false
+             */
+            includedInPrompt: boolean;
+        };
+        /** PlaygroundSkill */
+        PlaygroundSkill: {
+            /** Namespace */
+            namespace: string;
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /** Version */
+            version: string;
+        };
+        /** PromotionActionRequest */
+        PromotionActionRequest: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ReviewActionRequest */
+        ReviewActionRequest: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ReviewApproveRequest */
+        ReviewApproveRequest: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Confirmscanoverride
+             * @default false
+             */
+            confirmScanOverride: boolean;
+            /** Scanoverridereason */
+            scanOverrideReason?: string | null;
+        };
+        /** ReviewBatchDecisionRequest */
+        ReviewBatchDecisionRequest: {
+            /** Reviewtaskids */
+            reviewTaskIds: number[];
+            /** Decision */
+            decision: string;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ReviewSubmitRequest */
+        ReviewSubmitRequest: {
+            /** Skillversionid */
+            skillVersionId: number;
+        };
+        /** ReviewTaskResponse */
+        ReviewTaskResponse: {
+            /** Id */
+            id?: number | null;
+            /** Skillversionid */
+            skillVersionId?: number | null;
+            /** Namespace */
+            namespace?: string | null;
+            /** Skillslug */
+            skillSlug?: string | null;
+            /** Version */
+            version?: string | null;
+            /** Requestedvisibility */
+            requestedVisibility?: string | null;
+            /** Approvalvisibility */
+            approvalVisibility?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Submittedby */
+            submittedBy?: string | null;
+            /** Submittedbyname */
+            submittedByName?: string | null;
+            /** Reviewedby */
+            reviewedBy?: string | null;
+            /** Reviewedbyname */
+            reviewedByName?: string | null;
+            /** Reviewcomment */
+            reviewComment?: string | null;
+            /** Submittedat */
+            submittedAt?: string | null;
+            /** Reviewedat */
+            reviewedAt?: string | null;
+            /** Versionstatus */
+            versionStatus?: string | null;
+            /**
+             * Superseded
+             * @default false
+             */
+            superseded: boolean;
+            /**
+             * Artifactavailable
+             * @default true
+             */
+            artifactAvailable: boolean;
+            /** Replacementversionid */
+            replacementVersionId?: number | null;
+            /** Replacementreviewtaskid */
+            replacementReviewTaskId?: number | null;
+            /** Archivedat */
+            archivedAt?: string | null;
+            archivedSnapshot?: components["schemas"]["ArchivedReviewSnapshotResponse"] | null;
+        };
+        /** RotateServiceTokenRequest */
+        RotateServiceTokenRequest: {
+            /** Expiresat */
+            expiresAt: string | null;
+        };
+        /** SkillArchiveRequest */
+        SkillArchiveRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** SkillConfirmPublishRequest */
+        SkillConfirmPublishRequest: {
+            /** Version */
+            version: string;
+        };
+        /** SkillRatingRequest */
         SkillRatingRequest: {
-            /** Format: int32 */
+            /** Score */
             score: number;
         };
-        TagRequest: {
-            tagName: string;
+        /** SkillRereleaseRequest */
+        SkillRereleaseRequest: {
+            /** Targetversion */
             targetVersion: string;
+            /**
+             * Confirmwarnings
+             * @default false
+             */
+            confirmWarnings: boolean;
         };
-        ApiResponseTagResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["TagResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        TagResponse: {
-            /** Format: int64 */
-            id?: number;
-            tagName?: string;
-            /** Format: int64 */
-            versionId?: number;
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        ApiResponseSkillLabelDto: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillLabelDto"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillLabelDto: {
-            slug?: string;
-            type?: string;
-            displayName?: string;
-        };
-        ApiResponseMapStringInteger: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: {
-                [key: string]: number;
-            };
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        NotificationPreferenceUpdateRequest: {
-            preferences?: components["schemas"]["PreferenceItem"][];
-        };
-        PreferenceItem: {
-            category?: string;
-            channel?: string;
-            enabled?: boolean;
-        };
-        ApiResponseListNotificationPreferenceResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["NotificationPreferenceResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        NotificationPreferenceResponse: {
-            category?: string;
-            channel?: string;
-            enabled?: boolean;
-        };
-        UpdateMemberRoleRequest: {
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
-        };
-        ApiResponseMemberResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["MemberResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        MemberResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            namespaceId?: number;
-            userId?: string;
-            displayName?: string;
-            email?: string;
-            /** @enum {string} */
-            role?: "OWNER" | "ADMIN" | "MEMBER";
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        NamespaceRequest: {
-            slug: string;
-            displayName: string;
-            description?: string;
-        };
-        ApiResponseNamespaceResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["NamespaceResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        NamespaceResponse: {
-            /** Format: int64 */
-            id?: number;
-            slug?: string;
-            displayName?: string;
-            /** @enum {string} */
-            status?: "ACTIVE" | "FROZEN" | "ARCHIVED";
-            description?: string;
-            /** @enum {string} */
-            type?: "GLOBAL" | "TEAM";
-            avatarUrl?: string;
-            createdBy?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        TokenExpirationUpdateRequest: {
-            expiresAt?: string;
-        };
-        ApiResponseTokenSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["TokenSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        TokenSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            name?: string;
-            tokenPrefix?: string;
-            createdAt?: string;
-            expiresAt?: string;
-            lastUsedAt?: string;
-        };
-        AdminUserStatusUpdateRequest: {
-            status: string;
-        };
-        AdminUserMutationResponse: {
-            userId?: string;
-            role?: string;
-            status?: string;
-        };
-        ApiResponseAdminUserMutationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AdminUserMutationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        AdminUserRoleUpdateRequest: {
-            role: string;
-        };
-        AdminLabelUpdateRequest: {
-            /** @enum {string} */
-            type: "RECOMMENDED" | "PRIVILEGED";
-            visibleInFilter?: boolean;
-            /** Format: int32 */
-            sortOrder?: number;
-            translations: components["schemas"]["LabelTranslationItemRequest"][];
-        };
-        LabelTranslationItemRequest: {
-            locale: string;
-            displayName: string;
-        };
-        ApiResponseLabelDefinitionResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["LabelDefinitionResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        LabelDefinitionResponse: {
-            slug?: string;
-            type?: string;
-            visibleInFilter?: boolean;
-            /** Format: int32 */
-            sortOrder?: number;
-            translations?: components["schemas"]["LabelTranslationResponse"][];
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        LabelTranslationResponse: {
-            locale?: string;
-            displayName?: string;
-        };
-        LabelSortOrderItemRequest: {
-            slug: string;
-            /** Format: int32 */
-            sortOrder?: number;
-        };
-        LabelSortOrderUpdateRequest: {
-            items: components["schemas"]["LabelSortOrderItemRequest"][];
-        };
-        ApiResponseListLabelDefinitionResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["LabelDefinitionResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ApiResponseSkillLifecycleMutationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillLifecycleMutationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillLifecycleMutationResponse: {
-            /** Format: int64 */
-            skillId?: number;
-            /** Format: int64 */
-            versionId?: number;
-            action?: string;
-            status?: string;
-        };
-        SkillVersionRereleaseRequest: {
-            targetVersion: string;
-            confirmWarnings?: boolean;
-        };
-        SubmitReviewRequest: {
+        /** SkillSubmitReviewRequest */
+        SkillSubmitReviewRequest: {
+            /** Version */
             version: string;
+            /** Targetvisibility */
             targetVisibility: string;
         };
-        SkillReportSubmitRequest: {
-            reason?: string;
-            details?: string;
+        /** SkillVisibilityUpdateRequest */
+        SkillVisibilityUpdateRequest: {
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
         };
-        ApiResponseSkillReportMutationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillReportMutationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** SourceIdentityResponse */
+        SourceIdentityResponse: {
+            /** Displayname */
+            displayName: string;
+            /** Providercode */
+            providerCode?: string | null;
+            /** Loginname */
+            loginName?: string | null;
         };
-        SkillReportMutationResponse: {
-            /** Format: int64 */
-            reportId?: number;
-            status?: string;
+        /** SourceProvenanceResponse */
+        SourceProvenanceResponse: {
+            /** Repositoryurl */
+            repositoryUrl: string;
+            /** Repositoryrevisionsha */
+            repositoryRevisionSha: string;
+            /**
+             * Sourcereftype
+             * @enum {string}
+             */
+            sourceRefType: "TAG" | "BRANCH" | "COMMIT";
+            /** Sourceref */
+            sourceRef?: string | null;
+            /** Sourcepath */
+            sourcePath: string;
+            /** Contentfingerprint */
+            contentFingerprint: string;
+            /** Browseurl */
+            browseUrl: string;
         };
-        ConfirmPublishRequest: {
+        /** SubmitSourceSkillData */
+        SubmitSourceSkillData: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "IMPORTED" | "SKIPPED_UNCHANGED" | "SKIPPED_ALREADY_IMPORTED";
+            /** Coordinate */
+            coordinate: string;
+            /** Version */
             version: string;
+            /** Skillid */
+            skillId?: number | null;
+            /** Versionid */
+            versionId?: number | null;
+            /** Versionstatus */
+            versionStatus?: string | null;
+            /** Reviewtaskid */
+            reviewTaskId?: number | null;
+            stableOwner: components["schemas"]["SourceIdentityResponse"];
+            reviewSubmitter: components["schemas"]["SourceIdentityResponse"];
+            importerActor: components["schemas"]["SourceIdentityResponse"];
+            sourceProvenance: components["schemas"]["SourceProvenanceResponse"];
         };
-        AdminSkillActionRequest: {
-            reason?: string;
+        /** SubmitSourceSkillEnvelope */
+        SubmitSourceSkillEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["SubmitSourceSkillData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
         };
-        ApiResponsePublishResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PublishResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** UpdateServicePrincipalRequest */
+        UpdateServicePrincipalRequest: {
+            /** Displayname */
+            displayName?: string | null;
+            /** Status */
+            status?: ("ACTIVE" | "DISABLED") | null;
         };
-        PublishResponse: {
-            /** Format: int64 */
-            skillId?: number;
-            namespace?: string;
-            slug?: string;
-            version?: string;
-            status?: string;
-            /** Format: int32 */
-            fileCount?: number;
-            /** Format: int64 */
-            totalSize?: number;
+        /** ValidateSourceSkillData */
+        ValidateSourceSkillData: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "IMPORT" | "SKIPPED_UNCHANGED" | "SKIPPED_ALREADY_IMPORTED";
+            /** Coordinate */
+            coordinate: string;
+            /** Version */
+            version: string;
+            stableOwner: components["schemas"]["SourceIdentityResponse"];
+            reviewSubmitter: components["schemas"]["SourceIdentityResponse"];
+            /** Addsubmitterasmember */
+            addSubmitterAsMember: boolean;
+            sourceProvenance: components["schemas"]["SourceProvenanceResponse"];
         };
-        ReviewActionRequest: {
-            comment?: string;
+        /** ValidateSourceSkillEnvelope */
+        ValidateSourceSkillEnvelope: {
+            /** Code */
+            code: number;
+            /** Msg */
+            msg: string;
+            data: components["schemas"]["ValidateSourceSkillData"];
+            /** Timestamp */
+            timestamp: string;
+            /** Requestid */
+            requestId: string;
         };
-        ApiResponseReviewTaskResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["ReviewTaskResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
-        ReviewTaskResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            skillVersionId?: number;
-            namespace?: string;
-            skillSlug?: string;
-            version?: string;
-            status?: string;
-            submittedBy?: string;
-            submittedByName?: string;
-            reviewedBy?: string;
-            reviewedByName?: string;
-            reviewComment?: string;
-            /** Format: date-time */
-            submittedAt?: string;
-            /** Format: date-time */
-            reviewedAt?: string;
-        };
-        ReviewTaskRequest: {
-            /** Format: int64 */
-            skillVersionId?: number;
-        };
-        PromotionActionRequest: {
-            comment?: string;
-        };
-        ApiResponsePromotionResponseDto: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PromotionResponseDto"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PromotionResponseDto: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            sourceSkillId?: number;
-            sourceNamespace?: string;
-            sourceSkillSlug?: string;
-            sourceVersion?: string;
-            targetNamespace?: string;
-            /** Format: int64 */
-            targetSkillId?: number;
-            status?: string;
-            submittedBy?: string;
-            submittedByName?: string;
-            reviewedBy?: string;
-            reviewedByName?: string;
-            reviewComment?: string;
-            /** Format: date-time */
-            submittedAt?: string;
-            /** Format: date-time */
-            reviewedAt?: string;
-        };
-        PromotionRequestDto: {
-            /** Format: int64 */
-            sourceSkillId?: number;
-            /** Format: int64 */
-            sourceVersionId?: number;
-            /** Format: int64 */
-            targetNamespaceId?: number;
-        };
-        BatchMemberRequest: {
-            members: components["schemas"]["MemberRequest"][];
-        };
-        MemberRequest: {
-            userId: string;
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
-        };
-        ApiResponseBatchMemberResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["BatchMemberResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        BatchMemberResponse: {
-            /** Format: int32 */
-            totalCount?: number;
-            /** Format: int32 */
-            successCount?: number;
-            /** Format: int32 */
-            failureCount?: number;
-            results?: components["schemas"]["BatchMemberResult"][];
-        };
-        BatchMemberResult: {
-            userId?: string;
-            role?: string;
-            success?: boolean;
-            error?: string;
-        };
-        NamespaceLifecycleRequest: {
-            reason?: string;
-        };
-        ApiResponseGovernanceNotificationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["GovernanceNotificationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        GovernanceNotificationResponse: {
-            /** Format: int64 */
-            id?: number;
-            category?: string;
-            entityType?: string;
-            /** Format: int64 */
-            entityId?: number;
-            title?: string;
-            bodyJson?: string;
-            status?: string;
-            createdAt?: string;
-            readAt?: string;
-        };
-        TokenCreateRequest: {
-            name: string;
-            scopes?: string[];
-            expiresAt?: string;
-        };
-        ApiResponseTokenCreateResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["TokenCreateResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        TokenCreateResponse: {
-            token?: string;
-            /** Format: int64 */
-            id?: number;
-            name?: string;
-            tokenPrefix?: string;
-            createdAt?: string;
-            expiresAt?: string;
-        };
-        ClawHubStarResponse: {
-            ok?: boolean;
-            starred?: boolean;
-            alreadyStarred?: boolean;
-        };
-        ClawHubPublishResponse: {
-            ok?: boolean;
-            skillId?: string;
-            versionId?: string;
-        };
-        ClawHubDeleteResponse: {
-            ok?: boolean;
-        };
-        AuthorizeRequest: {
-            userCode?: string;
-        };
-        ApiResponseMessageResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["MessageResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        MessageResponse: {
-            message?: string;
-        };
-        SessionBootstrapRequest: {
-            provider: string;
-        };
-        ApiResponseAuthMeResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AuthMeResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
+        /** AuthMeResponse */
         AuthMeResponse: {
-            userId?: string;
-            displayName?: string;
-            email?: string;
-            avatarUrl?: string;
-            oauthProvider?: string;
-            platformRoles?: string[];
-        };
-        LocalRegisterRequest: {
-            username: string;
-            password: string;
-            email: string;
-        };
-        PasswordResetRequestDto: {
-            email: string;
-        };
-        PasswordResetConfirmRequest: {
-            email: string;
-            code: string;
-            newPassword: string;
-        };
-        LocalLoginRequest: {
-            username: string;
-            password: string;
-        };
-        ChangePasswordRequest: {
-            currentPassword: string;
-            newPassword: string;
-        };
-        DirectLoginRequest: {
-            provider: string;
-            username: string;
-            password: string;
-        };
-        TokenRequest: {
-            deviceCode?: string;
-        };
-        ApiResponseDeviceTokenResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DeviceTokenResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DeviceTokenResponse: {
-            accessToken?: string;
-            tokenType?: string;
-            error?: string;
-        };
-        ApiResponseDeviceCodeResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["DeviceCodeResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        DeviceCodeResponse: {
-            deviceCode?: string;
-            userCode?: string;
-            verificationUri?: string;
-            /** Format: int32 */
-            expiresIn?: number;
-            /** Format: int32 */
-            interval?: number;
-        };
-        AdminSkillMutationResponse: {
-            /** Format: int64 */
-            skillId?: number;
-            /** Format: int64 */
-            versionId?: number;
-            action?: string;
-            status?: string;
-        };
-        ApiResponseAdminSkillMutationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AdminSkillMutationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        AdminSkillReportActionRequest: {
-            comment?: string;
-            disposition?: string;
-        };
-        ProfileReviewRejectRequest: {
-            comment: string;
-        };
-        ApiResponseProfileReviewMutationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["ProfileReviewMutationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ProfileReviewMutationResponse: {
-            /** Format: int64 */
-            id?: number;
-            status?: string;
-        };
-        AdminLabelCreateRequest: {
-            slug: string;
-            /** @enum {string} */
-            type: "RECOMMENDED" | "PRIVILEGED";
-            visibleInFilter?: boolean;
-            /** Format: int32 */
-            sortOrder?: number;
-            translations: components["schemas"]["LabelTranslationItemRequest"][];
-        };
-        MergeVerifyRequest: {
-            /** Format: int64 */
-            mergeRequestId: number;
-            verificationToken: string;
-        };
-        MergeInitiateRequest: {
-            secondaryIdentifier: string;
-        };
-        ApiResponseMergeInitiateResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["MergeInitiateResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        MergeInitiateResponse: {
-            /** Format: int64 */
-            mergeRequestId?: number;
-            secondaryUserId?: string;
-            verificationToken?: string;
-            expiresAt?: string;
-        };
-        ConfirmMergeRequest: {
-            /** Format: int64 */
-            mergeRequestId: number;
-        };
-        ApiResponseCliPublishResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliPublishResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliPublishResponse: {
-            namespace?: string;
-            slug?: string;
-            version?: string;
-            visibility?: string;
-        };
-        ApiResponseCliDryRunResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliDryRunResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliDryRunResponse: {
-            valid?: boolean;
-            errors?: string[];
-            warnings?: string[];
-            resolvedSlug?: string | null;
-            resolvedVersion?: string | null;
-        };
-        UpdateProfileRequest: {
-            displayName?: string;
-        };
-        ApiResponseUpdateProfileResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["UpdateProfileResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        UpdateProfileResponse: {
-            /** @enum {string} */
-            status?: "APPLIED" | "PENDING_REVIEW" | "PARTIALLY_APPLIED";
-            message?: string;
-            appliedFields?: {
-                [key: string]: string;
-            };
-            pendingFields?: {
-                [key: string]: string;
-            };
-        };
-        ApiResponseSearchResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SearchResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SearchResponse: {
-            items?: components["schemas"]["SkillSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        SkillLifecycleVersionResponse: {
-            /** Format: int64 */
-            id?: number;
-            version?: string;
-            status?: string;
-        };
-        SkillSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            visibility?: string;
-            status?: string;
-            /** Format: int64 */
-            downloadCount?: number;
-            /** Format: int32 */
-            starCount?: number;
-            ratingAvg?: number;
-            /** Format: int32 */
-            ratingCount?: number;
-            namespace?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            canSubmitPromotion?: boolean;
-            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            resolutionMode?: string;
-        };
-        ApiResponseBoolean: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: boolean;
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ApiResponseSkillRatingStatusResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillRatingStatusResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillRatingStatusResponse: {
-            /** Format: int32 */
-            score?: number;
-            rated?: boolean;
-        };
-        ApiResponseListSkillFileResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillFileResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillFileResponse: {
-            /** Format: int64 */
-            id?: number;
-            filePath?: string;
-            /** Format: int64 */
-            fileSize?: number;
-            contentType?: string;
-            sha256?: string;
-        };
-        ApiResponseSkillVersionDetailResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillVersionDetailResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillVersionDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            version?: string;
-            status?: string;
-            changelog?: string;
-            /** Format: int32 */
-            fileCount?: number;
-            /** Format: int64 */
-            totalSize?: number;
-            /** Format: date-time */
-            publishedAt?: string;
-            parsedMetadataJson?: string;
-            manifestJson?: string;
-        };
-        ApiResponseSkillVersionCompareResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillVersionCompareResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillVersionCompareFileResponse: {
-            path?: string;
-            changeType?: string;
-            /** Format: int64 */
-            oldSize?: number;
-            /** Format: int64 */
-            newSize?: number;
-            binary?: boolean;
-            truncated?: boolean;
-            hunks?: components["schemas"]["SkillVersionCompareHunkResponse"][];
-        };
-        SkillVersionCompareHunkResponse: {
-            /** Format: int32 */
-            oldStart?: number;
-            /** Format: int32 */
-            oldLines?: number;
-            /** Format: int32 */
-            newStart?: number;
-            /** Format: int32 */
-            newLines?: number;
-            lines?: components["schemas"]["SkillVersionCompareLineResponse"][];
-        };
-        SkillVersionCompareLineResponse: {
-            type?: string;
-            content?: string;
-            /** Format: int32 */
-            oldLineNumber?: number;
-            /** Format: int32 */
-            newLineNumber?: number;
-        };
-        SkillVersionCompareResponse: {
-            from?: string;
-            to?: string;
-            summary?: components["schemas"]["SkillVersionCompareSummaryResponse"];
-            files?: components["schemas"]["SkillVersionCompareFileResponse"][];
-        };
-        SkillVersionCompareSummaryResponse: {
-            /** Format: int32 */
-            totalFiles?: number;
-            /** Format: int32 */
-            addedFiles?: number;
-            /** Format: int32 */
-            modifiedFiles?: number;
-            /** Format: int32 */
-            removedFiles?: number;
-            /** Format: int32 */
-            addedLines?: number;
-            /** Format: int32 */
-            removedLines?: number;
-        };
-        ApiResponsePageResponseSkillVersionResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseSkillVersionResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseSkillVersionResponse: {
-            items?: components["schemas"]["SkillVersionResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        SkillVersionResponse: {
-            /** Format: int64 */
-            id?: number;
-            version?: string;
-            status?: string;
-            changelog?: string;
-            /** Format: int32 */
-            fileCount?: number;
-            /** Format: int64 */
-            totalSize?: number;
-            /** Format: date-time */
-            publishedAt?: string;
-            downloadAvailable?: boolean;
-        };
-        ApiResponseListTagResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["TagResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ApiResponseResolveVersionResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["ResolveVersionResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ResolveVersionResponse: {
-            /** Format: int64 */
-            skillId?: number;
-            namespace?: string;
-            slug?: string;
-            version?: string;
-            /** Format: int64 */
-            versionId?: number;
-            fingerprint?: string;
-            matched?: boolean;
-            downloadUrl?: string;
-        };
-        ApiResponseListSkillLabelDto: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillLabelDto"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ApiResponseSkillDetailResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillDetailResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            slug?: string;
-            displayName?: string;
-            ownerId?: string;
-            ownerDisplayName?: string;
-            summary?: string;
-            visibility?: string;
-            status?: string;
-            /** Format: int64 */
-            downloadCount?: number;
-            /** Format: int32 */
-            starCount?: number;
-            /** Format: int32 */
-            subscriptionCount?: number;
-            ratingAvg?: number;
-            /** Format: int32 */
-            ratingCount?: number;
-            hidden?: boolean;
-            namespace?: string;
-            labels?: components["schemas"]["SkillLabelDto"][];
-            canManageLifecycle?: boolean;
-            canSubmitPromotion?: boolean;
-            canInteract?: boolean;
-            canReport?: boolean;
-            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            ownerPreviewReviewComment?: string;
-            resolutionMode?: string;
-        };
-        ApiResponseReviewSkillDetailResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["ReviewSkillDetailResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        ReviewSkillDetailResponse: {
-            skill?: components["schemas"]["SkillDetailResponse"];
-            versions?: components["schemas"]["SkillVersionResponse"][];
-            files?: components["schemas"]["SkillFileResponse"][];
-            documentationPath?: string;
-            documentationContent?: string;
-            downloadUrl?: string;
-            activeVersion?: string;
-        };
-        ApiResponsePageResponseReviewTaskResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseReviewTaskResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseReviewTaskResponse: {
-            items?: components["schemas"]["ReviewTaskResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponsePageResponsePromotionResponseDto: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponsePromotionResponseDto"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponsePromotionResponseDto: {
-            items?: components["schemas"]["PromotionResponseDto"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponseMapStringLong: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: {
-                [key: string]: number;
-            };
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SseEmitter: {
-            /** Format: int64 */
-            timeout?: number;
-        };
-        ApiResponsePageResponseNotificationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseNotificationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        NotificationResponse: {
-            /** Format: int64 */
-            id?: number;
-            category?: string;
-            eventType?: string;
-            title?: string;
-            bodyJson?: string;
-            entityType?: string;
-            /** Format: int64 */
-            entityId?: number;
-            status?: string;
-            createdAt?: string;
-            readAt?: string;
-            targetType?: string;
-            /** Format: int64 */
-            targetId?: number;
-            targetRoute?: string;
-        };
-        PageResponseNotificationResponse: {
-            items?: components["schemas"]["NotificationResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        Pageable: {
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            sort?: string[];
-        };
-        ApiResponsePageResponseMemberResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseMemberResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseMemberResponse: {
-            items?: components["schemas"]["MemberResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponseListNamespaceCandidateUserResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["NamespaceCandidateUserResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        NamespaceCandidateUserResponse: {
-            userId?: string;
-            displayName?: string;
-            email?: string;
-            status?: string;
-        };
-        ApiResponsePageResponseNamespaceResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseNamespaceResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseNamespaceResponse: {
-            items?: components["schemas"]["NamespaceResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponsePageResponseSkillSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseSkillSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseSkillSummaryResponse: {
-            items?: components["schemas"]["SkillSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponseListMyNamespaceResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["MyNamespaceResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        MyNamespaceResponse: {
-            /** Format: int64 */
-            id?: number;
-            slug?: string;
-            displayName?: string;
-            /** @enum {string} */
-            status?: "ACTIVE" | "FROZEN" | "ARCHIVED";
-            description?: string;
-            /** @enum {string} */
-            type?: "GLOBAL" | "TEAM";
-            avatarUrl?: string;
-            createdBy?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** @enum {string} */
-            currentUserRole?: "OWNER" | "ADMIN" | "MEMBER";
-            immutable?: boolean;
-            canFreeze?: boolean;
-            canUnfreeze?: boolean;
-            canArchive?: boolean;
-            canRestore?: boolean;
-            canDelete?: boolean;
-        };
-        ApiResponseGovernanceSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["GovernanceSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        GovernanceSummaryResponse: {
-            /** Format: int64 */
-            pendingReviews?: number;
-            /** Format: int64 */
-            pendingPromotions?: number;
-            /** Format: int64 */
-            pendingReports?: number;
-            /** Format: int64 */
-            unreadNotifications?: number;
-        };
-        ApiResponsePageResponseGovernanceNotificationResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseGovernanceNotificationResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseGovernanceNotificationResponse: {
-            items?: components["schemas"]["GovernanceNotificationResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponsePageResponseGovernanceInboxItemResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseGovernanceInboxItemResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        GovernanceInboxItemResponse: {
-            type?: string;
-            /** Format: int64 */
-            id?: number;
-            title?: string;
-            subtitle?: string;
-            timestamp?: string;
-            namespace?: string;
-            skillSlug?: string;
-        };
-        PageResponseGovernanceInboxItemResponse: {
-            items?: components["schemas"]["GovernanceInboxItemResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponsePageResponseGovernanceActivityItemResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseGovernanceActivityItemResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        GovernanceActivityItemResponse: {
-            /** Format: int64 */
-            id?: number;
-            action?: string;
-            actorUserId?: string;
-            actorDisplayName?: string;
-            targetType?: string;
-            targetId?: string;
-            details?: string;
-            timestamp?: string;
-        };
-        PageResponseGovernanceActivityItemResponse: {
-            items?: components["schemas"]["GovernanceActivityItemResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ClawHubWhoamiResponse: {
-            user?: components["schemas"]["User"];
-        };
-        User: {
-            handle?: string;
-            displayName?: string;
-            image?: string;
-        };
-        ApiResponseUserProfileResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["UserProfileResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        FieldPolicyResponse: {
-            editable?: boolean;
-            requiresReview?: boolean;
-        };
-        PendingChangesResponse: {
-            status?: string;
-            changes?: {
-                [key: string]: string;
-            };
-            reviewComment?: string;
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        UserProfileResponse: {
-            displayName?: string;
-            avatarUrl?: string;
-            email?: string;
-            pendingChanges?: components["schemas"]["PendingChangesResponse"];
-            fieldPolicies?: {
-                [key: string]: components["schemas"]["FieldPolicyResponse"];
-            };
-        };
-        ApiResponsePageResponseTokenSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseTokenSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        PageResponseTokenSummaryResponse: {
-            items?: components["schemas"]["TokenSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ClawHubSkillListResponse: {
-            items?: components["schemas"]["SkillListItem"][];
-            nextCursor?: string;
-        };
-        LatestVersion: {
-            version?: string;
-            /** Format: int64 */
-            createdAt?: number;
-            changelog?: string;
-            license?: string;
-        };
-        SkillListItem: {
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            tags?: Record<string, never>;
-            stats?: Record<string, never>;
-            /** Format: int64 */
-            createdAt?: number;
-            /** Format: int64 */
-            updatedAt?: number;
-            latestVersion?: components["schemas"]["LatestVersion"];
-        };
-        ApiResponseListSecurityAuditResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SecurityAuditResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SecurityAuditResponse: {
-            /** Format: int64 */
-            id?: number;
-            scanId?: string;
-            scannerType?: string;
-            /** @enum {string} */
-            verdict?: "SAFE" | "SUSPICIOUS" | "DANGEROUS" | "BLOCKED";
-            isSafe?: boolean;
-            maxSeverity?: string;
-            /** Format: int32 */
-            findingsCount?: number;
-            findings?: components["schemas"]["SecurityFinding"][];
-            /** Format: double */
-            scanDurationSeconds?: number;
-            /** Format: date-time */
-            scannedAt?: string;
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        SecurityFinding: {
-            ruleId?: string;
-            severity?: string;
-            category?: string;
-            title?: string;
-            message?: string;
-            filePath?: string;
-            /** Format: int32 */
-            lineNumber?: number;
-            codeSnippet?: string;
-            remediation?: string;
-            analyzer?: string;
-            metadata?: {
-                [key: string]: Record<string, never>;
-            };
-        };
-        ClawHubSkillResponse: {
-            skill?: components["schemas"]["SkillInfo"];
-            latestVersion?: components["schemas"]["VersionInfo"];
-            owner?: components["schemas"]["OwnerInfo"];
-            moderation?: components["schemas"]["ModerationInfo"];
-        };
-        ModerationInfo: {
-            isSuspicious?: boolean;
-            isMalwareBlocked?: boolean;
-            verdict?: string;
-            reasonCodes?: string[];
-            /** Format: int64 */
-            updatedAt?: number;
-            engineVersion?: string;
-            summary?: string;
-        };
-        OwnerInfo: {
-            handle?: string;
-            displayName?: string;
-            image?: string;
-        };
-        SkillInfo: {
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            tags?: Record<string, never>;
-            stats?: Record<string, never>;
-            /** Format: int64 */
-            createdAt?: number;
-            /** Format: int64 */
-            updatedAt?: number;
-        };
-        VersionInfo: {
-            version?: string;
-            /** Format: int64 */
-            createdAt?: number;
-            changelog?: string;
-            license?: string;
-        };
-        ClawHubSearchResponse: {
-            results?: components["schemas"]["ClawHubSearchResult"][];
-        };
-        ClawHubSearchResult: {
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            version?: string;
-            /** Format: double */
-            score?: number;
-            /** Format: int64 */
-            updatedAt?: number;
-        };
-        ClawHubResolveResponse: {
-            match?: components["schemas"]["VersionInfo"];
-            latestVersion?: components["schemas"]["VersionInfo"];
-        };
-        ApiResponseListAuthProviderResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AuthProviderResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
+            /** Userid */
+            userId?: string | null;
+            /** Displayname */
+            displayName?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Avatarurl */
+            avatarUrl?: string | null;
+            /** Oauthprovider */
+            oauthProvider?: string | null;
+            /** Canchangepassword */
+            canChangePassword?: boolean | null;
+            /** Platformroles */
+            platformRoles?: string[] | null;
+        };
+        /** AuthProviderResponse */
         AuthProviderResponse: {
-            id?: string;
-            name?: string;
-            authorizationUrl?: string;
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Authorizationurl */
+            authorizationUrl?: string | null;
         };
-        ApiResponseListAuthMethodResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["AuthMethodResponse"][];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** LabelDefinitionResponse */
+        LabelDefinitionResponse: {
+            /** Slug */
+            slug?: string | null;
+            /** Type */
+            type?: string | null;
+            /** Visibleinfilter */
+            visibleInFilter?: boolean | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Translations */
+            translations?: components["schemas"]["LabelTranslationResponse"][] | null;
+            /** Createdat */
+            createdAt?: string | null;
         };
-        AuthMethodResponse: {
-            id?: string;
-            methodType?: string;
-            provider?: string;
-            displayName?: string;
-            actionUrl?: string;
+        /** LabelTranslationResponse */
+        LabelTranslationResponse: {
+            /** Locale */
+            locale?: string | null;
+            /** Displayname */
+            displayName?: string | null;
         };
-        AdminUserSummaryResponse: {
-            id?: string;
-            username?: string;
-            email?: string;
-            status?: string;
-            platformRoles?: string[];
-            /** Format: date-time */
-            createdAt?: string;
+        /** NamespaceRequest */
+        NamespaceRequest: {
+            /** Slug */
+            slug: string;
+            /** Displayname */
+            displayName: string;
+            /** Description */
+            description?: string | null;
         };
-        ApiResponsePageResponseAdminUserSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseAdminUserSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** SkillLabelDto */
+        SkillLabelDto: {
+            /** Slug */
+            slug?: string | null;
+            /** Type */
+            type?: string | null;
+            /** Displayname */
+            displayName?: string | null;
         };
-        PageResponseAdminUserSummaryResponse: {
-            items?: components["schemas"]["AdminUserSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
+        /** SkillSummaryResponse */
+        SkillSummaryResponse: {
+            /** Id */
+            id?: number | null;
+            /** Slug */
+            slug?: string | null;
+            /** Displayname */
+            displayName?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Visibility */
+            visibility?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Downloadcount */
+            downloadCount?: number | null;
+            /** Starcount */
+            starCount?: number | null;
+            /** Ratingavg */
+            ratingAvg?: number | null;
+            /** Ratingcount */
+            ratingCount?: number | null;
+            /** Namespace */
+            namespace?: string | null;
+            /** Ownerid */
+            ownerId?: string | null;
+            /** Ownerdisplayname */
+            ownerDisplayName?: string | null;
+            /** Updatedat */
+            updatedAt?: string | null;
+            /** Cansubmitpromotion */
+            canSubmitPromotion?: boolean | null;
+            /** Headlineversion */
+            headlineVersion?: {
+                [key: string]: unknown;
+            } | null;
+            /** Publishedversion */
+            publishedVersion?: {
+                [key: string]: unknown;
+            } | null;
+            /** Ownerpreviewversion */
+            ownerPreviewVersion?: {
+                [key: string]: unknown;
+            } | null;
+            /** Resolutionmode */
+            resolutionMode?: string | null;
+            /** Compliancesnapshot */
+            complianceSnapshot?: {
+                [key: string]: unknown;
+            } | null;
+            /** Labels */
+            labels?: components["schemas"]["SkillLabelDto"][] | null;
         };
-        AdminSkillReportSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            skillId?: number;
-            namespace?: string;
-            skillSlug?: string;
-            skillDisplayName?: string;
-            reporterId?: string;
-            reason?: string;
-            details?: string;
-            status?: string;
-            handledBy?: string;
-            handleComment?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            handledAt?: string;
+        /** SkillVersionDetailResponse */
+        SkillVersionDetailResponse: {
+            /** Id */
+            id?: number | null;
+            /** Version */
+            version?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Changelog */
+            changelog?: string | null;
+            /** Filecount */
+            fileCount?: number | null;
+            /** Totalsize */
+            totalSize?: number | null;
+            /** Publishedat */
+            publishedAt?: string | null;
+            /** Parsedmetadatajson */
+            parsedMetadataJson?: string | null;
+            /** Manifestjson */
+            manifestJson?: string | null;
+            /** Sourceprovenance */
+            sourceProvenance?: {
+                [key: string]: unknown;
+            } | null;
+            /** Versionattribution */
+            versionAttribution?: {
+                [key: string]: unknown;
+            } | null;
+            /** Compliancesnapshot */
+            complianceSnapshot?: {
+                [key: string]: unknown;
+            } | null;
         };
-        ApiResponsePageResponseAdminSkillReportSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseAdminSkillReportSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** SkillVersionResponse */
+        SkillVersionResponse: {
+            /** Id */
+            id?: number | null;
+            /** Version */
+            version?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Changelog */
+            changelog?: string | null;
+            /** Filecount */
+            fileCount?: number | null;
+            /** Totalsize */
+            totalSize?: number | null;
+            /** Publishedat */
+            publishedAt?: string | null;
+            /** Downloadavailable */
+            downloadAvailable?: boolean | null;
+            /** Compliancesnapshot */
+            complianceSnapshot?: {
+                [key: string]: unknown;
+            } | null;
         };
-        PageResponseAdminSkillReportSummaryResponse: {
-            items?: components["schemas"]["AdminSkillReportSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
+        /** TokenCreateRequest */
+        TokenCreateRequest: {
+            /** Name */
+            name: string;
+            /** Scopes */
+            scopes?: string[] | null;
+            /** Expiresat */
+            expiresAt?: string | null;
         };
-        ApiResponsePageResponseProfileReviewSummaryResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseProfileReviewSummaryResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
+        /** TokenCreateResponse */
+        TokenCreateResponse: {
+            /** Token */
+            token?: string | null;
+            /** Id */
+            id?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Tokenprefix */
+            tokenPrefix?: string | null;
+            /** Createdat */
+            createdAt?: string | null;
+            /** Expiresat */
+            expiresAt?: string | null;
         };
-        PageResponseProfileReviewSummaryResponse: {
-            items?: components["schemas"]["ProfileReviewSummaryResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ProfileReviewSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            userId?: string;
-            username?: string;
-            currentDisplayName?: string;
-            requestedDisplayName?: string;
-            status?: string;
-            machineResult?: string;
-            reviewerId?: string;
-            reviewerName?: string;
-            reviewComment?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            reviewedAt?: string;
-        };
-        ApiResponsePageResponseAuditLogItemResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["PageResponseAuditLogItemResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        AuditLogItemResponse: {
-            /** Format: int64 */
-            id?: number;
-            action?: string;
-            userId?: string;
-            username?: string;
-            details?: string;
-            ipAddress?: string;
-            requestId?: string;
-            resourceType?: string;
-            resourceId?: string;
-            /** Format: date-time */
-            timestamp?: string;
-        };
-        PageResponseAuditLogItemResponse: {
-            items?: components["schemas"]["AuditLogItemResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-        };
-        ApiResponseCliResolveResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliResolveResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliResolveResponse: {
-            namespace?: string;
-            slug?: string;
-            version?: string;
-            /** Format: int64 */
-            versionId?: number;
-            fingerprint?: string;
-            downloadUrl?: string;
-        };
-        ApiResponseCliSearchResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliSearchResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliSearchItemResponse: {
-            namespace?: string;
-            slug?: string;
-            latestVersion?: string;
-            summary?: string;
-        };
-        CliSearchResponse: {
-            items?: components["schemas"]["CliSearchItemResponse"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            limit?: number;
-        };
-        ApiResponseCliWhoAmIResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliWhoAmIResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliWhoAmIResponse: {
-            handle?: string;
-            displayName?: string;
-            email?: string;
-        };
-        ApiResponseSkillDeleteResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["SkillDeleteResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        SkillDeleteResponse: {
-            /** Format: int64 */
-            skillId?: number;
-            namespace?: string;
-            slug?: string;
-            deleted?: boolean;
-        };
-        ClawHubUnstarResponse: {
-            ok?: boolean;
-            unstarred?: boolean;
-            alreadyUnstarred?: boolean;
-        };
-        ApiResponseCliDeleteResponse: {
-            /** Format: int32 */
-            code?: number;
-            msg?: string;
-            data?: components["schemas"]["CliDeleteResponse"];
-            /** Format: date-time */
-            timestamp?: string;
-            requestId?: string;
-        };
-        CliDeleteResponse: {
-            ok?: boolean;
-            scope?: string;
-            action?: string;
-            namespace?: string;
-            slug?: string;
+        /** TokenSummaryResponse */
+        TokenSummaryResponse: {
+            /** Id */
+            id?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Tokenprefix */
+            tokenPrefix?: string | null;
+            /** Createdat */
+            createdAt?: string | null;
+            /** Expiresat */
+            expiresAt?: string | null;
+            /** Lastusedat */
+            lastUsedAt?: string | null;
         };
     };
     responses: never;
@@ -5037,4679 +5509,517 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    checkSubscribed: {
+    initiate_account_merge_route_api_v1_account_merge_initiate_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                skillId: number;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBoolean"];
-                };
-            };
-        };
-    };
-    subscribeSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    unsubscribeSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    checkSubscribed_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBoolean"];
-                };
-            };
-        };
-    };
-    subscribeSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    unsubscribeSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    checkStarred: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBoolean"];
-                };
-            };
-        };
-    };
-    starSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    unstarSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    checkStarred_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBoolean"];
-                };
-            };
-        };
-    };
-    starSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    unstarSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    getUserRating: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillRatingStatusResponse"];
-                };
-            };
-        };
-    };
-    rateSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillRatingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    getUserRating_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillRatingStatusResponse"];
-                };
-            };
-        };
-    };
-    rateSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillRatingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    createOrMoveTag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TagRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseTagResponse"];
-                };
-            };
-        };
-    };
-    deleteTag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    createOrMoveTag_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TagRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseTagResponse"];
-                };
-            };
-        };
-    };
-    deleteTag_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    attachLabel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                labelSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLabelDto"];
-                };
-            };
-        };
-    };
-    detachLabel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                labelSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    attachLabel_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                labelSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLabelDto"];
-                };
-            };
-        };
-    };
-    detachLabel_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                labelSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    markRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    markRead_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    markAllRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMapStringInteger"];
-                };
-            };
-        };
-    };
-    markAllRead_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMapStringInteger"];
-                };
-            };
-        };
-    };
-    getPreferences: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListNotificationPreferenceResponse"];
-                };
-            };
-        };
-    };
-    updatePreferences: {
-        parameters: {
-            query?: never;
-            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationPreferenceUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListNotificationPreferenceResponse"];
-                };
-            };
-        };
-    };
-    getPreferences_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListNotificationPreferenceResponse"];
-                };
-            };
-        };
-    };
-    updatePreferences_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationPreferenceUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListNotificationPreferenceResponse"];
-                };
-            };
-        };
-    };
-    updateMemberRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    updateMemberRole_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateMemberRoleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    getNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    updateNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NamespaceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    deleteNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    getNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    updateNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NamespaceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    deleteNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    updateExpiration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TokenExpirationUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseTokenSummaryResponse"];
-                };
-            };
-        };
-    };
-    updateUserStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminUserStatusUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
-                };
-            };
-        };
-    };
-    updateUserRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminUserRoleUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
-                };
-            };
-        };
-    };
-    updateLabel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminLabelUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseLabelDefinitionResponse"];
-                };
-            };
-        };
-    };
-    deleteLabel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    updateSortOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LabelSortOrderUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListLabelDefinitionResponse"];
-                };
-            };
-        };
-    };
-    withdrawReview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    withdrawReview_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    rereleaseVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillVersionRereleaseRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    rereleaseVersion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillVersionRereleaseRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    unarchiveSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    unarchiveSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    submitForReview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitReviewRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    submitForReview_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitReviewRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    submitReport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillReportSubmitRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
-                };
-            };
-        };
-    };
-    submitReport_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SkillReportSubmitRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
-                };
-            };
-        };
-    };
-    confirmPublish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConfirmPublishRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    confirmPublish_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConfirmPublishRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    archiveSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    archiveSkill_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    publish: {
-        parameters: {
-            query: {
-                visibility: string;
-                confirmWarnings?: boolean;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
             content: {
                 "application/json": {
-                    /** Format: binary */
-                    file: string;
+                    [key: string]: unknown;
                 };
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePublishResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    publish_1: {
+    verify_account_merge_route_api_v1_account_merge_verify_post: {
         parameters: {
-            query: {
-                visibility: string;
-                confirmWarnings?: boolean;
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
-            header?: never;
-            path: {
-                namespace: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": {
-                    /** Format: binary */
-                    file: string;
+                    [key: string]: unknown;
                 };
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePublishResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    withdrawReview_2: {
+    confirm_account_merge_route_api_v1_account_merge_confirm_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                id: number;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    withdrawReview_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    rejectReview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    rejectReview_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    approveReview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    approveReview_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReviewActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listReviews: {
-        parameters: {
-            query: {
-                status: string;
-                namespaceId?: number;
-                page?: number;
-                size?: number;
-                sortDirection?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    submitReview: {
-        parameters: {
-            query?: never;
-            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReviewTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listReviews_1: {
-        parameters: {
-            query: {
-                status: string;
-                namespaceId?: number;
-                page?: number;
-                size?: number;
-                sortDirection?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    submitReview_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReviewTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    rejectPromotion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    rejectPromotion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    approvePromotion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    approvePromotion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PromotionActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    listPromotions: {
-        parameters: {
-            query?: {
-                status?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    submitPromotion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PromotionRequestDto"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    listPromotions_1: {
-        parameters: {
-            query?: {
-                status?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    submitPromotion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PromotionRequestDto"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    unfreezeNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    unfreezeNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    restoreNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    restoreNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    batchAddMembers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BatchMemberRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBatchMemberResponse"];
-                };
-            };
-        };
-    };
-    batchAddMembers_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BatchMemberRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseBatchMemberResponse"];
-                };
-            };
-        };
-    };
-    listMembers: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
-            };
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    addMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MemberRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    listMembers_1: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
-            };
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    addMember_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MemberRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    freezeNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    freezeNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    archiveNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    archiveNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["NamespaceLifecycleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    listNamespaces: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    createNamespace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NamespaceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    listNamespaces_1: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    createNamespace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NamespaceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseNamespaceResponse"];
-                };
-            };
-        };
-    };
-    markNotificationRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseGovernanceNotificationResponse"];
-                };
-            };
-        };
-    };
-    markNotificationRead_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseGovernanceNotificationResponse"];
-                };
-            };
-        };
-    };
-    list_2: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseTokenSummaryResponse"];
-                };
-            };
-        };
-    };
-    create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TokenCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseTokenCreateResponse"];
-                };
-            };
-        };
-    };
-    starSkill_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubStarResponse"];
-                };
-            };
-        };
-    };
-    unstarSkill_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubUnstarResponse"];
-                };
-            };
-        };
-    };
-    listSkills: {
-        parameters: {
-            query?: {
-                page?: number;
-                limit?: number;
-                sort?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubSkillListResponse"];
-                };
-            };
-        };
-    };
-    publishSkill: {
-        parameters: {
-            query: {
-                payload: string;
-                files: string[];
-                confirmWarnings?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubPublishResponse"];
-                };
-            };
-        };
-    };
-    undeleteSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubDeleteResponse"];
-                };
-            };
-        };
-    };
-    publish_2: {
-        parameters: {
-            query: {
-                namespace: string;
-                confirmWarnings?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
             content: {
                 "application/json": {
-                    /** Format: binary */
-                    file: string;
+                    [key: string]: unknown;
                 };
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ClawHubPublishResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
-        };
-    };
-    authorizeDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AuthorizeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    bootstrapSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SessionBootstrapRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    register: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LocalRegisterRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    requestPasswordReset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PasswordResetRequestDto"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    confirmPasswordReset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LocalLoginRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    changePassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangePasswordRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    directLogin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DirectLoginRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    pollToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TokenRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceTokenResponse"];
-                };
-            };
-        };
-    };
-    requestDeviceCode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseDeviceCodeResponse"];
-                };
-            };
-        };
-    };
-    triggerPasswordReset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    enableUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
-                };
-            };
-        };
-    };
-    disableUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
-                };
-            };
-        };
-    };
-    approveUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
-                };
-            };
-        };
-    };
-    unhideSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminSkillMutationResponse"];
-                };
-            };
-        };
-    };
-    hideSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminSkillMutationResponse"];
-                };
-            };
-        };
-    };
-    yankVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                versionId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAdminSkillMutationResponse"];
-                };
-            };
-        };
-    };
-    resolveReport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                reportId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillReportActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
-                };
-            };
-        };
-    };
-    dismissReport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                reportId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AdminSkillReportActionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillReportMutationResponse"];
-                };
-            };
-        };
-    };
-    rebuildAll: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
-    reject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProfileReviewRejectRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseProfileReviewMutationResponse"];
-                };
-            };
-        };
-    };
-    approve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseProfileReviewMutationResponse"];
-                };
-            };
-        };
-    };
-    listLabels_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListLabelDefinitionResponse"];
-                };
-            };
-        };
-    };
-    createLabel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdminLabelCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseLabelDefinitionResponse"];
-                };
-            };
-        };
-    };
-    verify: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MergeVerifyRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    initiate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MergeInitiateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMergeInitiateResponse"];
-                };
-            };
-        };
-    };
-    confirm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConfirmMergeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    publish_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                    visibility?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCliPublishResponse"];
-                };
-            };
-        };
-    };
-    validatePublish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                    visibility?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCliDryRunResponse"];
-                };
-            };
-        };
-    };
-    getProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUserProfileResponse"];
-                };
-            };
-        };
-    };
-    updateProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUpdateProfileResponse"];
-                };
-            };
-        };
-    };
-    search: {
+    list_admin_audit_logs_route_api_v1_admin_audit_logs_get: {
         parameters: {
             query?: {
-                q?: string;
-                namespace?: string;
-                label?: string[];
-                sort?: string;
+                page?: number;
+                size?: number;
+                userId?: string | null;
+                action?: string | null;
+                requestId?: string | null;
+                ipAddress?: string | null;
+                resourceType?: string | null;
+                resourceId?: string | null;
+                startTime?: string | null;
+                endTime?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_labels_route_api_v1_admin_labels_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_admin_label_route_api_v1_admin_labels_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_admin_label_sort_order_route_api_v1_admin_labels_sort_order_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_admin_label_route_api_v1_admin_labels__slug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_admin_label_route_api_v1_admin_labels__slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_namespaces_route_api_v1_admin_namespaces_get: {
+        parameters: {
+            query?: {
+                keyword?: string | null;
+                status?: string | null;
+                type?: string | null;
                 page?: number;
                 size?: number;
             };
-            header?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSearchResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceListEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listFiles: {
+    get_admin_namespace_route_api_v1_admin_namespaces__slug__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
-                };
-            };
-        };
-    };
-    listFiles_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
-                };
-            };
-        };
-    };
-    getFileContent: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getFileContent_1: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadVersion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getVersionDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillVersionDetailResponse"];
-                };
-            };
-        };
-    };
-    deleteVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    getVersionDetail_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillVersionDetailResponse"];
-                };
-            };
-        };
-    };
-    deleteVersion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillLifecycleMutationResponse"];
-                };
-            };
-        };
-    };
-    compareVersions: {
-        parameters: {
-            query: {
-                from: string;
-                to: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
                 slug: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSkillVersionCompareResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceDetailEnvelope"];
                 };
             };
-        };
-    };
-    compareVersions_1: {
-        parameters: {
-            query: {
-                from: string;
-                to: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSkillVersionCompareResponse"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listVersions: {
+    list_admin_namespace_members_route_api_v1_admin_namespaces__slug__members_get: {
         parameters: {
             query?: {
                 page?: number;
                 size?: number;
             };
-            header?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
-                namespace: string;
                 slug: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillVersionResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceMemberPageEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listVersions_1: {
+    add_admin_namespace_member_route_api_v1_admin_namespaces__slug__members_post: {
         parameters: {
-            query?: {
-                page?: number;
-                size?: number;
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
             };
-            header?: never;
             path: {
-                namespace: string;
                 slug: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceMemberRequest"];
+            };
+        };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillVersionResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceMemberEnvelope"];
                 };
             };
-        };
-    };
-    listFilesByTag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listFilesByTag_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillFileResponse"];
-                };
-            };
-        };
-    };
-    getFileContentByTag: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getFileContentByTag_1: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadByTag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadByTag_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                tagName: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    listTags: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListTagResponse"];
-                };
-            };
-        };
-    };
-    listTags_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListTagResponse"];
-                };
-            };
-        };
-    };
-    resolveVersion: {
-        parameters: {
-            query?: {
-                version?: string;
-                tag?: string;
-                hash?: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseResolveVersionResponse"];
-                };
-            };
-        };
-    };
-    resolveVersion_1: {
-        parameters: {
-            query?: {
-                version?: string;
-                tag?: string;
-                hash?: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseResolveVersionResponse"];
-                };
-            };
-        };
-    };
-    listLabels: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
-                };
-            };
-        };
-    };
-    listLabels_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
-                };
-            };
-        };
-    };
-    downloadLatest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadLatest_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getSkillDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDetailResponse"];
-                };
-            };
-        };
-    };
-    deleteSkill_1: {
-        parameters: {
-            query?: {
-                ownerId?: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
-                };
-            };
-        };
-    };
-    getSkillDetail_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDetailResponse"];
-                };
-            };
-        };
-    };
-    deleteSkill: {
-        parameters: {
-            query?: {
-                ownerId?: string;
-            };
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
-                };
-            };
-        };
-    };
-    getReviewSkillDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewSkillDetailResponse"];
-                };
-            };
-        };
-    };
-    getReviewSkillDetail_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewSkillDetailResponse"];
-                };
-            };
-        };
-    };
-    getReviewFile: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getReviewFile_1: {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadReviewVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    downloadReviewVersion_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    getReviewDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    getReviewDetail_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listPendingReviews: {
-        parameters: {
-            query: {
-                namespaceId: number;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listPendingReviews_1: {
-        parameters: {
-            query: {
-                namespaceId: number;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listMySubmissions: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    listMySubmissions_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseReviewTaskResponse"];
-                };
-            };
-        };
-    };
-    getPromotionDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    getPromotionDetail_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    listPendingPromotions: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    listPendingPromotions_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponsePromotionResponseDto"];
-                };
-            };
-        };
-    };
-    unreadCount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMapStringLong"];
-                };
-            };
-        };
-    };
-    unreadCount_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMapStringLong"];
-                };
-            };
-        };
-    };
-    sse: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SseEmitter"];
-                };
-            };
-        };
-    };
-    sse_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["SseEmitter"];
-                };
-            };
-        };
-    };
-    list: {
-        parameters: {
-            query?: {
-                category?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseNotificationResponse"];
-                };
-            };
-        };
-    };
-    list_1: {
-        parameters: {
-            query?: {
-                category?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseNotificationResponse"];
-                };
-            };
-        };
-    };
-    searchMemberCandidates: {
+    search_admin_namespace_member_candidates_route_api_v1_admin_namespaces__slug__member_candidates_get: {
         parameters: {
             query: {
                 search: string;
                 size?: number;
             };
-            header?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
                 slug: string;
             };
@@ -9717,24 +6027,221 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceCandidateListEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    searchMemberCandidates_1: {
+    batch_add_admin_namespace_members_route_api_v1_admin_namespaces__slug__members_batch_post: {
         parameters: {
-            query: {
-                search: string;
-                size?: number;
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
             };
-            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceBatchMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceBatchMemberEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_admin_namespace_member_role_route_api_v1_admin_namespaces__slug__members__userId__role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceUpdateMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceMemberEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_admin_namespace_member_route_api_v1_admin_namespaces__slug__members__userId__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceMessageEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_admin_namespace_ownership_route_api_v1_admin_namespaces__slug__transfer_ownership_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceTransferOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceMessageEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    freeze_admin_namespace_route_api_v1_admin_namespaces__slug__freeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceLifecycleRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceDetailEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfreeze_admin_namespace_route_api_v1_admin_namespaces__slug__unfreeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
                 slug: string;
             };
@@ -9742,579 +6249,1092 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListNamespaceCandidateUserResponse"];
+                    "application/json": components["schemas"]["AdminNamespaceDetailEnvelope"];
                 };
             };
-        };
-    };
-    listMySubscriptions: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listMySubscriptions_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
-                };
-            };
-        };
-    };
-    listMyStars: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
-                };
-            };
-        };
-    };
-    listMyStars_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
-                };
-            };
-        };
-    };
-    listMySkills: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-                filter?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
-                };
-            };
-        };
-    };
-    listMySkills_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-                filter?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
-                };
-            };
-        };
-    };
-    listMyNamespaces: {
+    archive_admin_namespace_route_api_v1_admin_namespaces__slug__archive_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListMyNamespaceResponse"];
-                };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
             };
-        };
-    };
-    listMyNamespaces_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListMyNamespaceResponse"];
-                };
-            };
-        };
-    };
-    listVisibleLabels: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
-                };
-            };
-        };
-    };
-    listVisibleLabels_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSkillLabelDto"];
-                };
-            };
-        };
-    };
-    summary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseGovernanceSummaryResponse"];
-                };
-            };
-        };
-    };
-    summary_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseGovernanceSummaryResponse"];
-                };
-            };
-        };
-    };
-    notifications: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceNotificationResponse"];
-                };
-            };
-        };
-    };
-    notifications_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceNotificationResponse"];
-                };
-            };
-        };
-    };
-    inbox: {
-        parameters: {
-            query?: {
-                type?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceInboxItemResponse"];
-                };
-            };
-        };
-    };
-    inbox_1: {
-        parameters: {
-            query?: {
-                type?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceInboxItemResponse"];
-                };
-            };
-        };
-    };
-    activity: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
-                };
-            };
-        };
-    };
-    activity_1: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
-                };
-            };
-        };
-    };
-    whoami: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubWhoamiResponse"];
-                };
-            };
-        };
-    };
-    getSecurityAudits: {
-        parameters: {
-            query?: {
-                scannerType?: string;
-            };
-            header?: never;
             path: {
-                skillId: number;
-                versionId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListSecurityAuditResponse"];
-                };
-            };
-        };
-    };
-    getSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubSkillResponse"];
-                };
-            };
-        };
-    };
-    deleteSkill_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                canonicalSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubDeleteResponse"];
-                };
-            };
-        };
-    };
-    search_1: {
-        parameters: {
-            query: {
-                q: string;
-                page?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ClawHubSearchResponse"];
-                };
-            };
-        };
-    };
-    resolveByQuery: {
-        parameters: {
-            query: {
                 slug: string;
-                version?: string;
-                hash?: string;
             };
-            header?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminNamespaceLifecycleRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceDetailEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_admin_namespace_route_api_v1_admin_namespaces__slug__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNamespaceDetailEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_skill_reports_route_api_v1_admin_skill_reports_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ClawHubResolveResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    resolve: {
+    resolve_admin_skill_report_route_api_v1_admin_skill_reports__report_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_admin_skill_report_route_api_v1_admin_skill_reports__report_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_profile_reviews_route_api_v1_admin_profile_reviews_get: {
         parameters: {
             query?: {
-                version?: string;
+                status?: string | null;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
             };
-            header?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_admin_profile_review_route_api_v1_admin_profile_reviews__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
-                canonicalSlug: string;
+                request_id: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ClawHubResolveResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    health: {
+    reject_admin_profile_review_route_api_v1_admin_profile_reviews__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                request_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rebuild_admin_search_route_api_v1_admin_search_rebuild_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_service_principals_route_api_v1_admin_service_principals_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_service_principal_route_api_v1_admin_service_principals_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServicePrincipalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_service_principal_route_api_v1_admin_service_principals__service_principal_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                service_principal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateServicePrincipalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_service_tokens_route_api_v1_admin_service_principals__service_principal_id__tokens_get: {
+        parameters: {
+            query?: {
+                includeRevoked?: boolean;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                service_principal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                service_principal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rotate_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens__token_id__rotate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                service_principal_id: string;
+                token_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotateServiceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_service_token_route_api_v1_admin_service_principals__service_principal_id__tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                service_principal_id: string;
+                token_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hide_skill_api_v1_admin_skills__skill_id__hide_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unhide_skill_api_v1_admin_skills__skill_id__unhide_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    yank_skill_version_api_v1_admin_skills_versions__version_id__yank_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                version_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminSkillActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_resource_diagnostics_api_v1_admin_skills__skill_id__resource_diagnostics_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_users_route_api_v1_admin_users_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                status?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_admin_user_role_route_api_v1_admin_users__user_id__role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_admin_user_status_route_api_v1_admin_users__user_id__status_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_admin_user_route_api_v1_admin_users__user_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_admin_user_route_api_v1_admin_users__user_id__disable_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_admin_user_route_api_v1_admin_users__user_id__enable_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_admin_user_password_reset_route_api_v1_admin_users__user_id__password_reset_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_user_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -10323,31 +7343,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
-                };
-            };
-        };
-    };
-    downloadByQuery: {
-        parameters: {
-            query: {
-                slug: string;
-                version?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Successful Response */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10355,313 +7352,282 @@ export interface operations {
             };
         };
     };
-    downloadByPath: {
+    get_clawhub_whoami_api_v1_whoami_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_cli_whoami_api_cli_v1_auth_whoami_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_auth_providers_api_v1_auth_providers_get: {
         parameters: {
             query?: {
-                version?: string;
+                returnTo?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_auth_methods_api_v1_auth_methods_get: {
+        parameters: {
+            query?: {
+                returnTo?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    oauth_authorization_boundary_oauth2_authorization__registration_id__get: {
+        parameters: {
+            query?: {
+                returnTo?: string | null;
             };
             header?: never;
             path: {
-                canonicalSlug: string;
+                registration_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
-    providers: {
+    oauth_callback_login_oauth2_code__registration_id__get: {
         parameters: {
             query?: {
-                returnTo?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListAuthProviderResponse"];
-                };
-            };
-        };
-    };
-    methods: {
-        parameters: {
-            query?: {
-                returnTo?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseListAuthMethodResponse"];
-                };
-            };
-        };
-    };
-    me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAuthMeResponse"];
-                };
-            };
-        };
-    };
-    listUsers: {
-        parameters: {
-            query?: {
-                search?: string;
-                status?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseAdminUserSummaryResponse"];
-                };
-            };
-        };
-    };
-    listReports: {
-        parameters: {
-            query?: {
-                status?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseAdminSkillReportSummaryResponse"];
-                };
-            };
-        };
-    };
-    list_3: {
-        parameters: {
-            query?: {
-                status?: string;
-                page?: number;
-                size?: number;
-                sortDirection?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseProfileReviewSummaryResponse"];
-                };
-            };
-        };
-    };
-    listAuditLogs: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-                userId?: string;
-                action?: string;
-                requestId?: string;
-                ipAddress?: string;
-                resourceType?: string;
-                resourceId?: string;
-                startTime?: string;
-                endTime?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseAuditLogItemResponse"];
-                };
-            };
-        };
-    };
-    downloadVersion_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-                version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    resolve_1: {
-        parameters: {
-            query?: {
-                version?: string;
+                code?: string | null;
+                state?: string | null;
             };
             header?: never;
             path: {
-                namespace: string;
-                slug: string;
+                registration_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseCliResolveResponse"];
+                    "application/json": unknown;
                 };
             };
-        };
-    };
-    downloadLatest_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                namespace: string;
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    search_2: {
-        parameters: {
-            query?: {
-                q?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCliSearchResponse"];
-                };
-            };
-        };
-    };
-    whoami_1: {
+    direct_login_api_v1_auth_direct_login_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseCliWhoAmIResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    clawhubConfig: {
+    session_bootstrap_api_v1_auth_session_bootstrap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_device_code_route_api_v1_auth_device_code_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -10670,174 +7636,843 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": {
-                        [key: string]: string;
+                    "application/json": {
+                        [key: string]: unknown;
                     };
                 };
             };
         };
     };
-    deleteSkillById: {
+    authorize_device_route_api_v1_device_authorize_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                skillId: number;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    deleteRead: {
+    poll_device_token_route_api_v1_auth_device_token_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: number;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    deleteRead_1: {
+    list_admin_download_events_route_api_v1_admin_download_events_get: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
+            query?: {
+                page?: number;
+                size?: number;
+                namespace?: string | null;
+                slug?: string | null;
+                version?: string | null;
+                userId?: string | null;
+                userQuery?: string | null;
+                source?: string | null;
+                startTime?: string | null;
+                endTime?: string | null;
             };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseVoid"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    removeMember: {
+    export_admin_download_events_csv_route_api_v1_admin_download_events_csv_get: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                namespace?: string | null;
+                slug?: string | null;
+                version?: string | null;
+                userId?: string | null;
+                userQuery?: string | null;
+                source?: string | null;
+                startTime?: string | null;
+                endTime?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_download_events_route_api_web_skills__namespace___slug__download_events_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                version?: string | null;
+                userId?: string | null;
+                source?: string | null;
+                startTime?: string | null;
+                endTime?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
             path: {
+                namespace: string;
                 slug: string;
-                userId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    removeMember_1: {
+    governance_summary_route_api_web_governance_summary_get: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                userId: string;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
-        };
-    };
-    revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
-    deleteSkillById_1: {
+    governance_summary_route_api_v1_governance_summary_get: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                skillId: number;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
             };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    deleteRemote: {
+    governance_inbox_route_api_web_governance_inbox_get: {
+        parameters: {
+            query?: {
+                type?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_inbox_route_api_v1_governance_inbox_get: {
+        parameters: {
+            query?: {
+                type?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_activity_route_api_web_governance_activity_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_activity_route_api_v1_governance_activity_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_notifications_route_api_web_governance_notifications_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_notifications_route_api_v1_governance_notifications_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_notification_mark_read_route_api_web_governance_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_notification_mark_read_route_api_v1_governance_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    health_api_v1_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    prometheus_metrics_api_v1_metrics_prometheus_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_namespace_analytics_route_api_v1_admin_namespace_analytics_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                namespaceType?: "ALL" | "TEAM" | "GLOBAL";
+                namespaceStatus?: "ALL" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+                startTime?: string | null;
+                endTime?: string | null;
+                source?: ("web" | "cli" | "api") | null;
+                sort?: "namespace" | "maintainers" | "skills" | "lifetimeDownloads" | "periodDownloads";
+                direction?: "asc" | "desc";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamespaceAnalyticsEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_namespace_analytics_csv_route_api_v1_admin_namespace_analytics_csv_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                namespaceType?: "ALL" | "TEAM" | "GLOBAL";
+                namespaceStatus?: "ALL" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+                startTime?: string | null;
+                endTime?: string | null;
+                source?: ("web" | "cli" | "api") | null;
+                sort?: "namespace" | "maintainers" | "skills" | "lifetimeDownloads" | "periodDownloads";
+                direction?: "asc" | "desc";
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_security_analytics_route_api_v1_admin_namespace_analytics_security_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                severity?: "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+                namespaceType?: "ALL" | "TEAM" | "GLOBAL";
+                namespaceStatus?: "ALL" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+                skillStatus?: "ALL" | "ACTIVE" | "ARCHIVED";
+                visibility?: "ALL" | "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+                hidden?: "ALL" | "VISIBLE" | "HIDDEN";
+                versionStatus?: "ALL" | "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+                scannerType?: ("skill-scanner" | "custom") | null;
+                sort?: "risk" | "namespace" | "affectedSkills" | "affectedVersions" | "findings" | "latestScan";
+                direction?: "asc" | "desc";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamespaceSecurityAnalyticsEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_security_skills_route_api_v1_admin_namespace_analytics_security_namespaces__namespace_id__skills_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+                severity?: "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | "UNCLASSIFIED";
+                skillStatus?: "ALL" | "ACTIVE" | "ARCHIVED";
+                visibility?: "ALL" | "PUBLIC" | "NAMESPACE_ONLY" | "PRIVATE";
+                hidden?: "ALL" | "VISIBLE" | "HIDDEN";
+                versionStatus?: "ALL" | "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+                scannerType?: ("skill-scanner" | "custom") | null;
+                sort?: "risk" | "skill" | "affectedVersions" | "findings" | "latestScan";
+                direction?: "asc" | "desc";
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamespaceSecuritySkillsEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_visible_labels_api_web_labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_visible_labels_api_v1_labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_skill_labels_api_web_skills__namespace___slug__labels_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -10849,13 +8484,7684 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseCliDeleteResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_labels_api_v1_skills__namespace___slug__labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_skill_label_route_api_web_skills__namespace___slug__labels__label_slug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                label_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detach_skill_label_route_api_web_skills__namespace___slug__labels__label_slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                label_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_skill_label_route_api_v1_skills__namespace___slug__labels__label_slug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                label_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detach_skill_label_route_api_v1_skills__namespace___slug__labels__label_slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                label_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_skills_route_api_web_me_skills_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                filter?: string | null;
+                q?: string | null;
+                namespace?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_skills_route_api_v1_me_skills_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                filter?: string | null;
+                q?: string | null;
+                namespace?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_stars_route_api_web_me_stars_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_stars_route_api_v1_me_stars_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_subscriptions_route_api_web_me_subscriptions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_subscriptions_route_api_v1_me_subscriptions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clawhub_star_route_api_v1_stars__canonical_slug__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                canonical_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clawhub_unstar_route_api_v1_stars__canonical_slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                canonical_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_star_route_api_web_skills__skill_id__star_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    star_skill_route_api_web_skills__skill_id__star_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unstar_skill_route_api_web_skills__skill_id__star_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_star_route_api_v1_skills__skill_id__star_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    star_skill_route_api_v1_skills__skill_id__star_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unstar_skill_route_api_v1_skills__skill_id__star_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_subscription_route_api_web_skills__skill_id__subscription_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subscribe_skill_route_api_web_skills__skill_id__subscription_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_skill_route_api_web_skills__skill_id__subscription_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_subscription_route_api_v1_skills__skill_id__subscription_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subscribe_skill_route_api_v1_skills__skill_id__subscription_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_skill_route_api_v1_skills__skill_id__subscription_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_rating_route_api_web_skills__skill_id__rating_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_skill_route_api_web_skills__skill_id__rating_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillRatingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_skill_rating_route_api_v1_skills__skill_id__rating_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_skill_route_api_v1_skills__skill_id__rating_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillRatingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_skill_visibility_route_api_web_skills__namespace___slug__visibility_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillVisibilityUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_skill_visibility_route_api_v1_skills__namespace___slug__visibility_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillVisibilityUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_skill_v1_api_v1_skills__namespace___slug__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SkillArchiveRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_skill_web_api_web_skills__namespace___slug__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SkillArchiveRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_skill_v1_api_v1_skills__namespace___slug__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_skill_web_api_web_skills__namespace___slug__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hard_delete_skill_by_id_v1_api_v1_skills_id__skill_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hard_delete_skill_by_id_web_api_web_skills_id__skill_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_detail_api_v1_skills__namespace___slug__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hard_delete_skill_v1_api_v1_skills__namespace___slug__delete: {
+        parameters: {
+            query?: {
+                ownerId?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_detail_api_web_skills__namespace___slug__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hard_delete_skill_web_api_web_skills__namespace___slug__delete: {
+        parameters: {
+            query?: {
+                ownerId?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cli_delete_skill_api_cli_v1_skills__namespace___slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_version_detail_api_v1_skills__namespace___slug__versions__version__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_skill_version_v1_api_v1_skills__namespace___slug__versions__version__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_version_detail_api_web_skills__namespace___slug__versions__version__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_skill_version_web_api_web_skills__namespace___slug__versions__version__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_skill_version_review_v1_api_v1_skills__namespace___slug__versions__version__withdraw_review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_skill_version_review_web_api_web_skills__namespace___slug__versions__version__withdraw_review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerelease_v1_api_v1_skills__namespace___slug__versions__version__rerelease_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillRereleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerelease_web_api_web_skills__namespace___slug__versions__version__rerelease_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillRereleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_publish_v1_api_v1_skills__namespace___slug__confirm_publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillConfirmPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_publish_web_api_web_skills__namespace___slug__confirm_publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillConfirmPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_v1_api_v1_skills__namespace___slug__submit_review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillSubmitReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_web_api_web_skills__namespace___slug__submit_review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillSubmitReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_local_account_route_api_v1_auth_local_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_local_account_route_api_v1_auth_local_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_local_password_route_api_v1_auth_local_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_local_password_reset_route_api_v1_auth_local_password_reset_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_local_password_reset_route_api_v1_auth_local_password_reset_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespaces_route_api_web_namespaces_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_namespace_route_api_web_namespaces_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespaces_route_api_v1_namespaces_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_namespace_route_api_v1_namespaces_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_namespaces_route_api_web_me_namespaces_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_namespaces_route_api_v1_me_namespaces_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_members_route_api_web_namespaces__slug__members_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_namespace_member_route_api_web_namespaces__slug__members_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_namespace_members_route_api_v1_namespaces__slug__members_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_namespace_member_route_api_v1_namespaces__slug__members_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_namespace_member_candidates_route_api_web_namespaces__slug__member_candidates_get: {
+        parameters: {
+            query?: {
+                search?: string;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_namespace_member_candidates_route_api_v1_namespaces__slug__member_candidates_get: {
+        parameters: {
+            query?: {
+                search?: string;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_add_namespace_members_route_api_web_namespaces__slug__members_batch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_add_namespace_members_route_api_v1_namespaces__slug__members_batch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_namespace_member_route_api_web_namespaces__slug__members__member_user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+                member_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_namespace_member_route_api_v1_namespaces__slug__members__member_user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+                member_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_namespace_member_role_route_api_web_namespaces__slug__members__member_user_id__role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+                member_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_namespace_member_role_route_api_v1_namespaces__slug__members__member_user_id__role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+                member_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_namespace_route_api_web_namespaces__slug__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_namespace_route_api_web_namespaces__slug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_namespace_route_api_web_namespaces__slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_namespace_route_api_v1_namespaces__slug__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_namespace_route_api_v1_namespaces__slug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_namespace_route_api_v1_namespaces__slug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    freeze_namespace_route_api_web_namespaces__slug__freeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    freeze_namespace_route_api_v1_namespaces__slug__freeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfreeze_namespace_route_api_web_namespaces__slug__unfreeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfreeze_namespace_route_api_v1_namespaces__slug__unfreeze_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_namespace_route_api_web_namespaces__slug__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_namespace_route_api_v1_namespaces__slug__archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_namespace_route_api_web_namespaces__slug__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_namespace_route_api_v1_namespaces__slug__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_namespace_ownership_route_api_web_namespaces__slug__transfer_ownership_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_namespace_ownership_route_api_v1_namespaces__slug__transfer_ownership_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    notification_sse_route_api_web_notifications_sse_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    notification_sse_route_api_v1_notifications_sse_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_route_api_web_notifications_get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_route_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_route_api_web_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_route_api_v1_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_route_api_web_notifications__notification_id__read_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_route_api_v1_notifications__notification_id__read_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_route_api_web_notifications_read_all_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_route_api_v1_notifications_read_all_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_read_route_api_web_notifications__notification_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_read_route_api_v1_notifications__notification_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notification_preferences_route_api_web_notification_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_notification_preferences_route_api_web_notification_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notification_preferences_route_api_v1_notification_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_notification_preferences_route_api_v1_notification_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_promotions_route_api_web_promotions_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                page?: number;
+                size?: number;
+                sortBy?: string | null;
+                sortDirection?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_promotion_route_api_web_promotions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_promotions_route_api_v1_promotions_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                page?: number;
+                size?: number;
+                sortBy?: string | null;
+                sortDirection?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_promotion_route_api_v1_promotions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_promotions_route_api_web_promotions_pending_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_promotions_route_api_v1_promotions_pending_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_promotion_detail_route_api_web_promotions__promotion_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_promotion_detail_route_api_v1_promotions__promotion_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_promotion_route_api_web_promotions__promotion_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_promotion_route_api_v1_promotions__promotion_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_promotion_route_api_web_promotions__promotion_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_promotion_route_api_v1_promotions__promotion_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                promotion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PromotionActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_playground_capability_api_web_skills__namespace___slug__playground_capability_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapabilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_playground_context_api_web_playground_context_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaygroundContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_cli_publish_api_cli_v1_skills__namespace__publish_validate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_cli_publish_api_cli_v1_skills__namespace__publish_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_cli_skill_api_web_skills__namespace__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_publish_cli_skill_api_web_skills__namespace__publish_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_cli_skill_api_v1_skills__namespace__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_publish_cli_skill_api_v1_skills__namespace__publish_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_cli_skill_api_cli_v1_skills__namespace__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_publish_cli_skill_api_cli_v1_skills__namespace__publish_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_legacy_skill_api_v1_publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_publish_legacy_skill_api_v1_publish_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clawhub_skills_api_v1_skills_get: {
+        parameters: {
+            query?: {
+                page?: string | null;
+                limit?: string | null;
+                sort?: string | null;
+                include?: string[];
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_clawhub_root_skill_api_v1_skills_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_publish_clawhub_root_skill_api_v1_skills_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_security_audits_route_api_v1_skills__skill_id__versions__version_id__security_audit_get: {
+        parameters: {
+            query?: {
+                scannerType?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+                version_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_skill_report_v1_route_api_v1_skills__namespace___slug__reports_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_skill_report_web_route_api_web_skills__namespace___slug__reports_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ensure_source_namespace_route_api_cli_v1_source_imports_namespaces__namespaceSlug__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespaceSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnsureSourceNamespaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnsureSourceNamespaceEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_validate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespaceSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateSourceSkillEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespaceSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_submit_source_skill_route_api_cli_v1_source_imports__namespaceSlug__skills_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitSourceSkillEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tokens_route_api_v1_tokens_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_token_route_api_v1_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_token_route_api_v1_tokens__id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_token_expiration_route_api_v1_tokens__id__expiration_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_profile_route_api_v1_user_profile_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_profile_route_api_v1_user_profile_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reviews_route_api_web_reviews_get: {
+        parameters: {
+            query: {
+                status: string;
+                namespaceId?: number | null;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_route_api_web_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reviews_route_api_v1_reviews_get: {
+        parameters: {
+            query: {
+                status: string;
+                namespaceId?: number | null;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_review_route_api_v1_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_reviews_route_api_web_reviews_pending_get: {
+        parameters: {
+            query: {
+                namespaceId: number;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_reviews_route_api_v1_reviews_pending_get: {
+        parameters: {
+            query: {
+                namespaceId: number;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_submissions_route_api_web_reviews_my_submissions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_submissions_route_api_v1_reviews_my_submissions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_skill_detail_route_api_web_reviews__review_task_id__skill_detail_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_skill_detail_route_api_v1_reviews__review_task_id__skill_detail_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_file_route_api_web_reviews__review_task_id__file_get: {
+        parameters: {
+            query?: {
+                path?: string | null;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_file_route_api_v1_reviews__review_task_id__file_get: {
+        parameters: {
+            query?: {
+                path?: string | null;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_download_route_api_web_reviews__review_task_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_download_route_api_v1_reviews__review_task_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_detail_route_api_web_reviews__review_task_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_detail_route_api_v1_reviews__review_task_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseReviewTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_reviews_batch_route_api_web_reviews_batch_decision_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewBatchDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_review_route_api_web_reviews__review_task_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewApproveRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_review_route_api_v1_reviews__review_task_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewApproveRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_review_route_api_web_reviews__review_task_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_review_route_api_v1_reviews__review_task_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_review_route_api_web_reviews__review_task_id__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_review_route_api_v1_reviews__review_task_id__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_clawhub_skill_by_query_api_v1_download_get: {
+        parameters: {
+            query: {
+                slug: string;
+                version?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_clawhub_skill_by_path_api_v1_download__canonicalSlug__get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_skills_api_web_skills_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                namespace?: string | null;
+                label?: string[];
+                include?: string[];
+                sort?: string | null;
+                page?: string | null;
+                size?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_namespace_candidates_api_web_search_namespaces_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_clawhub_skills_api_v1_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_cli_skills_api_cli_v1_skills_search_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cli_namespace_skills_api_cli_v1_namespaces__namespace__skills_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_clawhub_skill_by_query_api_v1_resolve_get: {
+        parameters: {
+            query: {
+                slug: string;
+                version?: string | null;
+                hash?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_cli_skill_api_cli_v1_skills__namespace___slug__resolve_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_clawhub_skill_by_path_api_v1_resolve__canonicalSlug__get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_clawhub_skill_detail_api_v1_skills__canonicalSlug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_clawhub_skill_placeholder_api_v1_skills__canonicalSlug__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undelete_clawhub_skill_placeholder_api_v1_skills__canonicalSlug__undelete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                canonicalSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_skill_version_api_web_skills__namespace___slug__resolve_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                tag?: string | null;
+                hash?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_skill_version_api_v1_skills__namespace___slug__resolve_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                tag?: string | null;
+                hash?: string | null;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_skill_versions_api_web_skills__namespace___slug__versions_compare_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_skill_versions_api_v1_skills__namespace___slug__versions_compare_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_versions_api_web_skills__namespace___slug__versions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_versions_api_v1_skills__namespace___slug__versions_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_version_files_api_web_skills__namespace___slug__versions__version__files_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_version_files_api_v1_skills__namespace___slug__versions__version__files_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_tag_files_api_web_skills__namespace___slug__tags__tagName__files_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_tag_files_api_v1_skills__namespace___slug__tags__tagName__files_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_tags_route_api_web_skills__namespace___slug__tags_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_tags_route_api_v1_skills__namespace___slug__tags_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_move_skill_tag_route_api_web_skills__namespace___slug__tags__tagName__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_skill_tag_route_api_web_skills__namespace___slug__tags__tagName__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_move_skill_tag_route_api_v1_skills__namespace___slug__tags__tagName__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_skill_tag_route_api_v1_skills__namespace___slug__tags__tagName__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_version_file_content_api_web_skills__namespace___slug__versions__version__file_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_version_file_content_api_v1_skills__namespace___slug__versions__version__file_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_tag_file_content_api_web_skills__namespace___slug__tags__tagName__file_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_tag_file_content_api_v1_skills__namespace___slug__tags__tagName__file_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_latest_api_web_skills__namespace___slug__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_latest_api_v1_skills__namespace___slug__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_version_api_web_skills__namespace___slug__versions__version__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_version_api_v1_skills__namespace___slug__versions__version__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_cli_skill_latest_api_cli_v1_skills__namespace___slug__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_cli_skill_version_api_cli_v1_skills__namespace___slug__versions__version__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_tag_api_web_skills__namespace___slug__tags__tagName__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_skill_tag_api_v1_skills__namespace___slug__tags__tagName__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                namespace: string;
+                slug: string;
+                tagName: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clawhub_config__well_known_clawhub_json_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };

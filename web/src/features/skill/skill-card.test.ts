@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as mod from './skill-card'
 import { SkillCard } from './skill-card'
+import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 
 vi.mock('@/features/auth/use-auth', () => ({
   useAuth: () => ({ isAuthenticated: false }),
@@ -29,6 +30,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string, options?: { skill?: string }) => (
       key === 'installSelection.selectSkill' ? `${key}:${options?.skill ?? ''}` : key
     ),
+    i18n: { language: 'en' },
   }),
 }))
 
@@ -156,5 +158,28 @@ describe('skill-card module exports', () => {
     render(createElement(mod.SkillCard, { skill, onClick: vi.fn() }))
 
     expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('renders projected owner and localized update time without removing local controls', () => {
+    const now = Date.parse('2026-09-01T12:00:00Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+
+    const html = renderToStaticMarkup(createElement(mod.SkillCard, {
+      skill: {
+        ...skill,
+        ownerId: 'alice-id',
+        ownerDisplayName: 'Alice',
+        updatedAt: '2026-09-01T11:55:00Z',
+      },
+      selectionMode: true,
+      selected: false,
+      onSelectionChange: vi.fn(),
+    }))
+
+    expect(html).toContain('Alice')
+    expect(html).toContain(formatRelativeTime('2026-09-01T11:55:00Z', 'en', now))
+    expect(html).toContain('type="checkbox"')
+    vi.useRealTimers()
   })
 })

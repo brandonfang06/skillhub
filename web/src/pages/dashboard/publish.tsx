@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { UploadZone } from '@/features/publish/upload-zone'
+import {
+  FolderPackagingError,
+  packageFolderAsZip,
+} from '@/features/publish/folder-zip'
 import { NamespacePicker } from '@/features/publish/namespace-picker'
 import {
   extractPrecheckWarnings,
@@ -28,6 +32,23 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { toast } from '@/shared/lib/toast'
 import { ApiError } from '@/api/client'
 
+const FOLDER_PACKAGING_ERROR_KEYS: Record<FolderPackagingError['code'], string> = {
+  'empty-folder': 'publish.folderPackagingErrors.empty',
+  'unsafe-path': 'publish.folderPackagingErrors.unsafePath',
+  'duplicate-path': 'publish.folderPackagingErrors.duplicatePath',
+  'path-too-long': 'publish.folderPackagingErrors.pathTooLong',
+  'too-many-files': 'publish.folderPackagingErrors.tooManyFiles',
+  'file-too-large': 'publish.folderPackagingErrors.fileTooLarge',
+  'package-too-large': 'publish.folderPackagingErrors.packageTooLarge',
+}
+
+function formatByteLimit(limit?: number): string {
+  if (!limit) return ''
+  if (limit >= 1024 * 1024) return `${limit / (1024 * 1024)} MiB`
+  if (limit >= 1024) return `${limit / 1024} KiB`
+  return `${limit} B`
+}
+
 export function PublishPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -38,6 +59,7 @@ export function PublishPage() {
   const [visibility, setVisibility] = useState<string>(prefill.visibility)
   const [warningDialogOpen, setWarningDialogOpen] = useState(false)
   const [precheckWarnings, setPrecheckWarnings] = useState<string[]>([])
+  const [isPackaging, setIsPackaging] = useState(false)
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
@@ -63,8 +85,28 @@ export function PublishPage() {
     setWarningDialogOpen(false)
   }
 
+  const handleFolderSelect = async (files: File[]) => {
+    setIsPackaging(true)
+    handleFileSelect(null)
+    try {
+      handleFileSelect(await packageFolderAsZip(files))
+    } catch (error) {
+      if (error instanceof FolderPackagingError) {
+        toast.error(t(FOLDER_PACKAGING_ERROR_KEYS[error.code], {
+          path: error.path ?? '',
+          limit: error.limit ?? 0,
+          sizeLimit: formatByteLimit(error.limit),
+        }))
+      } else {
+        toast.error(t('publish.folderPackagingFailed'))
+      }
+    } finally {
+      setIsPackaging(false)
+    }
+  }
+
   const publishSkill = async (confirmWarnings = false) => {
-    if (!selectedFile || !namespaceSlug) {
+    if (isPackaging || !selectedFile || !namespaceSlug) {
       toast.error(t('publish.selectRequired'))
       return
     }
@@ -185,7 +227,8 @@ export function PublishPage() {
           <UploadZone
             key={selectedFile ? `${selectedFile.name}-${selectedFile.lastModified}` : 'empty'}
             onFileSelect={handleFileSelect}
-            disabled={publishMutation.isPending}
+            onFolderSelect={handleFolderSelect}
+            disabled={publishMutation.isPending || isPackaging}
           />
           {selectedFile && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
@@ -202,7 +245,7 @@ export function PublishPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleRemoveSelectedFile}
-                disabled={publishMutation.isPending}
+                disabled={publishMutation.isPending || isPackaging}
               >
                 {t('publish.removeSelectedFile')}
               </Button>
@@ -214,9 +257,13 @@ export function PublishPage() {
           className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
-          disabled={!selectedFile || !namespaceSlug || publishMutation.isPending}
+          disabled={!selectedFile || !namespaceSlug || publishMutation.isPending || isPackaging}
         >
-          {publishMutation.isPending ? t('publish.publishing') : t('publish.confirm')}
+          {isPackaging
+            ? t('publish.packaging')
+            : publishMutation.isPending
+              ? t('publish.publishing')
+              : t('publish.confirm')}
         </Button>
       </Card>
 

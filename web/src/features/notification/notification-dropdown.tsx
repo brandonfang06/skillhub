@@ -6,24 +6,10 @@ import { resolveNotificationDisplay } from './notification-content'
 import { useAuth } from '@/features/auth/use-auth'
 import { useNotifications, useMarkAllRead, useMarkRead } from './use-notifications'
 import { resolveNotificationTarget } from './notification-target'
+import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 
 interface Props {
   onClose: () => void
-}
-
-function formatRelativeTime(dateStr: string, lang: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const minutes = Math.floor(diff / 60_000)
-  const hours = Math.floor(diff / 3_600_000)
-  const days = Math.floor(diff / 86_400_000)
-
-  const isChinese = lang.startsWith('zh')
-
-  if (minutes < 1) return isChinese ? '刚刚' : 'just now'
-  if (minutes < 60) return isChinese ? `${minutes}分钟` : `${minutes}m`
-  if (hours < 24) return isChinese ? `${hours}小时` : `${hours}h`
-  if (days < 30) return isChinese ? `${days}天` : `${days}d`
-  return new Date(dateStr).toLocaleDateString()
 }
 
 /**
@@ -103,7 +89,7 @@ export function NotificationDropdown({ onClose }: Props) {
                     </p>
                   ) : null}
                   <p className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    {t('notification.timeAgo', { time: formatRelativeTime(item.createdAt, i18n.language) })}
+                    {formatRelativeTime(item.createdAt, i18n.language)}
                   </p>
                 </div>
               </Link>
