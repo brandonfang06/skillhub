@@ -9,9 +9,19 @@ import { logoutCommand } from './commands/logout'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
+import {
+  syncDiffCommand,
+  syncPullCommand,
+  syncPushCommand,
+  syncStatusCommand,
+  type SyncCommonOptions,
+  type SyncPullOptions,
+  type SyncPushOptions
+} from './commands/sync'
 import { updateCommand } from './commands/update'
 import { versionCommand } from './commands/version'
 import { whoamiCommand } from './commands/whoami'
+import { EXIT } from './shared/constants'
 import { CliError } from './shared/errors'
 import { renderError } from './shared/output'
 
@@ -243,6 +253,37 @@ cli
   .option('--json', 'Output JSON')
   .action((slug: string, options: InstallCommandOptions & { agent?: string | string[] }) => {
     return runCommand(() => installCommand(slug, { ...options, agent: toArray(options.agent) }), Boolean(options.json))
+  })
+
+cli
+  .command('sync <action> [path]', 'Synchronize and maintain a namespace workspace')
+  .option('--namespace <slug>', 'Namespace', { default: 'global' })
+  .option('--dir <path>', 'Skill workspace directory')
+  .option('--check', 'Show changes without downloading')
+  .option('--prune', 'Remove managed local skills missing remotely')
+  .option('--force', 'Overwrite local changes')
+  .option('--all', 'Push every skill directory in the workspace')
+  .option('--visibility <v>', 'Visibility (public|namespace-only|private)', { default: 'namespace-only' })
+  .option('--dry-run', 'Validate without uploading')
+  .option('--submit-review', 'Submit an uploaded version for review when required')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((action: string, path: string | undefined, options: SyncPullOptions & SyncPushOptions) => {
+    const command = action === 'pull'
+      ? () => syncPullCommand(options)
+      : action === 'status'
+        ? () => syncStatusCommand(options as SyncCommonOptions)
+        : action === 'diff'
+          ? () => syncDiffCommand(options as SyncCommonOptions)
+          : action === 'push'
+            ? () => syncPushCommand(path, options)
+            : () => Promise.reject(new CliError(
+                `unknown sync action: ${action}`,
+                EXIT.usage,
+                { next: 'use pull, status, diff, or push' }
+              ))
+    return runCommand(command, Boolean(options.json))
   })
 
 cli

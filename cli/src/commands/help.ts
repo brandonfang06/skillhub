@@ -43,6 +43,15 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  sync: {
+    summary: 'Synchronize and maintain namespace workspaces',
+    usage: 'skillhub sync <pull|status|diff|push> [options]',
+    examples: [
+      'skillhub sync pull --namespace team-a',
+      'skillhub sync status --namespace team-a --json',
+      'skillhub sync push --all --namespace team-a --submit-review'
+    ]
+  },
   list: {
     summary: 'List local installs',
     usage: 'skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]',

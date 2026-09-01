@@ -32,6 +32,9 @@ skillhub list
 
 # Publish skill
 skillhub publish ./my-skill --namespace myspace
+
+# Synchronize an existing team namespace workspace
+skillhub sync pull --namespace myspace
 ```
 
 ## 🌐 Registry Configuration
@@ -225,10 +228,53 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
   "namespace": "global",
   "slug": "pdf-parser",
   "version": "1.0.0",
+  "fingerprint": "sha256:...",
+  "source": "skillhub",
   "agent": "codex",
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
+
+## 🔄 Namespace Workspaces
+
+Namespace sync maintains installable skills from an existing namespace in one
+Agent workspace. It does not create namespaces or memberships.
+
+```bash
+# Pull new and updated skills into ./.agents/skills
+skillhub sync pull --namespace team-a
+
+# Use an explicit workspace directory
+skillhub sync pull --namespace team-a --dir ./.claude/skills
+
+# Check without downloading, then inspect local and remote differences
+skillhub sync pull --namespace team-a --check
+skillhub sync status --namespace team-a --json
+skillhub sync diff --namespace team-a
+
+# Remove unchanged managed skills that no longer exist remotely
+skillhub sync pull --namespace team-a --prune
+
+# Validate or upload every local skill without replacing an existing version
+skillhub sync push --all --namespace team-a --dry-run
+skillhub sync push --all --namespace team-a --submit-review
+```
+
+The default workspace is `<cwd>/.agents/skills`. Pull preserves local changes
+unless `--force` is supplied. Remote removals are reported as `orphaned` and
+remain on disk unless `--prune` is supplied; a changed orphan also requires
+`--force` before pruning.
+
+Each pulled archive is hashed after extraction and must match the namespace
+manifest before any existing directory is replaced. Sync writes
+`.skillhub/namespace-sync.json` in the workspace and per-skill
+`.skillhub/metadata.json` files containing the registry coordinate, version,
+fingerprint, and file hashes used by `status` and `diff`.
+
+Workspace push is strict: an existing namespace/slug/version is a conflict,
+including uploaded or pending-review versions. Other entries in the same
+`--all` run continue processing. Pull/status require `skill:read`; push and
+review submission require `skill:publish` on API tokens.
 
 ## 📋 Local Management
 
@@ -361,6 +407,7 @@ Update mechanism:
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
+| `skillhub sync <pull\|status\|diff\|push> [path] [--namespace <slug>] [--dir <path>] [--check] [--prune] [--force] [--all] [--visibility <v>] [--dry-run] [--submit-review] [--json]` | Maintain an existing namespace workspace |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |

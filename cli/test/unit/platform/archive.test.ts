@@ -1,8 +1,8 @@
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'bun:test'
-import { zipSync } from 'fflate'
+import { unzipSync, zipSync } from 'fflate'
 import { createZip, extractZip, isZipFile } from '../../../src/platform/archive'
 
 describe('archive helpers', () => {
@@ -15,6 +15,25 @@ describe('archive helpers', () => {
     await extractZip(await archive.arrayBuffer(), target)
 
     expect(await readFile(join(target, 'SKILL.md'), 'utf-8')).toBe('# Demo')
+  })
+
+  test('normalizes entry paths and excludes SkillHub workspace metadata', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'skillhub-archive-exclude-'))
+    await mkdir(join(source, '.skillhub'), { recursive: true })
+    await mkdir(join(source, 'references'), { recursive: true })
+    await writeFile(join(source, 'SKILL.md'), '# Demo')
+    await writeFile(join(source, 'references', 'guide.md'), 'Guide')
+    await writeFile(join(source, '.skillhub', 'metadata.json'), '{"private":true}')
+
+    const archive = await createZip(source, {
+      exclude: path => path === '.skillhub' || path.startsWith('.skillhub/')
+    })
+    const entries = Object.keys(unzipSync(new Uint8Array(await archive.arrayBuffer()))).sort()
+
+    expect(entries).toContain('SKILL.md')
+    expect(entries).toContain('references/guide.md')
+    expect(entries.some(path => path.includes('\\'))).toBe(false)
+    expect(entries.some(path => path.startsWith('.skillhub'))).toBe(false)
   })
 
   test('detects zip files by magic bytes', async () => {

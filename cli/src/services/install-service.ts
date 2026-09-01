@@ -1,12 +1,13 @@
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { SkillHubClient } from '../clients/skillhub-client'
+import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
 import { InventoryStore } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { extractZip } from '../platform/archive'
 import { readBoundedResponseBody } from '../platform/download'
 import { canonicalizePath, pathExists } from '../platform/paths'
+import { snapshotSkillDirectory } from './skill-fingerprint'
 import type { AgentCandidate } from '../agents/types'
 
 export interface InstallOptions {
@@ -18,6 +19,8 @@ export interface InstallOptions {
   targets: AgentCandidate[]
   force: boolean
   home?: string | undefined
+  resolved?: ResolveResponse | undefined
+  verifyFingerprint?: boolean | undefined
 }
 
 function validateInstallSlug(slug: string): void {
@@ -75,7 +78,7 @@ async function preflightInstallTargets(
 export async function installSkill(options: InstallOptions): Promise<{ installed: Array<{ agent: string; dir: string }> }> {
   const preparedTargets = await preflightInstallTargets(options.targets, options.slug, options.force)
   const client = new SkillHubClient(options.registry, options.token)
-  const resolved = await client.resolve(options.namespace, options.slug, options.version)
+  const resolved = options.resolved ?? await client.resolve(options.namespace, options.slug, options.version)
   const response = await client.download(options.namespace, options.slug, resolved.version)
   const buffer = await readBoundedResponseBody(response)
 
@@ -107,6 +110,17 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
 
       await extractZip(buffer, tempDir)
 
+      const snapshot = await snapshotSkillDirectory(tempDir)
+      if (options.verifyFingerprint && snapshot.fingerprint !== resolved.fingerprint) {
+        throw new CliError('downloaded skill fingerprint does not match namespace manifest', EXIT.validation, {
+          expected: resolved.fingerprint,
+          actual: snapshot.fingerprint,
+          namespace: options.namespace,
+          slug: options.slug,
+          version: resolved.version
+        })
+      }
+
       const metaDir = join(tempDir, '.skillhub')
       await mkdir(metaDir, { recursive: true })
       await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
@@ -114,6 +128,9 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
         namespace: options.namespace,
         slug: options.slug,
         version: resolved.version,
+        fingerprint: resolved.fingerprint,
+        files: snapshot.files,
+        source: 'skillhub',
         agent: target.agent,
         installedAt
       }, null, 2))
@@ -161,7 +178,7 @@ export async function installSkill(options: InstallOptions): Promise<{ installed
           rootDir: target.rootDir,
           installDir: skillDir,
           installedAt
-        })
+        }, resolved.fingerprint)
       }
     } catch (error) {
       const rollbackErrors: unknown[] = []

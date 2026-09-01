@@ -107,12 +107,14 @@ export interface CapturedPublish {
   fileName: string
   /** Visibility string from the multipart form field. */
   visibility: string
+  rejectExistingVersion: boolean
 }
 
 export interface CapturedValidate {
   namespace: string
   fileName: string
   visibility: string
+  rejectExistingVersion: boolean
 }
 
 /** Last resolve GET: useful for verifying --version is forwarded as ?version=. */
@@ -130,6 +132,13 @@ export interface CapturedDelete {
   token: string | null
 }
 
+export interface CapturedReview {
+  namespace: string
+  slug: string
+  version: string
+  targetVisibility: string
+}
+
 // ---------------------------------------------------------------------------
 // Options
 // ---------------------------------------------------------------------------
@@ -142,6 +151,7 @@ interface FakeRegistryOptions {
   skills?: FakeSkill[]
   /** Response to return for publish/validate (dry-run) requests. */
   dryRunResponse?: { valid: boolean; errors: string[]; warnings: string[]; resolvedSlug: string | null; resolvedVersion: string | null }
+  publishStatus?: string
   /**
    * Per-endpoint failure injection. When set for an endpoint, that endpoint
    * ignores all other logic and returns the specified failure (or throws for
@@ -155,6 +165,8 @@ interface FakeRegistryOptions {
     deleteRemote?: FailureMode
     publish?: FailureMode
     validate?: FailureMode
+    namespaceSync?: FailureMode
+    submitReview?: FailureMode
   }
 }
 
@@ -195,7 +207,8 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     resolve: CapturedResolve | null
     delete: CapturedDelete | null
     validate: CapturedValidate | null
-  } = { publish: null, resolve: null, delete: null, validate: null }
+    review: CapturedReview | null
+  } = { publish: null, resolve: null, delete: null, validate: null, review: null }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -264,6 +277,31 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
             items: options.searchItems ?? [],
             total: options.searchItems?.length ?? 0,
             limit: 20
+          }
+        })
+      }
+
+      const namespaceSyncMatch = path.match(/^\/api\/cli\/v1\/namespaces\/([^/]+)\/skills$/)
+      if (namespaceSyncMatch && req.method === 'GET') {
+        if (options.failures?.namespaceSync) return failureResponse(options.failures.namespaceSync)
+        const authErr = checkAuth(req)
+        if (authErr) return authErr
+        const namespace = decodeURIComponent(namespaceSyncMatch[1]!)
+        const skills = (options.skills ?? []).filter(skill => skill.namespace === namespace)
+        return Response.json({
+          code: 0,
+          data: {
+            items: skills.map((skill, index) => ({
+              namespace,
+              slug: skill.slug,
+              version: skill.version ?? '1.0.0',
+              versionId: skill.versionId ?? index + 1,
+              fingerprint: skill.fingerprint ?? 'deadbeef',
+              updatedAt: '2026-08-18T00:00:00Z',
+              visibility: 'NAMESPACE_ONLY',
+              downloadUrl: buildDownloadUrl(baseUrl, namespace, skill.slug, skill.version ?? '1.0.0')
+            })),
+            nextCursor: null
           }
         })
       }
@@ -382,7 +420,12 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
-          state.validate = { namespace, fileName, visibility }
+          state.validate = {
+            namespace,
+            fileName,
+            visibility,
+            rejectExistingVersion: form.get('rejectExistingVersion') === 'true'
+          }
 
           const dryRunData = options.dryRunResponse ?? {
             valid: true,
@@ -415,7 +458,12 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           }
 
           // Record for test assertions.
-          state.publish = { namespace, fileName, visibility }
+          state.publish = {
+            namespace,
+            fileName,
+            visibility,
+            rejectExistingVersion: form.get('rejectExistingVersion') === 'true'
+          }
 
           return Response.json({
             code: 0,
@@ -423,8 +471,26 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
               namespace,
               slug: fileName.replace(/\.zip$/, ''),
               version: '1.0.0',
-              visibility
+              visibility,
+              status: options.publishStatus ?? 'PENDING_REVIEW'
             }
+          })
+        })
+      }
+
+      const submitReviewMatch = path.match(/^\/api\/v1\/skills\/([^/]+)\/([^/]+)\/submit-review$/)
+      if (submitReviewMatch && req.method === 'POST') {
+        if (options.failures?.submitReview) return failureResponse(options.failures.submitReview)
+        const authErr = checkAuth(req)
+        if (authErr) return authErr
+        return req.json().then(body => {
+          const request = body as { version: string; targetVisibility: string }
+          const namespace = decodeURIComponent(submitReviewMatch[1]!)
+          const slug = decodeURIComponent(submitReviewMatch[2]!)
+          state.review = { namespace, slug, version: request.version, targetVisibility: request.targetVisibility }
+          return Response.json({
+            code: 0,
+            data: { skillId: 1, versionId: 1, action: 'SUBMIT_REVIEW', status: 'PENDING_REVIEW' }
           })
         })
       }

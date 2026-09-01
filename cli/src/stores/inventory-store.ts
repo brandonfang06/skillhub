@@ -14,6 +14,7 @@ export interface InventoryItem {
   namespace: string
   slug: string
   version: string
+  fingerprint?: string
   targets: InventoryTarget[]
 }
 
@@ -117,7 +118,8 @@ export class InventoryStore {
     namespace: string,
     slug: string,
     version: string,
-    target: InventoryTarget
+    target: InventoryTarget,
+    fingerprint?: string
   ): Promise<void> {
     const inventory = await this.read()
     let item = inventory.items.find(
@@ -128,6 +130,7 @@ export class InventoryStore {
       inventory.items.push(item)
     }
     item.version = version
+    if (fingerprint !== undefined) item.fingerprint = fingerprint
     const existingIdx = item.targets.findIndex(t => t.installDir === target.installDir)
     if (existingIdx >= 0) {
       item.targets[existingIdx] = target

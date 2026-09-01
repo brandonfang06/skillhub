@@ -42,6 +42,30 @@ export interface PublishResponse {
   slug: string
   version: string
   visibility: string
+  status: string
+}
+
+export interface NamespaceSyncItem {
+  namespace: string
+  slug: string
+  version: string
+  versionId: number
+  fingerprint: string
+  updatedAt: string
+  visibility: string
+  downloadUrl: string
+}
+
+export interface NamespaceSyncResponse {
+  items: NamespaceSyncItem[]
+  nextCursor?: string | null
+}
+
+export interface SubmitReviewResponse {
+  skillId: number
+  versionId: number
+  action: string
+  status: string
 }
 
 export interface DryRunResponse {
@@ -80,6 +104,12 @@ export class SkillHubClient {
     return this.getJson(`/skills/${namespace}/${slug}/resolve${params}`)
   }
 
+  async listNamespaceSkills(namespace: string, cursor?: string, limit = 100): Promise<NamespaceSyncResponse> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (cursor) params.set('cursor', cursor)
+    return this.getJson(`/namespaces/${encodeURIComponent(namespace)}/skills?${params}`)
+  }
+
   async downloadUrl(namespace: string, slug: string, version?: string): Promise<string> {
     if (version) {
       return `${this.registry}/api/cli/v1/skills/${namespace}/${slug}/versions/${version}/download`
@@ -105,10 +135,17 @@ export class SkillHubClient {
     return this.deleteJson(`/skills/${namespace}/${slug}`)
   }
 
-  async publish(namespace: string, file: Blob, visibility: string, fileName = 'skill.zip'): Promise<PublishResponse> {
+  async publish(
+    namespace: string,
+    file: Blob,
+    visibility: string,
+    fileName = 'skill.zip',
+    rejectExistingVersion = false
+  ): Promise<PublishResponse> {
     const formData = new FormData()
     formData.append('file', file, fileName)
     formData.append('visibility', visibility)
+    if (rejectExistingVersion) formData.append('rejectExistingVersion', 'true')
     let response: Response
     try {
       response = await this.fetchImpl(`${this.registry}/api/cli/v1/skills/${namespace}/publish`, {
@@ -122,10 +159,17 @@ export class SkillHubClient {
     return this.handleJsonResponse<PublishResponse>(response)
   }
 
-  async validatePublish(namespace: string, file: Blob, visibility: string, fileName = 'skill.zip'): Promise<DryRunResponse> {
+  async validatePublish(
+    namespace: string,
+    file: Blob,
+    visibility: string,
+    fileName = 'skill.zip',
+    rejectExistingVersion = false
+  ): Promise<DryRunResponse> {
     const formData = new FormData()
     formData.append('file', file, fileName)
     formData.append('visibility', visibility)
+    if (rejectExistingVersion) formData.append('rejectExistingVersion', 'true')
     let response: Response
     try {
       response = await this.fetchImpl(`${this.registry}/api/cli/v1/skills/${namespace}/publish/validate`, {
@@ -137,6 +181,28 @@ export class SkillHubClient {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
     return this.handleJsonResponse<DryRunResponse>(response)
+  }
+
+  async submitReview(
+    namespace: string,
+    slug: string,
+    version: string,
+    targetVisibility: 'PUBLIC' | 'NAMESPACE_ONLY'
+  ): Promise<SubmitReviewResponse> {
+    let response: Response
+    try {
+      response = await this.fetchImpl(
+        `${this.registry}/api/v1/skills/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}/submit-review`,
+        {
+          method: 'POST',
+          headers: { ...this.headers(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ version, targetVisibility })
+        }
+      )
+    } catch {
+      throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
+    }
+    return this.handleJsonResponse<SubmitReviewResponse>(response)
   }
 
   private async getJson<T>(path: string): Promise<T> {

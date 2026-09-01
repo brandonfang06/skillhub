@@ -4,6 +4,24 @@ import { CliError } from '../../../src/shared/errors'
 import { EXIT } from '../../../src/shared/constants'
 
 describe('SkillHubClient', () => {
+  test('preserves a registry subpath and encodes namespace manifest pagination', async () => {
+    let capturedUrl = ''
+    let capturedAuthorization = ''
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      capturedUrl = String(input)
+      capturedAuthorization = new Headers(init?.headers).get('authorization') ?? ''
+      return Response.json({ data: { items: [], nextCursor: null } })
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('https://registry.test/skillhub', 'token', fetchImpl)
+
+    await client.listNamespaceSkills('team/a', 'next page', 25)
+
+    expect(capturedUrl).toBe(
+      'https://registry.test/skillhub/api/cli/v1/namespaces/team%2Fa/skills?limit=25&cursor=next+page'
+    )
+    expect(capturedAuthorization).toBe('Bearer token')
+  })
+
   test('uses the provided multipart file name when publishing', async () => {
     const fetchImpl = (async (_input: URL | RequestInfo, init?: RequestInit) => {
       const formData = init?.body as FormData

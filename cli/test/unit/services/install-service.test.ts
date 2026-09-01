@@ -450,4 +450,39 @@ describe('installSkill', () => {
       force: false
     })).rejects.toThrow('download exceeds maximum package size')
   })
+
+  test('verifies a supplied manifest fingerprint before replacing an existing skill', async () => {
+    globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+    const home = await mkdtemp(join(tmpdir(), 'skillhub-install-home-'))
+    const rootDir = await mkdtemp(join(tmpdir(), 'skillhub-install-root-'))
+    const skillDir = join(rootDir, 'demo')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), '# Old')
+
+    try {
+      await expect(installSkill({
+        registry: 'http://registry.test',
+        namespace: 'global',
+        slug: 'demo',
+        resolved: {
+          namespace: 'global',
+          slug: 'demo',
+          version: '1.0.0',
+          versionId: 1,
+          fingerprint: 'sha256:not-the-downloaded-snapshot',
+          downloadUrl: '/download'
+        },
+        verifyFingerprint: true,
+        targets: [{ agent: 'workspace', rootDir, scope: 'project', source: 'explicit' }],
+        force: true,
+        home
+      })).rejects.toThrow('downloaded skill fingerprint does not match namespace manifest')
+
+      expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Old')
+      expect(await exists(join(skillDir, '.skillhub', 'metadata.json'))).toBe(false)
+    } finally {
+      await rm(home, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })

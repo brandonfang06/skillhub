@@ -111,21 +111,31 @@ function findEndOfCentralDirectory(view: DataView): number {
  * Returns the archive as a Blob.
  * Pure JS implementation using fflate — no system commands needed.
  */
-export async function createZip(dirPath: string): Promise<Blob> {
+export interface CreateZipOptions {
+  exclude?: (relativePath: string) => boolean
+}
+
+export async function createZip(dirPath: string, options: CreateZipOptions = {}): Promise<Blob> {
   const entries: Record<string, Uint8Array> = {}
-  await collectFiles(dirPath, dirPath, entries)
+  await collectFiles(dirPath, dirPath, entries, options)
   const zipped = zipSync(entries, { level: 6 })
   return new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' })
 }
 
-async function collectFiles(basePath: string, currentPath: string, entries: Record<string, Uint8Array>): Promise<void> {
+async function collectFiles(
+  basePath: string,
+  currentPath: string,
+  entries: Record<string, Uint8Array>,
+  options: CreateZipOptions
+): Promise<void> {
   const items = await readdir(currentPath, { withFileTypes: true })
   for (const item of items) {
     const fullPath = join(currentPath, item.name)
-    const relPath = relative(basePath, fullPath)
+    const relPath = relative(basePath, fullPath).split('\\').join('/')
+    if (options.exclude?.(relPath)) continue
     if (item.isDirectory()) {
       entries[relPath + '/'] = new Uint8Array(0)
-      await collectFiles(basePath, fullPath, entries)
+      await collectFiles(basePath, fullPath, entries, options)
     } else if (item.isFile()) {
       entries[relPath] = new Uint8Array(await readFile(fullPath))
     }
