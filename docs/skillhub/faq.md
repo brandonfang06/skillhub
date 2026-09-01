@@ -96,7 +96,7 @@ server {
 
 A: SkillHub 提供了多种监控方式：
 
-- **健康检查**：`GET /actuator/health`
+- **健康检查**：`GET /api/v1/health`
 - **Scanner 健康检查**：`GET http://localhost:8000/health`
 - **指标监控**：`GET /actuator/metrics`（Prometheus 格式）
 - **审计日志**：所有关键操作都会记录到审计日志
@@ -122,7 +122,9 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version v0.2.0
 ```
 
-> **注意**：升级前建议先备份数据库和对象存储。数据库迁移由 Flyway 自动执行。
+> **注意**：升级前先备份数据库和对象存储。Python 容器启动时会执行
+> `python -m app.migrations upgrade`；升级后请检查 migration status 与
+> `scan_task_outbox` 投递状态。
 
 ## Q: 为什么管理员（admin）和普通用户都无法创建命名空间？
 

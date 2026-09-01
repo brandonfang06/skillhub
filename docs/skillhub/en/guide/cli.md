@@ -230,6 +230,33 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
 }
 ```
 
+## Namespace Workspace Sync
+
+`sync` maintains an **existing organization/team namespace** in one Agent
+workspace. It does not create namespaces or memberships.
+The default workspace is `<cwd>/.agents/skills`.
+
+```bash
+skillhub sync pull --namespace team-a
+skillhub sync pull --namespace team-a --check
+skillhub sync status --namespace team-a --json
+skillhub sync diff --namespace team-a
+skillhub sync pull --namespace team-a --prune
+skillhub sync push --all --namespace team-a --dry-run
+skillhub sync push --all --namespace team-a --submit-review
+```
+
+Pull verifies each archive against the manifest fingerprint before atomically
+replacing a directory. Local changes are preserved unless `--force` is supplied.
+Remote removals become `orphaned`; `--prune` removes only unchanged managed
+skills unless `--force` is also present.
+
+State is stored in `.skillhub/namespace-sync.json` and per-skill
+`.skillhub/metadata.json`. Pull/status require `skill:read`; push and review
+submission require `skill:publish`. Existing namespace/slug/version coordinates,
+including uploaded or pending-review versions, are conflicts and are never
+silently replaced.
+
 ## Local Management
 
 ### List Installed Skills
@@ -507,6 +534,16 @@ Options:
 - `--registry <url>` — Registry URL
 - `--token <token>` — API token
 - `--json` — JSON output
+
+### sync
+
+```bash
+skillhub sync <pull|status|diff|push> [path] --namespace <slug> [options]
+```
+
+Common options: `--dir`, `--check`, `--prune`, `--force`, `--all`,
+`--visibility`, `--dry-run`, `--submit-review`, `--registry`, `--token`, and
+`--json`.
 
 ### list
 

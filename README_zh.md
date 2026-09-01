@@ -32,6 +32,9 @@ SkillHub 是一个自托管平台，为团队提供私有的、受治理的智�
 - 📖 **[用户指南](https://iflytek.github.io/skillhub/)** — 技能发布、搜索、CLI 使用等用户操作指南
 - 🛠️ **[开发者文档](https://zread.ai/iflytek/skillhub)** — 架构设计、API 参考、本地开发、部署运维等技术文档
 - 📦 **[GitHub OSS Skills GitLab 匯入 SOP](./deploy/k8s/oss-github-source-import.zh.md)** — Pipeline variables、Keycloak 身分、scanner/review 與 `/skillhub` 部署方式
+- 🐍 **[Python 範例](./examples/python)** — 透過 REST API 搜尋、下載與發佈 Skill
+- 🛡️ **[內容安全](docs/CONTENT_SAFETY.md)** / **[隱私與資料治理](docs/PRIVACY_AND_DATA_GOVERNANCE.md)** — 自架環境的治理責任與安全邊界
+- 🧩 **[RISC-V 支援範圍](docs/RISCV64.md)** — 支援映像、建置方式與明確排除項目
 
 ## 核心特性
 
@@ -303,7 +306,7 @@ SkillHub 采用清晰的分层架构：
 ### 后端
 - **语言**：Python 3.12
 - **框架**：FastAPI
-- **数据库**：PostgreSQL 16 + Flyway 迁移
+- **数据库**：PostgreSQL 16 + `server-python/app/db/migration` 下的 Python-owned migration
 - **缓存**：Redis 7
 - **存储**：S3/MinIO
 - **搜索**：PostgreSQL 全文搜索

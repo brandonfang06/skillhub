@@ -66,6 +66,16 @@ skillhub-scanner
   health /health
 ```
 
+Published `skillhub-server-python` and `skillhub-web` images include amd64,
+arm64, and riscv64 variants. Scanner remains amd64/arm64, so this complete
+three-workload manifest is not yet a supported RISC-V deployment. See
+[`../../docs/RISCV64.md`](../../docs/RISCV64.md).
+
+The server image runs as UID `100`, GID `101`. S3-based manifests need no local
+volume ownership change. If an overlay mounts local package storage, ensure the
+mount is writable by `100:101` before rollout and back it up before changing
+ownership.
+
 The Java backend is not part of this Kubernetes runtime. Spring-compatible
 environment names are intentionally kept where they are part of the existing
 deployment contract, for example Redis and OIDC.
@@ -144,6 +154,13 @@ Edit these common ConfigMap values:
 | `local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | Set `false` to hide and block self-service local account registration while keeping local/admin login available. |
 | `oauth2-keycloak-issuer-uri` | `SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI` | Keycloak realm issuer URI. |
 | `security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | Scanner service URL, usually `http://skillhub-scanner:8000`. |
+
+Rate limiting is isolated in the `skillhub-rate-limit-config` ConfigMap and
+loaded by the Python backend with `envFrom`. It defaults to disabled. Set
+`SKILLHUB_RATELIMIT_ENABLED` to `"true"` only after confirming Redis capacity
+and the desired authenticated/anonymous quotas. All supported category override
+keys are present and blank by default; see
+[`environment-variables.zh.md`](./environment-variables.zh.md#http-請求限流).
 
 Set `cli-registry-url` to a full absolute HTTP or HTTPS URL without a trailing
 slash. It changes only the copied CLI install command. When blank, it falls back

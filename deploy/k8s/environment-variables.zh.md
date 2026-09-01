@@ -113,6 +113,39 @@ Sentinel master/nodes 非空 -> 透過 Sentinel 找目前 master
 否則 -> 使用 SPRING_DATA_REDIS_HOST / PORT / PASSWORD / DATABASE
 ```
 
+## HTTP 請求限流
+
+Python backend 使用 Redis sliding window。為了既有環境升級相容，預設值為
+`SKILLHUB_RATELIMIT_ENABLED=false`；沒有 operator 明確決策時不要改成
+`true`。啟用後 Redis 無法使用時，受保護的 API 會安全失敗，不會跳過限流。
+
+Kustomize 與 plain manifests 都提供獨立的
+`skillhub-rate-limit-config` ConfigMap，Deployment 以 `envFrom` 載入：
+
+```yaml
+SKILLHUB_RATELIMIT_ENABLED: "true"
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS: "100"
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED: "300"
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_WINDOW_SECONDS: "60"
+```
+
+變數格式為：
+
+```text
+SKILLHUB_RATELIMIT_CATEGORIES_<CATEGORY>_AUTHENTICATED
+SKILLHUB_RATELIMIT_CATEGORIES_<CATEGORY>_ANONYMOUS
+SKILLHUB_RATELIMIT_CATEGORIES_<CATEGORY>_WINDOW_SECONDS
+```
+
+支援分類：`SEARCH`、`RESOLVE`、`DOWNLOAD`、`SKILLS`、`STARS`、
+`PUBLISH`、`WHOAMI`、`AUTH_SESSION_BOOTSTRAP`、`AUTH_DIRECT_LOGIN`、
+`AUTH_PASSWORD_RESET_REQUEST`、`AUTH_PASSWORD_RESET_CONFIRM`、
+`AUTH_REGISTER`、`AUTH_LOCAL_LOGIN`、`AUTH_CHANGE_PASSWORD`。
+
+空字串表示使用該 endpoint 的程式預設值；`AUTHENTICATED` 與 `ANONYMOUS`
+可為 `0`，`WINDOW_SECONDS` 至少為 `1`。修改 ConfigMap 後需 rollout
+`skillhub-server` 才會生效，超過額度會回 HTTP `429`。
+
 ## MinIO / S3
 
 | K8s key | Pod env | 必填 | 範例 | 說明 |
@@ -280,6 +313,26 @@ http://host --token <token>`，或設定 `SKILLHUB_TOKEN`。HTTP endpoint
 | `skillhub-config/scanner-use-virustotal` | `SKILLHUB_SCANNER_USE_VIRUSTOTAL` | `false` | 是否啟用 VirusTotal analyzer。 |
 | `skillhub-config/scanner-use-trigger` | `SKILLHUB_SCANNER_USE_TRIGGER` | `false` | 是否啟用 trigger specificity analyzer。 |
 
+### Scan Outbox 調校
+
+V44/V45 migration 會建立 durable `scan_task_outbox`。下列 backend env
+通常保持程式預設；若需調整，請透過組織 overlay 加到 backend Deployment，
+並同步監控 PostgreSQL pending/failed rows、Redis backlog 與 Scanner latency：
+
+| Pod env | 預設 | 說明 |
+| --- | ---: | --- |
+| `SKILLHUB_SECURITY_OUTBOX_BATCH_SIZE` | `50` | 每輪最多 claim 筆數 |
+| `SKILLHUB_SECURITY_OUTBOX_MAX_ATTEMPTS` | `10` | terminal failure 次數邊界 |
+| `SKILLHUB_SECURITY_OUTBOX_LEASE` | `120` 秒 | claim 可被回收前的 lease |
+| `SKILLHUB_SECURITY_OUTBOX_MAX_BACKOFF` | `300` 秒 | retry backoff 上限 |
+| `SKILLHUB_SECURITY_OUTBOX_DISPATCH_INTERVAL_MS` | `5000` | dispatcher 輪詢間隔 |
+| `SKILLHUB_SECURITY_OUTBOX_SENT_RETENTION_DAYS` | `7` | SENT row 保留日數 |
+| `SKILLHUB_SECURITY_OUTBOX_CLEANUP_INTERVAL_SECONDS` | `86400` | cleanup 間隔 |
+
+升級前先備份 PostgreSQL。調短 retention 會減少事件追查證據；調大 batch 或
+縮短 interval 會提高 Redis 與 Scanner 瞬時負載。不要以手動刪除 pending/
+failed rows 取代根因處理。
+
 ## Publish Upload Allowlist
 
 | K8s key | Pod env | Required | Example | Notes |
@@ -362,6 +415,14 @@ SKILL_SCANNER_LLM_MODEL=...
 | --- | --- | --- | --- |
 | `skillhub-config/builtin-skills-enabled` | `SKILLHUB_BUILTIN_SKILLS_ENABLED` | `true` | 是否在 backend 啟動後背景同步 upstream 內建 skill manifest。若正式環境不能連外到 `bjcdn.openstorage.cn`，可設為 `false`。 |
 | manifest volume/env override | `SKILLHUB_BUILTIN_SKILLS_MANIFEST_PATH` | `/app/app/builtin_skills/manifest.json` | 可選。預設使用映像內建 manifest；只有要覆蓋 manifest 時才需要設定。 |
+
+## Backend Runtime UID/GID
+
+`skillhub-server-python` runtime 固定使用 UID `100`、GID `101`，延續既有
+storage volume ownership 契約。現在的 K8s 範例使用 S3，不會掛本機 package
+volume；若 overlay 自行掛載 local storage，rollout 前先備份並確認該目錄可由
+`100:101` 寫入。不要在沒有備份與 rollback 的情況下對 production volume
+做遞迴 chown。
 
 ## 最小可用範例
 

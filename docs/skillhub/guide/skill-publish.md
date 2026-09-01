@@ -69,7 +69,14 @@ npx clawhub publish ./my-skill --namespace my-team
 
 3. **使用 Web UI 发布**
 
-访问 `http://localhost:3000/dashboard/publish`，选择命名空间、上传 zip 文件、选择可见性后点击「发布」。
+访问 `http://localhost:3000/dashboard/publish`，选择命名空间后，可以上传现成
+ZIP，也可以直接选择一个技能目录。浏览器会先执行路径与容量检查，再以稳定顺序
+打包 ZIP；选择可见性后点击「发布」。
+
+目录打包会忽略 `.git`、`.svn`、`.hg`、`.skillhub`、`node_modules`、
+`__pycache__`、`__MACOSX`，以及 `.DS_Store`、`Thumbs.db`、`desktop.ini`、
+`._*`、`*.pyc`、`*.swp`。当前边界为最多 500 个可发布文件、单文件 10 MiB、
+未压缩总量 100 MiB。客户端检查不会取代后端验证或安全扫描。
 
 4. **使用 REST API 发布**
 

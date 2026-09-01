@@ -4,10 +4,21 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
+      - 'server-python/Dockerfile'
       - 'web/**'
       - '.github/workflows/pr-scripts.yml'
+      - '.github/workflows/publish-images.yml'
+      - '.github/workflows/riscv64-images.yml'
 
 jobs:
+  release-image-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: bash scripts/tests/release-image-compat-test.sh
+
   publish-cli-test:
     runs-on: ubuntu-latest
     steps:

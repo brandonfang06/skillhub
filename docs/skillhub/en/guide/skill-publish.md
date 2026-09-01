@@ -69,7 +69,15 @@ npx clawhub publish ./my-skill --namespace my-team
 
 3. **Publish via Web UI**
 
-Visit `http://localhost:3000/dashboard/publish`, select namespace, upload zip file, choose visibility, and click "Publish".
+Visit `http://localhost:3000/dashboard/publish` and select a namespace. You can
+upload an existing ZIP or select a skill directory. The browser validates paths
+and size boundaries, then creates a deterministic ZIP before publication.
+
+Folder packaging excludes `.git`, `.svn`, `.hg`, `.skillhub`, `node_modules`,
+`__pycache__`, `__MACOSX`, `.DS_Store`, `Thumbs.db`, `desktop.ini`, `._*`,
+`*.pyc`, and `*.swp`. Current limits are 500 publishable files, 10 MiB per file,
+and 100 MiB total uncompressed bytes. Client-side checks do not replace backend
+validation or security scanning.
 
 4. **Publish via REST API**
 

@@ -96,7 +96,7 @@ server {
 
 A: SkillHub provides several monitoring options:
 
-- **Health Check**: `GET /actuator/health`
+- **Health Check**: `GET /api/v1/health`
 - **Scanner Health Check**: `GET http://localhost:8000/health`
 - **Metrics**: `GET /actuator/metrics` (Prometheus format)
 - **Audit Logs**: All critical operations are recorded in the audit log
@@ -122,7 +122,9 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version v0.2.0
 ```
 
-> **Note**: It is recommended to back up the database and object storage before upgrading. Database migrations are handled automatically by Flyway.
+> **Note**: Back up PostgreSQL and object storage before upgrading. The Python
+> container runs `python -m app.migrations upgrade` at startup; verify migration
+> status and `scan_task_outbox` delivery after the rollout.
 
 ## Q: Why can't administrators (admin) and regular users create namespaces?
 

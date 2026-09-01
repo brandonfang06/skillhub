@@ -43,6 +43,13 @@ firewall, with the same polish you'd expect from a public registry.
 
 - 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
 - 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
+- 🐍 **[Python Examples](./examples/python)** — Search, download, and publish through the REST API
+
+### Governance and safety
+
+- **[Privacy and Data Governance](docs/PRIVACY_AND_DATA_GOVERNANCE.md)** — Operator responsibilities, retention, portability, and incident handling
+- **[Content Safety](docs/CONTENT_SAFETY.md)** — Package-safety expectations, reporting, review, and appeals
+- **[RISC-V support boundary](docs/RISCV64.md)** — Supported images, build commands, and explicit exclusions
 
 ## Highlights
 
@@ -125,6 +132,9 @@ skillhub install pdf-parser --agent codex
 
 # List installed skills
 skillhub list
+
+# Maintain an existing team namespace workspace
+skillhub sync pull --namespace team-a
 ```
 
 📖 Full guide: [docs/skillhub/en/guide/cli.md](docs/skillhub/en/guide/cli.md)
@@ -229,7 +239,9 @@ frontend schema, and fails if the checked-in SDK is stale.
 Published runtime images are built by GitHub Actions and pushed to GHCR.
 This is the supported path for anyone who wants a ready-to-use local
 environment without building the backend or frontend on their machine.
-Published images target both `linux/amd64` and `linux/arm64`.
+Published Python server and web images target `linux/amd64`, `linux/arm64`,
+and `linux/riscv64`. The scanner remains limited to `linux/amd64` and
+`linux/arm64`; the complete Compose stack is not yet supported on RISC-V.
 
 **Quick deployment with curl:**
 
@@ -420,7 +432,7 @@ default `auto` mode runs admin checks only when both credentials are present.
 **Backend (FastAPI, Python 3.12):**
 - Python-owned backend under `server-python/`
 - API, auth, lifecycle, search, storage, and migration code live in Python modules
-- PostgreSQL 16 with Flyway migrations
+- PostgreSQL 16 with Python-owned migrations under `server-python/app/db/migration`
 - Redis for session management
 - S3/MinIO for skill package storage
 

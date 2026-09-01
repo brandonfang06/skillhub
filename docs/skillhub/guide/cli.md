@@ -230,6 +230,38 @@ CLI 会在访问 registry 前校验技能 slug、规范化所有已选目标，�
 }
 ```
 
+## Namespace 工作区同步
+
+`sync` 维护一个**已存在的组织/团队 namespace** 到单一 Agent 工作区；它不会
+创建 namespace 或成员关系。默认目录为当前项目的
+`.agents/skills`。
+
+```bash
+# 拉取新增/更新项目；检查模式不会写文件
+skillhub sync pull --namespace team-a
+skillhub sync pull --namespace team-a --check
+
+# 检查本地修改与远端差异
+skillhub sync status --namespace team-a --json
+skillhub sync diff --namespace team-a
+
+# 删除远端已不存在、且本地未修改的受管项目
+skillhub sync pull --namespace team-a --prune
+
+# 验证或上传工作区内所有 Skill
+skillhub sync push --all --namespace team-a --dry-run
+skillhub sync push --all --namespace team-a --submit-review
+```
+
+`pull` 会校验下载档案与 manifest fingerprint，再原子替换目录。默认保留本地
+修改；使用 `--force` 才会覆盖。远端移除项先显示为 `orphaned`，只有 `--prune`
+才删除，已修改 orphan 还需要 `--force`。
+
+同步状态写入工作区 `.skillhub/namespace-sync.json` 与各 Skill 的
+`.skillhub/metadata.json`。读取需要 token 的 `skill:read`，push/submit-review
+需要 `skill:publish`。相同 namespace/slug/version 已存在（含 uploaded 或
+pending-review）时会报告冲突，不静默覆盖。
+
 ## 本地管理
 
 ### 查看已安装技能
@@ -507,6 +539,16 @@ skillhub install <coordinate> [options]
 - `--registry <url>` — Registry URL
 - `--token <token>` — API token
 - `--json` — JSON 输出
+
+### sync
+
+```bash
+skillhub sync <pull|status|diff|push> [path] --namespace <slug> [options]
+```
+
+常用选项：`--dir`、`--check`、`--prune`、`--force`、`--all`、
+`--visibility`、`--dry-run`、`--submit-review`、`--registry`、`--token`、
+`--json`。
 
 ### list
 

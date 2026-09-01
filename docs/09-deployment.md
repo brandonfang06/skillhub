@@ -10,8 +10,13 @@
 - 单机交付环境：`docker compose --env-file .env.release -f compose.release.yml up -d`
   - 前端和后端都运行在容器内
 - 使用 GitHub Actions 发布到 GHCR 的镜像
-- 默认发布 `linux/amd64` 与 `linux/arm64` 多架构镜像
+- 默认发布多架构镜像：Python Server / Web 覆盖 `linux/amd64`、
+  `linux/arm64` 与 `linux/riscv64`，Scanner 暂保持 `linux/amd64` 与
+  `linux/arm64`
   - PostgreSQL、Redis 与应用容器一起通过 Compose 启动
+
+RISC-V 目前只声明 Server/Web 组件映像支持；完整 Compose 与 Scanner
+尚未验证，详见 [`RISCV64.md`](./RISCV64.md)。
 
 不再维护本地构建整套 demo 容器的中间模式，也不再保留 `docker-compose.prod.yml`。
 
@@ -29,7 +34,7 @@
        │ /api/*
        ▼
 ┌──────────────┐
-│ Spring Boot  │  published image
+│ FastAPI      │  published Python image
 └───┬────┬─────┘
     │    │
     ▼    ▼
@@ -151,14 +156,42 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 1. 检出代码
 2. 登录 GHCR
-3. 分别构建 `server/Dockerfile` 与 `web/Dockerfile`
+3. 分别从仓库根目录构建 `server-python/Dockerfile`，并从 `web/` 构建
+   `web/Dockerfile`
 4. 推送镜像：
-   - `ghcr.io/iflytek/skillhub-server`
+   - `ghcr.io/iflytek/skillhub-server-python`
    - `ghcr.io/iflytek/skillhub-web`
 5. 写入 `edge` / `vX.Y.Z` / `latest` / `sha-*` 标签
-6. 同时发布 `linux/amd64` 与 `linux/arm64` manifest，避免 Apple Silicon / ARM 主机依赖模拟层
+6. Python Server/Web 发布 amd64、arm64、riscv64 manifest；Scanner 只发布
+   amd64、arm64
 
 ## 7 配置管理
+
+### 7.1 请求限流
+
+Python HTTP 限流使用 Redis，默认关闭以保持既有部署行为。启用后，未配置
+分类覆盖的接口继续使用代码定义的额度；Redis 不可用时受保护请求会安全失败，
+而不是绕过限流。
+
+```bash
+SKILLHUB_RATELIMIT_ENABLED=true
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS=100
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED=300
+SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_WINDOW_SECONDS=60
+```
+
+每个分类可独立设置 `AUTHENTICATED`、`ANONYMOUS` 与 `WINDOW_SECONDS`；
+只设置一个字段时，其余字段沿用接口默认值。支持的分类为：`search`、
+`resolve`、`download`、`skills`、`stars`、`publish`、`whoami`、
+`auth-session-bootstrap`、`auth-direct-login`、`auth-password-reset-request`、
+`auth-password-reset-confirm`、`auth-register`、`auth-local-login` 与
+`auth-change-password`。
+
+`.env.release.example` 与 `compose.release.yml` 已显式列出全部变量。K8s
+在 `skillhub-rate-limit-config` 中保留相同契约；修改后 rollout
+`skillhub-server` 才会生效。超过额度返回 HTTP `429`。
+
+### 7.2 前端运行时配置
 
 前端运行时配置通过 `web/runtime-config.js.template` 注入。与认证兼容层相关的新变量如下：
 
@@ -178,8 +211,8 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 注意：
 
-- 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
-- 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 前端密码兼容层打开之前，后端仍必须同步打开 `SKILLHUB_AUTH_DIRECT_ENABLED=true`
+- 前端开关打开之前，后端仍必须同步打开 `SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED=true`
 - 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
 
 开发环境：
@@ -199,7 +232,8 @@ docker compose --env-file .env.release -f compose.release.yml up -d
 
 ## 8 OIDC 登录配置
 
-SkillHub 复用 Spring Security OAuth2 Client 的 OIDC 支持。前端不需要单独
+Python 后端实现 OIDC 登录，并继续接受既有 Spring 风格环境变量以降低部署
+切换成本。前端不需要单独
 配置回调页；登录页会从 `/api/v1/auth/methods` 读取后端暴露的
 `OAUTH_REDIRECT` 方法并跳转到 `/oauth2/authorization/{registrationId}`。
 
@@ -257,7 +291,7 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 4. 首次启动
    - 运行 `docker compose --env-file .env.release -f compose.release.yml up -d`
    - 检查 `docker compose --env-file .env.release -f compose.release.yml ps`
-   - 检查 `curl -i http://127.0.0.1:8080/actuator/health`
+   - 检查 `curl -i http://127.0.0.1:8080/api/v1/health`
 5. 首登收尾
    - 仅在启用了 `BOOTSTRAP_ADMIN_ENABLED=true` 时，使用 `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` 登录
    - 立即修改管理员密码
@@ -267,9 +301,9 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 
 | 维度 | 方案 |
 |------|------|
-| 健康检查 | `web/nginx-health`、`server/actuator/health` |
+| 健康检查 | `web/nginx-health`、`server/api/v1/health` |
 | 日志 | 容器 stdout / stderr |
-| 指标 | Spring Boot Actuator，后续可接 Prometheus |
+| 指标 | Python 应用与平台采集链路；需要 Prometheus 时由部署平台接入 |
 
 ## 11 安全扫描服务
 
@@ -281,21 +315,27 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 当前 `deploy/k8s` 已按分离部署建模，因此推荐：
 
 - `SKILLHUB_SECURITY_SCANNER_ENABLED=true`
-- `SKILLHUB_SECURITY_SCANNER_URL=http://skillhub-scanner:8000`
+- `SKILLHUB_SECURITY_SCANNER_BASE_URL=http://skillhub-scanner:8000`
 - `SKILLHUB_SECURITY_SCANNER_MODE=upload`
 
 相关文件：
 
-- `deploy/k8s/scanner-deployment.yaml`
-- `deploy/k8s/services.yaml`
-- `deploy/k8s/backend-deployment.yaml`
+- `deploy/k8s/base/scanner-deployment.yaml`
+- `deploy/k8s/base/services.yaml`
+- `deploy/k8s/base/backend-deployment.yaml`
 - `scripts/verify-scanner.sh`
 - `docs/security-scanning.md`
 
 ## 12 数据迁移
 
-Flyway 仍是唯一 schema 变更入口：
+Schema 迁移由 Python runtime 独占：
 
-- 路径：`server/skillhub-app/src/main/resources/db/migration/`
-- 命名：`V{version}__{description}.sql`
-- 启动策略：应用容器启动时自动执行迁移
+- 上游跟随基线：`server-python/app/db/migration/V*__*.sql`
+- 组织扩展：`server-python/app/db/local_migration/`
+- 命令：`cd server-python && uv run python -m app.migrations upgrade`
+- 容器启动策略：启动 FastAPI 前先执行同一 upgrade 命令
+
+升级前必须备份 PostgreSQL 与对象存储。V44/V45 新增 durable scan outbox；
+升级后确认 migration status、`scan_task_outbox` 状态、Redis 投递与 Scanner
+消费均正常。不要将组织专属 schema 塞入上游 `V*` 编号空间，也不要跳过
+备份后直接重写生产 volume 权限。

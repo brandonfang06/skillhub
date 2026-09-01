@@ -20,6 +20,9 @@ spec:
         - name: backend-python
           image: ghcr.io/iflytek/skillhub-server-python:edge
           imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: skillhub-rate-limit-config
           ports:
             - containerPort: 8080
               name: http

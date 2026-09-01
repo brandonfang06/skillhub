@@ -216,7 +216,7 @@ skillhub-storage-s3-secret-key: your-secret-key
 
 | Component | Image |
 |---|---|
-| Backend | ghcr.io/iflytek/skillhub-server:latest |
+| Backend | ghcr.io/iflytek/skillhub-server-python:latest |
 | Frontend | ghcr.io/iflytek/skillhub-web:latest |
 | Scanner | ghcr.io/iflytek/skillhub-scanner:latest |
 | PostgreSQL | postgres:16-alpine |
