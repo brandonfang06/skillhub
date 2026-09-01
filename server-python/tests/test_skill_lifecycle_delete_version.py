@@ -151,12 +151,19 @@ async def test_delete_skill_version_deletes_metadata_audit_and_returns_storage_k
         "packages/101/42/bundle.zip",
     ]
     assert any("DELETE FROM skill_file" in statement for statement in connection.statements)
+    outbox_delete_index = next(
+        index
+        for index, sql in enumerate(connection.statements)
+        if "DELETE FROM scan_task_outbox" in sql
+    )
+    assert connection.params[outbox_delete_index] == {"version_id": 42}
     lock_index = next(index for index, sql in enumerate(connection.statements) if "FROM skill_version" in sql)
     assert "ORDER BY id" in connection.statements[lock_index]
     assert "FOR UPDATE" in connection.statements[lock_index]
     review_delete_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM review_task" in sql)
     assert any("UPDATE security_audit" in statement and "deleted_at" in statement for statement in connection.statements)
     version_delete_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM skill_version" in sql)
+    assert outbox_delete_index < version_delete_index
     assert review_delete_index < version_delete_index
     audit_index = next(index for index, sql in enumerate(connection.statements) if "INSERT INTO audit_log" in sql)
     assert connection.params[audit_index]["action"] == "DELETE_SKILL_VERSION"

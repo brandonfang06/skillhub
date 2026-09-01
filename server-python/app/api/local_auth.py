@@ -5,7 +5,7 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
 from app.auth.context import resolve_current_user_or_401, with_password_capability
 from app.auth.local import (
@@ -21,6 +21,7 @@ from app.auth.password_reset import (
     validate_password_reset_confirm,
     validate_password_reset_request,
 )
+from app.core.rate_limit import rate_limit
 from app.auth.session import establish_session, validate_session_cookie_candidates
 from app.core.config import parse_bool
 from app.core.response import ok
@@ -52,7 +53,19 @@ def _local_registration_enabled(request: Request) -> bool:
     return parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True)
 
 
-@router.post("/api/v1/auth/local/register")
+@router.post(
+    "/api/v1/auth/local/register",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-register",
+                authenticated=10,
+                anonymous=5,
+                window_seconds=300,
+            )
+        )
+    ],
+)
 async def register_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
     validate_session_cookie_candidates(request)
     if not _local_registration_enabled(request):
@@ -77,7 +90,18 @@ async def register_local_account_route(request: Request, response: Response, pay
     return ok("response.success.created", data, request)
 
 
-@router.post("/api/v1/auth/local/login")
+@router.post(
+    "/api/v1/auth/local/login",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-local-login",
+                authenticated=20,
+                anonymous=10,
+            )
+        )
+    ],
+)
 async def login_local_account_route(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, Any]:
     validate_session_cookie_candidates(request)
     login = getattr(request.app.state, "local_auth_login", None)
@@ -98,7 +122,19 @@ async def login_local_account_route(request: Request, response: Response, payloa
     return ok("response.success.read", data, request)
 
 
-@router.post("/api/v1/auth/local/change-password")
+@router.post(
+    "/api/v1/auth/local/change-password",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-change-password",
+                authenticated=5,
+                anonymous=20,
+                window_seconds=300,
+            )
+        )
+    ],
+)
 async def change_local_password_route(
     request: Request,
     payload: dict[str, Any],
@@ -124,7 +160,19 @@ async def change_local_password_route(
     return ok("response.success.updated", None, request)
 
 
-@router.post("/api/v1/auth/local/password-reset/request")
+@router.post(
+    "/api/v1/auth/local/password-reset/request",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-password-reset-request",
+                authenticated=8,
+                anonymous=5,
+                window_seconds=300,
+            )
+        )
+    ],
+)
 async def request_local_password_reset_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
     requester = getattr(request.app.state, "local_password_reset_requester", None)
     sender = getattr(request.app.state, "local_password_reset_sender", None)
@@ -144,7 +192,19 @@ async def request_local_password_reset_route(request: Request, payload: dict[str
     return ok("\u5982\u679c\u8d26\u53f7\u7b26\u5408\u6761\u4ef6\uff0c\u5bc6\u7801\u91cd\u7f6e\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u3002", None, request)
 
 
-@router.post("/api/v1/auth/local/password-reset/confirm")
+@router.post(
+    "/api/v1/auth/local/password-reset/confirm",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-password-reset-confirm",
+                authenticated=10,
+                anonymous=10,
+                window_seconds=300,
+            )
+        )
+    ],
+)
 async def confirm_local_password_reset_route(request: Request, payload: dict[str, Any]) -> dict[str, Any]:
     confirmer = getattr(request.app.state, "local_password_reset_confirmer", None)
     try:

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from ipaddress import IPv6Address, ip_address
 import json
 import os
 import re
 import uuid
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import text
@@ -13,6 +15,49 @@ from sqlalchemy import text
 from app.core.public_url import resolve_public_base_url
 
 DEFAULT_USER_ROLE = "USER"
+MAX_GITHUB_EMAIL_RESPONSE_BYTES = 1024 * 1024
+
+
+def _is_safe_github_email_api_uri(uri: str) -> bool:
+    try:
+        parsed = urlsplit(uri)
+        _ = parsed.port
+    except ValueError:
+        return False
+    if not (
+        parsed.scheme == "https"
+        and parsed.hostname is not None
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.query == ""
+        and parsed.fragment == ""
+    ):
+        return False
+
+    hostname = parsed.hostname.lower()
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        return False
+    if hostname in {
+        "metadata.google.internal",
+        "metadata.google",
+        "metadata.azure.internal",
+    }:
+        return False
+    try:
+        address = ip_address(hostname)
+    except ValueError:
+        return True
+    addresses = [address]
+    if isinstance(address, IPv6Address) and address.ipv4_mapped is not None:
+        addresses.append(address.ipv4_mapped)
+    return not any(
+        candidate.is_loopback
+        or candidate.is_link_local
+        or candidate.is_multicast
+        or candidate.is_reserved
+        or candidate.is_unspecified
+        for candidate in addresses
+    )
 
 
 def oauth_registrations_from_env() -> list[dict[str, object]]:
@@ -59,6 +104,18 @@ def _spring_oidc_registrations(public_base_url: str) -> list[dict[str, object]]:
             "scopes": scopes,
             "userNameAttribute": os.getenv(f"{provider_prefix}USER_NAME_ATTRIBUTE", "sub"),
         }
+        if registration_id == "github":
+            github_api_base_url = os.getenv(
+                "SKILLHUB_AUTH_GITHUB_API_BASE_URL",
+                "https://api.github.com",
+            ).rstrip("/")
+            email_api_uri = f"{github_api_base_url}/user/emails"
+            if not _is_safe_github_email_api_uri(email_api_uri):
+                raise ValueError(
+                    "SKILLHUB_AUTH_GITHUB_API_BASE_URL must be an HTTPS URL "
+                    "without credentials, query, or fragment"
+                )
+            registration["emailApiUri"] = email_api_uri
         registrations.append(registration)
     return registrations
 
@@ -98,7 +155,9 @@ async def exchange_oauth_code(
     *,
     http_client_factory: Any = None,
 ) -> dict[str, object]:
-    factory = http_client_factory or (lambda: httpx.AsyncClient(timeout=10.0))
+    factory = http_client_factory or (
+        lambda: httpx.AsyncClient(timeout=10.0, follow_redirects=False)
+    )
     async with factory() as client:
         token_response = await client.post(
             str(registration["tokenUri"]),
@@ -124,10 +183,86 @@ async def exchange_oauth_code(
         user_response.raise_for_status()
         attributes = user_response.json()
 
+        if not isinstance(attributes, dict):
+            raise ValueError("OAuth userinfo response must be an object")
+        if str(registration["id"]) == "github":
+            verified_email = await _read_github_verified_email(
+                client,
+                str(
+                    registration.get("emailApiUri")
+                    or "https://api.github.com/user/emails"
+                ),
+                access_token,
+            )
+            return _claims_from_attributes(
+                "github",
+                attributes,
+                email=(
+                    verified_email
+                    if verified_email is not None
+                    else attributes.get("email")
+                ),
+                email_verified=verified_email is not None,
+            )
+
     return _claims_from_attributes(str(registration["id"]), attributes)
 
 
-def _claims_from_attributes(provider: str, attributes: dict[str, object]) -> dict[str, object]:
+async def _read_github_verified_email(
+    client: Any,
+    email_api_uri: str,
+    access_token: str,
+) -> str | None:
+    if not _is_safe_github_email_api_uri(email_api_uri):
+        return None
+    try:
+        async with client.stream(
+            "GET",
+            email_api_uri,
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            },
+        ) as response:
+            if not 200 <= int(response.status_code) < 300:
+                return None
+            content_type = str(response.headers.get("content-type") or "")
+            if (
+                content_type.partition(";")[0].strip().lower()
+                != "application/json"
+            ):
+                return None
+            content = bytearray()
+            async for chunk in response.aiter_bytes():
+                if len(content) + len(chunk) > MAX_GITHUB_EMAIL_RESPONSE_BYTES:
+                    return None
+                content.extend(chunk)
+        payload = json.loads(content)
+    except (AttributeError, httpx.HTTPError, TypeError, ValueError):
+        return None
+
+    if not isinstance(payload, list):
+        return None
+    verified = [
+        item
+        for item in payload
+        if isinstance(item, dict)
+        and item.get("verified") is True
+        and str(item.get("email") or "").strip()
+    ]
+    verified.sort(key=lambda item: item.get("primary") is True, reverse=True)
+    if not verified:
+        return None
+    return str(verified[0]["email"]).strip()
+
+
+def _claims_from_attributes(
+    provider: str,
+    attributes: dict[str, object],
+    *,
+    email: object | None = None,
+    email_verified: bool | None = None,
+) -> dict[str, object]:
     if provider == "gitlab":
         provider_login = str(attributes.get("username") or attributes.get("login") or "").strip()
         avatar_url = attributes.get("avatar_url") or attributes.get("avatarUrl") or ""
@@ -148,11 +283,23 @@ def _claims_from_attributes(provider: str, attributes: dict[str, object]) -> dic
     subject = str(attributes.get("id") or attributes.get("sub") or "").strip()
     if subject == "" or provider_login == "":
         raise ValueError("OAuth userinfo response missing subject or login")
+    resolved_email = attributes.get("email") if email is None else email
+    if email_verified is None:
+        if provider == "gitlab":
+            confirmed_at = attributes.get("confirmed_at")
+            email_verified = (
+                isinstance(confirmed_at, str) and confirmed_at.strip() != ""
+            )
+        elif provider == "github":
+            email_verified = False
+        else:
+            email_verified = attributes.get("email_verified") is True
     return {
         "provider": provider,
         "subject": subject,
         "providerLogin": provider_login,
-        "email": attributes.get("email"),
+        "email": resolved_email,
+        "emailVerified": email_verified,
         "avatarUrl": avatar_url,
         "extra": attributes,
     }
@@ -162,7 +309,7 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
     provider = str(registration["id"])
     subject = str(claims["subject"])
     provider_login = str(claims["providerLogin"])
-    email = claims.get("email")
+    email = claims.get("email") if claims.get("emailVerified") is True else None
     avatar_url = claims.get("avatarUrl") or ""
     async with engine.begin() as connection:
         user = await _find_bound_user(connection, provider, subject)
@@ -208,6 +355,7 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
             }
         else:
             _ensure_user_status_allows_login(user)
+            persisted_email = email if email is not None else user.get("email")
             await connection.execute(
                 text(
                     """
@@ -222,7 +370,7 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
                 {
                     "user_id": user["id"],
                     "display_name": provider_login,
-                    "email": email,
+                    "email": persisted_email,
                     "avatar_url": avatar_url,
                     "updated_at": datetime.now(UTC),
                 },
@@ -244,7 +392,12 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
                     "updated_at": datetime.now(UTC),
                 },
             )
-            user = {**user, "display_name": provider_login, "email": email, "avatar_url": avatar_url}
+            user = {
+                **user,
+                "display_name": provider_login,
+                "email": persisted_email,
+                "avatar_url": avatar_url,
+            }
 
         role_codes = await _role_codes(connection, str(user["id"]))
 
@@ -270,7 +423,9 @@ async def _find_bound_user(connection: Any, provider: str, subject: str) -> dict
                     u.display_name,
                     u.email,
                     u.avatar_url,
-                    u.status
+                    u.status,
+                    u.merged_to_user_id,
+                    u.system_account
                 FROM identity_binding ib
                 JOIN user_account u ON u.id = ib.user_id
                 WHERE ib.provider_code = :provider_code
@@ -345,11 +500,15 @@ async def _ensure_global_namespace_membership(connection: Any, user_id: str) -> 
 
 
 def _ensure_user_status_allows_login(user: dict[str, object]) -> None:
+    if bool(user.get("system_account")):
+        raise PermissionError("error.auth.oauth.systemAccount")
     status = str(user.get("status") or "ACTIVE")
     if status == "PENDING":
         raise PermissionError("error.auth.oauth.accountPending")
     if status == "DISABLED":
         raise PermissionError("error.auth.oauth.accountDisabled")
+    if status == "MERGED":
+        raise PermissionError("error.auth.oauth.accountMerged")
 
 
 def _normalize_platform_roles(role_codes: list[str]) -> list[str]:

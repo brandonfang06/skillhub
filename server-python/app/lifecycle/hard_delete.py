@@ -198,6 +198,10 @@ async def _delete_related_rows(connection: Any, request: SkillHardDeleteInput, s
             {"version_ids": version_ids},
         )
         await connection.execute(
+            text("DELETE FROM scan_task_outbox WHERE version_id = ANY(:version_ids)"),
+            {"version_ids": version_ids},
+        )
+        await connection.execute(
             text("DELETE FROM promotion_request WHERE source_version_id = ANY(:version_ids)"),
             {"version_ids": version_ids},
         )

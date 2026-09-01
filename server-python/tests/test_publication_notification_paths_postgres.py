@@ -113,6 +113,7 @@ def _publish_input(
     *,
     version: str,
     auto_publish: bool,
+    visibility: str = "PUBLIC",
 ) -> PublishWriteInput:
     return PublishWriteInput(
         namespace_id=fixture.namespace_id,
@@ -121,7 +122,7 @@ def _publish_input(
         display_name="Publication Skill",
         summary="Publication notification integration",
         publisher_id=fixture.owner_id,
-        visibility="PUBLIC",
+        visibility=visibility,
         version=version,
         auto_publish=auto_publish,
         metadata=SkillMetadata(
@@ -448,6 +449,158 @@ async def test_auto_publish_and_review_approval_notify_eligible_subscribers_in_p
             )
         assert rolled_back_versions == 0
         assert rollback_fanout.published == []
+    finally:
+        await _cleanup_fixture(engine, fixture)
+        await engine.dispose()
+
+
+@pytest.mark.skipif(
+    TEST_DATABASE_URL is None,
+    reason="requires SKILLHUB_TEST_DATABASE_URL",
+)
+@pytest.mark.anyio
+async def test_publication_notifications_recheck_current_access_in_postgres(
+    tmp_path,
+) -> None:
+    engine = create_async_engine(str(TEST_DATABASE_URL), pool_size=3, max_overflow=0)
+    fixture = await _create_fixture(engine)
+    try:
+        initial = await execute_publish_write(
+            engine,
+            _publish_input(tmp_path, fixture, version="1.0.0", auto_publish=True),
+        )
+        async with engine.begin() as connection:
+            for user_id in (
+                fixture.reviewer_id,
+                fixture.subscriber_id,
+                fixture.disabled_subscriber_id,
+            ):
+                await connection.execute(
+                    text(
+                        "INSERT INTO skill_subscription (skill_id, user_id) VALUES (:skill_id, :user_id)"
+                    ),
+                    {"skill_id": initial.skill_id, "user_id": user_id},
+                )
+            for user_id in (
+                fixture.subscriber_id,
+                fixture.disabled_subscriber_id,
+            ):
+                await connection.execute(
+                    text(
+                        """
+                        INSERT INTO namespace_member (namespace_id, user_id, role)
+                        VALUES (:namespace_id, :user_id, 'MEMBER')
+                        """
+                    ),
+                    {"namespace_id": fixture.namespace_id, "user_id": user_id},
+                )
+            await connection.execute(
+                text("UPDATE user_account SET status = 'DISABLED' WHERE id = :user_id"),
+                {"user_id": fixture.disabled_subscriber_id},
+            )
+
+        active_namespace = await execute_publish_write(
+            engine,
+            _publish_input(
+                tmp_path,
+                fixture,
+                version="1.1.0",
+                auto_publish=True,
+                visibility="NAMESPACE_ONLY",
+            ),
+        )
+        active_rows = await _notification_rows(
+            engine,
+            skill_id=active_namespace.skill_id,
+            version_id=active_namespace.version_id,
+        )
+        assert {
+            (str(row["recipient_id"]), str(row["event_type"]))
+            for row in active_rows
+        } == {
+            (fixture.owner_id, "SKILL_PUBLISHED"),
+            (fixture.reviewer_id, "SUBSCRIPTION_NEW_VERSION"),
+            (fixture.subscriber_id, "SUBSCRIPTION_NEW_VERSION"),
+        }
+
+        async with engine.begin() as connection:
+            await connection.execute(
+                text(
+                    """
+                    DELETE FROM namespace_member
+                    WHERE namespace_id = :namespace_id
+                      AND user_id = :user_id
+                    """
+                ),
+                {
+                    "namespace_id": fixture.namespace_id,
+                    "user_id": fixture.subscriber_id,
+                },
+            )
+
+        removed_member = await execute_publish_write(
+            engine,
+            _publish_input(
+                tmp_path,
+                fixture,
+                version="1.2.0",
+                auto_publish=True,
+                visibility="NAMESPACE_ONLY",
+            ),
+        )
+        removed_rows = await _notification_rows(
+            engine,
+            skill_id=removed_member.skill_id,
+            version_id=removed_member.version_id,
+        )
+        assert {
+            (str(row["recipient_id"]), str(row["event_type"]))
+            for row in removed_rows
+        } == {
+            (fixture.owner_id, "SKILL_PUBLISHED"),
+            (fixture.reviewer_id, "SUBSCRIPTION_NEW_VERSION"),
+        }
+
+        async with engine.begin() as connection:
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO namespace_member (namespace_id, user_id, role)
+                    VALUES (:namespace_id, :user_id, 'MEMBER')
+                    """
+                ),
+                {
+                    "namespace_id": fixture.namespace_id,
+                    "user_id": fixture.subscriber_id,
+                },
+            )
+            await connection.execute(
+                text("UPDATE namespace SET status = 'ARCHIVED' WHERE id = :namespace_id"),
+                {"namespace_id": fixture.namespace_id},
+            )
+
+        archived_namespace = await execute_publish_write(
+            engine,
+            _publish_input(
+                tmp_path,
+                fixture,
+                version="1.3.0",
+                auto_publish=True,
+                visibility="NAMESPACE_ONLY",
+            ),
+        )
+        archived_rows = await _notification_rows(
+            engine,
+            skill_id=archived_namespace.skill_id,
+            version_id=archived_namespace.version_id,
+        )
+        assert {
+            (str(row["recipient_id"]), str(row["event_type"]))
+            for row in archived_rows
+        } == {
+            (fixture.owner_id, "SKILL_PUBLISHED"),
+            (fixture.reviewer_id, "SUBSCRIPTION_NEW_VERSION"),
+        }
     finally:
         await _cleanup_fixture(engine, fixture)
         await engine.dispose()

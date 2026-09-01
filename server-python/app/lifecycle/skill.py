@@ -673,6 +673,15 @@ async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) ->
         await connection.execute(
             text(
                 """
+                DELETE FROM scan_task_outbox
+                WHERE version_id = :version_id
+                """
+            ),
+            {"version_id": version_id},
+        )
+        await connection.execute(
+            text(
+                """
                 DELETE FROM skill_file
                 WHERE version_id = :version_id
                 """

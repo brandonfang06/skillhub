@@ -6,13 +6,13 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles, require_api_token_scope
 from app.core.config import get_settings
+from app.core.rate_limit import rate_limit
 from app.core.response import ok
-from app.core.redis import create_redis_client
 from app.object_storage import object_storage_for_settings
 from app.publish.dry_run import (
     PublishDryRunInput,
@@ -23,7 +23,6 @@ from app.publish.dry_run import (
 from app.publish.orchestration import PublishWriteInput, PublishWriteResult, execute_publish_write
 from app.publish.package import PackageEntry, SkillMetadata, determine_content_type, extract_package, normalize_entry_path, validate_package
 from app.publish.replacement import ReplaceableVersion, VersionReplacementConflict, find_replaceable_version
-from app.publish.scanner_handoff import RedisScanTaskPublisher
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -49,12 +48,19 @@ def dry_run_response(result: PublishDryRunResult) -> dict[str, object]:
     }
 
 
-def publish_response(namespace: str, slug: str, version: str, visibility: str) -> dict[str, object]:
+def publish_response(
+    namespace: str,
+    slug: str,
+    version: str,
+    visibility: str,
+    status: str,
+) -> dict[str, object]:
     return {
         "namespace": namespace,
         "slug": slug,
         "version": version,
         "visibility": visibility,
+        "status": status,
     }
 
 
@@ -140,6 +146,7 @@ async def run_publish_validate(
     publisher_id: str,
     visibility: str,
     platform_roles: set[str],
+    reject_existing_version: bool = False,
 ) -> PublishDryRunResult:
     reader = getattr(request.app.state, "publish_validate_reader", None)
     if reader is not None:
@@ -156,6 +163,7 @@ async def run_publish_validate(
             visibility=visibility,
             platform_roles=platform_roles,
             allowed_extensions=allowed_extensions,
+            reject_existing_version=reject_existing_version,
         ),
         repository,
     )
@@ -228,18 +236,9 @@ async def run_publish_write(request: Request, write_input: PublishWriteInput) ->
     writer = getattr(request.app.state, "publish_write_reader", None)
     if writer is not None:
         return await resolve_publish_write_result(writer(write_input))
-    scan_task_publisher = getattr(request.app.state, "publish_scan_task_publisher", None)
-    if write_input.scanner_enabled and scan_task_publisher is None:
-        settings = getattr(request.app.state, "settings", get_settings())
-        redis_client = getattr(request.app.state, "redis_client", None)
-        if redis_client is None:
-            redis_client = create_redis_client(settings)
-            request.app.state.redis_client = redis_client
-        scan_task_publisher = RedisScanTaskPublisher(redis_client, settings.scan_stream_key)
     return await execute_publish_write(
         request.app.state.db_engine,
         write_input,
-        scan_task_publisher=scan_task_publisher,
         notification_fanout=getattr(request.app.state, "notification_fanout", None),
     )
 
@@ -252,6 +251,7 @@ async def publish_entries(
     authorization: str | None,
     visibility: str | None,
     *,
+    reject_existing_version: bool = False,
     compat_namespace: str | None = None,
     compat_slug: str | None = None,
 ) -> tuple[PublishDryRunResult, PublishWriteResult, str]:
@@ -260,7 +260,15 @@ async def publish_entries(
     platform_role_set = set(platform_roles(user))
     publisher_id = str(user["userId"])
 
-    dry_run = await run_publish_validate(request, namespace, entries, publisher_id, resolved_visibility, platform_role_set)
+    dry_run = await run_publish_validate(
+        request,
+        namespace,
+        entries,
+        publisher_id,
+        resolved_visibility,
+        platform_role_set,
+        reject_existing_version,
+    )
     if not dry_run.valid:
         log_publish_validation_rejection(
             request,
@@ -290,6 +298,8 @@ async def publish_entries(
         dry_run.resolved_version,
         publisher_id,
     )
+    if reject_existing_version and replacement is not None:
+        raise HTTPException(status_code=409, detail="error.skill.version.exists")
     write_input = PublishWriteInput(
         namespace_id=namespace_id,
         namespace_slug=namespace,
@@ -336,12 +346,16 @@ def metadata_with_resolved_version(metadata: SkillMetadata, resolved_version: st
     )
 
 
-@router.post("/api/cli/v1/skills/{namespace}/publish/validate")
+@router.post(
+    "/api/cli/v1/skills/{namespace}/publish/validate",
+    dependencies=[Depends(rate_limit("publish", authenticated=10, anonymous=0))],
+)
 async def validate_cli_publish(
     request: Request,
     namespace: str,
     file: UploadFile = File(...),
     visibility: str | None = Form(default=None),
+    reject_existing_version: bool = Form(default=False, alias="rejectExistingVersion"),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
@@ -360,6 +374,7 @@ async def validate_cli_publish(
         str(user["userId"]),
         resolved_visibility,
         set(platform_roles(user)),
+        reject_existing_version,
     )
     if not result.valid:
         log_publish_validation_rejection(
@@ -372,14 +387,24 @@ async def validate_cli_publish(
     return ok("response.success.read", dry_run_response(result), request)
 
 
-@router.post("/api/cli/v1/skills/{namespace}/publish")
-@router.post("/api/v1/skills/{namespace}/publish")
-@router.post("/api/web/skills/{namespace}/publish")
+@router.post(
+    "/api/cli/v1/skills/{namespace}/publish",
+    dependencies=[Depends(rate_limit("publish", authenticated=10, anonymous=0))],
+)
+@router.post(
+    "/api/v1/skills/{namespace}/publish",
+    dependencies=[Depends(rate_limit("publish", authenticated=10, anonymous=0))],
+)
+@router.post(
+    "/api/web/skills/{namespace}/publish",
+    dependencies=[Depends(rate_limit("publish", authenticated=10, anonymous=0))],
+)
 async def publish_cli_skill(
     request: Request,
     namespace: str,
     file: UploadFile = File(...),
     visibility: str | None = Form(default=None),
+    reject_existing_version: bool = Form(default=False, alias="rejectExistingVersion"),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
@@ -388,16 +413,33 @@ async def publish_cli_skill(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="error.skill.publish.package.invalid") from exc
 
-    dry_run, _, resolved_visibility = await publish_entries(request, namespace, entries, mock_user_id, authorization, visibility)
+    dry_run, result, resolved_visibility = await publish_entries(
+        request,
+        namespace,
+        entries,
+        mock_user_id,
+        authorization,
+        visibility,
+        reject_existing_version=reject_existing_version,
+    )
 
     return ok(
         "response.success.published",
-        publish_response(namespace, dry_run.resolved_slug, dry_run.resolved_version, resolved_visibility),
+        publish_response(
+            namespace,
+            dry_run.resolved_slug,
+            dry_run.resolved_version,
+            resolved_visibility,
+            result.version_status,
+        ),
         request,
     )
 
 
-@router.post("/api/v1/publish")
+@router.post(
+    "/api/v1/publish",
+    dependencies=[Depends(rate_limit("publish", authenticated=60, anonymous=20))],
+)
 async def publish_legacy_skill(
     request: Request,
     file: UploadFile = File(...),
@@ -425,7 +467,10 @@ async def publish_legacy_skill(
     return compat_publish_response(result)
 
 
-@router.post("/api/v1/skills")
+@router.post(
+    "/api/v1/skills",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=20))],
+)
 async def publish_clawhub_root_skill(
     request: Request,
     payload: str = Form(...),

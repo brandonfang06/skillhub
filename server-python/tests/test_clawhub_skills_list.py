@@ -7,6 +7,7 @@ def portal_search_response() -> dict[str, object]:
     return {
         "items": [
             {
+                "id": 31,
                 "slug": "demo",
                 "displayName": "Demo Skill",
                 "summary": "Demo summary",
@@ -98,6 +99,29 @@ def test_clawhub_skills_list_route_normalizes_invalid_pagination() -> None:
     assert seen[0]["size"] == 25
     assert seen[0]["sort"] == "newest"
     assert seen[0]["current_user_id"] is None
+
+
+def test_clawhub_skills_list_includes_batched_labels_only_on_request() -> None:
+    app = create_app()
+    app.state.clawhub_skills_list_reader = lambda **kwargs: portal_search_response()
+    app.state.skill_label_projection_reader = lambda **kwargs: {
+        31: [
+            {
+                "slug": "featured",
+                "type": "GENERAL",
+                "displayName": "Featured",
+            }
+        ]
+    }
+    client = TestClient(app)
+
+    default_response = client.get("/api/v1/skills")
+    included_response = client.get("/api/v1/skills?include=labels")
+
+    assert "labels" not in default_response.json()["items"][0]
+    assert included_response.json()["items"][0]["labels"] == [
+        {"slug": "featured", "type": "GENERAL", "displayName": "Featured"}
+    ]
 
 
 def test_clawhub_skills_list_post_is_owned_by_python_publish_router() -> None:

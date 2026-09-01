@@ -23,6 +23,12 @@ class FakeScalarResult:
     def scalar_one_or_none(self) -> Any:
         return self.value
 
+    def mappings(self) -> "FakeScalarResult":
+        return self
+
+    def one_or_none(self) -> Any:
+        return self.value
+
 
 class FakeTransaction:
     def __init__(self, connection: "FakeSubscriptionConnection") -> None:
@@ -58,9 +64,26 @@ class FakeEngine:
 
 
 class FakeSubscriptionConnection:
-    def __init__(self, *, skill_exists: bool = True, already_subscribed: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        skill_exists: bool = True,
+        already_subscribed: bool = False,
+        visibility: str = "PUBLIC",
+        hidden: bool = False,
+        namespace_status: str = "ACTIVE",
+        account_status: str | None = "ACTIVE",
+        role: str | None = None,
+        published_version_id: int | None = 42,
+    ) -> None:
         self.skill_exists = skill_exists
         self.subscribed = already_subscribed
+        self.visibility = visibility
+        self.hidden = hidden
+        self.namespace_status = namespace_status
+        self.account_status = account_status
+        self.role = role
+        self.published_version_id = published_version_id
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
 
@@ -70,6 +93,23 @@ class FakeSubscriptionConnection:
         self.statements.append(sql)
         self.params.append(values)
 
+        if "FROM skill s" in sql and "JOIN namespace n" in sql:
+            if not self.skill_exists:
+                return FakeScalarResult(None)
+            return FakeScalarResult(
+                {
+                    "skill_id": 10,
+                    "namespace_id": 5,
+                    "owner_id": "owner",
+                    "visibility": self.visibility,
+                    "hidden": self.hidden,
+                    "latest_version_id": 43,
+                    "published_version_id": self.published_version_id,
+                    "namespace_status": self.namespace_status,
+                    "account_status": self.account_status,
+                    "namespace_role": self.role,
+                }
+            )
         if "SELECT 1" in sql and "FROM skill_subscription" in sql:
             return FakeScalarResult(1 if self.subscribed else None)
         if "SELECT 1" in sql and "FROM skill" in sql:
@@ -125,6 +165,17 @@ async def test_subscribe_skill_creates_relationship_and_increments_count_idempot
 
 
 @pytest.mark.anyio
+async def test_public_skill_without_published_version_cannot_be_subscribed() -> None:
+    connection = FakeSubscriptionConnection(published_version_id=None)
+
+    with pytest.raises(SkillSubscriptionError) as exc_info:
+        await subscribe_skill(FakeEngine(connection), subscription_input())
+
+    assert exc_info.value.status_code == 403
+    assert connection.subscribed is False
+
+
+@pytest.mark.anyio
 async def test_unsubscribe_skill_deletes_relationship_and_decrements_count_idempotently() -> None:
     connection = FakeSubscriptionConnection(already_subscribed=True)
 
@@ -156,6 +207,43 @@ async def test_skill_subscription_raises_not_found_before_mutation() -> None:
 
     assert exc_info.value.status_code == 404
     assert not any("INSERT INTO skill_subscription" in sql for sql in connection.statements)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("visibility", "hidden", "namespace_status", "account_status", "role"),
+    [
+        ("NAMESPACE_ONLY", False, "ACTIVE", "ACTIVE", None),
+        ("PRIVATE", False, "ACTIVE", "ACTIVE", "MEMBER"),
+        ("PUBLIC", True, "ACTIVE", "ACTIVE", "MEMBER"),
+        ("PUBLIC", False, "ARCHIVED", "ACTIVE", None),
+        ("PUBLIC", False, "ACTIVE", "DISABLED", None),
+    ],
+)
+async def test_subscribe_rechecks_current_metadata_access_before_mutation(
+    visibility: str,
+    hidden: bool,
+    namespace_status: str,
+    account_status: str,
+    role: str | None,
+) -> None:
+    connection = FakeSubscriptionConnection(
+        visibility=visibility,
+        hidden=hidden,
+        namespace_status=namespace_status,
+        account_status=account_status,
+        role=role,
+    )
+
+    with pytest.raises(
+        SkillSubscriptionError,
+        match="error.skill.subscription.noPermission",
+    ) as exc_info:
+        await subscribe_skill(FakeEngine(connection), subscription_input())
+
+    assert exc_info.value.status_code == 403
+    assert not any("INSERT INTO skill_subscription" in sql for sql in connection.statements)
+    assert not any("subscription_count = subscription_count + 1" in sql for sql in connection.statements)
 
 
 def auth_user(user_id: str = "user-1") -> dict[str, object]:

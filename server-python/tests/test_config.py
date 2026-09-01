@@ -422,3 +422,30 @@ def test_scanner_timeout_settings_fallback_to_defaults(monkeypatch):
 
     assert settings.scanner_connect_timeout_ms == 5000
     assert settings.scanner_read_timeout_ms == 300000
+
+
+def test_rate_limiting_is_disabled_by_default_for_python_cutover_compatibility(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_RATELIMIT_ENABLED", raising=False)
+    monkeypatch.delenv(
+        "SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED", raising=False
+    )
+
+    settings = get_settings()
+
+    assert settings.rate_limit_enabled is False
+    assert settings.rate_limit_overrides == {}
+
+
+def test_rate_limit_category_environment_overrides_only_explicit_fields(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_RATELIMIT_ENABLED", "true")
+    monkeypatch.setenv(
+        "SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED", "120"
+    )
+    monkeypatch.setenv("SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_WINDOW_SECONDS", "30")
+
+    settings = get_settings()
+
+    assert settings.rate_limit_enabled is True
+    assert settings.rate_limit_overrides["search"].authenticated == 120
+    assert settings.rate_limit_overrides["search"].anonymous is None
+    assert settings.rate_limit_overrides["search"].window_seconds == 30

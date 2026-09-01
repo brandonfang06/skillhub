@@ -358,7 +358,7 @@ def test_rerelease_routes_return_java_envelopes(tmp_path: Path) -> None:
     assert seen[0].confirm_warnings is True
 
 
-def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
+def test_rerelease_route_leaves_scanner_delivery_to_durable_outbox(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -405,9 +405,10 @@ def test_rerelease_route_supplies_scan_task_publish_writer_when_scanner_enabled(
         "scanner_enabled": True,
         "scan_mode": "upload",
         "allowed_extensions": {".md", ".py", ".dot"},
-        "publish_writer_supplied": True,
+        "publish_writer_supplied": False,
         "notification_fanout_supplied": True,
     }
+    assert not hasattr(app.state, "redis_client")
 
 
 def test_rerelease_routes_require_mock_user() -> None:

@@ -339,6 +339,15 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
         ),
         {"version_id": version.version_id},
     )
+    await connection.execute(
+        text(
+            """
+            DELETE FROM scan_task_outbox
+            WHERE version_id = :version_id
+            """
+        ),
+        {"version_id": version.version_id},
+    )
 
     file_rows = (
         await connection.execute(

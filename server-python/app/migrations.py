@@ -11,8 +11,8 @@ import asyncpg
 from app.core.config import get_settings
 
 
-BASELINE_FLYWAY_VERSION = 43
-BASELINE_REVISION = "skillhub_flyway_v43_baseline"
+BASELINE_FLYWAY_VERSION = 45
+BASELINE_REVISION = "skillhub_flyway_v45_baseline"
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 LOCAL_MIGRATION_DIR = ROOT / "server-python" / "app" / "db" / "local_migration"
@@ -91,12 +91,30 @@ async def apply_existing_database_compatibility_migrations(
     connection: DatabaseConnection,
     flyway_dir: Path = DEFAULT_FLYWAY_DIR,
 ) -> None:
-    if await column_exists(connection, "user_account", "system_account"):
-        return
+    migrations_by_version = {
+        item.version: item for item in flyway_migration_files(flyway_dir)
+    }
 
-    migration = next((item for item in flyway_migration_files(flyway_dir) if item.version == 43), None)
+    if not await column_exists(connection, "user_account", "system_account"):
+        await execute_required_migration(connection, migrations_by_version, 43)
+
+    if not await table_exists(connection, "scan_task_outbox"):
+        await execute_required_migration(connection, migrations_by_version, 44)
+
+    if not await column_exists(connection, "scan_task_outbox", "metadata"):
+        await execute_required_migration(connection, migrations_by_version, 45)
+
+
+async def execute_required_migration(
+    connection: DatabaseConnection,
+    migrations_by_version: dict[int, FlywayMigration],
+    version: int,
+) -> None:
+    migration = migrations_by_version.get(version)
     if migration is None:
-        raise RuntimeError("Cannot upgrade existing database: missing Flyway V43")
+        raise RuntimeError(
+            f"Cannot upgrade existing database: missing Flyway V{version}"
+        )
     await connection.execute(migration.path.read_text(encoding="utf-8"))
 
 

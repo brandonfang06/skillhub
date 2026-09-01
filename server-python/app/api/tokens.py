@@ -81,27 +81,27 @@ async def list_tokens_route(
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
-@router.delete("/api/v1/tokens/{token_id}", status_code=204)
+@router.delete("/api/v1/tokens/{id}", status_code=204)
 async def revoke_token_route(
     request: Request,
-    token_id: int,
+    id: int,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
     user = await _current_user(request, x_mock_user_id, authorization)
     revoker = getattr(request.app.state, "token_revoker", None)
     await _resolve_result(
-        revoker(token_id, user)
+        revoker(id, user)
         if revoker is not None
-        else revoke_api_token(request.app.state.db_engine, user_id=_user_id(user), token_id=token_id)
+        else revoke_api_token(request.app.state.db_engine, user_id=_user_id(user), token_id=id)
     )
     return Response(status_code=204)
 
 
-@router.put("/api/v1/tokens/{token_id}/expiration")
+@router.put("/api/v1/tokens/{id}/expiration")
 async def update_token_expiration_route(
     request: Request,
-    token_id: int,
+    id: int,
     payload: dict[str, Any],
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
@@ -110,12 +110,12 @@ async def update_token_expiration_route(
     updater = getattr(request.app.state, "token_expiration_updater", None)
     try:
         data = await _resolve_result(
-            updater(token_id, payload, user)
+            updater(id, payload, user)
             if updater is not None
             else update_api_token_expiration(
                 request.app.state.db_engine,
                 user_id=_user_id(user),
-                token_id=token_id,
+                token_id=id,
                 expires_at=payload.get("expiresAt"),
             )
         )

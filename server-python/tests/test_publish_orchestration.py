@@ -147,17 +147,6 @@ class FakeEngine:
         return FakeTransactionContext(self.connections.pop(0), self)
 
 
-class FakeScanTaskPublisher:
-    def __init__(self, transaction_events: list[str] | None = None) -> None:
-        self.tasks: list[Any] = []
-        self.transaction_events = transaction_events
-
-    async def publish_scan_task(self, task: Any) -> None:
-        if self.transaction_events is not None:
-            self.transaction_events.append("publish")
-        self.tasks.append(task)
-
-
 class FakeNotificationFanout:
     def __init__(self) -> None:
         self.published: list[tuple[str, dict[str, Any]]] = []
@@ -489,7 +478,7 @@ async def test_execute_publish_write_persists_review_notification_without_fanout
 
 
 @pytest.mark.anyio
-async def test_execute_publish_write_publishes_scan_task_after_commit(tmp_path) -> None:
+async def test_execute_publish_write_leaves_scan_delivery_to_durable_outbox(tmp_path) -> None:
     connection = FakeConnection(
         [
             FakeResult(row=None),
@@ -505,7 +494,6 @@ async def test_execute_publish_write_publishes_scan_task_after_commit(tmp_path) 
         ]
     )
     engine = FakeEngine([connection])
-    publisher = FakeScanTaskPublisher(engine.transaction_events)
 
     result = await execute_publish_write(
         engine,
@@ -532,14 +520,14 @@ async def test_execute_publish_write_publishes_scan_task_after_commit(tmp_path) 
             task_id="scan-task-1",
             now=datetime(2026, 6, 8, 18, 19, 20, tzinfo=UTC),
         ),
-        scan_task_publisher=publisher,
     )
 
     assert result.side_effects.scan_task is not None
-    assert publisher.tasks == [result.side_effects.scan_task]
-    assert publisher.tasks[0].bundle_key == "packages/7/42/bundle.zip"
-    assert publisher.tasks[0].skill_path is None
-    assert engine.transaction_events == ["commit", "publish"]
+    assert any(
+        "INSERT INTO scan_task_outbox" in statement
+        for statement in connection.statements
+    )
+    assert engine.transaction_events == ["commit"]
 
 
 @pytest.mark.anyio
@@ -559,7 +547,6 @@ async def test_execute_publish_write_does_not_publish_scan_task_on_rollback(tmp_
         ]
     )
     engine = FakeEngine([connection])
-    publisher = FakeScanTaskPublisher(engine.transaction_events)
 
     async def fail_after_publish(
         _connection: Any, _skill_id: int, _version_id: int
@@ -575,16 +562,14 @@ async def test_execute_publish_write_does_not_publish_scan_task_on_rollback(tmp_
                 scan_mode="upload",
                 task_id="scan-task-rollback",
             ),
-            scan_task_publisher=publisher,
             after_publish=fail_after_publish,
         )
 
-    assert publisher.tasks == []
     assert engine.transaction_events == ["rollback"]
 
 
 @pytest.mark.anyio
-async def test_execute_publish_write_requires_scan_task_publisher_before_transaction(
+async def test_execute_publish_write_commits_scan_outbox_without_live_redis_publisher(
     tmp_path,
 ) -> None:
     connection = FakeConnection(
@@ -603,151 +588,27 @@ async def test_execute_publish_write_requires_scan_task_publisher_before_transac
     )
     engine = FakeEngine([connection])
 
-    with pytest.raises(
-        ValueError,
-        match="Scan task publisher is required when scanner is enabled",
-    ):
-        await execute_publish_write(
-            engine,
-            replace(
-                publish_input(str(tmp_path)),
-                scanner_enabled=True,
-                scan_mode="upload",
-            ),
-        )
-
-    assert engine.entered_connections == []
-    assert engine.transaction_events == []
-
-
-@pytest.mark.anyio
-async def test_execute_publish_write_marks_scan_failed_when_task_publish_raises(
-    tmp_path,
-) -> None:
-    write_connection = FakeConnection(
-        [
-            FakeResult(row=None),
-            FakeResult(row={"id": 7, "status": "ACTIVE"}),
-            FakeResult(scalar=42),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(scalar=900),
-            FakeResult(scalar=801),
-            FakeResult(),
-        ]
-    )
-    compensation_connection = FakeConnection(
-        [
-            FakeResult(row={"id": 42}),
-            FakeResult(row={"id": 801}),
-            FakeResult(),
-        ]
-    )
-    engine = FakeEngine([write_connection, compensation_connection])
-    publish_error = RuntimeError("uncertain Redis XADD failure")
-
-    class UncertainFailingPublisher:
-        def __init__(self) -> None:
-            self.tasks: list[Any] = []
-
-        async def publish_scan_task(self, task: Any) -> None:
-            self.tasks.append(task)
-            engine.transaction_events.append("publish")
-            raise publish_error
-
-    publisher = UncertainFailingPublisher()
-
-    with pytest.raises(RuntimeError) as exc_info:
-        await execute_publish_write(
-            engine,
-            replace(
-                publish_input(str(tmp_path)),
-                scanner_enabled=True,
-                scan_mode="upload",
-                task_id="scan-task-uncertain",
-            ),
-            scan_task_publisher=publisher,
-        )
-
-    assert exc_info.value is publish_error
-    assert [task.task_id for task in publisher.tasks] == ["scan-task-uncertain"]
-    assert engine.transaction_events == ["commit", "publish", "commit"]
-    transition_index = next(
-        index
-        for index, statement in enumerate(compensation_connection.statements)
-        if "UPDATE skill_version" in statement and "SCAN_FAILED" in statement
-    )
-    execution_index = next(
-        index
-        for index, statement in enumerate(compensation_connection.statements)
-        if "INSERT INTO local_security_scan_execution" in statement
-    )
-    assert transition_index < execution_index
-    assert compensation_connection.params[execution_index]["failure_code"] == (
-        "SCAN_TASK_PUBLISH_FAILED"
+    result = await execute_publish_write(
+        engine,
+        replace(
+            publish_input(str(tmp_path)),
+            scanner_enabled=True,
+            scan_mode="upload",
+            task_id="scan-task-durable",
+        ),
     )
 
-
-@pytest.mark.anyio
-async def test_execute_publish_write_preserves_publish_error_when_compensation_fails(
-    tmp_path,
-) -> None:
-    write_connection = FakeConnection(
-        [
-            FakeResult(row=None),
-            FakeResult(row={"id": 7, "status": "ACTIVE"}),
-            FakeResult(scalar=42),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(),
-            FakeResult(scalar=900),
-            FakeResult(scalar=801),
-            FakeResult(),
-        ]
-    )
-
-    class FailingCompensationConnection(FakeConnection):
-        async def execute(
-            self,
-            statement: Any,
-            params: dict[str, Any] | None = None,
-        ) -> FakeResult:
-            raise OSError("compensation database unavailable")
-
-    engine = FakeEngine(
-        [write_connection, FailingCompensationConnection([])]
-    )
-    publish_error = RuntimeError("Redis unavailable")
-
-    class FailingPublisher:
-        async def publish_scan_task(self, task: Any) -> None:
-            engine.transaction_events.append("publish")
-            raise publish_error
-
-    with pytest.raises(RuntimeError) as exc_info:
-        await execute_publish_write(
-            engine,
-            replace(
-                publish_input(str(tmp_path)),
-                scanner_enabled=True,
-                scan_mode="upload",
-            ),
-            scan_task_publisher=FailingPublisher(),
-        )
-
-    assert exc_info.value is publish_error
-    assert engine.transaction_events == ["commit", "publish", "rollback"]
+    assert result.side_effects.scan_task is not None
+    assert result.side_effects.scan_task.task_id == "scan-task-durable"
     assert any(
-        "compensation database unavailable" in note
-        for note in getattr(exc_info.value, "__notes__", [])
+        "INSERT INTO scan_task_outbox" in statement
+        for statement in connection.statements
     )
+    assert engine.transaction_events == ["commit"]
 
 
 @pytest.mark.anyio
-async def test_execute_publish_write_compensates_replacement_cleanup_before_redis_error(
+async def test_execute_publish_write_records_replacement_cleanup_with_scan_outbox(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -760,6 +621,7 @@ async def test_execute_publish_write_compensates_replacement_cleanup_before_redi
 
     write_connection = FakeConnection(
         [
+            FakeResult(),
             FakeResult(),
             FakeResult(),
             FakeResult(rows=[{"storage_key": "skills/7/41/SKILL.md"}]),
@@ -777,27 +639,19 @@ async def test_execute_publish_write_compensates_replacement_cleanup_before_redi
             FakeResult(),
         ]
     )
-    scan_compensation_connection = FakeConnection(
+    replacement_compensation_connection = FakeConnection(
         [
             FakeResult(row={"id": 42}),
             FakeResult(row={"id": 801}),
             FakeResult(),
         ]
     )
-    replacement_compensation_connection = FakeConnection([])
     engine = FakeEngine(
         [
             write_connection,
-            scan_compensation_connection,
             replacement_compensation_connection,
         ]
     )
-    publish_error = RuntimeError("Redis enqueue failed")
-
-    class FailingPublisher:
-        async def publish_scan_task(self, task: Any) -> None:
-            engine.transaction_events.append("publish")
-            raise publish_error
 
     def fail_storage_delete(
         _storage_base_path: str,
@@ -828,20 +682,13 @@ async def test_execute_publish_write_compensates_replacement_cleanup_before_redi
         )
     )
 
-    with pytest.raises(RuntimeError) as exc_info:
-        await execute_publish_write(
-            engine,
-            request,
-            scan_task_publisher=FailingPublisher(),
-        )
+    result = await execute_publish_write(
+        engine,
+        request,
+    )
 
-    assert exc_info.value is publish_error
-    assert engine.transaction_events == [
-        "commit",
-        "publish",
-        "commit",
-        "commit",
-    ]
+    assert result.replacement_compensation_recorded is True
+    assert engine.transaction_events == ["commit", "commit"]
     compensation_index = next(
         index
         for index, statement in enumerate(
@@ -888,6 +735,7 @@ async def test_execute_publish_write_deletes_replacement_storage_after_commit(tm
 
     write_connection = FakeConnection(
         [
+            FakeResult(),
             FakeResult(),
             FakeResult(),
             FakeResult(rows=[{"storage_key": "skills/7/41/SKILL.md"}]),

@@ -25,3 +25,10 @@ uv run python -m app.migrations status
 `upgrade` initializes a fresh database from the bundled SQL baseline in
 `app/db/migration` and stamps the Alembic baseline revision. `stamp` marks an
 existing baseline schema without replaying legacy SQL.
+
+Back up PostgreSQL and package object storage before every production upgrade.
+The v0.2.18 baseline adds V44/V45 `scan_task_outbox` migrations. After upgrade,
+run `status`, confirm existing skill/version rows remain intact, and verify a
+scanner-enabled publish reaches `scan_task_outbox.status = 'SENT'` before the
+consumer completes the task. Organization-only schema continues under
+`app/db/local_migration`; do not reuse upstream `V*` numbers for local tables.

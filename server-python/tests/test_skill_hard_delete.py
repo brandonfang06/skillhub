@@ -91,6 +91,7 @@ def test_hard_delete_skill_deletes_java_artifacts_and_storage(tmp_path: Path) ->
     assert any("UPDATE skill SET latest_version_id = NULL" in sql and "updated_by = :actor_user_id" in sql for sql in ordered)
     assert any("DELETE FROM review_task WHERE skill_version_id = ANY" in sql for sql in ordered)
     assert any("DELETE FROM promotion_request WHERE source_skill_id = :skill_id OR target_skill_id = :skill_id" in sql for sql in ordered)
+    assert any("DELETE FROM scan_task_outbox WHERE version_id = ANY" in sql for sql in ordered)
     assert any("DELETE FROM security_audit WHERE skill_version_id = :version_id" in sql for sql in ordered)
     assert any("DELETE FROM skill_version WHERE skill_id = :skill_id" in sql for sql in ordered)
     assert any("DELETE FROM skill WHERE id = :skill_id" in sql for sql in ordered)

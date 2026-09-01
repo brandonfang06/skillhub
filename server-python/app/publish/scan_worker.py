@@ -207,6 +207,30 @@ async def acquire_scan_task_lease(connection: Any, version_id: int) -> None:
         raise ScanTaskAlreadyFinalized(f"SkillVersion is no longer scanning: {version_id}")
 
 
+async def scan_task_already_processed(
+    connection: Any,
+    task_id: str | None,
+) -> bool:
+    if task_id is None:
+        return False
+    row = (
+        await connection.execute(
+            text(
+                """
+                SELECT id
+                FROM security_audit
+                WHERE task_id = :task_id
+                  AND scanned_at IS NOT NULL
+                  AND deleted_at IS NULL
+                LIMIT 1
+                """
+            ),
+            {"task_id": task_id},
+        )
+    ).mappings().first()
+    return row is not None
+
+
 async def process_scan_task(
     connection: Any,
     task: SecurityScanTask,
@@ -218,6 +242,10 @@ async def process_scan_task(
     mark_failed_on_error: bool = True,
 ) -> AppliedSecurityScanResult:
     started = time.perf_counter()
+    if await scan_task_already_processed(connection, task.task_id):
+        raise ScanTaskAlreadyFinalized(
+            f"Scan task was already processed: taskId={task.task_id}"
+        )
     await acquire_scan_task_lease(connection, task.version_id)
     resolved: ResolvedScanPath | None = None
     try:

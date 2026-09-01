@@ -5,7 +5,7 @@ from inspect import isawaitable
 from typing import Any
 from urllib.parse import quote_plus, unquote, urlencode, urlsplit
 
-from fastapi import APIRouter, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
 
 from app.auth.context import (
@@ -28,6 +28,7 @@ from app.auth.session import (
     validate_session_cookie_candidates,
 )
 from app.core.public_url import is_safe_app_path, public_base_path, to_public_path
+from app.core.rate_limit import rate_limit
 from app.core.response import ok
 
 router = APIRouter()
@@ -252,7 +253,10 @@ async def logout(request: Request, response: Response) -> None:
     await clear_session(request, response)
 
 
-@router.get("/api/v1/whoami")
+@router.get(
+    "/api/v1/whoami",
+    dependencies=[Depends(rate_limit("whoami", authenticated=60, anonymous=20))],
+)
 async def get_clawhub_whoami(
     request: Request,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
@@ -357,7 +361,18 @@ async def oauth_callback(
     return redirect
 
 
-@router.post("/api/v1/auth/direct/login")
+@router.post(
+    "/api/v1/auth/direct/login",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-direct-login",
+                authenticated=20,
+                anonymous=10,
+            )
+        )
+    ],
+)
 async def direct_login(request: Request, response: Response, payload: dict[str, Any]) -> dict[str, object]:
     validate_session_cookie_candidates(request)
     if not _direct_enabled(request):
@@ -387,7 +402,18 @@ async def direct_login(request: Request, response: Response, payload: dict[str, 
     return ok("response.success.read", data, request)
 
 
-@router.post("/api/v1/auth/session/bootstrap")
+@router.post(
+    "/api/v1/auth/session/bootstrap",
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth-session-bootstrap",
+                authenticated=30,
+                anonymous=15,
+            )
+        )
+    ],
+)
 async def session_bootstrap(request: Request, payload: dict[str, Any]) -> dict[str, object]:
     if not _session_bootstrap_enabled(request):
         raise HTTPException(status_code=403, detail="error.auth.sessionBootstrap.disabled")

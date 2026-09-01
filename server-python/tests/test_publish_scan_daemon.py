@@ -7,7 +7,12 @@ import pytest
 
 from app.core.config import get_settings
 from app.publish.scan_consumer import ScanConsumerResult
-from app.publish.scan_daemon import ScanConsumerDaemon, create_scan_consumer_daemon
+from app.publish.scan_daemon import (
+    ScanConsumerDaemon,
+    ScanOutboxDaemon,
+    create_scan_consumer_daemon,
+    create_scan_outbox_daemon,
+)
 
 
 class FakeEngine:
@@ -67,6 +72,19 @@ class FakeRedisClient:
     pass
 
 
+class FakeOutboxDispatcher:
+    def __init__(self) -> None:
+        self.dispatch_calls = 0
+        self.cleanup_calls: list[int] = []
+
+    async def dispatch_once(self) -> None:
+        self.dispatch_calls += 1
+
+    async def cleanup_sent(self, *, retention_days: int) -> int:
+        self.cleanup_calls.append(retention_days)
+        return 2
+
+
 def test_scan_consumer_settings_are_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in [
         "SKILLHUB_SCAN_CONSUMER_ENABLED",
@@ -108,6 +126,72 @@ def test_scan_consumer_settings_can_be_overridden(monkeypatch: pytest.MonkeyPatc
     assert settings.scan_consumer_block_ms == 250
     assert settings.scan_consumer_reclaim_min_idle_ms == 5000
     assert settings.scan_consumer_reclaim_count == 7
+
+
+def test_scan_outbox_settings_use_upstream_safe_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name in [
+        "SKILLHUB_SECURITY_OUTBOX_BATCH_SIZE",
+        "SKILLHUB_SECURITY_OUTBOX_MAX_ATTEMPTS",
+        "SKILLHUB_SECURITY_OUTBOX_LEASE",
+        "SKILLHUB_SECURITY_OUTBOX_MAX_BACKOFF",
+        "SKILLHUB_SECURITY_OUTBOX_DISPATCH_INTERVAL_MS",
+        "SKILLHUB_SECURITY_OUTBOX_SENT_RETENTION_DAYS",
+        "SKILLHUB_SECURITY_OUTBOX_CLEANUP_INTERVAL_SECONDS",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings()
+
+    assert settings.scan_outbox_batch_size == 50
+    assert settings.scan_outbox_max_attempts == 10
+    assert settings.scan_outbox_lease_seconds == 120
+    assert settings.scan_outbox_max_backoff_seconds == 300
+    assert settings.scan_outbox_dispatch_interval_ms == 5000
+    assert settings.scan_outbox_sent_retention_days == 7
+    assert settings.scan_outbox_cleanup_interval_seconds == 86400
+
+
+def test_create_scan_outbox_daemon_follows_scanner_enabled_setting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "false")
+    disabled = create_scan_outbox_daemon(
+        get_settings(), FakeEngine(), FakeRedisClient()
+    )
+
+    monkeypatch.setenv("SKILLHUB_SECURITY_SCANNER_ENABLED", "true")
+    monkeypatch.setenv("SKILLHUB_SECURITY_OUTBOX_BATCH_SIZE", "7")
+    monkeypatch.setenv("SKILLHUB_SECURITY_OUTBOX_LEASE", "PT45S")
+    enabled = create_scan_outbox_daemon(
+        get_settings(), FakeEngine(), FakeRedisClient()
+    )
+
+    assert disabled is None
+    assert enabled is not None
+    assert enabled.dispatcher.batch_size == 7
+    assert enabled.dispatcher.lease_seconds == 45
+
+
+@pytest.mark.anyio
+async def test_scan_outbox_daemon_dispatches_and_runs_bounded_cleanup() -> None:
+    dispatcher = FakeOutboxDispatcher()
+    daemon = ScanOutboxDaemon(
+        dispatcher=dispatcher,
+        dispatch_interval_ms=1,
+        sent_retention_days=7,
+        cleanup_interval_seconds=3600,
+        error_sleep_seconds=0.001,
+    )
+
+    task = asyncio.create_task(daemon.run())
+    await asyncio.sleep(0.01)
+    daemon.stop()
+    await task
+
+    assert dispatcher.dispatch_calls >= 1
+    assert dispatcher.cleanup_calls == [7]
 
 
 @pytest.mark.anyio

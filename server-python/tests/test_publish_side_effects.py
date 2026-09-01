@@ -203,13 +203,29 @@ async def test_apply_side_effects_scanner_enabled_adds_audit_task_and_scanning_s
     assert result.scan_task is not None
     assert result.scan_task.bundle_key == "packages/101/202/bundle.zip"
     assert any("INSERT INTO security_audit" in statement for statement in connection.statements)
+    assert any("INSERT INTO scan_task_outbox" in statement for statement in connection.statements)
     assert any("UPDATE skill_version" in statement and "SCANNING" in statement for statement in connection.statements)
     audit_params = next(params for statement, params in zip(connection.statements, connection.params) if "INSERT INTO security_audit" in statement)
+    outbox_params = next(
+        params
+        for statement, params in zip(connection.statements, connection.params)
+        if "INSERT INTO scan_task_outbox" in statement
+    )
+    assert audit_params["task_id"] == "scan-task-1"
     assert audit_params["verdict"] == "SUSPICIOUS"
     assert audit_params["is_safe"] is False
     assert audit_params["findings_count"] == 0
     assert isinstance(audit_params["findings"], str)
     assert json.loads(audit_params["findings"]) == []
+    assert outbox_params == {
+        "task_id": "scan-task-1",
+        "version_id": 202,
+        "skill_path": None,
+        "bundle_key": "packages/101/202/bundle.zip",
+        "publisher_id": "local-user",
+        "metadata": '{"scannerType":"skill-scanner","skillhub.request_id":"req-123"}',
+        "next_attempt_at": datetime(2026, 6, 8, 14, 15, 16, tzinfo=UTC),
+    }
 
 
 @pytest.mark.anyio

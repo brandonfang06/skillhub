@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
-
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -120,6 +120,18 @@ def test_python_backend_container_has_schema_migration_startup() -> None:
     assert "uv run" not in dockerfile
 
 
+def test_python_backend_image_preserves_non_root_storage_identity_and_riscv_build_dependencies() -> None:
+    dockerfile = read("server-python/Dockerfile")
+
+    assert "build-essential" in dockerfile
+    assert "cargo" in dockerfile
+    assert "groupadd --system --gid 101 app" in dockerfile
+    assert "useradd --system --uid 100 --gid app --create-home app" in dockerfile
+    assert "mkdir -p /var/lib/skillhub/storage" in dockerfile
+    assert "chown -R app:app /workspace/server-python /var/lib/skillhub/storage" in dockerfile
+    assert "\nUSER app\n" in dockerfile
+
+
 def test_python_backend_declares_http_client_as_a_runtime_dependency() -> None:
     project = tomllib.loads(read("server-python/pyproject.toml"))
     runtime_dependencies = project["project"]["dependencies"]
@@ -127,6 +139,14 @@ def test_python_backend_declares_http_client_as_a_runtime_dependency() -> None:
 
     assert any(dependency.startswith("httpx") for dependency in runtime_dependencies)
     assert not any(dependency.startswith("httpx") for dependency in dev_dependencies)
+
+
+def test_generated_api_command_targets_fastapi_openapi_document() -> None:
+    package = json.loads(read("web/package.json"))
+    command = package["scripts"]["generate-api"]
+
+    assert "http://localhost:8080/openapi.json" in command
+    assert "/v3/api-docs" not in command
 
 
 def test_staging_smoke_test_targets_python_health_endpoints() -> None:

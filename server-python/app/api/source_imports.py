@@ -17,11 +17,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.auth.service_tokens import ServiceTokenPrincipal, resolve_service_token_or_401
 from app.core.config import get_settings
-from app.core.redis import create_redis_client
 from app.core.response import ok
 from app.object_storage import object_storage_for_settings
 from app.publish.package import extract_package
-from app.publish.scanner_handoff import RedisScanTaskPublisher
 from app.source_import.contracts import SourceIdentity, SourceServiceActor
 from app.source_import.service import (
     EnsureSourceNamespaceInput,
@@ -398,21 +396,11 @@ async def submit_source_skill_route(
         if submitter is not submit_source_skill
         else object_storage_for_settings(settings)
     )
-    scan_task_publisher = None
-    if submitter is submit_source_skill and settings.security_scanner_enabled:
-        redis_client = getattr(request.app.state, "redis_client", None)
-        if redis_client is None:
-            redis_client = create_redis_client(settings)
-            request.app.state.redis_client = redis_client
-        scan_task_publisher = RedisScanTaskPublisher(
-            redis_client, settings.scan_stream_key
-        )
     runtime = SourceSkillSubmissionRuntime(
         storage_base_path=settings.storage_base_path,
         storage=storage,
         scanner_enabled=settings.security_scanner_enabled,
         scan_mode=settings.security_scanner_mode,
-        scan_task_publisher=scan_task_publisher,
         notification_fanout=getattr(request.app.state, "notification_fanout", None),
     )
     try:

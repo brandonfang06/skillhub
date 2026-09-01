@@ -248,6 +248,10 @@ def is_os_metadata_path(path: str) -> bool:
     return normalized.startswith("__MACOSX/") or basename == ".DS_Store" or basename.startswith("._")
 
 
+def is_directory_entry_path(path: str) -> bool:
+    return path.endswith(("/", "\\"))
+
+
 def strip_single_root_directory(entries: list[PackageEntry]) -> list[PackageEntry]:
     if not entries:
         return entries
@@ -279,7 +283,11 @@ def extract_package(zip_bytes: bytes, limits: PackageLimits | None = None) -> li
     try:
         with ZipFile(BytesIO(zip_bytes)) as archive:
             for info in archive.infolist():
-                if info.is_dir() or is_os_metadata_path(info.filename):
+                if (
+                    info.is_dir()
+                    or is_directory_entry_path(info.filename)
+                    or is_os_metadata_path(info.filename)
+                ):
                     continue
                 if len(entries) >= active_limits.max_file_count:
                     raise ValueError(f"Too many files: more than {active_limits.max_file_count}")

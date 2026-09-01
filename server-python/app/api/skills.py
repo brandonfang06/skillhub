@@ -3,12 +3,25 @@ from inspect import isawaitable
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from app.auth.context import resolve_current_user_or_401
+from app.auth.policy import require_api_token_scope
 from app.core.response import ok
+from app.core.rate_limit import rate_limit
 from app.download_analytics.repository import DownloadEventContext, DownloadSource
+from app.skills.label_projection import (
+    SkillIncludeError,
+    includes_skill_labels,
+    read_skill_label_projection,
+    requested_locale,
+)
+from app.skills.namespace_manifest import (
+    NamespaceManifestError,
+    parse_namespace_manifest_cursor,
+    read_namespace_skill_manifest,
+)
 from app.skills.read_repository import *  # noqa: F403
 
 router = APIRouter()
@@ -17,6 +30,52 @@ async def _resolve_reader_result(result: Any | Awaitable[Any]) -> Any:
     if isawaitable(result):
         return await result
     return result
+
+
+async def _with_skill_labels(
+    request: Request,
+    data: dict[str, object],
+) -> dict[str, object]:
+    items = [dict(item) for item in data.get("items", [])]  # type: ignore[arg-type]
+    skill_ids = list(
+        dict.fromkeys(
+            int(item["id"])
+            for item in items
+            if item.get("id") is not None
+        )
+    )
+    labels_by_skill: dict[int, list[dict[str, str]]] = {}
+    if skill_ids:
+        locale = requested_locale(request.headers.get("Accept-Language"))
+        reader = getattr(request.app.state, "skill_label_projection_reader", None)
+        labels_by_skill = await _resolve_reader_result(
+            reader(skill_ids=skill_ids, locale=locale)
+            if reader is not None
+            else read_skill_label_projection(
+                request.app.state.db_engine,
+                skill_ids=skill_ids,
+                locale=locale,
+            )
+        )
+
+    for item in items:
+        skill_id = item.get("id")
+        item["labels"] = (
+            list(labels_by_skill.get(int(skill_id), []))
+            if skill_id is not None
+            else []
+        )
+    return {**data, "items": items}
+
+
+def _include_labels_or_400(include: list[str]) -> bool:
+    try:
+        return includes_skill_labels(include)
+    except SkillIncludeError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{exc}:{exc.option}",
+        ) from exc
 
 
 async def _skill_read_identity(
@@ -100,7 +159,10 @@ def build_download_redirect(namespace: str, slug: str, version: str | None) -> R
     return RedirectResponse(location, status_code=302)
 
 
-@router.get("/api/v1/download")
+@router.get(
+    "/api/v1/download",
+    dependencies=[Depends(rate_limit("download", authenticated=60, anonymous=20))],
+)
 async def download_clawhub_skill_by_query(
     request: Request,
     slug: str,
@@ -116,7 +178,10 @@ async def download_clawhub_skill_by_query(
     return build_download_redirect(namespace, skill_slug, version)
 
 
-@router.get("/api/v1/download/{canonicalSlug}")
+@router.get(
+    "/api/v1/download/{canonicalSlug}",
+    dependencies=[Depends(rate_limit("download", authenticated=60, anonymous=20))],
+)
 async def download_clawhub_skill_by_path(
     canonicalSlug: str,
     version: str | None = "latest",
@@ -125,18 +190,23 @@ async def download_clawhub_skill_by_path(
     return build_download_redirect(namespace, slug, version)
 
 
-@router.get("/api/web/skills")
+@router.get(
+    "/api/web/skills",
+    dependencies=[Depends(rate_limit("search", authenticated=60, anonymous=20))],
+)
 async def search_skills(
     request: Request,
     q: str | None = None,
     namespace: str | None = None,
     label: list[str] = Query(default_factory=list),
+    include: list[str] = Query(default_factory=list),
     sort: str | None = None,
     page: str | None = None,
     size: str | None = None,
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
+    include_labels = _include_labels_or_400(include)
     normalized_labels = normalize_label_slugs(label)
     normalized_sort = normalize_search_sort(sort)
     normalized_page = parse_non_negative_int(page, 0)
@@ -169,6 +239,8 @@ async def search_skills(
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    if include_labels:
+        data = await _with_skill_labels(request, data)
     return ok("获取成功", data, request)
 
 
@@ -197,7 +269,10 @@ async def search_namespace_candidates(
     return ok("Search namespaces retrieved", data, request)
 
 
-@router.get("/api/v1/search")
+@router.get(
+    "/api/v1/search",
+    dependencies=[Depends(rate_limit("search", authenticated=60, anonymous=20))],
+)
 async def search_clawhub_skills(
     request: Request,
     q: str = "",
@@ -240,7 +315,10 @@ async def search_clawhub_skills(
     return build_clawhub_search_response(data)
 
 
-@router.get("/api/cli/v1/skills/search")
+@router.get(
+    "/api/cli/v1/skills/search",
+    dependencies=[Depends(rate_limit("search", authenticated=60, anonymous=20))],
+)
 async def search_cli_skills(
     request: Request,
     q: str | None = None,
@@ -282,7 +360,49 @@ async def search_cli_skills(
     return ok("\u83b7\u53d6\u6210\u529f", build_cli_search_response(data, normalized_limit), request)
 
 
-@router.get("/api/v1/resolve")
+@router.get(
+    "/api/cli/v1/namespaces/{namespace}/skills",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=0))],
+)
+async def list_cli_namespace_skills(
+    namespace: str,
+    request: Request,
+    cursor: str | None = None,
+    limit: int = 100,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, object]:
+    user = await resolve_current_user_or_401(request, mock_user_id, authorization)
+    require_api_token_scope(user, "skill:read")
+    try:
+        page = parse_namespace_manifest_cursor(cursor)
+        size = min(max(limit, 1), 100)
+        reader = getattr(request.app.state, "cli_namespace_manifest_reader", None)
+        data = await _resolve_reader_result(
+            reader(
+                namespace=namespace,
+                page=page,
+                size=size,
+                current_user_id=str(user["userId"]),
+            )
+            if reader is not None
+            else read_namespace_skill_manifest(
+                request.app.state.db_engine,
+                namespace=namespace,
+                page=page,
+                size=size,
+                current_user_id=str(user["userId"]),
+            )
+        )
+    except NamespaceManifestError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+@router.get(
+    "/api/v1/resolve",
+    dependencies=[Depends(rate_limit("resolve", authenticated=60, anonymous=20))],
+)
 async def resolve_clawhub_skill_by_query(
     request: Request,
     slug: str,
@@ -328,7 +448,10 @@ async def resolve_clawhub_skill_by_query(
     return build_clawhub_resolve_response(data)
 
 
-@router.get("/api/cli/v1/skills/{namespace}/{slug}/resolve")
+@router.get(
+    "/api/cli/v1/skills/{namespace}/{slug}/resolve",
+    dependencies=[Depends(rate_limit("resolve", authenticated=60, anonymous=20))],
+)
 async def resolve_cli_skill(
     request: Request,
     namespace: str,
@@ -358,7 +481,10 @@ async def resolve_cli_skill(
     return ok("\u83b7\u53d6\u6210\u529f", build_cli_resolve_response(data), request)
 
 
-@router.get("/api/v1/resolve/{canonicalSlug}")
+@router.get(
+    "/api/v1/resolve/{canonicalSlug}",
+    dependencies=[Depends(rate_limit("resolve", authenticated=60, anonymous=20))],
+)
 async def resolve_clawhub_skill_by_path(
     request: Request,
     canonicalSlug: str,
@@ -384,15 +510,20 @@ async def resolve_clawhub_skill_by_path(
     return build_clawhub_resolve_response(data)
 
 
-@router.get("/api/v1/skills")
+@router.get(
+    "/api/v1/skills",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=20))],
+)
 async def list_clawhub_skills(
     request: Request,
     page: str | None = None,
     limit: str | None = None,
     sort: str | None = None,
+    include: list[str] = Query(default_factory=list),
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, object]:
+    include_labels = _include_labels_or_400(include)
     normalized_page = parse_non_negative_int(page, 0)
     normalized_limit = parse_positive_int(limit, 25)
     normalized_sort = normalize_search_sort(sort)
@@ -424,10 +555,15 @@ async def list_clawhub_skills(
             )
     except SkillResolveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    if include_labels:
+        data = await _with_skill_labels(request, data)
     return build_clawhub_skills_list_response(data)
 
 
-@router.get("/api/v1/skills/{canonicalSlug}")
+@router.get(
+    "/api/v1/skills/{canonicalSlug}",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=20))],
+)
 async def get_clawhub_skill_detail(request: Request, canonicalSlug: str) -> dict[str, object]:
     namespace, slug = from_clawhub_canonical_slug(canonicalSlug)
     reader = getattr(request.app.state, "clawhub_skill_detail_reader", None)
@@ -447,7 +583,10 @@ def clawhub_delete_placeholder_response(mock_user_id: str | None) -> dict[str, b
     return {"ok": True}
 
 
-@router.delete("/api/v1/skills/{canonicalSlug}")
+@router.delete(
+    "/api/v1/skills/{canonicalSlug}",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=20))],
+)
 async def delete_clawhub_skill_placeholder(
     canonicalSlug: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
@@ -455,7 +594,10 @@ async def delete_clawhub_skill_placeholder(
     return clawhub_delete_placeholder_response(x_mock_user_id)
 
 
-@router.post("/api/v1/skills/{canonicalSlug}/undelete")
+@router.post(
+    "/api/v1/skills/{canonicalSlug}/undelete",
+    dependencies=[Depends(rate_limit("skills", authenticated=60, anonymous=20))],
+)
 async def undelete_clawhub_skill_placeholder(
     canonicalSlug: str,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
@@ -817,8 +959,14 @@ async def get_skill_tag_file_content(
     return Response(content=content, media_type="application/octet-stream")
 
 
-@router.get("/api/v1/skills/{namespace}/{slug}/download")
-@router.get("/api/web/skills/{namespace}/{slug}/download")
+@router.get(
+    "/api/v1/skills/{namespace}/{slug}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
+@router.get(
+    "/api/web/skills/{namespace}/{slug}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
 async def download_skill_latest(
     namespace: str,
     slug: str,
@@ -844,8 +992,14 @@ async def download_skill_latest(
     return build_download_response(result)
 
 
-@router.get("/api/v1/skills/{namespace}/{slug}/versions/{version}/download")
-@router.get("/api/web/skills/{namespace}/{slug}/versions/{version}/download")
+@router.get(
+    "/api/v1/skills/{namespace}/{slug}/versions/{version}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
+@router.get(
+    "/api/web/skills/{namespace}/{slug}/versions/{version}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
 async def download_skill_version(
     namespace: str,
     slug: str,
@@ -873,7 +1027,10 @@ async def download_skill_version(
     return build_download_response(result)
 
 
-@router.get("/api/cli/v1/skills/{namespace}/{slug}/download")
+@router.get(
+    "/api/cli/v1/skills/{namespace}/{slug}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
 async def download_cli_skill_latest(
     namespace: str,
     slug: str,
@@ -900,7 +1057,10 @@ async def download_cli_skill_latest(
     return build_download_response(result)
 
 
-@router.get("/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download")
+@router.get(
+    "/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
 async def download_cli_skill_version(
     namespace: str,
     slug: str,
@@ -929,8 +1089,14 @@ async def download_cli_skill_version(
     return build_download_response(result)
 
 
-@router.get("/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download")
-@router.get("/api/web/skills/{namespace}/{slug}/tags/{tagName}/download")
+@router.get(
+    "/api/v1/skills/{namespace}/{slug}/tags/{tagName}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
+@router.get(
+    "/api/web/skills/{namespace}/{slug}/tags/{tagName}/download",
+    dependencies=[Depends(rate_limit("download", authenticated=120, anonymous=30))],
+)
 async def download_skill_tag(
     namespace: str,
     slug: str,

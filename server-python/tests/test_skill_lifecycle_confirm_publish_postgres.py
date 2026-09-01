@@ -56,18 +56,18 @@ async def _create_fixture(engine: AsyncEngine) -> ConfirmPublishFixture:
     namespace = f"confirm-{suffix}"
     slug = f"confirm-{suffix}"
     async with engine.begin() as connection:
-        await connection.execute(
-            text(
-                "INSERT INTO user_account (id, display_name) VALUES (:user_id, :display_name)"
-            ),
-            {"user_id": owner_id, "display_name": "Confirm owner"},
-        )
-        await connection.execute(
-            text(
-                "INSERT INTO user_account (id, display_name) VALUES (:user_id, :display_name)"
-            ),
-            {"user_id": admin_id, "display_name": "Confirm admin"},
-        )
+        for user_id, display_name in (
+            (owner_id, "Confirm owner"),
+            (admin_id, "Confirm admin"),
+            (subscriber_id, "Confirm subscriber"),
+            (disabled_subscriber_id, "Confirm preference-disabled subscriber"),
+        ):
+            await connection.execute(
+                text(
+                    "INSERT INTO user_account (id, display_name) VALUES (:user_id, :display_name)"
+                ),
+                {"user_id": user_id, "display_name": display_name},
+            )
         namespace_id = int(
             (
                 await connection.execute(
@@ -115,6 +115,16 @@ async def _create_fixture(engine: AsyncEngine) -> ConfirmPublishFixture:
             ),
             {"namespace_id": namespace_id, "admin_id": admin_id},
         )
+        for user_id in (subscriber_id, disabled_subscriber_id):
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO namespace_member (namespace_id, user_id, role)
+                    VALUES (:namespace_id, :user_id, 'ADMIN')
+                    """
+                ),
+                {"namespace_id": namespace_id, "user_id": user_id},
+            )
         version_id = int(
             (
                 await connection.execute(
@@ -239,12 +249,15 @@ async def _cleanup_fixture(engine: AsyncEngine, fixture: ConfirmPublishFixture) 
             {"namespace_id": fixture.namespace_id},
         )
         await connection.execute(
-            text("DELETE FROM user_account WHERE id = :owner_id"),
-            {"owner_id": fixture.owner_id},
-        )
-        await connection.execute(
-            text("DELETE FROM user_account WHERE id = :admin_id"),
-            {"admin_id": fixture.admin_id},
+            text("DELETE FROM user_account WHERE id = ANY(CAST(:user_ids AS varchar[]))"),
+            {
+                "user_ids": [
+                    fixture.owner_id,
+                    fixture.admin_id,
+                    fixture.subscriber_id,
+                    fixture.disabled_subscriber_id,
+                ]
+            },
         )
 
 

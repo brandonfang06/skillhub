@@ -41,12 +41,23 @@ from app.bootstrap import initialize_bootstrap_admin
 from app.builtin_skills import synchronize_builtin_skills
 from app.core.config import get_settings
 from app.core.database import create_database_engine, dispose_database_engine
+from app.core.openapi_contracts import install_frontend_openapi_contracts
 from app.core.redis import create_redis_client
+from app.core.rate_limit import (
+    RateLimitExceeded,
+    RateLimitUnavailable,
+    RedisSlidingWindowRateLimiter,
+    rate_limit_exceeded_response,
+    rate_limit_unavailable_response,
+)
 from app.core.request_id import RequestIdMiddleware
 from app.core.response import api_token_access_denied_response
 from app.download_analytics import prune_expired_download_events
 from app.notifications.fanout import NotificationFanoutManager
-from app.publish.scan_daemon import create_scan_consumer_daemon
+from app.publish.scan_daemon import (
+    create_scan_consumer_daemon,
+    create_scan_outbox_daemon,
+)
 
 log = logging.getLogger(__name__)
 DOWNLOAD_ANALYTICS_RETENTION_INTERVAL_SECONDS = 24 * 60 * 60
@@ -95,6 +106,9 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.db_engine = create_database_engine(settings)
     app.state.redis_client = create_redis_client(settings)
+    app.state.rate_limit_checker = RedisSlidingWindowRateLimiter(
+        app.state.redis_client
+    )
     await initialize_bootstrap_admin(app.state.db_engine)
     app.state.builtin_skill_sync_task = asyncio.create_task(
         run_builtin_skill_sync(app.state.db_engine, settings)
@@ -110,6 +124,11 @@ async def lifespan(app: FastAPI):
     app.state.scan_consumer_daemon = create_scan_consumer_daemon(
         settings, app.state.db_engine, app.state.redis_client
     )
+    app.state.scan_outbox_daemon = create_scan_outbox_daemon(
+        settings, app.state.db_engine, app.state.redis_client
+    )
+    if app.state.scan_outbox_daemon is not None:
+        app.state.scan_outbox_daemon.start()
     if app.state.scan_consumer_daemon is not None:
         app.state.scan_consumer_daemon.start()
     try:
@@ -118,6 +137,8 @@ async def lifespan(app: FastAPI):
         app.state.builtin_skill_sync_task.cancel()
         with suppress(asyncio.CancelledError):
             await app.state.builtin_skill_sync_task
+        if app.state.scan_outbox_daemon is not None:
+            await app.state.scan_outbox_daemon.shutdown()
         if app.state.scan_consumer_daemon is not None:
             await app.state.scan_consumer_daemon.shutdown()
         if app.state.download_analytics_retention_task is not None:
@@ -131,6 +152,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="SkillHub Python Backend", lifespan=lifespan)
     app.add_exception_handler(ApiTokenAccessDenied, api_token_access_denied_response)
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_response)
+    app.add_exception_handler(RateLimitUnavailable, rate_limit_unavailable_response)
     app.add_middleware(RequestIdMiddleware)
     app.include_router(account_merge_router)
     app.include_router(admin_audit_logs_router)
@@ -164,6 +187,7 @@ def create_app() -> FastAPI:
     app.include_router(reviews_router)
     app.include_router(skills_router)
     app.include_router(well_known_router)
+    install_frontend_openapi_contracts(app)
     return app
 
 

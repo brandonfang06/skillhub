@@ -4,12 +4,13 @@ from collections.abc import Awaitable
 from inspect import isawaitable
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from app.auth.context import resolve_current_user_or_401
 from app.auth.policy import platform_roles
 from app.core.response import ok
+from app.core.rate_limit import rate_limit
 from app.social.owned import list_my_owned_skills
 from app.social.clawhub_star import (
     ClawHubStarError,
@@ -412,7 +413,10 @@ async def list_my_subscriptions_route(
     )
 
 
-@router.post("/api/v1/stars/{canonical_slug}")
+@router.post(
+    "/api/v1/stars/{canonical_slug}",
+    dependencies=[Depends(rate_limit("stars", authenticated=60, anonymous=20))],
+)
 async def clawhub_star_route(
     request: Request,
     canonical_slug: str,
@@ -421,7 +425,10 @@ async def clawhub_star_route(
     return await clawhub_star_route_data(request, canonical_slug, x_mock_user_id)
 
 
-@router.delete("/api/v1/stars/{canonical_slug}")
+@router.delete(
+    "/api/v1/stars/{canonical_slug}",
+    dependencies=[Depends(rate_limit("stars", authenticated=60, anonymous=20))],
+)
 async def clawhub_unstar_route(
     request: Request,
     canonical_slug: str,

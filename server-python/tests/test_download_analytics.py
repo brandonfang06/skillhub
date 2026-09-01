@@ -220,6 +220,14 @@ async def test_lifespan_starts_and_stops_download_analytics_retention_task(monke
     retention_started = asyncio.Event()
     retention_cancelled = asyncio.Event()
     disposed: list[object] = []
+    outbox_events: list[str] = []
+
+    class FakeOutboxDaemon:
+        def start(self) -> None:
+            outbox_events.append("start")
+
+        async def shutdown(self) -> None:
+            outbox_events.append("shutdown")
 
     async def fake_initialize_bootstrap_admin(current_engine: object) -> None:
         assert current_engine is engine
@@ -253,6 +261,11 @@ async def test_lifespan_starts_and_stops_download_analytics_retention_task(monke
         fake_run_download_analytics_retention_loop,
     )
     monkeypatch.setattr(main_module, "create_scan_consumer_daemon", lambda *_args: None)
+    monkeypatch.setattr(
+        main_module,
+        "create_scan_outbox_daemon",
+        lambda *_args: FakeOutboxDaemon(),
+    )
     monkeypatch.setattr(main_module, "dispose_database_engine", fake_dispose_database_engine)
 
     app = create_app()
@@ -260,10 +273,12 @@ async def test_lifespan_starts_and_stops_download_analytics_retention_task(monke
     async with main_module.lifespan(app):
         await asyncio.wait_for(retention_started.wait(), timeout=1)
         assert app.state.download_analytics_retention_task is not None
+        assert outbox_events == ["start"]
 
     await asyncio.wait_for(retention_cancelled.wait(), timeout=1)
     assert redis_client.closed is True
     assert disposed == [engine]
+    assert outbox_events == ["start", "shutdown"]
 
 
 @pytest.mark.anyio

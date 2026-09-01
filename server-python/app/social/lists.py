@@ -55,6 +55,8 @@ async def list_my_social_skills(
                            s.rating_avg,
                            s.rating_count,
                            n.slug AS namespace,
+                           s.owner_id,
+                           NULLIF(BTRIM(owner.display_name), '') AS owner_display_name,
                            s.updated_at,
                            pv.id AS published_version_id,
                            pv.version AS published_version,
@@ -63,6 +65,7 @@ async def list_my_social_skills(
                     FROM page_rel rel
                     JOIN skill s ON s.id = rel.skill_id
                     JOIN namespace n ON n.id = s.namespace_id
+                    LEFT JOIN user_account owner ON owner.id = s.owner_id
                     LEFT JOIN LATERAL (
                         SELECT sv.id, sv.version, sv.status
                         FROM skill_version sv

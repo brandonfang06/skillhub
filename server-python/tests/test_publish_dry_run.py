@@ -73,6 +73,7 @@ async def run_dry_run(
     platform_roles: set[str] | None = None,
     visibility: str = "PUBLIC",
     allowed_extensions: set[str] | None = None,
+    reject_existing_version: bool = False,
 ) -> Any:
     return await validate_publish_dry_run(
         PublishDryRunInput(
@@ -83,6 +84,7 @@ async def run_dry_run(
             platform_roles=platform_roles or set(),
             now=datetime(2026, 6, 8, 12, 30, 45, tzinfo=UTC),
             allowed_extensions=allowed_extensions,
+            reject_existing_version=reject_existing_version,
         ),
         repository,
     )
@@ -393,6 +395,19 @@ async def test_own_rejected_version_can_be_resubmitted_with_same_version_number(
 
     assert result.valid
     assert result.errors == []
+
+
+@pytest.mark.anyio
+async def test_strict_dry_run_rejects_any_existing_version() -> None:
+    result = await run_dry_run(
+        FakeDryRunRepository(
+            conflict_context=PublishConflictContext(own_version_status="UPLOADED")
+        ),
+        reject_existing_version=True,
+    )
+
+    assert not result.valid
+    assert result.errors == ["Version already exists: 1.0.0"]
 
 
 @pytest.mark.anyio

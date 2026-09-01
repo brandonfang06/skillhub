@@ -13,6 +13,7 @@ from app.lifecycle.skill import (
     submit_skill_version_for_review,
 )
 from app.main import create_app
+from tests.support.builders import bearer_user
 
 
 class FakeResult:
@@ -301,3 +302,57 @@ def test_submit_review_routes_require_mock_user() -> None:
         "/api/v1/skills/team-a/agent-helper/submit-review",
         json={"version": "1.1.0", "targetVisibility": "PUBLIC"},
     ).status_code == 401
+
+
+def test_submit_review_v1_accepts_publish_scoped_api_token() -> None:
+    app = create_app()
+    seen: list[SkillSubmitReviewInput] = []
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user(
+        "token-owner",
+        ["skill:publish"],
+    )
+
+    async def submitter(lifecycle_input: SkillSubmitReviewInput) -> dict[str, object]:
+        seen.append(lifecycle_input)
+        return {
+            "skillId": 101,
+            "versionId": 42,
+            "action": "SUBMIT_REVIEW",
+            "status": "PENDING_REVIEW",
+        }
+
+    app.state.skill_submit_review_writer = submitter
+    response = TestClient(app).post(
+        "/api/v1/skills/team-a/agent-helper/submit-review",
+        json={"version": "1.1.0", "targetVisibility": "NAMESPACE_ONLY"},
+        headers={"Authorization": "Bearer cli-token"},
+    )
+
+    assert response.status_code == 200
+    assert seen[0].user_id == "token-owner"
+
+
+def test_submit_review_v1_rejects_api_token_without_publish_scope() -> None:
+    app = create_app()
+    writer_called = False
+    app.state.auth_bearer_reader = lambda raw_token: bearer_user(
+        "token-owner",
+        ["skill:read"],
+    )
+
+    async def submitter(lifecycle_input: SkillSubmitReviewInput) -> dict[str, object]:
+        nonlocal writer_called
+        writer_called = True
+        return {}
+
+    app.state.skill_submit_review_writer = submitter
+    response = TestClient(app).post(
+        "/api/v1/skills/team-a/agent-helper/submit-review",
+        json={"version": "1.1.0", "targetVisibility": "NAMESPACE_ONLY"},
+        headers={"Authorization": "Bearer cli-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["msg"] == "error.apiToken.scope.missing"
+    assert response.json()["data"]["args"] == ["skill:publish"]
+    assert writer_called is False

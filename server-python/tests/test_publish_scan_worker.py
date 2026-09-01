@@ -43,6 +43,7 @@ class FakeConnection:
         self.version_row = {"id": 202, "status": "SCANNING", "requested_visibility": "PUBLIC"}
         self.lease_acquired = True
         self.failure_transition_row: dict[str, object] | None = {"id": 202}
+        self.processed_task_ids: set[str] = set()
 
     async def execute(self, statement: object, params: dict[str, Any] | None = None) -> FakeResult:
         sql = str(statement)
@@ -50,6 +51,9 @@ class FakeConnection:
         self.params.append(params or {})
         if "pg_try_advisory_xact_lock" in sql:
             return FakeResult({"acquired": self.lease_acquired})
+        if "task_id = :task_id" in sql and "scanned_at IS NOT NULL" in sql:
+            task_id = str((params or {}).get("task_id") or "")
+            return FakeResult({"id": 801} if task_id in self.processed_task_ids else None)
         if "FROM security_audit" in sql:
             return FakeResult(self.audit_row)
         if "UPDATE skill_version" in sql and "SCAN_FAILED" in sql and "RETURNING" in sql:
@@ -191,6 +195,36 @@ async def test_process_scan_task_does_not_scan_without_database_lease(tmp_path: 
         )
 
     assert scanner.seen_tasks == []
+
+
+@pytest.mark.anyio
+async def test_process_scan_task_skips_duplicate_task_id_before_new_scan_round(
+    tmp_path: Path,
+) -> None:
+    connection = FakeConnection()
+    connection.processed_task_ids.add("task-old")
+    scanner = StaticScannerClient(
+        SecurityScanResultInput("scan-1", "SAFE", 0, None, [], 1.0)
+    )
+
+    with pytest.raises(ScanTaskAlreadyFinalized):
+        await process_scan_task(
+            connection,
+            SecurityScanTask(
+                task_id="task-old",
+                version_id=202,
+                skill_path=str(tmp_path),
+            ),
+            scanner,
+            storage_base_path=str(tmp_path),
+            scan_temp_dir=str(tmp_path / "scans"),
+        )
+
+    assert scanner.seen_tasks == []
+    assert not any(
+        "pg_try_advisory_xact_lock" in statement
+        for statement in connection.statements
+    )
 
 
 @pytest.mark.anyio

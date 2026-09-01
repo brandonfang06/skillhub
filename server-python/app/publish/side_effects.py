@@ -9,6 +9,8 @@ from uuid import uuid4
 from sqlalchemy import text
 
 from app.audit.writer import write_audit_log
+from app.publish.scan_contracts import ScanTaskPayload
+from app.publish.scan_outbox import enqueue_scan_task
 from app.publish.scanner_result import scanner_type_db_value
 
 
@@ -59,17 +61,6 @@ class PublishSideEffectPlan:
     publish_scan_task: bool
     mark_version_scanning: bool
     create_compat_audit: bool
-
-
-@dataclass(frozen=True)
-class ScanTaskPayload:
-    task_id: str
-    version_id: int
-    skill_path: str | None
-    bundle_key: str | None
-    publisher_id: str
-    created_at_millis: int
-    metadata: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -124,6 +115,7 @@ def build_scan_task_payload(request: PublishSideEffectInput) -> ScanTaskPayload:
         publisher_id=request.publisher_id,
         created_at_millis=int(now.timestamp() * 1000),
         metadata={"scannerType": "skill-scanner"},
+        request_id=request.request_id,
     )
 
 
@@ -184,6 +176,7 @@ async def apply_publish_side_effects(
             )
 
     if plan.create_security_audit:
+        scan_task = build_scan_task_payload(request)
         security_audit_id = int(
             (
                 await connection.execute(
@@ -191,11 +184,11 @@ async def apply_publish_side_effects(
                         """
                         INSERT INTO security_audit (
                             skill_version_id, scanner_type, verdict, is_safe, findings_count,
-                            findings, created_at
+                            findings, task_id, created_at
                         )
                         VALUES (
                             :skill_version_id, :scanner_type, :verdict, :is_safe, :findings_count,
-                            :findings, :created_at
+                            :findings, :task_id, :created_at
                         )
                         RETURNING id
                         """
@@ -207,12 +200,18 @@ async def apply_publish_side_effects(
                         "is_safe": False,
                         "findings_count": 0,
                         "findings": json.dumps([], separators=(",", ":")),
+                        "task_id": scan_task.task_id,
                         "created_at": now,
                     },
                 )
             ).scalar_one()
         )
-        scan_task = build_scan_task_payload(request)
+        await enqueue_scan_task(
+            connection,
+            scan_task,
+            next_attempt_at=now,
+            request_id=request.request_id,
+        )
         if plan.mark_version_scanning:
             await connection.execute(
                 text(

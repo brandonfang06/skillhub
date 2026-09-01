@@ -42,6 +42,8 @@ def test_build_skill_search_response_maps_java_summary_fields() -> None:
             "rating_avg": Decimal("4.50"),
             "rating_count": 4,
             "namespace": "global",
+            "owner_id": "owner-1",
+            "owner_display_name": "Owner One",
             "updated_at": datetime(2026, 6, 7, 10, 0, tzinfo=UTC),
             "published_version_id": 41,
             "published_version": "1.2.0",
@@ -64,6 +66,8 @@ def test_build_skill_search_response_maps_java_summary_fields() -> None:
                 "ratingAvg": 4.5,
                 "ratingCount": 4,
                 "namespace": "global",
+                "ownerId": "owner-1",
+                "ownerDisplayName": "Owner One",
                 "updatedAt": "2026-06-07T10:00:00Z",
                 "canSubmitPromotion": False,
                 "headlineVersion": {"id": 41, "version": "1.2.0", "status": "PUBLISHED"},
@@ -164,6 +168,9 @@ async def test_read_skill_search_resolves_an_older_published_version_when_latest
     assert "parsed_metadata_json" not in count_sql
     assert "isv.parsed_metadata_json -> 'complianceSnapshot'" in page_sql
     assert "CAST(isv.parsed_metadata_json AS text)" not in page_sql
+    assert "LEFT JOIN user_account owner ON owner.id = s.owner_id" in page_sql
+    assert "s.owner_id" in page_sql
+    assert "owner.display_name" in page_sql
 
 
 @pytest.mark.anyio

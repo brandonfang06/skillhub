@@ -116,10 +116,16 @@ class FakeReviewApproveConnection:
             return FakeResult(
                 row={
                     "skill_id": 7,
+                    "namespace_id": 10,
                     "owner_id": "local-user",
                     "slug": "agent-helper",
                     "display_name": "Agent Helper",
+                    "visibility": self.current_visibility,
+                    "hidden": False,
+                    "latest_version_id": 42,
+                    "published_version_id": 42,
                     "namespace_slug": "team-a",
+                    "namespace_status": "ACTIVE",
                     "version": "1.0.0",
                 }
             )
@@ -143,7 +149,16 @@ class FakeReviewApproveConnection:
         if "INSERT INTO skill_search_document" in sql:
             return FakeResult()
         if "FROM skill_subscription" in sql:
-            return FakeResult(rows=[{"user_id": user_id} for user_id in self.subscribers])
+            return FakeResult(
+                rows=[
+                    {
+                        "user_id": user_id,
+                        "account_status": "ACTIVE",
+                        "namespace_role": "MEMBER",
+                    }
+                    for user_id in self.subscribers
+                ]
+            )
         if "notification_preference" in sql:
             return FakeResult(row={"enabled": True})
         if "INSERT INTO notification" in sql:

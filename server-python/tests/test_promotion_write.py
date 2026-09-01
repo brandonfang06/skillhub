@@ -97,10 +97,15 @@ class FakePromotionWriteConnection:
             return FakeResult(
                 row={
                     "skill_id": 901,
+                    "namespace_id": 1,
                     "owner_id": "submitter",
                     "slug": "agent-helper",
                     "display_name": "Agent Helper",
+                    "visibility": "PUBLIC",
+                    "hidden": False,
+                    "latest_version_id": 902,
                     "namespace_slug": "global",
+                    "namespace_status": "ACTIVE",
                     "version": "1.0.0",
                 }
             )

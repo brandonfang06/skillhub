@@ -124,6 +124,56 @@ def test_skill_search_route_uses_java_style_invalid_page_defaults() -> None:
     assert seen[0]["current_user_id"] is None
 
 
+def test_skill_search_route_projects_labels_only_when_requested() -> None:
+    app = create_app()
+    app.state.skill_search_reader = lambda **kwargs: search_response()
+    seen: list[dict[str, object]] = []
+
+    def label_reader(**kwargs: object) -> dict[int, list[dict[str, str]]]:
+        seen.append(kwargs)
+        return {
+            31: [
+                {
+                    "slug": "featured",
+                    "type": "GENERAL",
+                    "displayName": "精選",
+                }
+            ]
+        }
+
+    app.state.skill_label_projection_reader = label_reader
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/web/skills?include=labels,&include=LABELS",
+        headers={"Accept-Language": "zh-TW,zh;q=0.9"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["items"][0]["labels"] == [
+        {"slug": "featured", "type": "GENERAL", "displayName": "精選"}
+    ]
+    assert seen == [{"skill_ids": [31], "locale": "zh-TW"}]
+
+
+def test_skill_search_route_rejects_unsupported_include_before_search() -> None:
+    app = create_app()
+    search_called = {"value": False}
+
+    def reader(**kwargs: object) -> dict[str, object]:
+        search_called["value"] = True
+        return search_response()
+
+    app.state.skill_search_reader = reader
+    client = TestClient(app)
+
+    response = client.get("/api/web/skills?include=labels,stats")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "error.request.include.unsupported:stats"
+    assert search_called["value"] is False
+
+
 def test_v1_skills_root_uses_clawhub_list_shape() -> None:
     app = create_app()
     app.state.clawhub_skills_list_reader = lambda **kwargs: search_response()

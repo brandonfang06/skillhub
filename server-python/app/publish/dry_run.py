@@ -95,6 +95,7 @@ class PublishDryRunInput:
     platform_roles: set[str] = field(default_factory=set)
     now: datetime | None = None
     allowed_extensions: AbstractSet[str] | None = None
+    reject_existing_version: bool = False
 
 
 @dataclass(frozen=True)
@@ -311,7 +312,9 @@ async def validate_publish_dry_run(
         )
         if conflicts.own_skill_status == "ARCHIVED":
             errors.append(f"Cannot publish to archived skill: {resolved_slug}")
-        if conflicts.own_version_status == "PUBLISHED":
+        if request.reject_existing_version and conflicts.own_version_status is not None:
+            errors.append(f"Version already exists: {resolved_version}")
+        elif conflicts.own_version_status == "PUBLISHED":
             errors.append(f"Version already published: {resolved_version}")
         if conflicts.other_owner_has_published:
             errors.append(f'Name conflict: slug "{resolved_slug}" is already published by another user')

@@ -6,8 +6,10 @@ from io import BytesIO
 from types import SimpleNamespace
 from zipfile import ZipFile
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.api import publish as publish_api
 from app.main import create_app
 from app.publish.orchestration import PublishWriteResult
 from app.publish.replacement import ReplaceableVersion, VersionReplacementConflict
@@ -68,6 +70,32 @@ def install_publish_validate_reader(app: object, seen: dict[str, object] | None 
         )
 
     app.state.publish_validate_reader = reader
+
+
+@pytest.mark.anyio
+async def test_scanner_enabled_publish_write_does_not_create_request_path_redis_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = create_app()
+    app.state.db_engine = object()
+    expected = object()
+    seen: dict[str, object] = {}
+
+    async def execute(engine: object, write_input: object, **kwargs: object) -> object:
+        seen["engine"] = engine
+        seen["write_input"] = write_input
+        seen["kwargs"] = kwargs
+        return expected
+
+    monkeypatch.setattr(publish_api, "execute_publish_write", execute)
+    request = SimpleNamespace(app=app)
+    write_input = SimpleNamespace(scanner_enabled=True)
+
+    result = await publish_api.run_publish_write(request, write_input)
+
+    assert result is expected
+    assert seen["engine"] is app.state.db_engine
+    assert not hasattr(app.state, "redis_client")
 
 
 def test_cli_publish_validate_requires_mock_user() -> None:
@@ -558,6 +586,73 @@ def test_cli_publish_write_forces_rejected_version_resubmission_through_review()
     assert replacement_called
     assert writer_called
     assert response.json()["data"]["version"] == "1.0.0"
+    assert response.json()["data"]["status"] == "PENDING_REVIEW"
+
+
+def test_cli_publish_strict_mode_refuses_a_replaceable_existing_version() -> None:
+    app = create_app()
+    app.state.auth_me_reader = lambda user_id: auth_user()
+    writer_called = False
+
+    async def validate_reader(
+        namespace: str,
+        entries: list[PackageEntry],
+        publisher_id: str,
+        visibility: str,
+        platform_roles: set[str],
+    ) -> PublishDryRunResult:
+        return PublishDryRunResult(
+            valid=True,
+            errors=[],
+            warnings=[],
+            resolved_slug="agent-helper",
+            resolved_version="1.0.0",
+        )
+
+    async def replacement_reader(
+        namespace_id: int,
+        namespace: str,
+        slug: str,
+        version: str,
+        publisher_id: str,
+    ) -> ReplaceableVersion:
+        return ReplaceableVersion(
+            skill_id=7,
+            namespace=namespace,
+            slug=slug,
+            version_id=41,
+            version=version,
+            status="UPLOADED",
+            publisher_id=publisher_id,
+        )
+
+    async def write_reader(request: object) -> PublishWriteResult:
+        nonlocal writer_called
+        writer_called = True
+        raise AssertionError("strict conflict must not reach the writer")
+
+    app.state.publish_validate_reader = validate_reader
+    app.state.publish_replacement_reader = replacement_reader
+    app.state.publish_write_reader = write_reader
+    app.state.publish_write_namespace_id = 10
+    app.state.settings = SimpleNamespace(
+        storage_base_path="C:/tmp/skillhub-storage",
+        security_scanner_enabled=False,
+        security_scanner_mode="upload",
+        redis_url="redis://localhost:6379",
+        scan_stream_key="skillhub:scan:requests",
+    )
+
+    response = TestClient(app).post(
+        "/api/cli/v1/skills/global/publish",
+        headers={"X-Mock-User-Id": "local-user"},
+        data={"rejectExistingVersion": "true"},
+        files={"file": ("skill.zip", skill_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "error.skill.version.exists"
+    assert writer_called is False
 
 
 def test_cli_publish_write_maps_ineligible_replacement_race_to_conflict() -> None:
@@ -722,6 +817,7 @@ def test_cli_publish_write_returns_java_compatible_publish_envelope() -> None:
         "slug": "agent-helper",
         "version": "1.0.0",
         "visibility": "PUBLIC",
+        "status": "PUBLISHED",
     }
     assert seen == {
         "slug": "agent-helper",
@@ -818,6 +914,7 @@ def test_portal_publish_write_aliases_reuse_publish_service() -> None:
             "slug": "agent-helper",
             "version": "1.0.0",
             "visibility": "PRIVATE",
+            "status": "PUBLISHED",
         }
 
     assert seen_paths == [

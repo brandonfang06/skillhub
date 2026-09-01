@@ -11,6 +11,10 @@ from sqlalchemy import text
 from app.admin.search import upsert_skill_search_document
 from app.db.unit_of_work import transaction_connection
 from app.notifications.publisher import NotificationFanout, publish_notification_rows
+from app.social.subscription_access import (
+    SubscriptionAccessFacts,
+    can_access_subscription_metadata,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -33,10 +37,16 @@ async def _read_publication_context(
                 text(
                     """
                 SELECT s.id AS skill_id,
+                       s.namespace_id,
                        s.owner_id,
                        s.slug,
                        s.display_name,
+                       s.visibility,
+                       s.hidden,
+                       s.latest_version_id,
+                       sv.id AS published_version_id,
                        n.slug AS namespace_slug,
+                       n.status AS namespace_status,
                        sv.version
                 FROM skill s
                 JOIN namespace n ON n.id = s.namespace_id
@@ -86,7 +96,7 @@ async def _in_app_publish_notifications_enabled(connection: Any, owner_id: str) 
 async def _read_subscribers(
     connection: Any,
     *,
-    skill_id: int,
+    context: dict[str, Any],
     publisher_id: str,
 ) -> list[str]:
     rows = (
@@ -94,8 +104,14 @@ async def _read_subscribers(
             await connection.execute(
                 text(
                     """
-                SELECT DISTINCT ss.user_id
+                SELECT DISTINCT ss.user_id,
+                                account.status AS account_status,
+                                member.role AS namespace_role
                 FROM skill_subscription ss
+                JOIN user_account account ON account.id = ss.user_id
+                LEFT JOIN namespace_member member
+                  ON member.namespace_id = :namespace_id
+                 AND member.user_id = ss.user_id
                 LEFT JOIN notification_preference np
                   ON np.user_id = ss.user_id
                  AND np.category = 'PUBLISH'
@@ -106,13 +122,29 @@ async def _read_subscribers(
                 ORDER BY ss.user_id
                 """
                 ),
-                {"skill_id": skill_id, "publisher_id": publisher_id},
+                {
+                    "skill_id": int(context["skill_id"]),
+                    "namespace_id": int(context["namespace_id"]),
+                    "publisher_id": publisher_id,
+                },
             )
         )
         .mappings()
         .all()
     )
-    return [str(row["user_id"]) for row in rows]
+    subscriber_ids: list[str] = []
+    for row in rows:
+        user_id = str(row["user_id"])
+        facts = SubscriptionAccessFacts.from_row(
+            {
+                **context,
+                "account_status": row["account_status"],
+                "namespace_role": row["namespace_role"],
+            }
+        )
+        if can_access_subscription_metadata(facts, user_id=user_id):
+            subscriber_ids.append(user_id)
+    return subscriber_ids
 
 
 async def _insert_publication_notification(
@@ -229,7 +261,7 @@ async def write_publication_outcomes(
 
     for subscriber_id in await _read_subscribers(
         connection,
-        skill_id=outcome.skill_id,
+        context=context,
         publisher_id=outcome.publisher_id,
     ):
         notification_rows.extend(

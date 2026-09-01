@@ -216,6 +216,10 @@ def build_skill_summary_response(row: dict[str, Any]) -> dict[str, object]:
         "ratingAvg": float(row["rating_avg"]),
         "ratingCount": int(row["rating_count"]),
         "namespace": str(row["namespace"]),
+        "ownerId": (
+            str(row["owner_id"]) if row.get("owner_id") is not None else None
+        ),
+        "ownerDisplayName": row.get("owner_display_name"),
         "updatedAt": to_java_instant(row["updated_at"]),
         "canSubmitPromotion": False,
         "headlineVersion": published_version,

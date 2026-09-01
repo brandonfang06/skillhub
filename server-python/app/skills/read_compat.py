@@ -71,18 +71,19 @@ def build_clawhub_skills_list_response(search_response: dict[str, object]) -> di
         if summary.get("starCount") is not None:
             stats["stars"] = summary["starCount"]
 
-        items.append(
-            {
-                "slug": to_clawhub_canonical_slug(str(summary["namespace"]), str(summary["slug"])),
-                "displayName": summary["displayName"],
-                "summary": summary.get("summary"),
-                "tags": {},
-                "stats": stats,
-                "createdAt": 0,
-                "updatedAt": updated_at,
-                "latestVersion": latest_version,
-            }
-        )
+        item = {
+            "slug": to_clawhub_canonical_slug(str(summary["namespace"]), str(summary["slug"])),
+            "displayName": summary["displayName"],
+            "summary": summary.get("summary"),
+            "tags": {},
+            "stats": stats,
+            "createdAt": 0,
+            "updatedAt": updated_at,
+            "latestVersion": latest_version,
+        }
+        if "labels" in summary:
+            item["labels"] = summary["labels"]
+        items.append(item)
 
     page = int(search_response["page"])
     size = int(search_response["size"])

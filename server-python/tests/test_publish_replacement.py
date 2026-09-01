@@ -261,6 +261,7 @@ async def test_cleanup_deletes_review_files_security_audits_and_version() -> Non
         "packages/7/42/bundle.zip",
     ]
     assert any("DELETE FROM review_task" in statement for statement in connection.statements)
+    assert any("DELETE FROM scan_task_outbox" in statement for statement in connection.statements)
     assert any("DELETE FROM skill_file" in statement for statement in connection.statements)
     assert any("UPDATE security_audit" in statement and "deleted_at" in statement for statement in connection.statements)
     assert "DELETE FROM skill_version" in connection.statements[-1]

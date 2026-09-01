@@ -1,11 +1,18 @@
 import asyncio
+import json
 from typing import Self
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.oauth import _claims_from_attributes, oauth_registrations_from_env
+from app.auth.oauth import (
+    _claims_from_attributes,
+    bind_oauth_principal,
+    exchange_oauth_code,
+    oauth_registrations_from_env,
+)
 from app.auth.session import InMemorySessionStore
 from app.main import create_app
 
@@ -100,6 +107,8 @@ class FakeOAuthConnection:
                     "email": user["email"],
                     "avatar_url": user["avatar_url"],
                     "status": user["status"],
+                    "merged_to_user_id": user.get("merged_to_user_id"),
+                    "system_account": user.get("system_account", False),
                 }
             )
         if "INSERT INTO user_account" in sql:
@@ -109,6 +118,8 @@ class FakeOAuthConnection:
                 "email": bound["email"],
                 "avatar_url": bound["avatar_url"],
                 "status": "ACTIVE",
+                "merged_to_user_id": None,
+                "system_account": False,
             }
             return FakeResult()
         if "INSERT INTO identity_binding" in sql:
@@ -153,19 +164,62 @@ class FakeOAuthConnection:
 
 
 class FakeHttpResponse:
-    def __init__(self, payload: dict[str, object]) -> None:
+    def __init__(
+        self,
+        payload: object,
+        *,
+        content_type: str = "application/json",
+        content: bytes | None = None,
+        deny_content_access: bool = False,
+        status_code: int = 200,
+    ) -> None:
         self.payload = payload
+        self.headers = {"content-type": content_type}
+        self._content = content if content is not None else json.dumps(payload).encode()
+        self.deny_content_access = deny_content_access
+        self.status_code = status_code
+
+    @property
+    def content(self) -> bytes:
+        if self.deny_content_access:
+            raise AssertionError("streaming response must not read .content")
+        return self._content
+
+    async def aiter_bytes(self) -> object:
+        midpoint = max(len(self._content) // 2, 1)
+        for start in range(0, len(self._content), midpoint):
+            yield self._content[start : start + midpoint]
 
     def raise_for_status(self) -> None:
         return None
 
-    def json(self) -> dict[str, object]:
+    def json(self) -> object:
         return self.payload
 
 
+class FakeResponseStream:
+    def __init__(self, response: FakeHttpResponse) -> None:
+        self.response = response
+
+    async def __aenter__(self) -> FakeHttpResponse:
+        return self.response
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        return None
+
+
+class FailingResponseStream:
+    async def __aenter__(self) -> FakeHttpResponse:
+        raise httpx.RequestError("GitHub email API unavailable")
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        return None
+
+
 class FakeOAuthHttpClient:
-    def __init__(self) -> None:
+    def __init__(self, email_response: FakeHttpResponse | None = None) -> None:
         self.requests: list[tuple[str, str, dict[str, object]]] = []
+        self.email_response = email_response
 
     async def __aenter__(self) -> Self:
         return self
@@ -179,6 +233,23 @@ class FakeOAuthHttpClient:
 
     async def get(self, url: str, headers: dict[str, str]) -> FakeHttpResponse:
         self.requests.append(("GET", url, {"headers": headers}))
+        if url.endswith("/user/emails"):
+            if self.email_response is not None:
+                return self.email_response
+            return FakeHttpResponse(
+                [
+                    {
+                        "email": "secondary@example.test",
+                        "primary": False,
+                        "verified": True,
+                    },
+                    {
+                        "email": "oauth-user@example.test",
+                        "primary": True,
+                        "verified": True,
+                    },
+                ]
+            )
         return FakeHttpResponse(
             {
                 "id": 12345,
@@ -187,6 +258,41 @@ class FakeOAuthHttpClient:
                 "avatar_url": "https://avatar.example/user.png",
             }
         )
+
+    def stream(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+    ) -> FakeResponseStream:
+        self.requests.append((method, url, {"headers": headers}))
+        response = self.email_response or FakeHttpResponse(
+            [
+                {
+                    "email": "oauth-user@example.test",
+                    "primary": True,
+                    "verified": True,
+                }
+            ]
+        )
+        return FakeResponseStream(response)
+
+
+class FailingGitHubEmailHttpClient(FakeOAuthHttpClient):
+    async def get(self, url: str, headers: dict[str, str]) -> FakeHttpResponse:
+        if url.endswith("/user/emails"):
+            self.requests.append(("GET", url, {"headers": headers}))
+            raise httpx.RequestError("GitHub email API unavailable")
+        return await super().get(url, headers)
+
+    def stream(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+    ) -> FailingResponseStream:
+        self.requests.append((method, url, {"headers": headers}))
+        return FailingResponseStream()
 
 
 def test_oauth_authorization_redirects_when_provider_is_configured() -> None:
@@ -249,6 +355,43 @@ def test_keycloak_registration_uses_spring_boot_oidc_env_contract(monkeypatch: p
     assert keycloak["scopes"] == ["openid", "profile", "email"]
 
 
+def test_github_registration_uses_configured_email_api_base_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENT_ID",
+        "github-client",
+    )
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENT_SECRET",
+        "github-secret",
+    )
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GITHUB_AUTHORIZATION_URI",
+        "https://github.example/oauth/authorize",
+    )
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GITHUB_TOKEN_URI",
+        "https://github.example/oauth/token",
+    )
+    monkeypatch.setenv(
+        "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GITHUB_USER_INFO_URI",
+        "https://github.example/user",
+    )
+    monkeypatch.setenv(
+        "SKILLHUB_AUTH_GITHUB_API_BASE_URL",
+        "https://github-proxy.internal/",
+    )
+
+    registrations = {
+        str(item["id"]): item for item in oauth_registrations_from_env()
+    }
+
+    assert registrations["github"]["emailApiUri"] == (
+        "https://github-proxy.internal/user/emails"
+    )
+
+
 def test_keycloak_authorization_redirects_from_spring_boot_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SKILLHUB_PUBLIC_BASE_URL", "https://skillhub.example")
     monkeypatch.setenv("SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID", "skillhub-web")
@@ -282,12 +425,29 @@ def test_keycloak_claims_use_sub_and_preferred_username() -> None:
             "preferred_username": "alice",
             "name": "Alice Example",
             "email": "alice@example.test",
+            "email_verified": True,
         },
     )
 
     assert claims["subject"] == "1e52e2cf-1f10-4b8b-9f41-71ad3e845791"
     assert claims["providerLogin"] == "alice"
     assert claims["email"] == "alice@example.test"
+    assert claims["emailVerified"] is True
+
+
+def test_oidc_claims_do_not_mark_unverified_email_as_trusted() -> None:
+    claims = _claims_from_attributes(
+        "keycloak",
+        {
+            "sub": "subject-1",
+            "preferred_username": "alice",
+            "email": "unverified@example.test",
+            "email_verified": False,
+        },
+    )
+
+    assert claims["email"] == "unverified@example.test"
+    assert claims["emailVerified"] is False
 
 
 def test_oauth_callback_rejects_missing_code() -> None:
@@ -497,3 +657,281 @@ def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_
     ]
     assert http_client.requests[0][0:2] == ("POST", "https://github.example/oauth/token")
     assert http_client.requests[1][0:2] == ("GET", "https://github.example/user")
+    assert http_client.requests[2][0:2] == ("GET", "https://api.github.com/user/emails")
+
+
+@pytest.mark.anyio
+async def test_github_exchange_uses_primary_verified_email_from_configured_api() -> None:
+    http_client = FakeOAuthHttpClient()
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+        "emailApiUri": "https://github-proxy.internal/user/emails",
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["email"] == "oauth-user@example.test"
+    assert claims["emailVerified"] is True
+    assert http_client.requests[2][0:2] == (
+        "GET",
+        "https://github-proxy.internal/user/emails",
+    )
+
+
+@pytest.mark.anyio
+async def test_github_exchange_does_not_send_token_to_unsafe_email_api() -> None:
+    http_client = FakeOAuthHttpClient()
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+        "emailApiUri": "http://attacker.example/user/emails",
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["emailVerified"] is False
+    assert [request[1] for request in http_client.requests] == [
+        "https://github.example/oauth/token",
+        "https://github.example/user",
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "email_api_uri",
+    [
+        "https://localhost/user/emails",
+        "https://127.0.0.1/user/emails",
+        "https://169.254.169.254/latest/meta-data",
+        "https://[::1]/user/emails",
+    ],
+)
+async def test_github_exchange_does_not_send_token_to_forbidden_host(
+    email_api_uri: str,
+) -> None:
+    http_client = FakeOAuthHttpClient()
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+        "emailApiUri": email_api_uri,
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["emailVerified"] is False
+    assert [request[1] for request in http_client.requests] == [
+        "https://github.example/oauth/token",
+        "https://github.example/user",
+    ]
+
+
+@pytest.mark.anyio
+async def test_github_exchange_streams_email_response_without_buffering() -> None:
+    response = FakeHttpResponse(
+        [
+            {
+                "email": "streamed@example.test",
+                "primary": True,
+                "verified": True,
+            }
+        ],
+        deny_content_access=True,
+    )
+    http_client = FakeOAuthHttpClient(response)
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["email"] == "streamed@example.test"
+    assert claims["emailVerified"] is True
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "email_response",
+    [
+        FakeHttpResponse(
+            [{"email": "unsafe@example.test", "verified": True}],
+            content_type="text/html",
+        ),
+        FakeHttpResponse(
+            [{"email": "oversized@example.test", "verified": True}],
+            content=b"x" * (1024 * 1024 + 1),
+        ),
+        FakeHttpResponse(
+            [{"email": "redirected@example.test", "verified": True}],
+            status_code=302,
+        ),
+    ],
+)
+async def test_github_exchange_rejects_untrusted_email_api_response(
+    email_response: FakeHttpResponse,
+) -> None:
+    http_client = FakeOAuthHttpClient(email_response)
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["emailVerified"] is False
+
+
+@pytest.mark.anyio
+async def test_github_exchange_treats_email_api_failure_as_unverified() -> None:
+    http_client = FailingGitHubEmailHttpClient()
+    registration = {
+        **oauth_registration(),
+        "clientSecret": "secret-123",
+        "tokenUri": "https://github.example/oauth/token",
+        "userInfoUri": "https://github.example/user",
+    }
+
+    claims = await exchange_oauth_code(
+        registration,
+        "code-123",
+        http_client_factory=lambda: http_client,
+    )
+
+    assert claims["email"] == "oauth-user@example.test"
+    assert claims["emailVerified"] is False
+
+
+@pytest.mark.anyio
+async def test_oauth_binding_does_not_persist_unverified_email_for_new_account() -> None:
+    connection = FakeOAuthConnection()
+
+    principal_value = await bind_oauth_principal(
+        FakeEngine(connection),
+        oauth_registration(),
+        {
+            "subject": "subject-1",
+            "providerLogin": "alice",
+            "email": "unverified@example.test",
+            "emailVerified": False,
+        },
+    )
+
+    user = next(iter(connection.users.values()))
+    assert user["email"] is None
+    assert principal_value["email"] == ""
+
+
+@pytest.mark.anyio
+async def test_oauth_binding_does_not_overwrite_verified_email_with_unverified_claim() -> None:
+    connection = FakeOAuthConnection()
+    connection.users["user-1"] = {
+        "id": "user-1",
+        "display_name": "Alice",
+        "email": "verified@example.test",
+        "avatar_url": "",
+        "status": "ACTIVE",
+        "merged_to_user_id": None,
+        "system_account": False,
+    }
+    connection.identity_bindings.append(
+        {
+            "id": 1,
+            "user_id": "user-1",
+            "provider_code": "github",
+            "subject": "subject-1",
+            "login_name": "alice",
+        }
+    )
+
+    await bind_oauth_principal(
+        FakeEngine(connection),
+        oauth_registration(),
+        {
+            "subject": "subject-1",
+            "providerLogin": "attacker-name",
+            "email": "unverified@example.test",
+            "emailVerified": False,
+        },
+    )
+
+    assert connection.users["user-1"]["email"] == "verified@example.test"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("status", "system_account", "message"),
+    [
+        ("MERGED", False, "error.auth.oauth.accountMerged"),
+        ("ACTIVE", True, "error.auth.oauth.systemAccount"),
+    ],
+)
+async def test_oauth_binding_rejects_merged_and_system_accounts_before_profile_update(
+    status: str,
+    system_account: bool,
+    message: str,
+) -> None:
+    connection = FakeOAuthConnection()
+    connection.users["user-1"] = {
+        "id": "user-1",
+        "display_name": "Original Name",
+        "email": "verified@example.test",
+        "avatar_url": "",
+        "status": status,
+        "merged_to_user_id": "primary-user" if status == "MERGED" else None,
+        "system_account": system_account,
+    }
+    connection.identity_bindings.append(
+        {
+            "id": 1,
+            "user_id": "user-1",
+            "provider_code": "github",
+            "subject": "subject-1",
+            "login_name": "original",
+        }
+    )
+
+    with pytest.raises(PermissionError, match=message):
+        await bind_oauth_principal(
+            FakeEngine(connection),
+            oauth_registration(),
+            {
+                "subject": "subject-1",
+                "providerLogin": "attacker-name",
+                "email": "attacker@example.test",
+                "emailVerified": True,
+            },
+        )
+
+    assert connection.users["user-1"]["display_name"] == "Original Name"
+    assert connection.users["user-1"]["email"] == "verified@example.test"

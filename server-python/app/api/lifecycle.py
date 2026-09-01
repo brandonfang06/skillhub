@@ -16,7 +16,6 @@ from app.auth.policy import (
     require_platform_role,
 )
 from app.core.response import ok
-from app.core.redis import create_redis_client
 from app.lifecycle.hard_delete import SkillHardDeleteError, SkillHardDeleteInput, hard_delete_skill
 from app.lifecycle.skill import (
     SkillArchiveInput,
@@ -37,10 +36,6 @@ from app.lifecycle.skill import (
     update_skill_visibility,
     withdraw_skill_version_review,
 )
-from app.publish.orchestration import execute_publish_write
-from app.publish.scanner_handoff import RedisScanTaskPublisher
-
-
 router = APIRouter()
 
 
@@ -72,8 +67,16 @@ async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
     return result
 
 
-async def _require_user_id(request: Request, mock_user_id: str | None) -> str:
-    user = await resolve_current_user_or_401(request, mock_user_id, None)
+async def _require_user_id(
+    request: Request,
+    mock_user_id: str | None,
+    authorization: str | None = None,
+    *,
+    required_api_token_scope: str | None = None,
+) -> str:
+    user = await resolve_current_user_or_401(request, mock_user_id, authorization)
+    if required_api_token_scope is not None and is_api_token_principal(user):
+        require_api_token_scope(user, required_api_token_scope)
     return str(user["userId"])
 
 
@@ -356,8 +359,14 @@ async def submit_review_route_data(
     slug: str,
     body: SkillSubmitReviewRequest,
     mock_user_id: str | None,
+    authorization: str | None,
 ) -> dict[str, Any]:
-    user_id = await _require_user_id(request, mock_user_id)
+    user_id = await _require_user_id(
+        request,
+        mock_user_id,
+        authorization,
+        required_api_token_scope="skill:publish",
+    )
     submit_input = SkillSubmitReviewInput(
         namespace=namespace,
         slug=slug,
@@ -410,21 +419,6 @@ async def rerelease_route_data(
         user_agent=request.headers.get("user-agent"),
     )
     writer = getattr(request.app.state, "skill_rerelease_writer", None)
-    publish_writer = None
-    if writer is None and rerelease_input.scanner_enabled:
-        redis_client = getattr(request.app.state, "redis_client", None)
-        if redis_client is None:
-            redis_client = create_redis_client(settings)
-            request.app.state.redis_client = redis_client
-        scan_task_publisher = RedisScanTaskPublisher(redis_client, settings.scan_stream_key)
-
-        async def publish_writer(write_input: Any) -> Any:
-            return await execute_publish_write(
-                request.app.state.db_engine,
-                write_input,
-                scan_task_publisher=scan_task_publisher,
-                notification_fanout=getattr(request.app.state, "notification_fanout", None),
-            )
 
     try:
         data = await _resolve_result(
@@ -433,7 +427,6 @@ async def rerelease_route_data(
             else rerelease_skill_version(
                 request.app.state.db_engine,
                 rerelease_input,
-                publish_writer=publish_writer,
                 notification_fanout=getattr(request.app.state, "notification_fanout", None),
             )
         )
@@ -684,8 +677,16 @@ async def submit_review_v1(
     slug: str,
     body: SkillSubmitReviewRequest,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
-    return await submit_review_route_data(request, namespace, slug, body, x_mock_user_id)
+    return await submit_review_route_data(
+        request,
+        namespace,
+        slug,
+        body,
+        x_mock_user_id,
+        authorization,
+    )
 
 
 @router.post("/api/web/skills/{namespace}/{slug}/submit-review")
@@ -696,4 +697,11 @@ async def submit_review_web(
     body: SkillSubmitReviewRequest,
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
-    return await submit_review_route_data(request, namespace, slug, body, x_mock_user_id)
+    return await submit_review_route_data(
+        request,
+        namespace,
+        slug,
+        body,
+        x_mock_user_id,
+        None,
+    )

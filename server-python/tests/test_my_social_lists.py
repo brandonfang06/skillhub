@@ -82,6 +82,8 @@ def social_row(**overrides: Any) -> dict[str, Any]:
         "rating_avg": Decimal("4.25"),
         "rating_count": 3,
         "namespace": "global",
+        "owner_id": "owner-1",
+        "owner_display_name": "Owner One",
         "updated_at": datetime(2026, 6, 10, 11, 0, tzinfo=UTC),
         "published_version_id": 77,
         "published_version": "1.0.0",
@@ -112,6 +114,8 @@ async def test_list_my_social_skills_maps_stars_with_java_page_defaults_and_tota
                 "ratingAvg": 4.25,
                 "ratingCount": 3,
                 "namespace": "global",
+                "ownerId": "owner-1",
+                "ownerDisplayName": "Owner One",
                 "updatedAt": "2026-06-10T11:00:00Z",
                 "canSubmitPromotion": False,
                 "headlineVersion": {"id": 77, "version": "1.0.0", "status": "PUBLISHED"},
@@ -130,6 +134,8 @@ async def test_list_my_social_skills_maps_stars_with_java_page_defaults_and_tota
     assert connection.params[1]["offset"] == 0
     assert "skill_star" in connection.statements[0]
     assert "skill_star" in connection.statements[1]
+    assert "s.owner_id" in connection.statements[1]
+    assert "JOIN user_account owner" in connection.statements[1]
 
 
 @pytest.mark.anyio

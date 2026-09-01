@@ -366,7 +366,9 @@ async def read_clawhub_legacy_slug_coordinate(engine: AsyncEngine, slug: str) ->
                       AND s.status = 'ACTIVE'
                       AND s.latest_version_id IS NOT NULL
                       AND s.hidden = false
-                    ORDER BY s.id ASC
+                    ORDER BY CASE WHEN s.visibility = 'PUBLIC' THEN 0 ELSE 1 END,
+                             CASE WHEN n.type = 'GLOBAL' THEN 0 ELSE 1 END,
+                             s.id ASC
                     LIMIT 1
                     """
                 ),
@@ -1078,6 +1080,8 @@ async def read_skill_search(
                            s.rating_avg,
                            s.rating_count,
                            n.slug AS namespace,
+                           s.owner_id,
+                           NULLIF(BTRIM(owner.display_name), '') AS owner_display_name,
                            s.updated_at,
                            isv.id AS published_version_id,
                            isv.version AS published_version,
@@ -1088,6 +1092,7 @@ async def read_skill_search(
                     FROM skill_search_document d
                     JOIN skill s ON s.id = d.skill_id
                     JOIN namespace n ON n.id = d.namespace_id
+                    LEFT JOIN user_account owner ON owner.id = s.owner_id
                     {published_version_projection_join_sql}
                     WHERE {where_sql}
                     ORDER BY {order_sql}

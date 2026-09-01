@@ -34,8 +34,20 @@ class FakeResult:
 
 
 class FakePublicationConnection:
-    def __init__(self, *, fail_on_notification: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        fail_on_notification: bool = False,
+        subscriber_rows: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.fail_on_notification = fail_on_notification
+        self.subscriber_rows = subscriber_rows or [
+            {
+                "user_id": "subscriber-a",
+                "account_status": "ACTIVE",
+                "namespace_role": None,
+            }
+        ]
         self.display_name = "Agent Helper"
         self.statements: list[str] = []
         self.params: list[dict[str, Any]] = []
@@ -58,7 +70,13 @@ class FakePublicationConnection:
                     "owner_id": "owner",
                     "slug": "agent-helper",
                     "display_name": self.display_name,
+                    "namespace_id": 20,
                     "namespace_slug": "team-a",
+                    "visibility": "PUBLIC",
+                    "hidden": False,
+                    "latest_version_id": 42,
+                    "published_version_id": 42,
+                    "namespace_status": "ACTIVE",
                     "version": "1.1.0",
                 }
             )
@@ -85,7 +103,7 @@ class FakePublicationConnection:
         if "notification_preference" in sql and "owner_id" in values:
             return FakeResult(row={"enabled": True})
         if "FROM skill_subscription" in sql:
-            return FakeResult(rows=[{"user_id": "subscriber-a"}])
+            return FakeResult(rows=self.subscriber_rows)
         if "INSERT INTO notification" in sql:
             if self.fail_on_notification:
                 raise RuntimeError("notification write failed")
@@ -239,6 +257,37 @@ async def test_publication_outcome_replay_does_not_duplicate_durable_or_fanout_n
     assert len(connection.notifications) == 2
     assert len(fanout.published) == 2
     assert engine.events == ["commit", "commit"]
+
+
+@pytest.mark.anyio
+async def test_publication_outcomes_recheck_subscriber_account_eligibility_before_insert() -> (
+    None
+):
+    connection = FakePublicationConnection(
+        subscriber_rows=[
+            {
+                "user_id": "active-subscriber",
+                "account_status": "ACTIVE",
+                "namespace_role": None,
+            },
+            {
+                "user_id": "disabled-subscriber",
+                "account_status": "DISABLED",
+                "namespace_role": None,
+            },
+        ]
+    )
+    engine = FakeEngine(connection)
+
+    await apply_publication_outcomes(engine, outcome_input(), None)
+
+    assert [
+        (row["recipient_id"], row["event_type"])
+        for row in connection.notifications
+    ] == [
+        ("owner", "SKILL_PUBLISHED"),
+        ("active-subscriber", "SUBSCRIPTION_NEW_VERSION"),
+    ]
 
 
 @pytest.mark.anyio

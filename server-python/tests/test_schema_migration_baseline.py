@@ -33,8 +33,27 @@ def test_baseline_revision_tracks_bundled_python_migration_snapshot() -> None:
     latest_flyway = max(migrations.flyway_migration_files(FLYWAY_DIR), key=lambda item: item.version)
 
     assert migrations.BASELINE_FLYWAY_VERSION == latest_flyway.version
-    assert migrations.BASELINE_REVISION == "skillhub_flyway_v43_baseline"
-    assert latest_flyway.path.name == "V43__user_account_system_account.sql"
+    assert migrations.BASELINE_REVISION == "skillhub_flyway_v45_baseline"
+    assert latest_flyway.path.name == "V45__scan_task_outbox_metadata.sql"
+
+
+def test_upstream_scan_task_outbox_migrations_preserve_delivery_intent() -> None:
+    migration_files = {
+        item.version: item.path.read_text(encoding="utf-8")
+        for item in migrations.flyway_migration_files(FLYWAY_DIR)
+    }
+
+    outbox_sql = migration_files[44]
+    metadata_sql = migration_files[45]
+
+    assert "CREATE TABLE scan_task_outbox" in outbox_sql
+    assert "task_id VARCHAR(100) NOT NULL" in outbox_sql
+    assert "CONSTRAINT uk_scan_task_outbox_task_id UNIQUE (task_id)" in outbox_sql
+    assert "status IN ('PENDING', 'SENDING', 'SENT', 'FAILED')" in outbox_sql
+    assert "next_attempt_at TIMESTAMPTZ NOT NULL" in outbox_sql
+    assert "lease_until TIMESTAMPTZ" in outbox_sql
+    assert "ALTER TABLE security_audit ADD COLUMN task_id" in outbox_sql
+    assert "ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}'::jsonb" in metadata_sql
 
 
 def test_alembic_baseline_files_are_present() -> None:

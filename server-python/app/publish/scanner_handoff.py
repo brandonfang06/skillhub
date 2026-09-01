@@ -11,7 +11,7 @@ from app.core.request_id import (
     current_request_id,
     is_valid_request_id,
 )
-from app.publish.side_effects import ScanTaskPayload
+from app.publish.scan_contracts import ScanTaskPayload
 
 DEFAULT_SCAN_STREAM_KEY = "skillhub:scan:requests"
 OWNED_TRANSPORT_FIELDS = {MESSAGE_REQUEST_ID_FIELD, "traceparent", "tracestate", "baggage"}
@@ -43,7 +43,7 @@ def build_scan_stream_fields(task: ScanTaskPayload) -> dict[str, str]:
         for key, value in (task.metadata or {}).items()
         if key not in OWNED_TRANSPORT_FIELDS
     )
-    request_id = current_request_id()
+    request_id = task.request_id or current_request_id()
     if is_valid_request_id(request_id):
         fields[MESSAGE_REQUEST_ID_FIELD] = request_id
     return fields

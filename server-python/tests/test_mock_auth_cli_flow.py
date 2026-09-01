@@ -187,6 +187,7 @@ def test_cli_bearer_user_can_search_resolve_download_validate_and_publish() -> N
         "slug": "cli-skill",
         "version": "1.0.0",
         "visibility": "PRIVATE",
+        "status": "PENDING_REVIEW",
     }
 
     assert flow == [

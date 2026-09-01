@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 
 import pytest
 
@@ -13,6 +13,7 @@ from app.publish.package import (
     extract_package,
     extract_package_with_warnings,
     is_allowed_extension,
+    is_directory_entry_path,
     normalize_entry_path,
     parse_skill_metadata,
     strip_single_root_directory,
@@ -109,6 +110,28 @@ def test_extract_package_skips_directories_and_os_metadata() -> None:
         ("SKILL.md", skill_md(), "text/markdown"),
         ("src/main.py", b"print('ok')", "text/x-python"),
     ]
+
+
+def test_extract_package_skips_windows_style_directory_entries() -> None:
+    buffer = BytesIO()
+    with ZipFile(buffer, "w") as archive_writer:
+        directory = ZipInfo("placeholder")
+        directory.filename = "skill\\"
+        archive_writer.writestr(directory, b"")
+        skill_file = ZipInfo("placeholder")
+        skill_file.filename = "skill\\SKILL.md"
+        archive_writer.writestr(skill_file, skill_md())
+
+    entries = extract_package(buffer.getvalue())
+
+    assert [(entry.path, entry.content) for entry in entries] == [
+        ("SKILL.md", skill_md()),
+    ]
+
+
+@pytest.mark.parametrize("path", ["skill/", "skill\\"])
+def test_directory_entry_detection_is_platform_independent(path: str) -> None:
+    assert is_directory_entry_path(path)
 
 
 def test_extract_package_canonicalizes_case_insensitive_skill_md() -> None:

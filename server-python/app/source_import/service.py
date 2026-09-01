@@ -139,7 +139,6 @@ class SourceSkillSubmissionRuntime:
     storage: Any | None = None
     scanner_enabled: bool = False
     scan_mode: str = "upload"
-    scan_task_publisher: Any | None = None
     notification_fanout: Any | None = None
 
 
@@ -642,7 +641,6 @@ async def submit_source_skill(
         result = await publisher(
             engine,
             build_source_publish_input(plan, request, runtime),
-            scan_task_publisher=runtime.scan_task_publisher,
             notification_fanout=runtime.notification_fanout,
             after_prepare=persist_provenance,
         )

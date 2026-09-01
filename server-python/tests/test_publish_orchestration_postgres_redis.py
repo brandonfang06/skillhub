@@ -13,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from app.core.redis import SkillHubRedisClient
 from app.publish.orchestration import (
     PublishWriteInput,
-    ScanTaskPublisher,
     execute_publish_write,
 )
 from app.publish.package import PackageEntry, SkillMetadata
+from app.publish.scan_contracts import ScanTaskPayload
+from app.publish.scan_outbox import ScanOutboxDispatcher, ScanTaskPublisher
 from app.publish.scanner_handoff import RedisScanTaskPublisher
-from app.publish.side_effects import ScanTaskPayload
 
 TEST_DATABASE_URL = os.getenv("SKILLHUB_TEST_DATABASE_URL")
 TEST_REDIS_URL = os.getenv("SKILLHUB_TEST_REDIS_URL")
@@ -173,10 +173,38 @@ async def test_scan_task_is_visible_once_after_commit_and_absent_on_rollback(
                 slug=f"committed-{suffix}",
                 task_id=f"committed-task-{suffix}",
             ),
-            scan_task_publisher=committed_publisher,
         )
 
+        async with engine.connect() as connection:
+            committed_outbox = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT task_id, version_id, status, retry_count
+                        FROM scan_task_outbox
+                        WHERE task_id = :task_id
+                        """
+                    ),
+                    {"task_id": f"committed-task-{suffix}"},
+                )
+            ).mappings().one()
+
+        assert dict(committed_outbox) == {
+            "task_id": f"committed-task-{suffix}",
+            "version_id": committed.version_id,
+            "status": "PENDING",
+            "retry_count": 0,
+        }
+        assert committed_publisher.observations == []
+        assert await raw_redis.xlen(committed_stream) == 0
+
+        dispatched = await ScanOutboxDispatcher(
+            engine,
+            committed_publisher,
+        ).dispatch_once()
         committed_messages = await raw_redis.xrange(committed_stream)
+        assert dispatched.claimed == 1
+        assert dispatched.sent == 1
         assert committed_publisher.observations == [
             PublishObservation(
                 version_id=committed.version_id,
@@ -208,9 +236,8 @@ async def test_scan_task_is_visible_once_after_commit_and_absent_on_rollback(
                     namespace_id=namespace_id,
                     publisher_id=user_id,
                     slug=f"rolled-back-{suffix}",
-                    task_id=f"rolled-back-task-{suffix}",
-                ),
-                scan_task_publisher=rolled_back_publisher,
+                task_id=f"rolled-back-task-{suffix}",
+            ),
                 after_publish=fail_transaction,
             )
 
@@ -235,7 +262,22 @@ async def test_scan_task_is_visible_once_after_commit_and_absent_on_rollback(
                     )
                 ).scalar_one()
             )
+            rolled_back_outbox_count = int(
+                (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT COUNT(*)
+                            FROM scan_task_outbox
+                            WHERE task_id = :task_id
+                            """
+                        ),
+                        {"task_id": f"rolled-back-task-{suffix}"},
+                    )
+                ).scalar_one()
+            )
         assert rolled_back_count == 0
+        assert rolled_back_outbox_count == 0
     finally:
         await redis_client.delete(committed_stream, rolled_back_stream)
         await redis_client.aclose()
@@ -269,6 +311,15 @@ async def test_scan_task_is_visible_once_after_commit_and_absent_on_rollback(
                             {"namespace_id": namespace_id},
                         )
                     ).scalars().all()
+                )
+                await connection.execute(
+                    text(
+                        """
+                        DELETE FROM scan_task_outbox
+                        WHERE publisher_id = :user_id
+                        """
+                    ),
+                    {"user_id": user_id},
                 )
                 if skill_ids:
                     await connection.execute(

@@ -29,8 +29,38 @@ DEFAULT_SCAN_CONSUMER_READ_COUNT = 10
 DEFAULT_SCAN_CONSUMER_BLOCK_MS = 2000
 DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 120000
 DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT = 20
+DEFAULT_SCAN_OUTBOX_BATCH_SIZE = 50
+DEFAULT_SCAN_OUTBOX_MAX_ATTEMPTS = 10
+DEFAULT_SCAN_OUTBOX_LEASE_SECONDS = 120
+DEFAULT_SCAN_OUTBOX_MAX_BACKOFF_SECONDS = 300
+DEFAULT_SCAN_OUTBOX_DISPATCH_INTERVAL_MS = 5000
+DEFAULT_SCAN_OUTBOX_SENT_RETENTION_DAYS = 7
+DEFAULT_SCAN_OUTBOX_CLEANUP_INTERVAL_SECONDS = 86400
 DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS = 12
+RATE_LIMIT_CATEGORIES = (
+    "search",
+    "resolve",
+    "download",
+    "skills",
+    "stars",
+    "publish",
+    "whoami",
+    "auth-session-bootstrap",
+    "auth-direct-login",
+    "auth-password-reset-request",
+    "auth-password-reset-confirm",
+    "auth-register",
+    "auth-local-login",
+    "auth-change-password",
+)
 log = logging.getLogger("uvicorn.error")
+
+
+@dataclass(frozen=True)
+class RateLimitCategoryOverride:
+    authenticated: int | None = None
+    anonymous: int | None = None
+    window_seconds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +100,8 @@ class Settings:
     redis_ssl_enabled: bool
     redis_connect_timeout_seconds: int
     redis_timeout_seconds: int
+    rate_limit_enabled: bool
+    rate_limit_overrides: dict[str, RateLimitCategoryOverride]
     scan_stream_key: str
     scanner_base_url: str
     scanner_health_path: str
@@ -91,6 +123,13 @@ class Settings:
     scan_consumer_block_ms: int
     scan_consumer_reclaim_min_idle_ms: int
     scan_consumer_reclaim_count: int
+    scan_outbox_batch_size: int
+    scan_outbox_max_attempts: int
+    scan_outbox_lease_seconds: int
+    scan_outbox_max_backoff_seconds: int
+    scan_outbox_dispatch_interval_ms: int
+    scan_outbox_sent_retention_days: int
+    scan_outbox_cleanup_interval_seconds: int
     playground_token_secret: str
     playground_token_ttl_seconds: int
     playground_token_issuer: str
@@ -115,6 +154,20 @@ def parse_int(value: str | None, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def parse_optional_bounded_int(
+    value: str | None,
+    *,
+    minimum: int,
+) -> int | None:
+    if value is None or value.strip() == "":
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return parsed if parsed >= minimum else None
 
 
 def parse_duration_seconds(value: str | None, default: int) -> int:
@@ -158,6 +211,34 @@ def parse_extension_set(value: str | None) -> set[str] | None:
             normalized = f".{normalized}"
         extensions.add(normalized)
     return extensions or None
+
+
+def resolve_rate_limit_overrides() -> dict[str, RateLimitCategoryOverride]:
+    overrides: dict[str, RateLimitCategoryOverride] = {}
+    for category in RATE_LIMIT_CATEGORIES:
+        env_category = category.replace("-", "_").upper()
+        prefix = f"SKILLHUB_RATELIMIT_CATEGORIES_{env_category}_"
+        override = RateLimitCategoryOverride(
+            authenticated=parse_optional_bounded_int(
+                os.getenv(f"{prefix}AUTHENTICATED"), minimum=0
+            ),
+            anonymous=parse_optional_bounded_int(
+                os.getenv(f"{prefix}ANONYMOUS"), minimum=0
+            ),
+            window_seconds=parse_optional_bounded_int(
+                os.getenv(f"{prefix}WINDOW_SECONDS"), minimum=1
+            ),
+        )
+        if any(
+            value is not None
+            for value in (
+                override.authenticated,
+                override.anonymous,
+                override.window_seconds,
+            )
+        ):
+            overrides[category] = override
+    return overrides
 
 
 def resolve_database_url() -> str:
@@ -342,6 +423,8 @@ def get_settings() -> Settings:
             first_env("SPRING_DATA_REDIS_TIMEOUT", "SKILLHUB_REDIS_TIMEOUT"),
             5,
         ),
+        rate_limit_enabled=parse_bool(os.getenv("SKILLHUB_RATELIMIT_ENABLED")),
+        rate_limit_overrides=resolve_rate_limit_overrides(),
         scan_stream_key=os.getenv("SKILLHUB_SCAN_STREAM_KEY", DEFAULT_SCAN_STREAM_KEY),
         scanner_base_url=first_env(
             "SKILLHUB_SECURITY_SCANNER_BASE_URL",
@@ -384,6 +467,34 @@ def get_settings() -> Settings:
         scan_consumer_reclaim_count=parse_int(
             os.getenv("SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT"),
             DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT,
+        ),
+        scan_outbox_batch_size=parse_int(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_BATCH_SIZE"),
+            DEFAULT_SCAN_OUTBOX_BATCH_SIZE,
+        ),
+        scan_outbox_max_attempts=parse_int(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_MAX_ATTEMPTS"),
+            DEFAULT_SCAN_OUTBOX_MAX_ATTEMPTS,
+        ),
+        scan_outbox_lease_seconds=parse_duration_seconds(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_LEASE"),
+            DEFAULT_SCAN_OUTBOX_LEASE_SECONDS,
+        ),
+        scan_outbox_max_backoff_seconds=parse_duration_seconds(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_MAX_BACKOFF"),
+            DEFAULT_SCAN_OUTBOX_MAX_BACKOFF_SECONDS,
+        ),
+        scan_outbox_dispatch_interval_ms=parse_int(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_DISPATCH_INTERVAL_MS"),
+            DEFAULT_SCAN_OUTBOX_DISPATCH_INTERVAL_MS,
+        ),
+        scan_outbox_sent_retention_days=parse_int(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_SENT_RETENTION_DAYS"),
+            DEFAULT_SCAN_OUTBOX_SENT_RETENTION_DAYS,
+        ),
+        scan_outbox_cleanup_interval_seconds=parse_int(
+            os.getenv("SKILLHUB_SECURITY_OUTBOX_CLEANUP_INTERVAL_SECONDS"),
+            DEFAULT_SCAN_OUTBOX_CLEANUP_INTERVAL_SECONDS,
         ),
         playground_token_secret=os.getenv("SKILLHUB_PLAYGROUND_TOKEN_SECRET", ""),
         playground_token_ttl_seconds=parse_int(
