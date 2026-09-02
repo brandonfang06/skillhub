@@ -25,6 +25,7 @@ class FakeSourceImportRepository:
     bindings_by_repository: dict[str, NamespaceSourceBinding]
     bindings_by_namespace: dict[int, NamespaceSourceBinding]
     owners: dict[int, list[IdentityAccount]]
+    service_platform_admins: dict[str, IdentityAccount]
 
     def __init__(self) -> None:
         self.identities = {}
@@ -32,6 +33,8 @@ class FakeSourceImportRepository:
         self.bindings_by_repository = {}
         self.bindings_by_namespace = {}
         self.owners = {}
+        self.service_platform_admins = {}
+        self.locked_slugs: list[str] = []
         self.created: list[dict[str, object]] = []
 
     async def read_identity_accounts(self, provider_code: str, login_name: str) -> list[IdentityAccount]:
@@ -39,6 +42,10 @@ class FakeSourceImportRepository:
 
     async def read_namespace(self, slug: str) -> NamespaceRecord | None:
         return self.namespaces.get(slug)
+
+    async def try_lock_source_namespace_creation(self, slug: str) -> bool:
+        self.locked_slugs.append(slug)
+        return True
 
     async def read_namespace_source_by_repository(self, repository_url: str) -> NamespaceSourceBinding | None:
         return self.bindings_by_repository.get(repository_url)
@@ -49,6 +56,11 @@ class FakeSourceImportRepository:
     async def read_namespace_owners(self, namespace_id: int) -> list[IdentityAccount]:
         return self.owners.get(namespace_id, [])
 
+    async def read_service_principal_platform_admin(
+        self, service_principal_id: str
+    ) -> IdentityAccount | None:
+        return self.service_platform_admins.get(service_principal_id)
+
     async def create_namespace_source(
         self,
         *,
@@ -56,6 +68,7 @@ class FakeSourceImportRepository:
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
+        platform_admin: IdentityAccount,
         service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]:
@@ -77,6 +90,7 @@ class FakeSourceImportRepository:
                 "display_name": display_name,
                 "repository_url": repository_url,
                 "owner_id": owner.user_id,
+                "platform_admin_id": platform_admin.user_id,
                 "service_principal_id": service_actor.service_principal_id,
                 "request_id": request_id,
             }
@@ -116,19 +130,23 @@ def ensure_input() -> EnsureSourceNamespaceInput:
 async def test_creates_missing_namespace_with_fallback_owner_and_repository_binding() -> None:
     repository = FakeSourceImportRepository()
     fallback = account("owner-user", login_name="platform-owner")
+    platform_admin = account("platform-admin")
     repository.identities[("keycloak", "platform-owner")] = [fallback]
+    repository.service_platform_admins["svc_importer"] = platform_admin
 
     result = await ensure_source_namespace_in_transaction(repository, ensure_input())
 
     assert result.outcome == "CREATED"
     assert result.namespace.slug == "oss-mattpocock-skills"
     assert result.owner == fallback
+    assert repository.locked_slugs == ["oss-mattpocock-skills"]
     assert repository.created == [
         {
             "slug": "oss-mattpocock-skills",
             "display_name": "OSS-mattpocock-skills",
             "repository_url": "https://github.com/mattpocock/skills",
             "owner_id": "owner-user",
+            "platform_admin_id": "platform-admin",
             "service_principal_id": "svc_importer",
             "request_id": "request-1",
         }
@@ -210,6 +228,26 @@ async def test_requires_exactly_one_active_fallback_identity_for_creation() -> N
 
     repository.identities[("keycloak", "platform-owner")] = [account("disabled", status="DISABLED")]
     with pytest.raises(SourceImportConflict, match="not active"):
+        await ensure_source_namespace_in_transaction(repository, ensure_input())
+
+
+@pytest.mark.anyio
+async def test_requires_distinct_active_platform_admin_who_created_service_principal() -> None:
+    repository = FakeSourceImportRepository()
+    fallback = account("owner-user", login_name="platform-owner")
+    repository.identities[("keycloak", "platform-owner")] = [fallback]
+
+    with pytest.raises(SourceImportConflict, match="platform admin"):
+        await ensure_source_namespace_in_transaction(repository, ensure_input())
+
+    repository.service_platform_admins["svc_importer"] = account(
+        "disabled-admin", status="DISABLED"
+    )
+    with pytest.raises(SourceImportConflict, match="platform admin"):
+        await ensure_source_namespace_in_transaction(repository, ensure_input())
+
+    repository.service_platform_admins["svc_importer"] = fallback
+    with pytest.raises(SourceImportConflict, match="different users"):
         await ensure_source_namespace_in_transaction(repository, ensure_input())
 
 

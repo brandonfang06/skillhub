@@ -202,6 +202,8 @@ INSERT INTO identity_binding (user_id, provider_code, subject, login_name, extra
 ('$ownerId','keycloak','$ownerId-subject','$ownerId','{}'::jsonb),
 ('$triggerId','keycloak','$triggerId-subject','$triggerId','{}'::jsonb),
 ('$triggerTwoId','keycloak','$triggerTwoId-subject','$triggerTwoId','{}'::jsonb);
+INSERT INTO user_role_binding (user_id, role_id)
+SELECT '$actorId', id FROM role WHERE code='SUPER_ADMIN';
 INSERT INTO service_principal (id, code, display_name, status, created_by_user_id)
 VALUES ('$serviceId','$serviceCode','OSS Smoke Importer','ACTIVE','$actorId');
 INSERT INTO service_token (
@@ -247,6 +249,20 @@ WHERE n.slug='$namespaceSlug'
         Start-Sleep -Seconds 1
     }
     Assert-Equal $databaseEvidence.Trim() "3" "Database identity, provenance, review, and scanner evidence"
+
+    $membershipEvidence = (Invoke-Psql @"
+SELECT string_agg(nm.user_id || ':' || nm.role, ',' ORDER BY nm.user_id)
+FROM namespace_member nm
+JOIN namespace n ON n.id=nm.namespace_id
+WHERE n.slug='$namespaceSlug' AND nm.role IN ('OWNER','ADMIN');
+"@ -TuplesOnly).Trim()
+    Assert-Equal $membershipEvidence "$actorId`:ADMIN,$ownerId`:OWNER" "OSS namespace owner and platform admin"
+    $triggerMembership = (Invoke-Psql @"
+SELECT nm.role FROM namespace_member nm
+JOIN namespace n ON n.id=nm.namespace_id
+WHERE n.slug='$namespaceSlug' AND nm.user_id='$triggerId';
+"@ -TuplesOnly).Trim()
+    Assert-Equal $triggerMembership "MEMBER" "Pipeline initiator keeps non-management membership"
 
     $minioObjects = & docker run --rm --network "${ComposeProject}_default" --entrypoint /bin/sh `
         minio/mc:RELEASE.2025-07-21T05-28-08Z -c `

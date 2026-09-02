@@ -213,6 +213,17 @@ Platform Admin 在 `/admin/service-principals` 建立 ACTIVE principal 與 token
 `/skillhub/admin/service-principals`。限時 token 最長為建立日起 **3 個曆年**，也可以選擇
 **永不到期**。無論期限為何都要有定期**輪替**與緊急**撤銷**程序。
 
+新建 `oss-` namespace 固定包含兩位管理角色：設定的 fallback owner 是 `OWNER`，建立該
+service principal 的 Platform Admin 是 `ADMIN`。兩者必須是不同的 ACTIVE 使用者，而且
+service principal 建立者在建立 namespace 時仍須持有 `SUPER_ADMIN`；否則 ensure namespace
+會失敗並整筆 rollback。其他 `SUPER_ADMIN` 不會自動加入，既有 namespace 也不會由重跑
+importer 自動回填。後續 skill submission 仍可能依既有 attribution 規則把 pipeline initiator
+加入為一般 `MEMBER`；這不會增加 namespace 管理者。
+
+同一個新 namespace 若被兩個 job 同時 ensure，只有一個 transaction 取得建立鎖；另一個會
+立即收到 `error.sourceImport.namespace.creationInProgress` conflict，不會無限等待。第一個 job
+commit 後重跑即可取得 `EXISTING`。
+
 Fallback owner provider 固定為 `keycloak`，不需要額外環境變數。`tsso` 是 OAuth client ID，
 不是 SkillHub provider code。Owner 與 trigger login 都使用 exact `preferred_username`，且該
 user 必須曾登入 SkillHub、identity 為 ACTIVE 且唯一。

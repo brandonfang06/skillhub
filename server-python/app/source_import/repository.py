@@ -68,6 +68,15 @@ class SourceImportRepository:
         )
         return _namespace_record(dict(row)) if row is not None else None
 
+    async def try_lock_source_namespace_creation(self, slug: str) -> bool:
+        acquired = (
+            await self.connection.execute(
+                text("SELECT pg_try_advisory_xact_lock(hashtextextended(:slug, 0))"),
+                {"slug": slug},
+            )
+        ).scalar_one()
+        return bool(acquired)
+
     async def read_namespace_source_by_repository(
         self, repository_url: str
     ) -> NamespaceSourceBinding | None:
@@ -146,6 +155,38 @@ class SourceImportRepository:
         )
         return [_identity_account(dict(row)) for row in rows]
 
+    async def read_service_principal_platform_admin(
+        self, service_principal_id: str
+    ) -> IdentityAccount | None:
+        row = (
+            (
+                await self.connection.execute(
+                    text(
+                        """
+                    SELECT ua.id AS user_id,
+                           ua.display_name,
+                           ua.status,
+                           NULL AS provider_code,
+                           NULL AS login_name
+                    FROM service_principal sp
+                    JOIN user_account ua ON ua.id = sp.created_by_user_id
+                    JOIN user_role_binding urb ON urb.user_id = ua.id
+                    JOIN role r ON r.id = urb.role_id
+                    WHERE sp.id = :service_principal_id
+                      AND ua.status = 'ACTIVE'
+                      AND r.code = 'SUPER_ADMIN'
+                    LIMIT 1
+                    FOR SHARE OF sp, ua, urb
+                    """
+                    ),
+                    {"service_principal_id": service_principal_id},
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        return _identity_account(dict(row)) if row is not None else None
+
     async def create_namespace_source(
         self,
         *,
@@ -153,6 +194,7 @@ class SourceImportRepository:
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
+        platform_admin: IdentityAccount,
         service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]:
@@ -185,6 +227,15 @@ class SourceImportRepository:
                 """
             ),
             {"namespace_id": namespace.id, "user_id": owner.user_id},
+        )
+        await self.connection.execute(
+            text(
+                """
+                INSERT INTO namespace_member (namespace_id, user_id, role)
+                VALUES (:namespace_id, :user_id, 'ADMIN')
+                """
+            ),
+            {"namespace_id": namespace.id, "user_id": platform_admin.user_id},
         )
         binding_row = (
             (
@@ -227,6 +278,8 @@ class SourceImportRepository:
                 "repositoryUrl": repository_url,
                 "namespaceSlug": slug,
                 "ownerUserId": owner.user_id,
+                "outcome": "CREATED",
+                "platformAdminUserId": platform_admin.user_id,
                 "servicePrincipalCode": service_actor.code,
             },
             created_at=datetime.now(UTC),

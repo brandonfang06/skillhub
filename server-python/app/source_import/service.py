@@ -176,6 +176,8 @@ class SourceImportRepositoryProtocol(Protocol):
 
     async def read_namespace(self, slug: str) -> NamespaceRecord | None: ...
 
+    async def try_lock_source_namespace_creation(self, slug: str) -> bool: ...
+
     async def read_namespace_source_by_repository(
         self, repository_url: str
     ) -> NamespaceSourceBinding | None: ...
@@ -188,6 +190,10 @@ class SourceImportRepositoryProtocol(Protocol):
         self, namespace_id: int
     ) -> list[IdentityAccount]: ...
 
+    async def read_service_principal_platform_admin(
+        self, service_principal_id: str
+    ) -> IdentityAccount | None: ...
+
     async def create_namespace_source(
         self,
         *,
@@ -195,6 +201,7 @@ class SourceImportRepositoryProtocol(Protocol):
         display_name: str,
         repository_url: str,
         owner: IdentityAccount,
+        platform_admin: IdentityAccount,
         service_actor: SourceServiceActor,
         request_id: str | None,
     ) -> tuple[NamespaceRecord, NamespaceSourceBinding]: ...
@@ -299,6 +306,11 @@ async def ensure_source_namespace_in_transaction(
             code="error.sourceImport.namespace.displayName.invalid",
         )
 
+    if not await repository.try_lock_source_namespace_creation(source.namespace_slug):
+        raise SourceImportConflict(
+            "Source namespace creation is already in progress",
+            code="error.sourceImport.namespace.creationInProgress",
+        )
     namespace = await repository.read_namespace(source.namespace_slug)
     repository_binding = await repository.read_namespace_source_by_repository(
         source.canonical_url
@@ -337,11 +349,25 @@ async def ensure_source_namespace_in_transaction(
     )
     if fallback_owner is None:
         raise AssertionError("required fallback owner cannot resolve to None")
+    platform_admin = await repository.read_service_principal_platform_admin(
+        request.service_actor.service_principal_id
+    )
+    if platform_admin is None or platform_admin.status != "ACTIVE":
+        raise SourceImportConflict(
+            "Source importer service principal must have an active platform admin creator",
+            code="error.sourceImport.platformAdmin.invalid",
+        )
+    if platform_admin.user_id == fallback_owner.user_id:
+        raise SourceImportConflict(
+            "Fallback owner and platform admin must be different users",
+            code="error.sourceImport.platformAdmin.sameAsOwner",
+        )
     created_namespace, created_binding = await repository.create_namespace_source(
         slug=source.namespace_slug,
         display_name=source.namespace_display_name,
         repository_url=source.canonical_url,
         owner=fallback_owner,
+        platform_admin=platform_admin,
         service_actor=request.service_actor,
         request_id=request.request_id,
     )
