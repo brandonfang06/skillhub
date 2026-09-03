@@ -34,7 +34,10 @@ def _claims(
     reason="requires SKILLHUB_TEST_DATABASE_URL",
 )
 @pytest.mark.anyio
-async def test_oauth_identity_trust_and_account_guards_in_postgres() -> None:
+async def test_oauth_identity_trust_and_account_guards_in_postgres(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", raising=False)
     engine = create_async_engine(str(TEST_DATABASE_URL), pool_size=2, max_overflow=0)
     suffix = uuid4().hex[:12]
     provider = f"oauth-test-{suffix}"
@@ -42,6 +45,7 @@ async def test_oauth_identity_trust_and_account_guards_in_postgres() -> None:
     merged_id = f"oauth-merged-{suffix}"
     system_id = f"oauth-system-{suffix}"
     created_id: str | None = None
+    auto_joined_id: str | None = None
     user_ids = [active_id, merged_id, system_id]
     try:
         async with engine.begin() as connection:
@@ -117,6 +121,20 @@ async def test_oauth_identity_trust_and_account_guards_in_postgres() -> None:
         user_ids.append(created_id)
         assert created_principal["email"] == ""
 
+        monkeypatch.setenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", "true")
+        auto_joined_principal = await bind_oauth_principal(
+            engine,
+            {"id": provider},
+            _claims(
+                f"auto-join-{suffix}",
+                login="Auto Joined User",
+                email="auto-joined@example.test",
+                verified=True,
+            ),
+        )
+        auto_joined_id = str(auto_joined_principal["userId"])
+        user_ids.append(auto_joined_id)
+
         for user_id, message in (
             (merged_id, "error.auth.oauth.accountMerged"),
             (system_id, "error.auth.oauth.systemAccount"),
@@ -151,8 +169,27 @@ async def test_oauth_identity_trust_and_account_guards_in_postgres() -> None:
         assert by_id[active_id]["display_name"] == "Renamed Active"
         assert by_id[active_id]["email"] == f"{active_id}@example.test"
         assert by_id[created_id]["email"] is None
+        assert by_id[auto_joined_id]["email"] == "auto-joined@example.test"
         assert by_id[merged_id]["display_name"] == f"Original {merged_id}"
         assert by_id[system_id]["display_name"] == f"Original {system_id}"
+
+        async with engine.connect() as connection:
+            global_members = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT nm.user_id
+                        FROM namespace_member nm
+                        JOIN namespace n ON n.id = nm.namespace_id
+                        WHERE n.slug = 'global'
+                          AND nm.user_id = ANY(CAST(:user_ids AS varchar[]))
+                        ORDER BY nm.user_id
+                        """
+                    ),
+                    {"user_ids": [created_id, auto_joined_id]},
+                )
+            ).scalars().all()
+        assert list(global_members) == [auto_joined_id]
     finally:
         async with engine.begin() as connection:
             await connection.execute(

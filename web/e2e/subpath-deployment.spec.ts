@@ -512,10 +512,7 @@ test.describe('SkillHub production subpath deployment', () => {
 
     await page.goto(`${basePath}/space/global/subpath-skill`)
     await expect(page.getByRole('heading', { name: 'Subpath Skill', exact: true }).first()).toBeVisible()
-    await expect(page.getByRole('link', { name: 'View immutable source on GitHub' })).toHaveAttribute(
-      'href',
-      reviewSkillDetail.sourceProvenance.browseUrl,
-    )
+    await expect(page.locator('[data-testid="source-provenance"] a')).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
 
     const downloadRequest = page.waitForRequest((request) =>

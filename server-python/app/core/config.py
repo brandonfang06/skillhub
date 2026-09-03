@@ -85,6 +85,7 @@ class Settings:
     publish_allowed_file_extensions: set[str] | None
     download_analytics_retention_months: int
     local_registration_enabled: bool
+    global_namespace_auto_join_enabled: bool
     device_auth_verification_uri: str
     security_scanner_enabled: bool
     security_scanner_mode: str
@@ -145,6 +146,10 @@ def parse_bool(value: str | None, default: bool = False) -> bool:
     if value is None or value.strip() == "":
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def global_namespace_auto_join_enabled() -> bool:
+    return parse_bool(os.getenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED"))
 
 
 def parse_int(value: str | None, default: int) -> int:
@@ -402,6 +407,7 @@ def get_settings() -> Settings:
             DEFAULT_DOWNLOAD_ANALYTICS_RETENTION_MONTHS,
         ),
         local_registration_enabled=parse_bool(os.getenv("SKILLHUB_LOCAL_REGISTRATION_ENABLED"), True),
+        global_namespace_auto_join_enabled=global_namespace_auto_join_enabled(),
         device_auth_verification_uri=resolve_device_auth_verification_uri(),
         security_scanner_enabled=parse_bool(os.getenv("SKILLHUB_SECURITY_SCANNER_ENABLED")),
         security_scanner_mode=os.getenv("SKILLHUB_SECURITY_SCANNER_MODE", DEFAULT_SCANNER_MODE),

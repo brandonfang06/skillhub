@@ -50,6 +50,7 @@ data:
   auth-direct-enabled: "false"
   auth-session-bootstrap-enabled: "false"
   local-registration-enabled: "false"
+  global-namespace-auto-join-enabled: "false"
   bootstrap-admin-enabled: "true"
   bootstrap-admin-user-id: docker-admin
   bootstrap-admin-username: admin

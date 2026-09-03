@@ -618,7 +618,10 @@ def test_oauth_callback_rejects_cookie_overflow_before_session_rotation(
     assert binder_calls == []
 
 
-def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_doubles() -> None:
+def test_oauth_callback_does_not_auto_join_global_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", raising=False)
     connection = FakeOAuthConnection()
     http_client = FakeOAuthHttpClient()
     app = create_app()
@@ -652,12 +655,37 @@ def test_oauth_callback_uses_default_exchange_and_identity_binding_when_no_test_
     }
     assert connection.identity_bindings[0]["provider_code"] == "github"
     assert connection.identity_bindings[0]["subject"] == "12345"
-    assert connection.namespace_members == [
-        {"namespace_id": 1, "user_id": next(iter(connection.users)), "role": "MEMBER"}
-    ]
+    assert connection.namespace_members == []
     assert http_client.requests[0][0:2] == ("POST", "https://github.example/oauth/token")
     assert http_client.requests[1][0:2] == ("GET", "https://github.example/user")
     assert http_client.requests[2][0:2] == ("GET", "https://api.github.com/user/emails")
+
+
+@pytest.mark.anyio
+async def test_oauth_binding_auto_joins_global_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", "true")
+    connection = FakeOAuthConnection()
+
+    principal_value = await bind_oauth_principal(
+        FakeEngine(connection),
+        oauth_registration(),
+        {
+            "subject": "subject-auto-join",
+            "providerLogin": "auto-join-user",
+            "email": "verified@example.test",
+            "emailVerified": True,
+        },
+    )
+
+    assert connection.namespace_members == [
+        {
+            "namespace_id": 1,
+            "user_id": principal_value["userId"],
+            "role": "MEMBER",
+        }
+    ]
 
 
 @pytest.mark.anyio

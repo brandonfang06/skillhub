@@ -63,6 +63,7 @@ data:
   auth-direct-enabled: "false"
   auth-session-bootstrap-enabled: "false"
   local-registration-enabled: "false"
+  global-namespace-auto-join-enabled: "false"
 
   # Bootstrap admin
   bootstrap-admin-enabled: "true"

@@ -1,4 +1,4 @@
-import { ExternalLink, GitBranch } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { SourceProvenance, VersionAttribution } from '@/api/types'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
@@ -51,15 +51,6 @@ export function SourceProvenanceCard({ provenance, attribution }: SourceProvenan
           <dd className="mt-1 break-all font-mono text-foreground">{provenance.sourcePath}</dd>
         </div>
       </dl>
-      <a
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700 hover:underline"
-        href={provenance.browseUrl}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {t('skillDetail.openSourceRepository')}
-        <ExternalLink className="h-3.5 w-3.5" />
-      </a>
     </Card>
   )
 }

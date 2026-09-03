@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 import httpx
 from sqlalchemy import text
 
+from app.core.config import global_namespace_auto_join_enabled
 from app.core.public_url import resolve_public_base_url
 
 DEFAULT_USER_ROLE = "USER"
@@ -345,7 +346,8 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
                     "extra_json": json.dumps(claims.get("extra") or {}),
                 },
             )
-            await _ensure_global_namespace_membership(connection, user_id)
+            if global_namespace_auto_join_enabled():
+                await _ensure_global_namespace_membership(connection, user_id)
             user = {
                 "id": user_id,
                 "display_name": provider_login,

@@ -159,7 +159,10 @@ def fake_verify(password: str, hashed: str) -> bool:
 
 
 @pytest.mark.anyio
-async def test_register_creates_active_user_credential_and_global_membership() -> None:
+async def test_register_creates_active_user_without_global_membership_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", raising=False)
     connection = FakeLocalAuthConnection()
 
     principal = await register_local_user(
@@ -175,7 +178,7 @@ async def test_register_creates_active_user_credential_and_global_membership() -
     assert connection.users["usr_test"]["email"] == "new@example.test"
     assert connection.credentials["usr_test"]["username"] == "new_user"
     assert connection.credentials["usr_test"]["password_hash"] == "hash:Abcd123!"
-    assert connection.namespace_members == [{"namespace_id": 1, "user_id": "usr_test", "role": "MEMBER"}]
+    assert connection.namespace_members == []
     assert principal == {
         "userId": "usr_test",
         "displayName": "new_user",
@@ -184,6 +187,27 @@ async def test_register_creates_active_user_credential_and_global_membership() -
         "oauthProvider": "local",
         "platformRoles": ["USER"],
     }
+
+
+@pytest.mark.anyio
+async def test_register_adds_global_membership_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", "true")
+    connection = FakeLocalAuthConnection()
+
+    await register_local_user(
+        FakeEngine(connection),
+        username="new_user",
+        password="Abcd123!",
+        email="new@example.test",
+        user_id_factory=lambda: "usr_test",
+        password_hasher=fake_hash,
+    )
+
+    assert connection.namespace_members == [
+        {"namespace_id": 1, "user_id": "usr_test", "role": "MEMBER"}
+    ]
 
 
 @pytest.mark.anyio

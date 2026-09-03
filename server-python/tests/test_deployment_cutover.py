@@ -37,6 +37,7 @@ def test_kubernetes_backend_deployment_uses_python_runtime_contract() -> None:
     assert "SKILLHUB_SESSION_COOKIE_SECURE" in deployment
     assert "SKILLHUB_DOWNLOAD_REQUIRE_AUTH" not in deployment
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED" in deployment
+    assert "SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID" in deployment
     assert "SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI" in deployment
     assert "OAUTH2_GITHUB" not in deployment
@@ -73,6 +74,7 @@ def test_kubernetes_config_and_secret_examples_expose_python_env_inputs() -> Non
     assert "session-cookie-secure:" in configmap
     assert "download-require-auth" not in configmap
     assert "local-registration-enabled: \"false\"" in configmap
+    assert "global-namespace-auto-join-enabled: \"false\"" in configmap
     assert "PersistentVolumeClaim" not in configmap
     assert "spring-datasource" not in secret_example
     assert "oauth2-keycloak-client-id:" in secret_example
@@ -108,6 +110,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_DOWNLOAD_REQUIRE_AUTH" not in release_compose
     assert "SKILLHUB_SECURITY_SCANNER_BASE_URL:" in release_compose
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED:" in release_compose
+    assert "SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED:" in release_compose
     assert 'test: ["CMD", "python", "-c"' in release_compose
     assert "urllib.request.urlopen" in release_compose
     assert 'test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/v1/health"]' not in release_compose
@@ -121,6 +124,7 @@ def test_release_compose_uses_python_server_image_and_healthcheck() -> None:
     assert "SKILLHUB_DOWNLOAD_ANALYTICS_RETENTION_MONTHS=12" in release_env
     assert "SKILLHUB_DOWNLOAD_REQUIRE_AUTH" not in release_env
     assert "SKILLHUB_LOCAL_REGISTRATION_ENABLED=true" in release_env
+    assert "SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED=false" in release_env
     assert "OAUTH2_GITHUB" not in release_env
     assert "OAUTH2_GITLAB" not in release_env
     assert "SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY" not in release_env

@@ -26,6 +26,18 @@ def test_playground_defaults_to_disabled_without_affecting_startup(monkeypatch):
     assert settings.playground_context_max_bytes == 120000
 
 
+def test_global_namespace_auto_join_defaults_to_disabled(monkeypatch):
+    monkeypatch.delenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", raising=False)
+
+    assert get_settings().global_namespace_auto_join_enabled is False
+
+
+def test_global_namespace_auto_join_can_be_enabled(monkeypatch):
+    monkeypatch.setenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", "true")
+
+    assert get_settings().global_namespace_auto_join_enabled is True
+
+
 def test_playground_settings_can_be_overridden(monkeypatch):
     monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_SECRET", "test-secret")
     monkeypatch.setenv("SKILLHUB_PLAYGROUND_TOKEN_TTL_SECONDS", "120")

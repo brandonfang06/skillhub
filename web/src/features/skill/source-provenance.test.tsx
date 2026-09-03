@@ -31,7 +31,7 @@ const attribution = {
 }
 
 describe('SourceProvenanceCard', () => {
-  it('renders an immutable source link, ref, and repository path', () => {
+  it('renders source provenance without an external repository link', () => {
     const html = renderToStaticMarkup(
       <SourceProvenanceCard provenance={provenance} attribution={attribution} />,
     )
@@ -39,8 +39,8 @@ describe('SourceProvenanceCard', () => {
     expect(html).toContain('data-testid="source-provenance"')
     expect(html).toContain('tag: v1.2.0')
     expect(html).toContain('skills/code-review')
-    expect(html).toContain(`href="${provenance.browseUrl}"`)
-    expect(html).toContain('target="_blank"')
+    expect(html).not.toContain(provenance.browseUrl)
+    expect(html).not.toContain('href=')
     expect(html).toContain('Imported by')
     expect(html).toContain('hcfange')
   })

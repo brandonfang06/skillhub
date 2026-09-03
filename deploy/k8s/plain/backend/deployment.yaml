@@ -277,6 +277,11 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: local-registration-enabled
+            - name: SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: global-namespace-auto-join-enabled
             - name: BOOTSTRAP_ADMIN_ENABLED
               valueFrom:
                 configMapKeyRef:

@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from app.auth.context import normalize_platform_roles
 from app.auth.password_reset import bcrypt_value, verify_bcrypt_value
+from app.core.config import global_namespace_auto_join_enabled
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,64}$")
 EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
@@ -275,7 +276,8 @@ async def register_local_user(
                 "password_hash": password_hasher(normalized_password),
             },
         )
-        await _ensure_global_namespace_membership(connection, user_id)
+        if global_namespace_auto_join_enabled():
+            await _ensure_global_namespace_membership(connection, user_id)
         user = await _user_by_id(connection, user_id)
         if user is None:
             user = {

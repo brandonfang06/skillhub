@@ -399,6 +399,7 @@ SKILL_SCANNER_LLM_MODEL=...
 | `skillhub-config/auth-direct-enabled` | `SKILLHUB_AUTH_DIRECT_ENABLED` | `false` | 是否啟用 username/password direct auth API。 |
 | `skillhub-config/auth-session-bootstrap-enabled` | `SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED` | `false` | local/dev session bootstrap，正式環境建議 `false`。 |
 | `skillhub-config/local-registration-enabled` | `SKILLHUB_LOCAL_REGISTRATION_ENABLED` | `false` | 是否開放本機帳號自助註冊；設為 `false` 只會隱藏/阻擋註冊，不會關閉 local/admin 登入。 |
+| `skillhub-config/global-namespace-auto-join-enabled` | `SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED` | `false` | 是否讓新建立的 local/OAuth 帳號自動成為 `global` namespace 的 `MEMBER`。不影響既有會員、global 公開技能或 promotion；只有需要舊行為時才設為 `true`。 |
 
 ## Bootstrap Admin
 
