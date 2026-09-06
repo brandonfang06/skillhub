@@ -6,6 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+import httpx
+
 from app.core.request_id import (
     MESSAGE_REQUEST_ID_FIELD,
     current_request_id,
@@ -28,6 +30,8 @@ from app.publish.scan_worker import (
 MAX_SCAN_RETRY_COUNT = 3
 MAX_SCAN_NOT_READY_REQUEUE_COUNT = 30
 MAX_SCAN_NOT_READY_AGE_MS = 120000
+MAX_SCANNER_CLOCK_SKEW_MS = 300000
+DEFAULT_MAX_UNAVAILABLE_AGE_MS = 3600000
 DEFAULT_SCAN_GROUP_NAME = "skillhub-scan-workers"
 DEFAULT_SCAN_CONSUMER_NAME = "scanner-python"
 DEFAULT_READ_COUNT = 10
@@ -164,6 +168,7 @@ class ScanConsumerRuntime:
         clock_millis: Callable[[], int] | None = None,
         max_not_ready_requeue_count: int = MAX_SCAN_NOT_READY_REQUEUE_COUNT,
         max_not_ready_age_ms: int = MAX_SCAN_NOT_READY_AGE_MS,
+        max_unavailable_age_ms: int = DEFAULT_MAX_UNAVAILABLE_AGE_MS,
     ) -> None:
         self.redis = redis
         self.stream_key = stream_key
@@ -175,6 +180,9 @@ class ScanConsumerRuntime:
         self.clock_millis = clock_millis or (lambda: int(time.time() * 1000))
         self.max_not_ready_requeue_count = max_not_ready_requeue_count
         self.max_not_ready_age_ms = max_not_ready_age_ms
+        if max_unavailable_age_ms <= 0:
+            raise ValueError("max_unavailable_age_ms must be positive")
+        self.max_unavailable_age_ms = max_unavailable_age_ms
         self._group_ready = False
         self._reclaim_start_id = "0-0"
 
@@ -358,13 +366,57 @@ class ScanConsumerRuntime:
                     await self.redis.ack(self.stream_key, self.group_name, message.message_id)
                     return ScanConsumerResult(processed=1, acknowledged=1)
 
+                if is_scanner_unavailable(exc):
+                    now_millis = self.clock_millis()
+                    created_at_millis = task.created_at_millis or parse_message_created_at_millis(
+                        message.message_id
+                    )
+                    unavailable_expired = (
+                        created_at_millis <= 0
+                        or created_at_millis > now_millis + MAX_SCANNER_CLOCK_SKEW_MS
+                        or now_millis - created_at_millis >= self.max_unavailable_age_ms
+                    )
+                    if not unavailable_expired:
+                        logger.warning(
+                            "scan.task.unavailable_deferred message_id=%s task_id=%s version_id=%s "
+                            "scanner_type=%s retry_count=%s request_id=%s age_ms=%s max_age_ms=%s",
+                            message.message_id,
+                            task.task_id,
+                            task.version_id,
+                            task.scanner_type,
+                            task.retry_count,
+                            current_request_id(),
+                            max(now_millis - created_at_millis, 0),
+                            self.max_unavailable_age_ms,
+                        )
+                        return ScanConsumerResult()
+
+                    try:
+                        async with engine.begin() as connection:
+                            await acquire_scan_task_lease(connection, task.version_id)
+                            await mark_scan_task_failed(
+                                connection,
+                                version_id=task.version_id,
+                                scanner_type=task.scanner_type,
+                                failure_code="SCANNER_UNAVAILABLE",
+                                task_id=task.task_id,
+                                failure_reason=(
+                                    "Security scanner did not recover before the configured timeout. "
+                                    "Retry after scanner availability is restored."
+                                ),
+                            )
+                    except ScanTaskLeaseUnavailable:
+                        return ScanConsumerResult()
+                    await self.redis.ack(self.stream_key, self.group_name, message.message_id)
+                    return ScanConsumerResult(processed=1, acknowledged=1, failed=1)
+
                 if task.retry_count < MAX_SCAN_RETRY_COUNT:
                     retry_message_id = await self.redis.add(
                         self.stream_key,
                         build_retry_stream_fields(
                             task,
                             retry_count=task.retry_count + 1,
-                            created_at_millis=self.clock_millis(),
+                            created_at_millis=task.created_at_millis or self.clock_millis(),
                         ),
                     )
                     logger.warning(
@@ -393,6 +445,11 @@ class ScanConsumerRuntime:
                             connection,
                             version_id=task.version_id,
                             scanner_type=task.scanner_type,
+                            task_id=task.task_id,
+                            failure_reason=(
+                                "Security scan failed after automatic retries. "
+                                "Retry the scan or contact an administrator."
+                            ),
                         )
                 except ScanTaskLeaseUnavailable:
                     logger.info(
@@ -439,6 +496,22 @@ class ScanConsumerRuntime:
 
             await self.redis.ack(self.stream_key, self.group_name, message.message_id)
             return ScanConsumerResult(processed=1, acknowledged=1)
+
+
+def parse_message_created_at_millis(message_id: str) -> int:
+    try:
+        value = int(message_id.split("-", 1)[0])
+    except ValueError:
+        return 0
+    return value if value > 0 else 0
+
+
+def is_scanner_unavailable(error: Exception) -> bool:
+    if isinstance(error, (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError)):
+        return True
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code == 429 or error.response.status_code >= 500
+    return False
 
 
 class RedisStreamClient:

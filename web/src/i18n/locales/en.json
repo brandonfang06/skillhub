@@ -233,7 +233,7 @@
     "modeHeading": "Install method",
     "modeDirect": "Direct Agent",
     "modeInteractive": "Terminal interactive",
-    "interactiveWarning": "Each Skill asks once in an interactive Terminal; choose multiple Agents or Generic there. Latest versions replace all selected target directories. Not for CI or background jobs.",
+    "interactiveWarning": "Each Skill asks once in an interactive Terminal; choose multiple Agents or Generic there. Existing same-source managed installs may be replaced. Not for CI or background jobs.",
     "scopeHeading": "Install scope",
     "scopeUser": "User",
     "scopeProject": "Project",
@@ -242,7 +242,7 @@
     "agentPlaceholder": "Select an Agent",
     "selectAgentRequired": "Select one supported Agent to copy commands.",
     "commandsHeading": "Terminal commands",
-    "commandsHint": "Each line installs the latest published version and replaces an existing target directory.",
+    "commandsHint": "Each line installs the latest published version. --force only replaces a verified same-source managed installation.",
     "copyAll": "Copy all commands",
     "copyCommand": "Copy the install command for {{skill}}"
   },
@@ -552,6 +552,43 @@
   "tokens": {
     "pageTitle": "Token Management",
     "pageSubtitle": "Manage access credentials for CLI and API"
+  },
+  "skillReviews": {
+    "title": "User reviews", "count": "{{count}} reviews", "write": "Write a review", "edit": "Edit my review",
+    "scoreLabel": "Your score", "ratingDisplay": "Rating: {{score}} out of 5 stars", "ratingOption": "Rate {{score}} out of 5 stars",
+    "reviewTextLabel": "Review text", "save": "Save review", "cancel": "Cancel", "delete": "Delete review",
+    "saved": "Review saved", "deleted": "Review deleted; your star rating was kept", "saveFailed": "Could not save review",
+    "deleteFailed": "Could not delete review", "loadFailed": "Could not load reviews", "empty": "No reviews yet.", "loading": "Loading reviews...",
+    "hiddenStatus": "Hidden", "yourReviewHidden": "Your review is hidden from the public list.", "moderationReason": "Reason: {{reason}}",
+    "hide": "Hide review", "restore": "Restore review", "previous": "Previous", "next": "Next"
+  },
+  "theme": {
+    "darkMode": "Dark theme",
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "reviewProgress": {
+    "title": "My Review Progress",
+    "subtitle": "Track decisions, feedback, and every resubmission of your skills",
+    "searchLabel": "Search skills or namespaces",
+    "searchAction": "Search",
+    "statusFilter": "Filter by review status",
+    "statusAll": "All statuses",
+    "statusPending": "In review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "statusSummary": "Current review status summary",
+    "latestSubmitted": "Latest submission: {{time}}",
+    "attemptCount": "{{count}} submissions",
+    "attemptNumber": "Attempt {{number}}",
+    "submittedAt": "Submitted {{time}}",
+    "reviewedAt": "Reviewed {{time}}",
+    "reviewedBy": "Reviewed by {{reviewer}}",
+    "history": "Submission history",
+    "resubmit": "Edit and resubmit",
+    "error": "Review progress could not be loaded. Try again later.",
+    "historyError": "Submission history could not be loaded. Try again later.",
+    "emptyTitle": "No review history yet"
   },
   "reviews": {
     "title": "Review Center",
@@ -1050,6 +1087,7 @@
     "install": "Install",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "This version cannot be represented safely in a cross-platform command. Ask the publisher to correct it.",
     "download": "Download",
     "tryInPlayground": "Try in Playground",
     "labelsSectionTitle": "Labels",
@@ -1236,6 +1274,11 @@
       "button": "Share",
       "copied": "Copied",
       "defaultDescription": "A useful skill"
+    },
+    "installForAgent": {
+      "button": "Install for Agent",
+      "copied": "Agent prompt copied",
+      "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}} from registry {{registryUrl}}."
     }
   },
   "skillCompare": {

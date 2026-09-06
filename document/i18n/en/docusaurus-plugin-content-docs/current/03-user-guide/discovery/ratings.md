@@ -25,6 +25,13 @@ You can rate skills from 1-5 stars:
 
 You can modify your rating at any time.
 
+## Text Reviews
+
+On a published, downloadable skill page, you can write a review of up to 2,000
+characters. You can edit or clear your review without deleting the star rating.
+A moderator-hidden review is absent from public listings and remains hidden
+after an author edit until a moderator restores it.
+
 ## Next Steps
 
 - [Team Namespaces](../collaboration/namespaces) - Team collaboration

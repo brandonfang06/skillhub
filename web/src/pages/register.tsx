@@ -67,7 +67,7 @@ export function RegisterPage() {
   if (!localRegistrationConfig.enabled) {
     return (
       <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
-        <Card className="w-full border-slate-200 bg-white/95 shadow-xl">
+        <Card className="w-full border-border bg-card/95 shadow-xl">
           <CardHeader className="space-y-3 text-center">
             <CardTitle>{t('register.disabledTitle')}</CardTitle>
             <CardDescription>{t('register.disabledDescription')}</CardDescription>
@@ -191,7 +191,7 @@ export function RegisterPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
-      <Card className="w-full border-slate-200 bg-white/95 shadow-xl">
+      <Card className="w-full border-border bg-card/95 shadow-xl">
         <CardHeader className="space-y-3 text-center">
           <CardTitle>{t('register.title')}</CardTitle>
           <CardDescription>{t('register.subtitle')}</CardDescription>

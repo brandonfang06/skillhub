@@ -1,4 +1,6 @@
 import { printResult } from '../shared/output'
+import { EXIT } from '../shared/constants'
+import { CliError } from '../shared/errors'
 
 export const commands = {
   help: {
@@ -9,7 +11,7 @@ export const commands = {
   version: {
     summary: 'Show installed CLI version',
     usage: 'skillhub version [--json]',
-    examples: ['skillhub version', 'skillhub version --json']
+    examples: ['skillhub version', 'skillhub version --json', 'skillhub --version', 'skillhub -v']
   },
   login: {
     summary: 'Save registry and token',
@@ -43,11 +45,20 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  upgrade: {
+    summary: 'Upgrade explicitly selected installed skills',
+    usage: 'skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]',
+    examples: [
+      'skillhub upgrade @global/skillhub-registry',
+      'skillhub upgrade @team/code-review @team/java-guide --check --json',
+      'skillhub upgrade code-review --namespace team --agent codex'
+    ]
+  },
   sync: {
     summary: 'Synchronize and maintain namespace workspaces',
-    usage: 'skillhub sync <pull|status|diff|push> [options]',
+    usage: 'skillhub sync pull --namespace <slug> [--skill <slug>] [options] | skillhub sync <status|diff|push> --namespace <slug> [options]',
     examples: [
-      'skillhub sync pull --namespace team-a',
+      'skillhub sync pull --namespace team-a --skill code-review',
       'skillhub sync status --namespace team-a --json',
       'skillhub sync push --all --namespace team-a --submit-review'
     ]
@@ -64,7 +75,7 @@ export const commands = {
       'skillhub remove pdf-parser',
       'skillhub remove team/my-skill',
       'skillhub remove my-skill --namespace team',
-      'skillhub remove pdf-parser --remote --hard',
+      'skillhub remove pdf-parser --remote --hard'
     ]
   },
   doctor: {
@@ -91,10 +102,15 @@ export function formatCommandList(): string {
 export async function helpCommand(args: string[]): Promise<string> {
   const json = args.includes('--json')
   const topic = args.find(arg => !arg.startsWith('--'))
+  const detail = topic ? commands[topic as keyof typeof commands] : undefined
+  if (topic && !detail) {
+    throw new CliError(`unknown help topic: ${topic}`, EXIT.usage, {
+      topic,
+      next: 'run `skillhub help` to list available commands'
+    })
+  }
   if (json) {
-    if (topic) {
-      // TODO: unknown topic returns undefined and crashes on detail.usage; see help-command.test.ts
-      const detail = commands[topic as keyof typeof commands]
+    if (topic && detail) {
       return printResult({ ok: true, command: topic, ...detail }, true)
     }
     return printResult({
@@ -102,8 +118,7 @@ export async function helpCommand(args: string[]): Promise<string> {
       commands: Object.entries(commands).map(([name, detail]) => ({ name, description: detail.summary }))
     }, true)
   }
-  if (topic) {
-    const detail = commands[topic as keyof typeof commands]
+  if (topic && detail) {
     return [
       `${topic} - ${detail.summary}`,
       `Usage: ${detail.usage}`,

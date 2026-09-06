@@ -11,8 +11,8 @@ import asyncpg
 from app.core.config import get_settings
 
 
-BASELINE_FLYWAY_VERSION = 45
-BASELINE_REVISION = "skillhub_flyway_v45_baseline"
+BASELINE_FLYWAY_VERSION = 48
+BASELINE_REVISION = "skillhub_flyway_v48_baseline"
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLYWAY_DIR = ROOT / "server-python" / "app" / "db" / "migration"
 LOCAL_MIGRATION_DIR = ROOT / "server-python" / "app" / "db" / "local_migration"
@@ -103,6 +103,15 @@ async def apply_existing_database_compatibility_migrations(
 
     if not await column_exists(connection, "scan_task_outbox", "metadata"):
         await execute_required_migration(connection, migrations_by_version, 45)
+
+    if not await column_exists(connection, "review_task", "skill_id"):
+        await execute_required_migration(connection, migrations_by_version, 46)
+
+    if not await column_exists(connection, "skill_rating", "review_text"):
+        await execute_required_migration(connection, migrations_by_version, 47)
+
+    if not await column_exists(connection, "security_audit", "failure_reason"):
+        await execute_required_migration(connection, migrations_by_version, 48)
 
 
 async def execute_required_migration(

@@ -24,6 +24,10 @@ spec:
             - containerPort: 8000
               name: http
           env:
+            - name: SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS
+              value: "1"
+            - name: SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS
+              value: "930"
             - name: SKILL_SCANNER_LLM_API_KEY
               valueFrom:
                 secretKeyRef:

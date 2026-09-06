@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY backports/apply_1_0_2_llm_base_url_backport.py /tmp/apply_1_0_2_llm_base_url_backport.py
 COPY backports/apply_1_0_2_llm_failure_backport.py /tmp/apply_1_0_2_llm_failure_backport.py
+COPY skillhub_scanner_app.py /app/skillhub_scanner_app.py
 
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev && \
     pip install --no-cache-dir \
@@ -27,4 +28,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://127.0.0.1:8000/health || exit 1
 
-CMD ["skill-scanner-api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "skillhub_scanner_app:app", "--host", "0.0.0.0", "--port", "8000"]

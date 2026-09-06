@@ -11,7 +11,8 @@ export function resolveNotificationUserId(user?: { userId?: string } | null) {
 
 /**
  * Bell icon with unread badge. Toggles the notification dropdown on click.
- * SSE connection is established here at the authenticated user level.
+ * Polling is the durable transport; SSE remains connected during rolling upgrades
+ * so an older backend/web pair can still deliver prompt updates.
  */
 export function NotificationBell() {
   const { t } = useTranslation()

@@ -6,8 +6,10 @@
  */
 import './legacy-polyfills'
 import { installPreloadErrorRecovery } from './app/preload-error-recovery'
+import { initializeTheme } from './shared/lib/theme'
 
 installPreloadErrorRecovery()
+initializeTheme()
 
 async function loadRuntimeConfig() {
   await new Promise<void>((resolve, reject) => {

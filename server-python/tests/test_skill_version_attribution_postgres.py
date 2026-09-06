@@ -170,18 +170,14 @@ async def test_version_detail_resolves_native_and_oss_submitters_without_changin
                 text(
                     """
                     INSERT INTO review_task (
-                        skill_version_id, namespace_id, status, submitted_by,
-                        submitted_at, reviewed_by, reviewed_at
+                        skill_version_id, skill_id, skill_version, namespace_id,
+                        status, submitted_by, submitted_at, reviewed_by, reviewed_at
                     )
-                    VALUES
-                        (
-                            :native_version_id, :namespace_id, 'APPROVED',
-                            :native_submitter_id, :created_at, :owner_id, :created_at
-                        ),
-                        (
-                            :imported_version_id, :namespace_id, 'APPROVED',
-                            :importer_id, :created_at, :owner_id, :created_at
-                        )
+                    SELECT sv.id, sv.skill_id, sv.version, :namespace_id,
+                           'APPROVED', :native_submitter_id, :created_at,
+                           :owner_id, :created_at
+                    FROM skill_version sv
+                    WHERE sv.id = :native_version_id
                     """
                 ),
                 {
@@ -189,6 +185,28 @@ async def test_version_detail_resolves_native_and_oss_submitters_without_changin
                     "imported_version_id": imported_version_id,
                     "namespace_id": namespace_id,
                     "native_submitter_id": native_submitter_id,
+                    "importer_id": importer_id,
+                    "owner_id": owner_id,
+                    "created_at": created_at,
+                },
+            )
+            await connection.execute(
+                text(
+                    """
+                    INSERT INTO review_task (
+                        skill_version_id, skill_id, skill_version, namespace_id,
+                        status, submitted_by, submitted_at, reviewed_by, reviewed_at
+                    )
+                    SELECT sv.id, sv.skill_id, sv.version, :namespace_id,
+                           'APPROVED', :importer_id, :created_at,
+                           :owner_id, :created_at
+                    FROM skill_version sv
+                    WHERE sv.id = :imported_version_id
+                    """
+                ),
+                {
+                    "imported_version_id": imported_version_id,
+                    "namespace_id": namespace_id,
                     "importer_id": importer_id,
                     "owner_id": owner_id,
                     "created_at": created_at,

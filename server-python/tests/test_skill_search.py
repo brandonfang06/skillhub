@@ -105,6 +105,34 @@ def test_skill_search_route_forwards_optional_current_user_id() -> None:
     ]
 
 
+def test_public_skill_search_treats_an_expired_session_as_anonymous() -> None:
+    seen: list[dict[str, object]] = []
+    app = create_app()
+
+    def reader(**kwargs: object) -> dict[str, object]:
+        seen.append(kwargs)
+        return search_response()
+
+    app.state.skill_search_reader = reader
+    client = TestClient(app)
+    client.cookies.set("SESSION", "expired-session")
+
+    response = client.get("/api/web/skills?q=agent")
+
+    assert response.status_code == 200
+    assert seen[0]["current_user_id"] is None
+
+
+def test_protected_auth_route_rejects_an_expired_session() -> None:
+    client = TestClient(create_app())
+    client.cookies.set("SESSION", "expired-session")
+
+    response = client.get("/api/v1/auth/me")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "error.auth.required"
+
+
 def test_skill_search_route_uses_java_style_invalid_page_defaults() -> None:
     seen: list[dict[str, object]] = []
     app = create_app()

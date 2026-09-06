@@ -557,6 +557,8 @@ def test_validate_package_enforces_compliance_mapping_and_evidence_limits() -> N
         "db/query.sql",
         "stats/model.r",
         "scripts/run.bat",
+        "docs/README.DOCX",
+        "scripts/INSTALL.PS1",
     ],
 )
 def test_allowed_extensions_match_java_skill_package_policy(path: str) -> None:

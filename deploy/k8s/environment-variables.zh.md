@@ -303,7 +303,10 @@ http://host --token <token>`，或設定 `SKILLHUB_TOKEN`。HTTP endpoint
 | `skillhub-config/security-scanner-enabled` | `SKILLHUB_SECURITY_SCANNER_ENABLED` | `true` | 是否啟用安全掃描。 |
 | `skillhub-config/security-scanner-base-url` | `SKILLHUB_SECURITY_SCANNER_BASE_URL` | `http://skillhub-scanner:8000` | Scanner service URL。也可沿用 `SKILLHUB_SECURITY_SCANNER_URL`。 |
 | `skillhub-config/security-scanner-mode` | `SKILLHUB_SECURITY_SCANNER_MODE` | `upload` | K8s 建議使用 upload handoff。 |
+| `skillhub-config/security-scanner-read-timeout-ms` | `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS` | `900000` | Backend 等待 scanner 的上限，單位毫秒。 |
 | `skillhub-config/scan-consumer-enabled` | `SKILLHUB_SCAN_CONSUMER_ENABLED` | `false` | 是否啟動 backend scan consumer。 |
+| `skillhub-config/scan-consumer-reclaim-min-idle-ms` | `SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS` | `960000` | Redis pending task 可被 reclaim 前的 idle，單位毫秒。 |
+| `skillhub-config/security-stream-max-unavailable-age-seconds` | `SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS` | `3600` | Scanner 持續不可用時允許自動恢復的最長任務年齡，單位秒。 |
 | `skillhub-config/scanner-use-behavioral` | `SKILLHUB_SCANNER_USE_BEHAVIORAL` | `true` | 是否傳 `use_behavioral` 給 scanner。 |
 | `skillhub-config/scanner-use-llm` | `SKILLHUB_SCANNER_USE_LLM` | `true` | 是否傳 `use_llm` 給 scanner。要啟用 LLM scan，這裡和 scanner LLM API key 都要設定。 |
 | `skillhub-config/scanner-llm-provider` | `SKILLHUB_SCANNER_LLM_PROVIDER` | `anthropic` | 傳給 scanner 的 LLM provider。 |
@@ -378,6 +381,24 @@ sidecar 的 OpenAI-compatible provider、model catalog、API key 與 SkillHub co
 | `skillhub-scanner-secret/skill-scanner-llm-api-key` | `SKILL_SCANNER_LLM_API_KEY` | 啟用 LLM 時必填 | Scanner 連 LLM provider 的 API key。Kustomize base 仍可使用 `skillhub-secret` 同名 key。 |
 | `skillhub-scanner-secret/skill-scanner-llm-base-url` | `SKILL_SCANNER_LLM_BASE_URL` | 視 provider | LLM base URL。 |
 | `skillhub-scanner-secret/skill-scanner-llm-model` | `SKILL_SCANNER_LLM_MODEL` | 視 provider | LLM model。 |
+| deployment literal | `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS` | 否，預設 `1` | 單一 scanner pod 同時執行的掃描數；超量請求回 503 與 `Retry-After: 30`。 |
+| deployment literal | `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` | 否，預設 `930` | 單次掃描硬上限；超時以 exit 124 結束 process，交由容器重啟策略復原。 |
+
+預設時間預算依序是 backend read timeout 900 秒、scanner hard timeout
+930 秒、Redis reclaim 960 秒。請維持此順序，讓硬逾時先觸發容器重啟，
+再由 pending task reclaim 接手。Scanner 持續回 429/5xx、連線或讀取逾時時，
+任務會保留到原始年齡達 3600 秒才轉成 `SCAN_FAILED`；重排不會重設年齡。
+若提高單 pod 併發，需先以實際 CPU/記憶體與掃描延遲驗證，或改採多 pod。
+
+## Notification polling 滾動升級
+
+0.2.19 Web 以每 10 秒 polling 為主要通知 transport，登入、重新聚焦分頁或
+網路恢復時也會同步；查詢 cache 依 user id 隔離，登出或切換帳號會清除。
+Backend 的通知資料庫寫入不依賴 SSE。為了讓舊 Web pod 與新 backend 在
+rolling update 期間仍相容，本版暫時保留 `/api/v1/notifications/sse` 與
+`/api/web/notifications/sse`；先更新 backend，再更新全部 Web pod。確認舊 Web
+已無流量後，後續版本才可移除 SSE route/fanout。Playground 的 EventSource
+屬於另一條 sidecar stream，不在此移除範圍。
 
 啟用 LLM scan 時至少要同時設定：
 

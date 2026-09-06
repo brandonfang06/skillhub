@@ -30,8 +30,10 @@ from app.review.query import (
     ReviewDownloadResult,
     ReviewListQuery,
     ReviewQueryError,
+    list_my_review_progress,
     list_my_review_submissions,
     list_pending_reviews,
+    list_review_attempts,
     list_review_tasks,
     read_review_detail,
     read_review_download_package,
@@ -377,6 +379,68 @@ async def list_my_submissions_route_data(
     return ok("\u83b7\u53d6\u6210\u529f", data, request)
 
 
+async def list_my_progress_route_data(
+    request: Request,
+    status: str | None,
+    query: str,
+    page: int,
+    size: int,
+    mock_user_id: str | None,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    reader = getattr(request.app.state, "review_progress_reader", None)
+    try:
+        data = await _resolve_reader_result(
+            reader(
+                status=status,
+                query=query,
+                page=page,
+                size=size,
+                user_id=user_id,
+            )
+            if reader is not None
+            else list_my_review_progress(
+                request.app.state.db_engine,
+                status=status,
+                query=query,
+                page=page,
+                size=size,
+                user_id=user_id,
+            )
+        )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
+async def list_attempts_route_data(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None,
+    *,
+    author_only: bool,
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, mock_user_id)
+    reader_name = (
+        "review_author_attempts_reader" if author_only else "review_attempts_reader"
+    )
+    reader = getattr(request.app.state, reader_name, None)
+    try:
+        data = await _resolve_reader_result(
+            reader(review_task_id=review_task_id, user_id=user_id)
+            if reader is not None
+            else list_review_attempts(
+                request.app.state.db_engine,
+                review_task_id=review_task_id,
+                user_id=user_id,
+                author_only=author_only,
+            )
+        )
+    except ReviewQueryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ok("\u83b7\u53d6\u6210\u529f", data, request)
+
+
 async def get_review_detail(
     request: Request,
     review_task_id: int,
@@ -535,6 +599,45 @@ async def list_my_submissions_route(
     mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await list_my_submissions_route_data(request, page, size, mock_user_id)
+
+
+@router.get("/api/v1/reviews/my-progress")
+@router.get("/api/web/reviews/my-progress")
+async def list_my_progress_route(
+    request: Request,
+    status: str | None = None,
+    q: str = "",
+    page: int = 0,
+    size: int = 20,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_my_progress_route_data(
+        request, status, q, page, size, mock_user_id
+    )
+
+
+@router.get("/api/v1/reviews/my-progress/{review_task_id}/attempts")
+@router.get("/api/web/reviews/my-progress/{review_task_id}/attempts")
+async def list_my_attempts_route(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_attempts_route_data(
+        request, review_task_id, mock_user_id, author_only=True
+    )
+
+
+@router.get("/api/v1/reviews/{review_task_id}/attempts")
+@router.get("/api/web/reviews/{review_task_id}/attempts")
+async def list_attempts_route(
+    request: Request,
+    review_task_id: int,
+    mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await list_attempts_route_data(
+        request, review_task_id, mock_user_id, author_only=False
+    )
 
 
 @router.get("/api/v1/reviews/{review_task_id}/skill-detail")

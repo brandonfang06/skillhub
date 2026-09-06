@@ -3,7 +3,10 @@ import { APP_HEADER_ELEVATED_CLASS_NAME, getAppHeaderClassName } from './layout-
 
 describe('getAppHeaderClassName', () => {
   it('keeps the header flat before the page starts scrolling', () => {
-    expect(getAppHeaderClassName(false)).not.toContain(APP_HEADER_ELEVATED_CLASS_NAME)
+    const className = getAppHeaderClassName(false)
+    expect(className).not.toContain(APP_HEADER_ELEVATED_CLASS_NAME)
+    expect(className).toContain('bg-background/90')
+    expect(className).not.toContain('bg-white')
   })
 
   it('adds a subtle drop shadow after the header becomes sticky', () => {

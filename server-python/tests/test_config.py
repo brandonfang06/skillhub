@@ -433,7 +433,7 @@ def test_scanner_timeout_settings_fallback_to_defaults(monkeypatch):
     settings = get_settings()
 
     assert settings.scanner_connect_timeout_ms == 5000
-    assert settings.scanner_read_timeout_ms == 300000
+    assert settings.scanner_read_timeout_ms == 900000
 
 
 def test_rate_limiting_is_disabled_by_default_for_python_cutover_compatibility(monkeypatch):

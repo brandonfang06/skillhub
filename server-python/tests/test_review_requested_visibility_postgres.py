@@ -118,9 +118,13 @@ async def test_review_detail_returns_version_requested_visibility() -> None:
                         text(
                             """
                             INSERT INTO review_task (
-                                skill_version_id, namespace_id, status, submitted_by
+                                skill_version_id, skill_id, skill_version,
+                                namespace_id, status, submitted_by
                             )
-                            VALUES (:version_id, :namespace_id, 'PENDING', :submitter_id)
+                            SELECT sv.id, sv.skill_id, sv.version,
+                                   :namespace_id, 'PENDING', :submitter_id
+                            FROM skill_version sv
+                            WHERE sv.id = :version_id
                             RETURNING id
                             """
                         ),

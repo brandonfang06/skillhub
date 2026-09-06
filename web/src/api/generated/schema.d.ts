@@ -1603,6 +1603,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/skills/{skill_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Reviews Route */
+        get: operations["list_skill_reviews_route_api_web_skills__skill_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skill Reviews Route */
+        get: operations["list_skill_reviews_route_api_v1_skills__skill_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/skills/{skill_id}/reviews/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Skill Review Route */
+        get: operations["get_my_skill_review_route_api_web_skills__skill_id__reviews_me_get"];
+        /** Upsert Skill Review Route */
+        put: operations["upsert_skill_review_route_api_web_skills__skill_id__reviews_me_put"];
+        post?: never;
+        /** Clear Skill Review Route */
+        delete: operations["clear_skill_review_route_api_web_skills__skill_id__reviews_me_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}/reviews/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Skill Review Route */
+        get: operations["get_my_skill_review_route_api_v1_skills__skill_id__reviews_me_get"];
+        /** Upsert Skill Review Route */
+        put: operations["upsert_skill_review_route_api_v1_skills__skill_id__reviews_me_put"];
+        post?: never;
+        /** Clear Skill Review Route */
+        delete: operations["clear_skill_review_route_api_v1_skills__skill_id__reviews_me_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skill-reviews/{review_id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide Skill Review Route */
+        post: operations["hide_skill_review_route_api_v1_admin_skill_reviews__review_id__hide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skill-reviews/{review_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Skill Review Route */
+        post: operations["restore_skill_review_route_api_v1_admin_skill_reviews__review_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/skills/{namespace}/{slug}/visibility": {
         parameters: {
             query?: never;
@@ -3065,6 +3171,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/skills/{skill_id}/versions/{version_id}/security-audit/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Security Audit Route */
+        post: operations["retry_security_audit_route_api_v1_skills__skill_id__versions__version_id__security_audit_retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/skills/{namespace}/{slug}/reports": {
         parameters: {
             query?: never;
@@ -3316,6 +3439,108 @@ export interface paths {
         };
         /** List My Submissions Route */
         get: operations["list_my_submissions_route_api_v1_reviews_my_submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/my-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Progress Route */
+        get: operations["list_my_progress_route_api_web_reviews_my_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/my-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Progress Route */
+        get: operations["list_my_progress_route_api_v1_reviews_my_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/my-progress/{review_task_id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Attempts Route */
+        get: operations["list_my_attempts_route_api_web_reviews_my_progress__review_task_id__attempts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/my-progress/{review_task_id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Attempts Route */
+        get: operations["list_my_attempts_route_api_v1_reviews_my_progress__review_task_id__attempts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/{review_task_id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attempts Route */
+        get: operations["list_attempts_route_api_web_reviews__review_task_id__attempts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_task_id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attempts Route */
+        get: operations["list_attempts_route_api_v1_reviews__review_task_id__attempts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5156,6 +5381,23 @@ export interface components {
              * @default false
              */
             confirmWarnings: boolean;
+        };
+        /** SkillReviewModerationRequest */
+        SkillReviewModerationRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** SkillReviewRequest */
+        SkillReviewRequest: {
+            /** Score */
+            score: number;
+            /** Reviewtext */
+            reviewText: string;
+            /**
+             * Lockversion
+             * @default 0
+             */
+            lockVersion: number;
         };
         /** SkillSubmitReviewRequest */
         SkillSubmitReviewRequest: {
@@ -9554,6 +9796,384 @@ export interface operations {
             };
         };
     };
+    list_skill_reviews_route_api_web_skills__skill_id__reviews_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skill_reviews_route_api_v1_skills__skill_id__reviews_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_skill_review_route_api_web_skills__skill_id__reviews_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_skill_review_route_api_web_skills__skill_id__reviews_me_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_skill_review_route_api_web_skills__skill_id__reviews_me_delete: {
+        parameters: {
+            query: {
+                lockVersion: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_skill_review_route_api_v1_skills__skill_id__reviews_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_skill_review_route_api_v1_skills__skill_id__reviews_me_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_skill_review_route_api_v1_skills__skill_id__reviews_me_delete: {
+        parameters: {
+            query: {
+                lockVersion: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hide_skill_review_route_api_v1_admin_skill_reviews__review_id__hide_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SkillReviewModerationRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_skill_review_route_api_v1_admin_skill_reviews__review_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_skill_visibility_route_api_web_skills__namespace___slug__visibility_patch: {
         parameters: {
             query?: never;
@@ -13387,6 +14007,43 @@ export interface operations {
             };
         };
     };
+    retry_security_audit_route_api_v1_skills__skill_id__versions__version_id__security_audit_retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+                Authorization?: string | null;
+            };
+            path: {
+                skill_id: number;
+                version_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     submit_skill_report_v1_route_api_v1_skills__namespace___slug__reports_post: {
         parameters: {
             query?: never;
@@ -14077,6 +14734,222 @@ export interface operations {
                 "X-Mock-User-Id"?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_progress_route_api_web_reviews_my_progress_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                q?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_progress_route_api_v1_reviews_my_progress_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                q?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_attempts_route_api_web_reviews_my_progress__review_task_id__attempts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_attempts_route_api_v1_reviews_my_progress__review_task_id__attempts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_attempts_route_api_web_reviews__review_task_id__attempts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_attempts_route_api_v1_reviews__review_task_id__attempts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Mock-User-Id"?: string | null;
+            };
+            path: {
+                review_task_id: number;
+            };
             cookie?: never;
         };
         requestBody?: never;

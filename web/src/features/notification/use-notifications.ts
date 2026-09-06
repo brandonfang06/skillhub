@@ -11,46 +11,58 @@ export const NOTIFICATION_QUERY_KEYS = {
     [...getNotificationQueryKeyScope(userId), 'list', page, size, category] as const,
 }
 
+export const NOTIFICATION_POLL_INTERVAL_MS = 10_000
+
+const notificationPollingOptions = {
+  staleTime: 0,
+  refetchInterval: NOTIFICATION_POLL_INTERVAL_MS,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+  retry: false,
+} as const
+
+export function getNotificationListQueryOptions(
+  userId?: string | null,
+  page = 0,
+  size = 20,
+  category?: string,
+) {
+  return {
+    queryKey: NOTIFICATION_QUERY_KEYS.listByCategory(userId, page, size, category),
+    queryFn: () => notificationApi.list({ page, size, category }) as Promise<PagedResponse<NotificationItem>>,
+    enabled: !!userId,
+    ...notificationPollingOptions,
+  }
+}
+
+export function getUnreadCountQueryOptions(userId?: string | null) {
+  return {
+    queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId),
+    queryFn: () => notificationApi.getUnreadCount(),
+    enabled: !!userId,
+    ...notificationPollingOptions,
+  }
+}
+
 /**
  * Fetches paginated notification list.
  */
 export function useNotifications(userId?: string | null, page = 0, size = 5) {
-  return useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.list(userId, page, size),
-    queryFn: () => notificationApi.list({ page, size }) as Promise<PagedResponse<NotificationItem>>,
-    enabled: !!userId,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  })
+  return useQuery(getNotificationListQueryOptions(userId, page, size))
 }
 
 /**
  * Fetches the current unread notification count for the badge.
  */
 export function useUnreadCount(userId?: string | null) {
-  return useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.unreadCount(userId),
-    queryFn: () => notificationApi.getUnreadCount(),
-    enabled: !!userId,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  })
+  return useQuery(getUnreadCountQueryOptions(userId))
 }
 
 /**
  * Fetches paginated notification list with optional category filter.
  */
 export function useNotificationList(userId?: string | null, page = 0, size = 20, category?: string) {
-  return useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.listByCategory(userId, page, size, category),
-    queryFn: () => notificationApi.list({ page, size, category }) as Promise<PagedResponse<NotificationItem>>,
-    enabled: !!userId,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  })
+  return useQuery(getNotificationListQueryOptions(userId, page, size, category))
 }
 
 /**
@@ -62,7 +74,7 @@ export function useMarkAllRead(userId?: string | null) {
     mutationFn: () => notificationApi.markAllRead(),
     onSuccess: () => {
       resetUnreadCount(queryClient, userId)
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      void queryClient.invalidateQueries({ queryKey: getNotificationQueryKeyScope(userId) })
     },
   })
 }
@@ -76,7 +88,7 @@ export function useMarkRead(userId?: string | null) {
     mutationFn: (id: number) => notificationApi.markRead(id),
     onSuccess: () => {
       decrementUnreadCount(queryClient, userId)
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      void queryClient.invalidateQueries({ queryKey: getNotificationQueryKeyScope(userId) })
     },
   })
 }

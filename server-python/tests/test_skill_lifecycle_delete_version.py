@@ -217,7 +217,7 @@ async def test_delete_skill_version_rejects_inconsistent_pending_review() -> Non
 
 
 @pytest.mark.anyio
-async def test_delete_rejected_version_archives_review_before_deleting_task(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_delete_rejected_version_archives_and_retains_review_task(monkeypatch: pytest.MonkeyPatch) -> None:
     connection = FakeDeleteVersionConnection(version_status="REJECTED")
     archived_requests: list[object] = []
 
@@ -237,8 +237,7 @@ async def test_delete_rejected_version_archives_review_before_deleting_task(monk
     assert archive_request.replacement_version_id is None
     assert archive_request.replacement_review_task_id is None
     assert archive_request.archive_reason == "REJECTED_VERSION_DELETE"
-    archive_index = next(index for index, sql in enumerate(connection.statements) if "DELETE FROM review_task" in sql)
-    assert archive_index > 0
+    assert not any("DELETE FROM review_task" in sql for sql in connection.statements)
 
 
 @pytest.mark.anyio

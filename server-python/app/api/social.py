@@ -5,10 +5,14 @@ from inspect import isawaitable
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.auth.context import resolve_current_user_or_401
-from app.auth.policy import platform_roles
+from app.auth.policy import (
+    platform_roles,
+    reject_api_token_principal_for_route,
+    require_any_platform_role,
+)
 from app.core.response import ok
 from app.core.rate_limit import rate_limit
 from app.social.owned import list_my_owned_skills
@@ -23,6 +27,16 @@ from app.social.rating import (
     SkillRatingInput,
     check_skill_rating,
     rate_skill,
+)
+from app.social.review import (
+    SkillReviewError,
+    SkillReviewInput,
+    SkillReviewModerationInput,
+    clear_skill_review,
+    get_my_skill_review,
+    list_skill_reviews,
+    moderate_skill_review,
+    upsert_skill_review,
 )
 from app.social.star import (
     SkillStarError,
@@ -45,6 +59,16 @@ router = APIRouter()
 
 class SkillRatingRequest(BaseModel):
     score: int
+
+
+class SkillReviewRequest(BaseModel):
+    score: int
+    reviewText: str = Field(min_length=1, max_length=2000)
+    lockVersion: int = Field(default=0, ge=0)
+
+
+class SkillReviewModerationRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
 
 
 async def _resolve_result(result: Any | Awaitable[Any]) -> Any:
@@ -523,3 +547,141 @@ async def check_skill_rating_route(
     x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
 ) -> dict[str, Any]:
     return await check_skill_rating_route_data(request, skill_id, x_mock_user_id)
+
+
+def _review_error(exc: SkillReviewError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+@router.get("/api/v1/skills/{skill_id}/reviews")
+@router.get("/api/web/skills/{skill_id}/reviews")
+async def list_skill_reviews_route(
+    request: Request,
+    skill_id: int,
+    page: int = 0,
+    size: int = 20,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    user_id = await _read_optional_user_id(request, x_mock_user_id)
+    roles: set[str] = set()
+    if user_id is not None:
+        roles = set(platform_roles(await _require_user_context(request, x_mock_user_id)))
+    try:
+        data = await list_skill_reviews(
+            request.app.state.db_engine,
+            skill_id=skill_id,
+            user_id=user_id,
+            platform_roles=roles,
+            page=page,
+            size=size,
+        )
+    except SkillReviewError as exc:
+        raise _review_error(exc) from exc
+    return ok("response.success.read", data, request)
+
+
+@router.get("/api/v1/skills/{skill_id}/reviews/me")
+@router.get("/api/web/skills/{skill_id}/reviews/me")
+async def get_my_skill_review_route(
+    request: Request,
+    skill_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id, authorization)
+    try:
+        data = await get_my_skill_review(request.app.state.db_engine, skill_id=skill_id, user_id=user_id)
+    except SkillReviewError as exc:
+        raise _review_error(exc) from exc
+    return ok("response.success.read", data, request)
+
+
+@router.put("/api/v1/skills/{skill_id}/reviews/me")
+@router.put("/api/web/skills/{skill_id}/reviews/me")
+async def upsert_skill_review_route(
+    request: Request,
+    skill_id: int,
+    payload: SkillReviewRequest,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id, authorization)
+    try:
+        data = await upsert_skill_review(request.app.state.db_engine, SkillReviewInput(
+            skill_id=skill_id,
+            user_id=user_id,
+            score=payload.score,
+            review_text=payload.reviewText,
+            expected_lock_version=payload.lockVersion,
+        ))
+    except SkillReviewError as exc:
+        raise _review_error(exc) from exc
+    return ok("response.success.updated", data, request)
+
+
+@router.delete("/api/v1/skills/{skill_id}/reviews/me")
+@router.delete("/api/web/skills/{skill_id}/reviews/me")
+async def clear_skill_review_route(
+    request: Request,
+    skill_id: int,
+    lockVersion: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    user_id = await _require_user_id(request, x_mock_user_id, authorization)
+    try:
+        data = await clear_skill_review(
+            request.app.state.db_engine,
+            skill_id=skill_id,
+            user_id=user_id,
+            expected_lock_version=lockVersion,
+        )
+    except SkillReviewError as exc:
+        raise _review_error(exc) from exc
+    return ok("response.success.updated", data, request)
+
+
+async def _moderate_review_route(
+    request: Request,
+    review_id: int,
+    action: str,
+    reason: str | None,
+    x_mock_user_id: str | None,
+) -> dict[str, Any]:
+    user = await _require_user_context(request, x_mock_user_id)
+    reject_api_token_principal_for_route(user, request.url.path)
+    require_any_platform_role(user, {"SKILL_ADMIN", "SUPER_ADMIN"}, detail="error.forbidden")
+    try:
+        data = await moderate_skill_review(request.app.state.db_engine, SkillReviewModerationInput(
+            review_id=review_id,
+            moderator_id=str(user["userId"]),
+            action=action,
+            reason=reason,
+            request_id=getattr(request.state, "request_id", None),
+            client_ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        ))
+    except SkillReviewError as exc:
+        raise _review_error(exc) from exc
+    return ok("response.success.updated", data, request)
+
+
+@router.post("/api/v1/admin/skill-reviews/{review_id}/hide")
+async def hide_skill_review_route(
+    request: Request,
+    review_id: int,
+    payload: SkillReviewModerationRequest | None = None,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _moderate_review_route(
+        request, review_id, "HIDE", payload.reason if payload else None, x_mock_user_id
+    )
+
+
+@router.post("/api/v1/admin/skill-reviews/{review_id}/restore")
+async def restore_skill_review_route(
+    request: Request,
+    review_id: int,
+    x_mock_user_id: str | None = Header(default=None, alias="X-Mock-User-Id"),
+) -> dict[str, Any]:
+    return await _moderate_review_route(request, review_id, "RESTORE", None, x_mock_user_id)

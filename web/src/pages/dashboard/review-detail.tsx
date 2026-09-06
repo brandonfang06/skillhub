@@ -94,7 +94,7 @@ function ReviewDetailScreen({
     (version) => version.version === reviewSkillDetail.activeVersion
   )
   const skillId = reviewSkillDetail?.skill?.id
-  const versionId = activeReviewVersion?.id ?? review?.skillVersionId
+  const versionId = activeReviewVersion?.id ?? review?.skillVersionId ?? undefined
   const {
     data: securityAudits,
     isLoading: isLoadingSecurityAudits,

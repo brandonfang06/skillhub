@@ -136,15 +136,16 @@ belong to the scanner deployment, not the backend.
 | `SKILLHUB_SECURITY_SCANNER_SCAN_PATH` | ConfigMap | `/scan-upload` | Upload scan endpoint path. |
 | `SKILLHUB_SECURITY_SCANNER_MODE` | ConfigMap | `upload` | Scanner handoff mode. |
 | `SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT_MS` | ConfigMap | `5000` | Scanner HTTP connect timeout. |
-| `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS` | ConfigMap | `300000` | Scanner HTTP read timeout. |
+| `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS` | ConfigMap | `900000` | Scanner HTTP read timeout. Keep below the scanner hard timeout. |
 | `SKILLHUB_SCAN_CONSUMER_ENABLED` | ConfigMap | `false` | Enables Redis stream scan consumer. |
 | `SKILLHUB_SCAN_STREAM_KEY` | ConfigMap | `skillhub:scan:requests` | Redis stream key. |
 | `SKILLHUB_SCAN_CONSUMER_GROUP_NAME` | ConfigMap | `skillhub-scan-workers` | Redis consumer group. |
 | `SKILLHUB_SCAN_CONSUMER_NAME` | ConfigMap | hostname | Redis consumer name. |
 | `SKILLHUB_SCAN_CONSUMER_READ_COUNT` | ConfigMap | `10` | Stream read count. |
 | `SKILLHUB_SCAN_CONSUMER_BLOCK_MS` | ConfigMap | `2000` | Stream block timeout. |
-| `SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS` | ConfigMap | `120000` | Pending message reclaim idle threshold. |
+| `SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS` | ConfigMap | `960000` | Pending message reclaim idle threshold. Keep above the scanner hard timeout. |
 | `SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT` | ConfigMap | `20` | Pending message reclaim batch size. |
+| `SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS` | ConfigMap | `3600` | Maximum original task age while scanner-unavailable failures remain retryable. The age is not reset when the task is reclaimed. |
 | `SKILLHUB_SCANNER_USE_BEHAVIORAL` | ConfigMap | `true` | Scanner request flag. |
 | `SKILLHUB_SCANNER_USE_LLM` | ConfigMap | `false` | Scanner request flag. |
 | `SKILLHUB_SCANNER_LLM_PROVIDER` | ConfigMap | `anthropic` | Scanner request flag. |
@@ -153,6 +154,20 @@ belong to the scanner deployment, not the backend.
 | `SKILLHUB_SCANNER_AI_DEFENSE_API_KEY` | Secret | unset | Backend passes this scanner request option when enabled. |
 | `SKILLHUB_SCANNER_USE_VIRUSTOTAL` | ConfigMap | `false` | Scanner request flag. |
 | `SKILLHUB_SCANNER_USE_TRIGGER` | ConfigMap | `false` | Scanner request flag. |
+
+The default timeout budget is backend read timeout 900 seconds, scanner hard
+timeout 930 seconds, then Redis reclaim after 960 seconds. Preserve that order
+when tuning these values.
+
+## Scanner Container Control
+
+These variables belong to the separate scanner pod or container, not the
+Python backend process.
+
+| Env var | Source | Default | Notes |
+| --- | --- | --- | --- |
+| `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS` | ConfigMap | `1` | Maximum concurrent `/scan` and `/scan-upload` jobs per scanner process. Excess requests receive `503` with `Retry-After: 30`. |
+| `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` | ConfigMap | `930` | Hard limit for one scan. Expiry terminates the process with exit code `124` so the container restart policy can recover it. |
 
 ## Built-In Skills
 

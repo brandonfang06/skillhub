@@ -94,6 +94,7 @@ def test_scan_consumer_settings_are_disabled_by_default(monkeypatch: pytest.Monk
         "SKILLHUB_SCAN_CONSUMER_BLOCK_MS",
         "SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS",
         "SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT",
+        "SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS",
     ]:
         monkeypatch.delenv(name, raising=False)
 
@@ -104,8 +105,9 @@ def test_scan_consumer_settings_are_disabled_by_default(monkeypatch: pytest.Monk
     assert settings.scan_consumer_name.startswith("scanner-python-")
     assert settings.scan_consumer_read_count == 10
     assert settings.scan_consumer_block_ms == 2000
-    assert settings.scan_consumer_reclaim_min_idle_ms == 120000
+    assert settings.scan_consumer_reclaim_min_idle_ms == 960000
     assert settings.scan_consumer_reclaim_count == 20
+    assert settings.scan_consumer_max_unavailable_age_seconds == 3600
 
 
 def test_scan_consumer_settings_can_be_overridden(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -116,6 +118,7 @@ def test_scan_consumer_settings_can_be_overridden(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("SKILLHUB_SCAN_CONSUMER_BLOCK_MS", "250")
     monkeypatch.setenv("SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS", "5000")
     monkeypatch.setenv("SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT", "7")
+    monkeypatch.setenv("SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS", "1800")
 
     settings = get_settings()
 
@@ -126,6 +129,7 @@ def test_scan_consumer_settings_can_be_overridden(monkeypatch: pytest.MonkeyPatc
     assert settings.scan_consumer_block_ms == 250
     assert settings.scan_consumer_reclaim_min_idle_ms == 5000
     assert settings.scan_consumer_reclaim_count == 7
+    assert settings.scan_consumer_max_unavailable_age_seconds == 1800
 
 
 def test_scan_outbox_settings_use_upstream_safe_defaults(

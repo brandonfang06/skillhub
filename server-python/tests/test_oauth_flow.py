@@ -87,6 +87,8 @@ class FakeOAuthConnection:
     async def execute(self, statement: object, params: dict[str, object] | None = None) -> FakeResult:
         sql = str(statement)
         bound = params or {}
+        if "pg_advisory_xact_lock" in sql:
+            return FakeResult()
         if "FROM identity_binding ib" in sql:
             row = next(
                 (

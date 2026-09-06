@@ -91,7 +91,7 @@ async def test_apply_scan_result_updates_latest_audit_and_public_scanning_versio
     assert result.previous_status == "SCANNING"
     assert result.new_status == "PENDING_REVIEW"
     assert result.status_changed is True
-    assert "ORDER BY created_at DESC" in connection.statements[0]
+    assert "ORDER BY audit.created_at DESC, audit.id DESC" in connection.statements[0]
     audit_update_index = next(
         index for index, statement in enumerate(connection.statements) if "UPDATE security_audit" in statement
     )
@@ -123,6 +123,27 @@ async def test_apply_scan_result_updates_latest_audit_and_public_scanning_versio
     assert connection.params[version_update_index] == {"version_id": 202}
     assert "AND status = 'SCANNING'" in connection.statements[version_update_index]
     assert "RETURNING status" in connection.statements[version_update_index]
+
+
+@pytest.mark.anyio
+async def test_late_result_from_superseded_attempt_cannot_update_new_attempt() -> None:
+    connection = FakeConnection(
+        audit_row={"id": 800, "task_id": "old-task", "is_latest": False},
+        version_row={"id": 202, "status": "SCANNING", "requested_visibility": "PUBLIC"},
+    )
+
+    result = await apply_security_scan_result(
+        connection,
+        version_id=202,
+        scanner_type="skill-scanner",
+        task_id="old-task",
+        scan_result=scan_input(verdict="DANGEROUS"),
+    )
+
+    assert result.status_changed is False
+    assert result.new_status == "SCANNING"
+    assert not any("UPDATE security_audit" in sql for sql in connection.statements)
+    assert not any("INSERT INTO local_security_scan_execution" in sql for sql in connection.statements)
 
 
 @pytest.mark.anyio

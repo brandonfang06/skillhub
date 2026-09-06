@@ -10,6 +10,7 @@ import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
 import type { SkillFile } from '@/api/types'
 import { InstallCommand } from '@/features/skill/install-command'
+import { InstallForAgentButton } from '@/features/skill/install-for-agent-button'
 import { ShareButton } from '@/features/skill/share-button'
 import { SkillLabelPanel } from '@/features/skill/skill-label-panel'
 import { ComplianceSnapshotPanel } from '@/features/skill/compliance-snapshot-panel'
@@ -28,6 +29,7 @@ import { isSkillDetailQueriesEnabled } from './skill-detail-query'
 import { RatingInput } from '@/features/social/rating-input'
 import { StarButton } from '@/features/social/star-button'
 import { SubscribeButton } from '@/features/social/subscribe-button'
+import { SkillReviews } from '@/features/social/skill-reviews'
 import { useAuth } from '@/features/auth/use-auth'
 import { adminApi, ApiError, buildApiUrl, getPlaygroundRuntimeConfig, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
@@ -188,6 +190,7 @@ export function SkillDetailPage() {
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const selectedVersion = headlineVersion?.version ?? versions?.[0]?.version
   const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
+  const publishedVersionEntry = versions?.find((version) => version.version === publishedVersion?.version)
   const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
@@ -910,17 +913,17 @@ export function SkillDetailPage() {
               </span>
             )}
             {isReviewFlowPending && (
-              <span className="badge-soft" style={{ background: '#fef3c7', color: '#92400e' }}>
+              <span className="badge-soft bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
                 {t('skillDetail.versionStatusPendingReview')}
               </span>
             )}
             {!isPendingPreview && (isRejectedPreview || hasRejectedOwnerPreview) && skill.canManageLifecycle && (
-              <span className="badge-soft" style={{ background: '#fee2e2', color: '#991b1b' }}>
+              <span className="badge-soft bg-red-100 text-red-900 dark:bg-red-950/60 dark:text-red-300">
                 {t('skillDetail.rejectedBadge')}
               </span>
             )}
           </div>
-          <h1 className="text-balance text-4xl font-bold font-heading text-foreground">{skill.displayName}</h1>
+          <h1 className="text-balance break-words text-4xl font-bold font-heading text-foreground [overflow-wrap:anywhere]">{skill.displayName}</h1>
           {skill.ownerDisplayName && (
             <div className="flex min-w-0">
               <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/85 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm">
@@ -944,8 +947,8 @@ export function SkillDetailPage() {
                   className={cn(
                     'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
                     label.type === 'PRIVILEGED'
-                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80'
-                      : 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200/80',
+                      ? 'border-amber-500/40 bg-amber-100 text-amber-900 hover:bg-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/70'
+                      : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
                   )}
                 >
                   {label.displayName}
@@ -1200,6 +1203,8 @@ export function SkillDetailPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <SkillReviews skillId={skill.id} canInteract={canInteract} onRequireLogin={requireLogin} />
       </div>
 
       {/* Sidebar */}
@@ -1319,6 +1324,12 @@ export function SkillDetailPage() {
               namespace={namespace}
               slug={slug}
               version={publishedVersion.version}
+            />
+            <InstallForAgentButton
+              namespace={namespace}
+              slug={slug}
+              version={publishedVersion.version}
+              disabled={skill.status === 'ARCHIVED' || !(publishedVersionEntry?.downloadAvailable ?? false)}
             />
           </Card>
         )}

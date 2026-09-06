@@ -253,6 +253,27 @@ export interface DownloadEventItem {
   createdAt: string
 }
 
+export interface ReviewProgress {
+  latestReviewTaskId: number
+  skillId: number
+  namespace: string
+  skillSlug: string
+  skillVersion: string
+  latestStatus: 'PENDING' | 'APPROVED' | 'REJECTED'
+  latestReviewComment?: string
+  latestSubmittedAt: string
+  latestReviewedAt?: string
+  attemptCount: number
+}
+
+export interface ReviewProgressPage {
+  items: ReviewProgress[]
+  total: number
+  page: number
+  size: number
+  statusCounts: { pending: number; approved: number; rejected: number }
+}
+
 export type NamespaceAnalyticsData = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsData']
 export type NamespaceAnalyticsItem = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsItem']
 export type NamespaceAnalyticsSummary = namespaceAnalyticsComponents['schemas']['NamespaceAnalyticsSummary']
@@ -494,7 +515,7 @@ export type ReviewTask = Omit<
   | 'submittedAt'
 > & {
   id: number
-  skillVersionId: number
+  skillVersionId: number | null
   namespace: string
   skillSlug: string
   version: string

@@ -200,11 +200,26 @@ spec:
                 configMapKeyRef:
                   name: skillhub-config
                   key: security-scanner-mode
+            - name: SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: security-scanner-read-timeout-ms
             - name: SKILLHUB_SCAN_CONSUMER_ENABLED
               valueFrom:
                 configMapKeyRef:
                   name: skillhub-config
                   key: scan-consumer-enabled
+            - name: SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: scan-consumer-reclaim-min-idle-ms
+            - name: SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: security-stream-max-unavailable-age-seconds
             - name: SKILLHUB_SCANNER_USE_BEHAVIORAL
               valueFrom:
                 configMapKeyRef:

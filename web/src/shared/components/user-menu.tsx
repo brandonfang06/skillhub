@@ -121,6 +121,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
     >
       <button
         type="button"
+        aria-label={user.displayName}
         aria-expanded={open}
         aria-haspopup="menu"
         className={cn('flex items-center gap-3 text-foreground hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-md', triggerClassName)}
@@ -134,7 +135,15 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             className="w-8 h-8 rounded-full border border-border/60"
           />
         )}
-        <span className="text-sm font-medium text-inherit">
+        {!user.avatarUrl && (
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-muted text-xs font-semibold text-foreground"
+          >
+            {user.displayName.charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="hidden text-sm font-medium text-inherit lg:inline">
           {user.displayName}
         </span>
       </button>

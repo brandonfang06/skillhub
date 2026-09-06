@@ -661,15 +661,16 @@ async def delete_skill_version(engine: Any, request: SkillVersionDeleteInput) ->
                 },
             )
 
-        await connection.execute(
-            text(
-                """
-                DELETE FROM review_task
-                WHERE skill_version_id = :version_id
-                """
-            ),
-            {"version_id": version_id},
-        )
+        if version_status != "REJECTED":
+            await connection.execute(
+                text(
+                    """
+                    DELETE FROM review_task
+                    WHERE skill_version_id = :version_id
+                    """
+                ),
+                {"version_id": version_id},
+            )
         await connection.execute(
             text(
                 """
@@ -975,16 +976,20 @@ async def submit_skill_version_for_review(
                 text(
                     """
                     INSERT INTO review_task (
-                        skill_version_id, namespace_id, status, version, submitted_by, submitted_at
+                        skill_version_id, skill_id, skill_version, namespace_id,
+                        status, version, submitted_by, submitted_at
                     )
                     VALUES (
-                        :version_id, :namespace_id, 'PENDING', 1, :submitted_by, :submitted_at
+                        :version_id, :skill_id, :skill_version, :namespace_id,
+                        'PENDING', 1, :submitted_by, :submitted_at
                     )
                     RETURNING id
                     """
                 ),
                 {
                     "version_id": version_id,
+                    "skill_id": skill_id,
+                    "skill_version": version_name,
                     "namespace_id": namespace_id,
                     "submitted_by": request.user_id,
                     "submitted_at": timestamp,

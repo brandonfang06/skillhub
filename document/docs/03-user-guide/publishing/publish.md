@@ -45,6 +45,9 @@ clawhub publish ./my-skill.zip
 | `REJECTED` | 已拒绝，需修改后重新提交 |
 | `YANKED` | 已撤回，不再推荐使用 |
 
+作者可在 Dashboard 查看当前审核进度、状态数量与历次审核记录；拒绝后重新提交
+不会删除旧记录。
+
 ## 下一步
 
 - [版本管理](./versioning) - 管理技能版本

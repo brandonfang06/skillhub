@@ -49,7 +49,7 @@ export function SkillCard({
   return (
     <Card
       className={cn(
-        'h-full p-5 cursor-pointer group relative overflow-hidden bg-white border shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
+        'group relative h-full cursor-pointer overflow-hidden border bg-card p-5 text-card-foreground shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2',
         selected && 'ring-2 ring-primary/70',
       )}
       style={{ borderColor: 'hsl(var(--border-card))' }}

@@ -24,6 +24,7 @@ const RESERVED_BASE_PATH_SEGMENTS = new Set([
   'oauth2',
   'login',
   'assets',
+  'install',
   'registry',
   'nginx-health',
   '.well-known',

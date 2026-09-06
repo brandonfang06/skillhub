@@ -98,6 +98,8 @@ After publishing, [Skill Scanner](/en/guide/scanner) automatically scans the ski
 6. **Wait for Review** (if namespace has review enabled)
 
 Team admins receive review notifications and approve skill packages for official release.
+Authors can use the Dashboard to see current progress, status counts, and the
+complete attempt history; resubmitting after rejection does not remove earlier records.
 
 7. **Publish Success**
 

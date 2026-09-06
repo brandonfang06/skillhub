@@ -97,6 +97,12 @@ export function DashboardPage() {
           </Link>
         </Card>
         <Card className="p-5">
+          <div className="text-sm text-muted-foreground">{t('reviewProgress.title')}</div>
+          <Link to="/dashboard/review-progress" className="mt-2 inline-block font-semibold text-primary hover:underline">
+            {t('reviewProgress.history')}
+          </Link>
+        </Card>
+        <Card className="p-5">
           <div className="text-sm text-muted-foreground">{t('dashboard.credentials')}</div>
           <Link to="/dashboard/tokens" className="mt-2 inline-block font-semibold text-primary hover:underline">
             {t('dashboard.openTokens')}

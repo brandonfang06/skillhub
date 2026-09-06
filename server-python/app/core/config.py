@@ -17,7 +17,7 @@ DEFAULT_SCANNER_HEALTH_PATH = "/health"
 DEFAULT_SCANNER_MODE = "upload"
 DEFAULT_SCANNER_SCAN_PATH = "/scan-upload"
 DEFAULT_SCANNER_CONNECT_TIMEOUT_MS = 5000
-DEFAULT_SCANNER_READ_TIMEOUT_MS = 300000
+DEFAULT_SCANNER_READ_TIMEOUT_MS = 900000
 DEFAULT_STORAGE_PROVIDER = "local"
 DEFAULT_STORAGE_S3_REGION = "us-east-1"
 DEFAULT_STORAGE_S3_MAX_CONNECTIONS = 50
@@ -27,8 +27,9 @@ DEFAULT_STORAGE_S3_API_CALL_TIMEOUT_SECONDS = 60
 DEFAULT_SCAN_CONSUMER_GROUP_NAME = "skillhub-scan-workers"
 DEFAULT_SCAN_CONSUMER_READ_COUNT = 10
 DEFAULT_SCAN_CONSUMER_BLOCK_MS = 2000
-DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 120000
+DEFAULT_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS = 960000
 DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT = 20
+DEFAULT_SCAN_CONSUMER_MAX_UNAVAILABLE_AGE_SECONDS = 3600
 DEFAULT_SCAN_OUTBOX_BATCH_SIZE = 50
 DEFAULT_SCAN_OUTBOX_MAX_ATTEMPTS = 10
 DEFAULT_SCAN_OUTBOX_LEASE_SECONDS = 120
@@ -124,6 +125,7 @@ class Settings:
     scan_consumer_block_ms: int
     scan_consumer_reclaim_min_idle_ms: int
     scan_consumer_reclaim_count: int
+    scan_consumer_max_unavailable_age_seconds: int
     scan_outbox_batch_size: int
     scan_outbox_max_attempts: int
     scan_outbox_lease_seconds: int
@@ -473,6 +475,10 @@ def get_settings() -> Settings:
         scan_consumer_reclaim_count=parse_int(
             os.getenv("SKILLHUB_SCAN_CONSUMER_RECLAIM_COUNT"),
             DEFAULT_SCAN_CONSUMER_RECLAIM_COUNT,
+        ),
+        scan_consumer_max_unavailable_age_seconds=parse_int(
+            os.getenv("SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS"),
+            DEFAULT_SCAN_CONSUMER_MAX_UNAVAILABLE_AGE_SECONDS,
         ),
         scan_outbox_batch_size=parse_int(
             os.getenv("SKILLHUB_SECURITY_OUTBOX_BATCH_SIZE"),

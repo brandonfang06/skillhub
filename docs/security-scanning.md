@@ -42,6 +42,21 @@ Important environment variables:
 - `SKILLHUB_SCAN_CONSUMER_GROUP_NAME`
 - `SKILLHUB_SCAN_CONSUMER_NAME`
 
+Recovery and timeout variables:
+
+| Variable | Default | Purpose |
+| --- | ---: | --- |
+| `SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT_MS` | `900000` | Backend read timeout for one scanner request |
+| `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` | `930` | Scanner process hard timeout; exit `124` lets the container restart |
+| `SKILLHUB_SCAN_CONSUMER_RECLAIM_MIN_IDLE_MS` | `960000` | Redis pending-message reclaim threshold |
+| `SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE_SECONDS` | `3600` | Maximum original task age while scanner-unavailable failures remain retryable |
+| `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS` | `1` | Concurrent `/scan` and `/scan-upload` jobs per scanner process |
+
+Keep the timeout order at 900 seconds for the backend read, 930 seconds for
+the scanner hard stop, and 960 seconds before Redis reclaim. Raising scanner
+concurrency requires load testing against the pod's actual CPU, memory, and
+scan latency. A saturated scanner returns `503` with `Retry-After: 30`.
+
 Outbox tuning variables and defaults:
 
 | Variable | Default | Purpose |
@@ -105,6 +120,17 @@ Recommended backend checks after enabling the feature:
 6. confirm the version eventually moves to `PENDING_REVIEW` or `SCAN_FAILED`
 7. call `GET /api/v1/skills/{skillId}/versions/{versionId}/security-audit`
 
+For an authorized owner, namespace administrator, or platform skill
+administrator, retry a failed scan with:
+
+```text
+POST /api/v1/skills/{skillId}/versions/{versionId}/security-audit/retry
+```
+
+Bearer callers need the `skill:publish` scope. An active attempt is reused
+instead of creating duplicate work. A new retry has a new task identity, so a
+late result from an older attempt cannot overwrite it.
+
 ## Audit Query API
 
 Backend audit data is available from:
@@ -134,6 +160,11 @@ Response fields include:
   outbox failure is retained as `FAILED` with the last error for operators.
 - Consumer pending messages can be reclaimed. A stable `task_id` prevents a
   completed scan from executing twice after duplicate delivery.
+- Scanner-unavailable failures remain retryable only until the original task
+  reaches the configured maximum age. Reclaiming or re-enqueuing the task does
+  not reset that age.
+- Public audit responses expose only a safe failure category. Detailed scanner
+  errors remain operator evidence and are not returned to unauthorized users.
 - Terminal scanner failure marks the version `SCAN_FAILED`; the review task
   remains available so the package does not get stuck without governance.
 - Sent outbox rows are cleaned only after the configured retention period.

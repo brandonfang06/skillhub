@@ -159,8 +159,7 @@ async def test_cleanup_archives_rejected_version_before_deleting_active_rows() -
         }
     ]
     assert result.archived_review.scanner_summary[0]["scannerType"] == "STATIC"
-    review_delete = next(sql for sql in connection.statements if "DELETE FROM review_task" in sql)
-    assert "status = 'PENDING'" not in review_delete
+    assert not any("DELETE FROM review_task" in sql for sql in connection.statements)
     assert "DELETE FROM skill_version" in connection.statements[-1]
 
 

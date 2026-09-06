@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from types import TracebackType
 
+import httpx
 import pytest
 
 from app.core.request_id import current_request_id
@@ -131,6 +132,13 @@ class SafeScanner:
 class FailingScanner:
     async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
         raise RuntimeError("scanner unavailable")
+
+
+class UnavailableScanner:
+    async def scan(self, task: SecurityScanTask, skill_path: str) -> SecurityScanResultInput:
+        request = httpx.Request("POST", "http://scanner/scan-upload")
+        response = httpx.Response(503, request=request)
+        raise httpx.HTTPStatusError("scanner busy", request=request, response=response)
 
 
 class CorrelationScanner:
@@ -602,6 +610,80 @@ async def test_consume_once_retries_failure_without_marking_failed_before_max_re
     assert "message_id=1780-0" in caplog.text
     assert "retry_message_id=retry-1" in caplog.text
     assert "retry_count=2" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_unavailable_scanner_stays_pending_past_retry_limit_until_age_expires(tmp_path) -> None:
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-unavailable",
+                    "versionId": "202",
+                    "skillPath": str(tmp_path),
+                    "retryCount": str(MAX_SCAN_RETRY_COUNT),
+                    "createdAtMillis": "1780968999000",
+                },
+            )
+        ]
+    )
+    connection = FakeConnection()
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        storage_base_path=str(tmp_path),
+        scan_temp_dir=str(tmp_path / "scans"),
+        clock_millis=lambda: 1780969000000,
+        max_unavailable_age_ms=3_600_000,
+    )
+
+    result = await runtime.consume_once(FakeEngine(connection), UnavailableScanner())
+
+    assert result == ScanConsumerResult()
+    assert redis.acked == []
+    assert redis.added == []
+    assert not any("SCAN_FAILED" in statement for statement in connection.statements)
+
+
+@pytest.mark.anyio
+async def test_unavailable_scanner_marks_failed_and_acks_after_age_limit(tmp_path) -> None:
+    redis = FakeRedisStream(
+        [
+            RedisStreamMessage(
+                "1780-0",
+                {
+                    "taskId": "task-unavailable-expired",
+                    "versionId": "202",
+                    "skillPath": str(tmp_path),
+                    "retryCount": str(MAX_SCAN_RETRY_COUNT),
+                    "createdAtMillis": "1780965399999",
+                },
+            )
+        ]
+    )
+    connection = FakeConnection()
+    runtime = ScanConsumerRuntime(
+        redis,
+        stream_key="skillhub:scan:requests",
+        storage_base_path=str(tmp_path),
+        scan_temp_dir=str(tmp_path / "scans"),
+        clock_millis=lambda: 1780969000000,
+        max_unavailable_age_ms=3_600_000,
+    )
+
+    result = await runtime.consume_once(FakeEngine(connection), UnavailableScanner())
+
+    assert result == ScanConsumerResult(processed=1, acknowledged=1, failed=1)
+    assert redis.acked == ["1780-0"]
+    failure_update = next(
+        index for index, statement in enumerate(connection.statements)
+        if "UPDATE security_audit" in statement and "failure_reason" in statement
+    )
+    assert connection.params[failure_update]["failure_reason"] == (
+        "Security scanner did not recover before the configured timeout. "
+        "Retry after scanner availability is restored."
+    )
 
 
 @pytest.mark.anyio

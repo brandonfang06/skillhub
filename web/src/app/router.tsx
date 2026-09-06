@@ -9,6 +9,8 @@ import { RoleGuard } from '@/shared/components/role-guard'
 import { createRequireAuth } from '@/shared/lib/auth-route'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 
+type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
 /**
  * Central route registry for the SkillHub web app.
  *
@@ -82,6 +84,7 @@ const SkillPlaygroundPage = createLazyRouteComponent(
 const SkillVersionComparePage = createLazyRouteComponent(() => import('@/pages/skill-version-compare'), 'SkillVersionComparePage')
 const DashboardPage = createLazyRouteComponent(() => import('@/pages/dashboard'), 'DashboardPage')
 const MySkillsPage = createLazyRouteComponent(() => import('@/pages/dashboard/my-skills'), 'MySkillsPage')
+const ReviewProgressPage = createLazyRouteComponent(() => import('@/pages/dashboard/review-progress'), 'ReviewProgressPage')
 const PublishPage = createLazyRouteComponent(() => import('@/pages/dashboard/publish'), 'PublishPage')
 const MyNamespacesPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/my-namespaces'),
@@ -319,13 +322,29 @@ const dashboardSkillsRoute = createRoute({
   component: MySkillsPage,
 })
 
+const dashboardReviewProgressRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/review-progress',
+  beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { status?: ReviewStatus; q?: string; page?: number } => ({
+    status: search.status === 'PENDING' || search.status === 'APPROVED' || search.status === 'REJECTED'
+      ? search.status
+      : undefined,
+    q: typeof search.q === 'string' && search.q ? search.q : undefined,
+    page: typeof search.page === 'number' && search.page >= 0 ? search.page : undefined,
+  }),
+  component: ReviewProgressPage,
+})
+
 const dashboardPublishRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/publish',
   beforeLoad: requireAuth,
-  validateSearch: (search: Record<string, unknown>): { namespace?: string; visibility?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { namespace?: string; visibility?: string; resubmitSkill?: string; resubmitVersion?: string } => ({
     namespace: typeof search.namespace === 'string' && search.namespace ? search.namespace : undefined,
     visibility: typeof search.visibility === 'string' && search.visibility ? search.visibility : undefined,
+    resubmitSkill: typeof search.resubmitSkill === 'string' && search.resubmitSkill ? search.resubmitSkill : undefined,
+    resubmitVersion: typeof search.resubmitVersion === 'string' && search.resubmitVersion ? search.resubmitVersion : undefined,
   }),
   component: PublishPage,
 })
@@ -400,6 +419,9 @@ const dashboardStarsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/stars',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MyStarsPage,
 })
 
@@ -407,6 +429,9 @@ const dashboardSubscriptionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/subscriptions',
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { page?: number } => ({
+    page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
+  }),
   component: MySubscriptionsPage,
 })
 
@@ -536,6 +561,7 @@ const routeTree = rootRoute.addChildren([
   skillVersionCompareRoute,
   dashboardRoute,
   dashboardSkillsRoute,
+  dashboardReviewProgressRoute,
   dashboardPublishRoute,
   dashboardNamespacesRoute,
   dashboardNamespaceMembersRoute,

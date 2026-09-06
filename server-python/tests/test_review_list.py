@@ -272,6 +272,68 @@ def test_review_pending_and_my_submissions_routes_forward_reader_inputs() -> Non
     assert seen[1] == ("submissions", {"page": 2, "size": 10, "user_id": "owner"})
 
 
+def test_review_progress_and_attempt_routes_forward_authenticated_user() -> None:
+    app = create_app()
+    seen: list[tuple[str, dict[str, object]]] = []
+
+    async def progress_reader(**kwargs: object) -> dict[str, object]:
+        seen.append(("progress", kwargs))
+        return {
+            "items": [],
+            "total": 0,
+            "page": kwargs["page"],
+            "size": kwargs["size"],
+            "statusCounts": {"pending": 0, "approved": 0, "rejected": 0},
+        }
+
+    async def author_attempts_reader(**kwargs: object) -> list[dict[str, object]]:
+        seen.append(("author-attempts", kwargs))
+        return []
+
+    async def reviewer_attempts_reader(**kwargs: object) -> list[dict[str, object]]:
+        seen.append(("reviewer-attempts", kwargs))
+        return []
+
+    app.state.review_progress_reader = progress_reader
+    app.state.review_author_attempts_reader = author_attempts_reader
+    app.state.review_attempts_reader = reviewer_attempts_reader
+    client = TestClient(app)
+    headers = {"X-Mock-User-Id": "owner"}
+
+    progress = client.get(
+        "/api/v1/reviews/my-progress?status=REJECTED&q=agent&page=2&size=5",
+        headers=headers,
+    )
+    author_attempts = client.get(
+        "/api/web/reviews/my-progress/42/attempts",
+        headers=headers,
+    )
+    reviewer_attempts = client.get("/api/v1/reviews/42/attempts", headers=headers)
+
+    assert progress.status_code == 200
+    assert progress.json()["data"]["statusCounts"] == {
+        "pending": 0,
+        "approved": 0,
+        "rejected": 0,
+    }
+    assert author_attempts.status_code == 200
+    assert reviewer_attempts.status_code == 200
+    assert seen == [
+        (
+            "progress",
+            {
+                "status": "REJECTED",
+                "query": "agent",
+                "page": 2,
+                "size": 5,
+                "user_id": "owner",
+            },
+        ),
+        ("author-attempts", {"review_task_id": 42, "user_id": "owner"}),
+        ("reviewer-attempts", {"review_task_id": 42, "user_id": "owner"}),
+    ]
+
+
 def test_review_list_routes_require_mock_user() -> None:
     app = create_app()
     client = TestClient(app)

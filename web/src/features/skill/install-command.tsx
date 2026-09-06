@@ -21,6 +21,15 @@ export function buildInstallTarget(namespace: string, slug: string): string {
   return namespace === 'global' ? slug : `${namespace}--${slug}`
 }
 
+export function buildSkillhubCoordinate(namespace: string, slug: string): string {
+  return `@${namespace}/${slug}`
+}
+
+/** Restrict copied commands to version tokens that are safe across common shells. */
+export function isPortableSkillVersion(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/.test(value)
+}
+
 export function getBaseUrl(): string {
   return getBrowserAppUrl()
 }
@@ -38,6 +47,7 @@ interface SkillhubInstallCommandOptions {
   scope?: InstallScope
   agentId?: string
   force?: boolean
+  version?: string
 }
 
 export function buildSkillhubInstallCommand(
@@ -46,12 +56,16 @@ export function buildSkillhubInstallCommand(
   baseUrl: string,
   options: SkillhubInstallCommandOptions = {},
 ): string {
-  const namespaceArg = namespace === 'global' ? '' : ` --namespace ${namespace}`
+  if (options.version && !isPortableSkillVersion(options.version)) {
+    return ''
+  }
+  const coordinate = buildSkillhubCoordinate(namespace, slug)
+  const versionArg = options.version ? ` --version ${options.version}` : ''
   const scopeArg = options.scope ? ` --scope ${options.scope}` : ''
   const agentId = normalizeInstallAgentId(options.agentId)
   const agentArg = agentId ? ` --agent ${agentId}` : ''
   const forceArg = options.force ? ' --force' : ''
-  return `npx @astron-team/skillhub@latest install ${slug}${namespaceArg} --registry ${baseUrl}${scopeArg}${agentArg}${forceArg}`
+  return `npx @astron-team/skillhub@latest install ${coordinate}${versionArg} --registry ${baseUrl}${scopeArg}${agentArg}${forceArg}`
 }
 
 interface CommandBlockProps {
@@ -95,12 +109,12 @@ function CommandBlock({ command }: CommandBlockProps) {
   )
 }
 
-export function InstallCommand({ namespace, slug }: InstallCommandProps) {
+export function InstallCommand({ namespace, slug, version }: InstallCommandProps) {
   const { t } = useTranslation()
   const registryUrl = useMemo(() => getCliRegistryUrl(), [])
   const skillhubCommand = useMemo(
-    () => buildSkillhubInstallCommand(namespace, slug, registryUrl),
-    [namespace, registryUrl, slug],
+    () => buildSkillhubInstallCommand(namespace, slug, registryUrl, { version }),
+    [namespace, registryUrl, slug, version],
   )
 
   return (
@@ -121,7 +135,9 @@ export function InstallCommand({ namespace, slug }: InstallCommandProps) {
       </TabsContent>
       */}
       <TabsContent value="skillhub">
-        <CommandBlock command={skillhubCommand} />
+        {skillhubCommand
+          ? <CommandBlock command={skillhubCommand} />
+          : <p role="alert" className="text-sm text-destructive">{t('skillDetail.installCommandUnsafeVersion')}</p>}
       </TabsContent>
     </Tabs>
   )

@@ -68,6 +68,12 @@ def _normalize_status(status: str) -> str:
     return normalized
 
 
+def _normalize_optional_status(status: str | None) -> str:
+    if status is None or status.strip() == "":
+        return ""
+    return _normalize_status(status)
+
+
 def _normalize_page(page: int) -> int:
     return max(page, 0)
 
@@ -93,11 +99,19 @@ def _task_response(row: dict[str, Any]) -> dict[str, Any]:
     superseded = bool(row.get("superseded"))
     response = {
         "id": int(row["id"]),
-        "skillVersionId": int(row["skill_version_id"]),
+        "skillVersionId": (
+            int(row["skill_version_id"])
+            if row.get("skill_version_id") is not None
+            else None
+        ),
         "namespace": str(row["namespace_slug"]),
         "skillSlug": str(row["skill_slug"]),
         "version": str(row["version_name"]),
-        "versionStatus": str(row["version_status"]),
+        "versionStatus": (
+            str(row["version_status"])
+            if row.get("version_status") is not None
+            else None
+        ),
         "status": str(row["status"]),
         "submittedBy": str(row["submitted_by"]),
         "submittedByName": row.get("submitted_by_name"),
@@ -990,6 +1004,224 @@ async def list_my_review_submissions(engine: Any, *, page: int, size: int, user_
             size=size,
             sort_direction="DESC",
         )
+
+
+REVIEW_ATTEMPTS_CTE = """
+WITH attempts AS (
+    SELECT rt.id, rt.skill_version_id, rt.skill_id, rt.skill_version,
+           rt.namespace_id, rt.status, rt.submitted_by, rt.reviewed_by,
+           rt.review_comment, rt.submitted_at, rt.reviewed_at,
+           FALSE AS superseded, NULL::BIGINT AS replacement_version_id,
+           NULL::BIGINT AS replacement_review_task_id,
+           NULL::TIMESTAMPTZ AS archived_at
+    FROM review_task rt
+    UNION ALL
+    SELECT raa.original_review_task_id, raa.original_skill_version_id,
+           raa.skill_id, raa.version, raa.namespace_id, raa.status,
+           raa.submitted_by, raa.reviewed_by, raa.review_comment,
+           raa.submitted_at, raa.reviewed_at, TRUE,
+           raa.replacement_version_id, raa.replacement_review_task_id,
+           raa.archived_at
+    FROM review_attempt_archive raa
+    WHERE NOT EXISTS (
+        SELECT 1 FROM review_task rt WHERE rt.id = raa.original_review_task_id
+    )
+)
+"""
+
+
+def _progress_item(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "latestReviewTaskId": int(row["id"]),
+        "skillId": int(row["skill_id"]),
+        "namespace": str(row["namespace_slug"]),
+        "skillSlug": str(row["skill_slug"]),
+        "skillVersion": str(row["skill_version"]),
+        "latestStatus": str(row["status"]),
+        "latestReviewComment": row.get("review_comment"),
+        "latestSubmittedAt": _java_instant(row.get("submitted_at")),
+        "latestReviewedAt": _java_instant(row.get("reviewed_at")),
+        "attemptCount": int(row["attempt_count"]),
+    }
+
+
+async def list_my_review_progress(
+    engine: Any,
+    *,
+    status: str | None,
+    query: str,
+    page: int,
+    size: int,
+    user_id: str,
+) -> dict[str, Any]:
+    normalized_status = _normalize_optional_status(status)
+    normalized_query = query.strip().lower()
+    normalized_page = _normalize_page(page)
+    normalized_size = _normalize_size(size)
+    params = {
+        "user_id": user_id,
+        "status": normalized_status,
+        "query": normalized_query,
+        "query_pattern": f"%{normalized_query}%",
+        "limit": normalized_size,
+        "offset": normalized_page * normalized_size,
+    }
+    ranked_cte = REVIEW_ATTEMPTS_CTE + """,
+ranked AS (
+    SELECT attempts.*,
+           ROW_NUMBER() OVER (
+               PARTITION BY skill_id, skill_version
+               ORDER BY submitted_at DESC, id DESC
+           ) AS attempt_rank,
+           COUNT(*) OVER (
+               PARTITION BY skill_id, skill_version
+           ) AS attempt_count
+    FROM attempts
+    WHERE submitted_by = :user_id
+), latest AS (
+    SELECT * FROM ranked WHERE attempt_rank = 1
+)
+"""
+    async with engine.connect() as connection:
+        rows = (
+            await connection.execute(
+                text(
+                    ranked_cte
+                    + """
+                    SELECT latest.*, n.slug AS namespace_slug, s.slug AS skill_slug
+                    FROM latest
+                    JOIN skill s ON s.id = latest.skill_id
+                    JOIN namespace n ON n.id = latest.namespace_id
+                    WHERE (:query = ''
+                           OR LOWER(s.slug) LIKE :query_pattern
+                           OR LOWER(n.slug) LIKE :query_pattern)
+                      AND (:status = '' OR latest.status = :status)
+                    ORDER BY latest.submitted_at DESC, latest.id DESC
+                    LIMIT :limit OFFSET :offset
+                    """
+                ),
+                params,
+            )
+        ).mappings().all()
+        summary = (
+            await connection.execute(
+                text(
+                    ranked_cte
+                    + """
+                    SELECT COUNT(*) FILTER (
+                               WHERE :status = '' OR latest.status = :status
+                           ) AS filtered_total,
+                           COUNT(*) FILTER (WHERE latest.status = 'PENDING') AS pending_count,
+                           COUNT(*) FILTER (WHERE latest.status = 'APPROVED') AS approved_count,
+                           COUNT(*) FILTER (WHERE latest.status = 'REJECTED') AS rejected_count
+                    FROM latest
+                    JOIN skill s ON s.id = latest.skill_id
+                    JOIN namespace n ON n.id = latest.namespace_id
+                    WHERE :query = ''
+                       OR LOWER(s.slug) LIKE :query_pattern
+                       OR LOWER(n.slug) LIKE :query_pattern
+                    """
+                ),
+                params,
+            )
+        ).mappings().one()
+    return {
+        "items": [_progress_item(dict(row)) for row in rows],
+        "total": int(summary["filtered_total"]),
+        "page": normalized_page,
+        "size": normalized_size,
+        "statusCounts": {
+            "pending": int(summary["pending_count"]),
+            "approved": int(summary["approved_count"]),
+            "rejected": int(summary["rejected_count"]),
+        },
+    }
+
+
+async def _read_attempt_coordinate(connection: Any, review_task_id: int) -> dict[str, Any]:
+    row = (
+        await connection.execute(
+            text(
+                REVIEW_ATTEMPTS_CTE
+                + """
+                SELECT attempts.skill_id, attempts.skill_version,
+                       attempts.namespace_id, attempts.submitted_by,
+                       n.type AS namespace_type
+                FROM attempts
+                JOIN namespace n ON n.id = attempts.namespace_id
+                WHERE attempts.id = :review_task_id
+                LIMIT 1
+                """
+            ),
+            {"review_task_id": review_task_id},
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        raise ReviewQueryError("review_task.not_found", status_code=404)
+    return dict(row)
+
+
+async def _read_attempt_rows(
+    connection: Any, *, skill_id: int, skill_version: str
+) -> list[dict[str, Any]]:
+    rows = (
+        await connection.execute(
+            text(
+                REVIEW_ATTEMPTS_CTE
+                + """
+                SELECT attempts.id, attempts.skill_version_id,
+                       attempts.namespace_id, attempts.status,
+                       attempts.submitted_by,
+                       submitter.display_name AS submitted_by_name,
+                       attempts.reviewed_by,
+                       reviewer.display_name AS reviewed_by_name,
+                       attempts.review_comment, attempts.submitted_at,
+                       attempts.reviewed_at, n.slug AS namespace_slug,
+                       n.type AS namespace_type, s.slug AS skill_slug,
+                       attempts.skill_version AS version_name,
+                       COALESCE(sv.status, attempts.status) AS version_status,
+                       attempts.superseded, attempts.replacement_version_id,
+                       attempts.replacement_review_task_id, attempts.archived_at
+                FROM attempts
+                JOIN skill s ON s.id = attempts.skill_id
+                JOIN namespace n ON n.id = attempts.namespace_id
+                LEFT JOIN skill_version sv ON sv.id = attempts.skill_version_id
+                LEFT JOIN user_account submitter ON submitter.id = attempts.submitted_by
+                LEFT JOIN user_account reviewer ON reviewer.id = attempts.reviewed_by
+                WHERE attempts.skill_id = :skill_id
+                  AND attempts.skill_version = :skill_version
+                ORDER BY attempts.submitted_at DESC, attempts.id DESC
+                """
+            ),
+            {"skill_id": skill_id, "skill_version": skill_version},
+        )
+    ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def list_review_attempts(
+    engine: Any,
+    *,
+    review_task_id: int,
+    user_id: str,
+    author_only: bool = False,
+) -> list[dict[str, Any]]:
+    async with engine.connect() as connection:
+        coordinate = await _read_attempt_coordinate(connection, review_task_id)
+        if author_only:
+            if str(coordinate["submitted_by"]) != user_id:
+                raise ReviewQueryError("review.no_permission", status_code=403)
+        else:
+            platform_roles = await _read_platform_roles(connection, user_id)
+            namespace_roles = await _read_namespace_roles(connection, user_id)
+            if not _can_view_review(coordinate, user_id, namespace_roles, platform_roles):
+                raise ReviewQueryError("review.no_permission", status_code=403)
+        rows = await _read_attempt_rows(
+            connection,
+            skill_id=int(coordinate["skill_id"]),
+            skill_version=str(coordinate["skill_version"]),
+        )
+    return [_task_response(row) for row in rows]
 
 
 async def read_review_detail(engine: Any, *, review_task_id: int, user_id: str) -> dict[str, Any]:

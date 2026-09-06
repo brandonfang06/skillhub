@@ -233,7 +233,7 @@
     "modeHeading": "Способ установки",
     "modeDirect": "Непосредственно в Agent",
     "modeInteractive": "Интерактивный терминал",
-    "interactiveWarning": "Каждый скилл задаёт один вопрос в интерактивном терминале; там можно выбрать несколько Agent или Generic. Последние версии заменяют все выбранные целевые каталоги. Не используйте для CI или фоновых заданий.",
+    "interactiveWarning": "Каждый скилл задаёт один вопрос в интерактивном терминале; там можно выбрать несколько Agent или Generic. Можно заменить только управляемую установку из того же источника. Не используйте для CI или фоновых заданий.",
     "scopeHeading": "Область установки",
     "scopeUser": "Пользователь",
     "scopeProject": "Проект",
@@ -242,7 +242,7 @@
     "agentPlaceholder": "Выберите Agent",
     "selectAgentRequired": "Чтобы скопировать команды, выберите один поддерживаемый Agent.",
     "commandsHeading": "Команды терминала",
-    "commandsHint": "Каждая строка устанавливает последнюю опубликованную версию и заменяет существующий целевой каталог.",
+    "commandsHint": "Каждая строка устанавливает последнюю опубликованную версию. --force заменяет только проверенную управляемую установку из того же источника.",
     "copyAll": "Скопировать все команды",
     "copyCommand": "Скопировать команду установки для {{skill}}"
   },
@@ -561,6 +561,43 @@
   "tokens": {
     "pageTitle": "Управление токенами",
     "pageSubtitle": "Учётные данные доступа для CLI и API"
+  },
+  "skillReviews": {
+    "title": "Отзывы пользователей", "count": "Отзывов: {{count}}", "write": "Написать отзыв", "edit": "Изменить мой отзыв",
+    "scoreLabel": "Ваша оценка", "ratingDisplay": "Оценка: {{score}} из 5 звёзд", "ratingOption": "Поставить {{score}} из 5 звёзд",
+    "reviewTextLabel": "Текст отзыва", "save": "Сохранить отзыв", "cancel": "Отмена", "delete": "Удалить отзыв",
+    "saved": "Отзыв сохранён", "deleted": "Отзыв удалён, оценка сохранена", "saveFailed": "Не удалось сохранить отзыв",
+    "deleteFailed": "Не удалось удалить отзыв", "loadFailed": "Не удалось загрузить отзывы", "empty": "Отзывов пока нет.", "loading": "Загрузка отзывов...",
+    "hiddenStatus": "Скрыт", "yourReviewHidden": "Ваш отзыв скрыт из публичного списка.", "moderationReason": "Причина: {{reason}}",
+    "hide": "Скрыть отзыв", "restore": "Восстановить отзыв", "previous": "Назад", "next": "Далее"
+  },
+  "theme": {
+    "darkMode": "Тёмная тема",
+    "switchToLight": "Переключить на светлую тему",
+    "switchToDark": "Переключить на тёмную тему"
+  },
+  "reviewProgress": {
+    "title": "Ход моих проверок",
+    "subtitle": "Решения, отзывы и история повторных отправок",
+    "searchLabel": "Поиск навыков или пространств",
+    "searchAction": "Найти",
+    "statusFilter": "Фильтр по статусу",
+    "statusAll": "Все статусы",
+    "statusPending": "На проверке",
+    "statusApproved": "Одобрено",
+    "statusRejected": "Отклонено",
+    "statusSummary": "Сводка статусов",
+    "latestSubmitted": "Последняя отправка: {{time}}",
+    "attemptCount": "Отправок: {{count}}",
+    "attemptNumber": "Попытка {{number}}",
+    "submittedAt": "Отправлено {{time}}",
+    "reviewedAt": "Проверено {{time}}",
+    "reviewedBy": "Проверил: {{reviewer}}",
+    "history": "История отправок",
+    "resubmit": "Изменить и отправить снова",
+    "error": "Не удалось загрузить ход проверки.",
+    "historyError": "Не удалось загрузить историю отправок.",
+    "emptyTitle": "Истории проверок пока нет"
   },
   "reviews": {
     "title": "Центр рецензирования",
@@ -1059,6 +1096,7 @@
     "install": "Установить",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "Эту версию нельзя безопасно представить в кроссплатформенной команде. Попросите издателя исправить её.",
     "download": "Скачать",
     "tryInPlayground": "Попробовать в Playground",
     "labelsSectionTitle": "Метки",
@@ -1245,6 +1283,11 @@
       "button": "Поделиться",
       "copied": "Скопировано",
       "defaultDescription": "Полезный скилл"
+    },
+    "installForAgent": {
+      "button": "Установить для агента",
+      "copied": "Запрос для агента скопирован",
+      "prompt": "Следуйте {{guideUrl}}, чтобы подключить SkillHub и установить {{skill}} версии {{version}} из реестра {{registryUrl}}."
     }
   },
   "skillCompare": {

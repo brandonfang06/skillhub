@@ -583,7 +583,7 @@ test.describe('SkillHub production subpath deployment', () => {
     await expect(page.getByRole('heading', { name: 'Install Skills' })).toBeFocused()
     await page.getByLabel('Agent targets').selectOption('codex')
     await expect(page.getByText(
-      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex --force',
+      'npx @astron-team/skillhub@latest install @global/subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --agent codex --force',
       { exact: true },
     )).toBeVisible()
     const directMode = page.getByRole('radio', { name: 'Direct Agent' })
@@ -592,11 +592,11 @@ test.describe('SkillHub production subpath deployment', () => {
     await interactiveMode.check()
     await expect(page.getByLabel('Agent targets')).toHaveCount(0)
     await expect(page.getByText(
-      'Each Skill asks once in an interactive Terminal; choose multiple Agents or Generic there. Latest versions replace all selected target directories. Not for CI or background jobs.',
+      'Each Skill asks once in an interactive Terminal; choose multiple Agents or Generic there. Existing same-source managed installs may be replaced. Not for CI or background jobs.',
       { exact: true },
     )).toBeVisible()
     await expect(page.getByText(
-      'npx @astron-team/skillhub@latest install subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --force',
+      'npx @astron-team/skillhub@latest install @global/subpath-skill --registry http://127.0.0.1:3190/skillhub --scope user --force',
       { exact: true },
     )).toBeVisible()
     await expect(page.getByRole('button', { name: 'Copy all commands' })).toBeEnabled()

@@ -176,6 +176,7 @@ def create_scan_consumer_daemon(settings: Settings, engine: Any, redis_client: A
         storage_base_path=settings.storage_base_path,
         scan_temp_dir=str(settings.storage_base_path.rstrip("/\\") + "-scan-temp"),
         storage=object_storage_for_settings(settings),
+        max_unavailable_age_ms=settings.scan_consumer_max_unavailable_age_seconds * 1000,
     )
     scanner = ScannerHttpClient(
         base_url=settings.scanner_base_url,

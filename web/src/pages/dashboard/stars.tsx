@@ -1,18 +1,20 @@
-import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SkillCard } from '@/features/skill/skill-card'
 import { Pagination } from '@/shared/components/pagination'
 import { useMyStarsPage } from '@/shared/hooks/use-user-queries'
 import { Card } from '@/shared/ui/card'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
+import { buildReturnTo } from '@/shared/lib/auth-route'
 
 const PAGE_SIZE = 12
 
 export function MyStarsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [page, setPage] = useState(0)
+  const location = useLocation()
+  const search = useSearch({ from: '/dashboard/stars' })
+  const page = search.page ?? 0
   const { data, isLoading } = useMyStarsPage({ page, size: PAGE_SIZE })
   const skills = data?.items ?? []
   const totalPages = data ? Math.max(Math.ceil(data.total / data.size), 1) : 1
@@ -40,12 +42,22 @@ export function MyStarsPage() {
               <SkillCard
                 key={skill.id}
                 skill={skill}
-                onClick={() => navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}` })}
+                onClick={() => navigate({
+                  to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`,
+                  search: { returnTo: buildReturnTo(location) },
+                })}
               />
             ))}
           </div>
           {data && data.total > PAGE_SIZE ? (
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={(nextPage) => navigate({
+                to: '/dashboard/stars',
+                search: { page: nextPage > 0 ? nextPage : undefined },
+              })}
+            />
           ) : null}
         </>
       )}

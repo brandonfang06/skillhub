@@ -5,9 +5,11 @@ import {
   InstallCommand,
   buildInstallCommand,
   buildInstallTarget,
+  buildSkillhubCoordinate,
   buildSkillhubInstallCommand,
   getBaseUrl,
   getCliRegistryUrl,
+  isPortableSkillVersion,
 } from './install-command'
 
 vi.mock('react-i18next', () => ({
@@ -74,15 +76,28 @@ describe('install-command', () => {
   })
 
   it('builds a one-line SkillHub npx command for the global namespace', () => {
-    expect(buildSkillhubInstallCommand('global', 'my-skill', 'https://skill.xfyun.cn')).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --registry https://skill.xfyun.cn',
+    expect(buildSkillhubCoordinate('global', 'my-skill')).toBe('@global/my-skill')
+    expect(buildSkillhubInstallCommand('global', 'my-skill', 'https://skill.xfyun.cn', { version: '1.2.3' })).toBe(
+      'npx @astron-team/skillhub@latest install @global/my-skill --version 1.2.3 --registry https://skill.xfyun.cn',
     )
   })
 
   it('builds a one-line SkillHub npx command with namespace for team skills', () => {
     expect(buildSkillhubInstallCommand('team-alpha', 'my-skill', 'https://skill.xfyun.cn')).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --namespace team-alpha --registry https://skill.xfyun.cn',
+      'npx @astron-team/skillhub@latest install @team-alpha/my-skill --registry https://skill.xfyun.cn',
     )
+  })
+
+  it('does not generate a cross-shell command for an unsafe version token', () => {
+    expect(isPortableSkillVersion('20260818.075232')).toBe(true)
+    expect(isPortableSkillVersion('1.0.0-beta+build.1')).toBe(true)
+    expect(isPortableSkillVersion('1.0.0&echo INJECTED')).toBe(false)
+    expect(buildSkillhubInstallCommand(
+      'global',
+      'my-skill',
+      'https://skill.xfyun.cn',
+      { version: '1.0.0&echo INJECTED' },
+    )).toBe('')
   })
 
   it('adds one deterministic non-interactive Agent and force option', () => {
@@ -96,7 +111,7 @@ describe('install-command', () => {
         force: true,
       },
     )).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --namespace team-alpha --registry https://skill.xfyun.cn/skillhub --scope project --agent codex --force',
+      'npx @astron-team/skillhub@latest install @team-alpha/my-skill --registry https://skill.xfyun.cn/skillhub --scope project --agent codex --force',
     )
   })
 
@@ -107,7 +122,7 @@ describe('install-command', () => {
       'https://skill.xfyun.cn',
       { scope: 'user', agentId: 'generic', force: true },
     )).toBe(
-      'npx @astron-team/skillhub@latest install my-skill --registry https://skill.xfyun.cn --scope user --force',
+      'npx @astron-team/skillhub@latest install @global/my-skill --registry https://skill.xfyun.cn --scope user --force',
     )
   })
 
@@ -237,10 +252,11 @@ describe('install-command', () => {
     const html = renderToStaticMarkup(createElement(InstallCommand, {
       namespace: 'team-alpha',
       slug: 'meeting-minutes-generator',
+      version: '2.0.0',
     }))
 
     expect(html).toContain('skillDetail.installMethodSkillhub')
-    expect(html).toContain('npx @astron-team/skillhub@latest install meeting-minutes-generator --namespace team-alpha --registry http://app.example.com')
+    expect(html).toContain('npx @astron-team/skillhub@latest install @team-alpha/meeting-minutes-generator --version 2.0.0 --registry http://app.example.com')
     expect(html).not.toContain('--registry https://app.example.com')
     expect(html).not.toContain('skillDetail.installMethodClawhub')
     expect(html).not.toContain('npx clawhub install team-alpha--meeting-minutes-generator --registry http://app.example.com')

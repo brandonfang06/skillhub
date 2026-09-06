@@ -96,6 +96,15 @@ describe('user-menu module exports', () => {
 })
 
 describe('UserMenu security settings visibility', () => {
+  it('keeps the user trigger named when its visible label is hidden on narrow screens', () => {
+    const html = renderToStaticMarkup(
+      <UserMenu user={{ displayName: 'Mobile User', platformRoles: ['USER'] }} />,
+    )
+
+    expect(html).toContain('aria-label="Mobile User"')
+    expect(html).toContain('>M</span>')
+  })
+
   it('shows security settings when password changes are allowed, independent of OAuth provider', () => {
     const html = renderToStaticMarkup(
       <UserMenu

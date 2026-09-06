@@ -260,6 +260,7 @@ async def process_scan_task(
             connection,
             version_id=task.version_id,
             scanner_type=task.scanner_type,
+            task_id=task.task_id,
             scan_result=scan_result,
         )
         logger.info(
@@ -288,6 +289,8 @@ async def process_scan_task(
                 connection,
                 version_id=task.version_id,
                 scanner_type=task.scanner_type,
+                task_id=task.task_id,
+                failure_reason="Security scan failed after automatic retries. Retry the scan or contact an administrator.",
             )
         raise
     finally:
@@ -300,6 +303,8 @@ async def mark_scan_task_failed(
     version_id: int,
     scanner_type: str = "skill-scanner",
     failure_code: str = "SCANNER_ERROR",
+    task_id: str | None = None,
+    failure_reason: str | None = None,
 ) -> bool:
     transition_row = (
         await connection.execute(
@@ -326,6 +331,7 @@ async def mark_scan_task_failed(
                 FROM security_audit
                 WHERE skill_version_id = :version_id
                   AND scanner_type = :scanner_type
+                  AND (CAST(:task_id AS TEXT) IS NULL OR task_id = CAST(:task_id AS TEXT))
                   AND deleted_at IS NULL
                 ORDER BY created_at DESC
                 LIMIT 1
@@ -334,11 +340,26 @@ async def mark_scan_task_failed(
             {
                 "version_id": version_id,
                 "scanner_type": scanner_type_db_value(scanner_type),
+                "task_id": task_id,
             },
         )
     ).mappings().first()
 
     if audit_row is not None:
+        if failure_reason is not None:
+            await connection.execute(
+                text(
+                    """
+                    UPDATE security_audit
+                    SET failure_reason = :failure_reason
+                    WHERE id = :security_audit_id
+                    """
+                ),
+                {
+                    "security_audit_id": int(audit_row["id"]),
+                    "failure_reason": failure_reason[:1000],
+                },
+            )
         await upsert_scan_execution(
             connection,
             security_audit_id=int(audit_row["id"]),

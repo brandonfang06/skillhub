@@ -57,8 +57,8 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
           className={cn('cursor-pointer gap-2 text-muted-foreground hover:text-foreground', className)}
         >
           <Globe className="h-4 w-4" />
-          <span className="text-sm text-inherit">{currentLanguage.name}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          <span className="hidden text-sm text-inherit sm:inline">{currentLanguage.name}</span>
+          <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex min-w-[9rem] flex-col gap-1.5 p-2">

@@ -232,6 +232,10 @@ vi.mock('@/features/skill/install-command', () => ({
   InstallCommand: () => <div>install</div>,
 }))
 
+vi.mock('@/features/skill/install-for-agent-button', () => ({
+  InstallForAgentButton: () => <div>install-for-agent</div>,
+}))
+
 vi.mock('@/features/skill/use-resource-diagnostics', () => ({
   useResourceDiagnostics: (...args: unknown[]) => useResourceDiagnosticsMock(...args),
 }))

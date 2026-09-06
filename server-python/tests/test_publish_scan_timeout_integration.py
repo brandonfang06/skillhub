@@ -204,6 +204,8 @@ async def test_litellm_timeout_at_max_retry_commits_scan_failed_with_real_servic
             consumer_name=f"consumer-{suffix}",
             storage_base_path=str(tmp_path),
             scan_temp_dir=str(tmp_path / "scans"),
+            clock_millis=lambda: 9_999_999_999_999,
+            max_unavailable_age_ms=1,
         )
 
         result = await runtime.consume_once(engine, TimeoutScanner(), count=1, block_ms=100)
@@ -528,6 +530,8 @@ async def test_terminal_failure_defers_to_duplicate_worker_holding_real_lease(tm
             consumer_name=f"consumer-{suffix}",
             storage_base_path=str(tmp_path),
             scan_temp_dir=str(tmp_path / "scans"),
+            clock_millis=lambda: 9_999_999_999_999,
+            max_unavailable_age_ms=1,
         )
         failed_consumer = asyncio.create_task(
             runtime.consume_once(GatedEngine(), TimeoutScanner(), count=1, block_ms=100)

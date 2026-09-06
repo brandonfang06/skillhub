@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from uuid import uuid4
 
@@ -10,6 +11,94 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.auth.oauth import bind_oauth_principal
 
 TEST_DATABASE_URL = os.getenv("SKILLHUB_TEST_DATABASE_URL")
+
+
+@pytest.mark.skipif(
+    TEST_DATABASE_URL is None,
+    reason="requires SKILLHUB_TEST_DATABASE_URL",
+)
+@pytest.mark.anyio
+async def test_concurrent_oauth_callbacks_converge_on_one_account(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("SKILLHUB_GLOBAL_NAMESPACE_AUTO_JOIN_ENABLED", raising=False)
+    engine = create_async_engine(str(TEST_DATABASE_URL), pool_size=2, max_overflow=0)
+    suffix = uuid4().hex[:12]
+    provider = f"oauth-race-{suffix}"
+    subject = f"subject-{suffix}"
+    start = asyncio.Event()
+
+    async def bind() -> dict[str, object]:
+        await start.wait()
+        return await bind_oauth_principal(
+            engine,
+            {"id": provider},
+            _claims(
+                subject,
+                login="Concurrent User",
+                email="concurrent@example.test",
+                verified=True,
+            ),
+        )
+
+    tasks = [asyncio.create_task(bind()) for _ in range(2)]
+    start.set()
+    try:
+        principals = await asyncio.gather(*tasks)
+        assert principals[0]["userId"] == principals[1]["userId"]
+
+        async with engine.connect() as connection:
+            binding_count = await connection.scalar(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM identity_binding
+                    WHERE provider_code = :provider AND subject = :subject
+                    """
+                ),
+                {"provider": provider, "subject": subject},
+            )
+            account_count = await connection.scalar(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM user_account u
+                    JOIN identity_binding ib ON ib.user_id = u.id
+                    WHERE ib.provider_code = :provider AND ib.subject = :subject
+                    """
+                ),
+                {"provider": provider, "subject": subject},
+            )
+        assert binding_count == 1
+        assert account_count == 1
+    finally:
+        async with engine.begin() as connection:
+            user_ids = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT user_id FROM identity_binding
+                        WHERE provider_code = :provider AND subject = :subject
+                        """
+                    ),
+                    {"provider": provider, "subject": subject},
+                )
+            ).scalars().all()
+            await connection.execute(
+                text(
+                    """
+                    DELETE FROM identity_binding
+                    WHERE provider_code = :provider AND subject = :subject
+                    """
+                ),
+                {"provider": provider, "subject": subject},
+            )
+            if user_ids:
+                await connection.execute(
+                    text("DELETE FROM user_account WHERE id = ANY(CAST(:user_ids AS varchar[]))"),
+                    {"user_ids": list(user_ids)},
+                )
+        await engine.dispose()
 
 
 def _claims(

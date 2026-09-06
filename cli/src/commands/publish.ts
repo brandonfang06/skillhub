@@ -49,7 +49,9 @@ export async function publishCommand(path: string, options: PublishCommandOption
       throw new CliError(`file must be a zip archive: ${path}`, EXIT.filesystem, { path })
     }
   } else if (pathStat.isDirectory()) {
-    archiveBlob = await createZip(path)
+    archiveBlob = await createZip(path, {
+      exclude: relativePath => relativePath === '.skillhub' || relativePath.startsWith('.skillhub/')
+    })
     archiveName = `${basename(path)}.zip`
   } else {
     throw new CliError(`path must be a file or directory: ${path}`, EXIT.filesystem, { path })
@@ -106,14 +108,21 @@ export async function publishCommand(path: string, options: PublishCommandOption
   if (options.json) {
     return JSON.stringify({
       ok: true,
+      action: 'submitted',
       namespace: result.namespace,
       slug: result.slug,
       version: result.version,
       visibility: result.visibility.toLowerCase(),
+      status: result.status,
       detailUrl
     })
   }
-  return `Published successfully: ${result.namespace}/${result.slug}@${result.version}\nDetail: ${detailUrl}`
+  return [
+    `Submitted successfully: ${result.namespace}/${result.slug}@${result.version}`,
+    `Status: ${result.status}`,
+    `Detail: ${detailUrl}`,
+    'Check the Web page for final publish or review status.'
+  ].join('\n')
 }
 
 /**

@@ -58,7 +58,7 @@ describe('PlaygroundChat', () => {
 
     expect(html).toContain('data-playground-install-cta="true"')
     expect(html).toContain('playground.installReady')
-    expect(html).toContain('npx @astron-team/skillhub@latest install notes')
+    expect(html).toContain('npx @astron-team/skillhub@latest install @global/notes')
   })
 
   it('does not offer installation while the response is streaming', () => {

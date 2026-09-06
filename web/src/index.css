@@ -51,29 +51,33 @@
   }
 
   .dark {
-    /* Dark theme (preserved, not default) */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 40% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 40% 9%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 239 100% 75%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 222 30% 13%;
-    --secondary-foreground: 210 30% 85%;
-    --muted: 222 25% 15%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 271 100% 72%;
+    /* Cool ink surfaces: distinct depth without near-black dead zones. */
+    --background: 222 30% 10%;
+    --foreground: 216 28% 93%;
+    --card: 222 25% 14%;
+    --card-foreground: 216 28% 93%;
+    --popover: 222 24% 15%;
+    --popover-foreground: 216 28% 93%;
+    --primary: 241 92% 74%;
+    --primary-foreground: 222 30% 10%;
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 216 24% 88%;
+    --muted: 222 18% 19%;
+    --muted-foreground: 216 14% 66%;
+    --accent: 272 86% 72%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 55%;
+    --destructive: 0 72% 52%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 20% 18%;
-    --input: 222 20% 18%;
-    --ring: 239 100% 75%;
-    --surface-glass: 222 35% 11%;
-    --glow-primary: 239 100% 75%;
-    --glow-accent: 271 100% 72%;
+    --border: 222 16% 25%;
+    --input: 222 16% 25%;
+    --ring: 241 92% 74%;
+    --surface-glass: 222 24% 14%;
+    --glow-primary: 241 92% 70%;
+    --glow-accent: 272 80% 68%;
+    --text-secondary: 216 17% 76%;
+    --text-muted: 216 14% 66%;
+    --text-placeholder: 216 12% 54%;
+    --border-card: 222 16% 24%;
   }
 }
 
@@ -378,10 +382,26 @@
   color: #1d4ed8;
 }
 
+.dark .handle-tag {
+  color: hsl(196 80% 72%);
+  background: hsl(199 70% 15%);
+  border-color: hsl(199 60% 30%);
+}
+
+.dark .badge-soft-green {
+  background: hsl(142 55% 16%);
+  color: hsl(142 70% 72%);
+}
+
+.dark .badge-soft-blue {
+  background: hsl(221 55% 18%);
+  color: hsl(213 90% 75%);
+}
+
 /* ─── Tab active ─── */
 .tab-active {
-  border-bottom: 2px solid #3b82f6;
-  color: #1d4ed8;
+  border-bottom: 2px solid hsl(var(--primary));
+  color: hsl(var(--primary));
 }
 
 /* ─── Code block ─── */

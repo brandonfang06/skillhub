@@ -104,13 +104,14 @@ async def _create_fixture(
                         text(
                             """
                             INSERT INTO review_task (
-                                skill_version_id, namespace_id, status, submitted_by, reviewed_by,
-                                review_comment, reviewed_at
+                                skill_version_id, skill_id, skill_version, namespace_id,
+                                status, submitted_by, reviewed_by, review_comment, reviewed_at
                             )
-                            VALUES (
-                                :version_id, :namespace_id, 'REJECTED', :user_id, :user_id,
-                                'Fix validation', CURRENT_TIMESTAMP
-                            )
+                            SELECT
+                                sv.id, sv.skill_id, sv.version, :namespace_id,
+                                'REJECTED', :user_id, :user_id, 'Fix validation', CURRENT_TIMESTAMP
+                            FROM skill_version sv
+                            WHERE sv.id = :version_id
                             RETURNING id
                             """
                         ),
@@ -208,6 +209,18 @@ async def test_delete_rejected_version_preserves_review_history_and_notification
                     )
                 ).scalar_one()
             )
+            retained_review_version_id = (
+                await connection.execute(
+                    text(
+                        """
+                        SELECT skill_version_id
+                        FROM review_task
+                        WHERE id = :review_task_id
+                        """
+                    ),
+                    {"review_task_id": fixture.review_task_id},
+                )
+            ).scalar_one_or_none()
             archive_row = (
                 await connection.execute(
                     text(
@@ -234,7 +247,8 @@ async def test_delete_rejected_version_preserves_review_history_and_notification
 
         assert result.response["versionId"] == fixture.version_ids[1]
         assert version_count == 1
-        assert review_count == 0
+        assert review_count == 1
+        assert retained_review_version_id is None
         assert archive_row is not None
         assert int(archive_row["original_review_task_id"]) == fixture.review_task_id
         assert archive_row["archive_reason"] == "REJECTED_VERSION_DELETE"

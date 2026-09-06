@@ -45,6 +45,10 @@ clawhub publish ./my-skill.zip
 | `REJECTED` | Rejected, need modification and resubmit |
 | `YANKED` | Withdrawn, no longer recommended for use |
 
+Authors can use the Dashboard to see current progress, status counts, and the
+complete attempt history. Resubmitting after rejection does not remove earlier
+records.
+
 ## Next Steps
 
 - [Version Management](./versioning) - Manage skill versions

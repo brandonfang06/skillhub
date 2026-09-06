@@ -143,11 +143,13 @@ async def apply_publish_side_effects(
                     text(
                         """
                         INSERT INTO review_task (
-                            skill_version_id, namespace_id, status, version, submitted_by, submitted_at
+                            skill_version_id, skill_id, skill_version, namespace_id,
+                            status, version, submitted_by, submitted_at
                         )
-                        VALUES (
-                            :skill_version_id, :namespace_id, :status, 1, :submitted_by, :submitted_at
-                        )
+                        SELECT sv.id, sv.skill_id, sv.version, :namespace_id,
+                               :status, 1, :submitted_by, :submitted_at
+                        FROM skill_version sv
+                        WHERE sv.id = :skill_version_id
                         RETURNING id
                         """
                     ),

@@ -50,7 +50,7 @@ if [ -n "${SKILLHUB_WEB_BASE_PATH}" ]; then
   first_segment=${SKILLHUB_WEB_BASE_PATH#/}
   first_segment=${first_segment%%/*}
   case "$first_segment" in
-    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+    api|oauth2|login|assets|install|registry|nginx-health|.well-known|runtime-config.js)
       echo "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment: $first_segment" >&2
       exit 1
       ;;
@@ -138,8 +138,44 @@ envsubst '${SKILLHUB_WEB_API_BASE_URL} ${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WE
   < /usr/share/nginx/html/runtime-config.js.template \
   > /usr/share/nginx/html/runtime-config.js
 
-# Generate registry/skill.md with actual public URL
-# shellcheck disable=SC2016
-envsubst '${SKILLHUB_PUBLIC_BASE_URL}' \
+# Generate both the preferred install guide and compatibility route from one
+# template. The browser URL and CLI registry URL intentionally remain distinct.
+mkdir -p /usr/share/nginx/html/install
+guide_public_base_url="${SKILLHUB_PUBLIC_BASE_URL%/}"
+if [ -z "$guide_public_base_url" ]; then
+  guide_public_base_url='__SKILLHUB_PUBLIC_BASE_URL__'
+fi
+
+validate_guide_url() {
+  variable_name="$1"
+  variable_value=""
+  eval "variable_value=\${$variable_name:-}"
+  if [ -n "$variable_value" ] && ! printf '%s' "$variable_value" \
+    | grep -Eq '^https?://([A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?(/[A-Za-z0-9._~/-]*)?$'; then
+    echo "Invalid guide URL: $variable_name" >&2
+    exit 1
+  fi
+}
+
+validate_guide_url SKILLHUB_PUBLIC_BASE_URL
+validate_guide_url SKILLHUB_WEB_CLI_REGISTRY_URL
+SKILLHUB_PUBLIC_BASE_URL="${SKILLHUB_PUBLIC_BASE_URL%/}"
+SKILLHUB_WEB_CLI_REGISTRY_URL="${SKILLHUB_WEB_CLI_REGISTRY_URL%/}"
+guide_cli_registry_url="${SKILLHUB_WEB_CLI_REGISTRY_URL%/}"
+if [ -z "$guide_cli_registry_url" ]; then
+  guide_cli_registry_url="$guide_public_base_url"
+fi
+guide_url_config="${SKILLHUB_NGINX_GUIDE_URL_CONFIG:-/etc/nginx/skillhub-guide-public-url.conf}"
+if [ "$guide_public_base_url" = '__SKILLHUB_PUBLIC_BASE_URL__' ] || [ "$guide_cli_registry_url" = '__SKILLHUB_PUBLIC_BASE_URL__' ]; then
+  printf '%s\n' \
+    'if ($http_host !~ "^(?:[A-Za-z0-9.-]+|\\[[0-9A-Fa-f:.]+\\])(?::[0-9]{1,5})?$") { return 400; }' \
+    > "$guide_url_config"
+else
+  printf '%s\n' '# Explicit guide URLs: request Host is not used.' > "$guide_url_config"
+fi
+SKILLHUB_PUBLIC_BASE_URL="$guide_public_base_url" \
+SKILLHUB_WEB_CLI_REGISTRY_URL="$guide_cli_registry_url" \
+envsubst '${SKILLHUB_PUBLIC_BASE_URL} ${SKILLHUB_WEB_CLI_REGISTRY_URL}' \
   < /usr/share/nginx/html/registry/skill.md.template \
   > /usr/share/nginx/html/registry/skill.md
+cp /usr/share/nginx/html/registry/skill.md /usr/share/nginx/html/install/skillhub.md

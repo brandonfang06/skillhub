@@ -33,8 +33,49 @@ def test_baseline_revision_tracks_bundled_python_migration_snapshot() -> None:
     latest_flyway = max(migrations.flyway_migration_files(FLYWAY_DIR), key=lambda item: item.version)
 
     assert migrations.BASELINE_FLYWAY_VERSION == latest_flyway.version
-    assert migrations.BASELINE_REVISION == "skillhub_flyway_v45_baseline"
-    assert latest_flyway.path.name == "V45__scan_task_outbox_metadata.sql"
+    assert migrations.BASELINE_REVISION == "skillhub_flyway_v48_baseline"
+    assert latest_flyway.path.name == "V48__security_audit_failure_reason.sql"
+
+
+def test_review_attempt_history_migration_preserves_version_identity() -> None:
+    migration_files = {
+        item.version: item.path.read_text(encoding="utf-8")
+        for item in migrations.flyway_migration_files(FLYWAY_DIR)
+    }
+
+    review_history_sql = migration_files[46]
+
+    assert "ADD COLUMN skill_id BIGINT" in review_history_sql
+    assert "ADD COLUMN skill_version VARCHAR(64)" in review_history_sql
+    assert "ALTER COLUMN skill_version_id DROP NOT NULL" in review_history_sql
+    assert "ON DELETE SET NULL" in review_history_sql
+    assert "idx_review_task_submitter_submitted" in review_history_sql
+    assert "idx_review_task_skill_version_attempts" in review_history_sql
+
+
+def test_skill_rating_review_migration_preserves_scores_and_adds_moderation() -> None:
+    migration_files = {
+        item.version: item.path.read_text(encoding="utf-8")
+        for item in migrations.flyway_migration_files(FLYWAY_DIR)
+    }
+
+    review_sql = migration_files[47]
+
+    assert "ADD COLUMN review_text VARCHAR(2000)" in review_sql
+    assert "ADD COLUMN review_status VARCHAR(16) NOT NULL DEFAULT 'VISIBLE'" in review_sql
+    assert "ADD COLUMN lock_version BIGINT NOT NULL DEFAULT 0" in review_sql
+    assert "moderated_by VARCHAR(128) REFERENCES user_account(id)" in review_sql
+    assert "moderation_reason VARCHAR(500)" in review_sql
+    assert "idx_skill_rating_visible_reviews" in review_sql
+
+
+def test_security_audit_failure_reason_is_bounded() -> None:
+    migration_files = {
+        item.version: item.path.read_text(encoding="utf-8")
+        for item in migrations.flyway_migration_files(FLYWAY_DIR)
+    }
+
+    assert "ADD COLUMN failure_reason VARCHAR(1000)" in migration_files[48]
 
 
 def test_upstream_scan_task_outbox_migrations_preserve_delivery_intent() -> None:
@@ -97,6 +138,56 @@ def test_existing_v42_python_database_applies_v43_before_stamping_baseline() -> 
     assert not any("CREATE TABLE user_account" in statement for statement in connection.executed)
     assert any("ADD COLUMN system_account" in statement for statement in connection.executed)
     assert any("CREATE TABLE IF NOT EXISTS alembic_version" in statement for statement in connection.executed)
+    assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
+
+
+def test_existing_v45_database_applies_review_history_before_stamping() -> None:
+    connection = FakeConnection(
+        existing_tables={"user_account", "scan_task_outbox"},
+        existing_columns={
+            ("user_account", "system_account"),
+            ("scan_task_outbox", "metadata"),
+        },
+    )
+
+    asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
+
+    assert any("ADD COLUMN skill_id BIGINT" in statement for statement in connection.executed)
+    assert any("ALTER COLUMN skill_version_id DROP NOT NULL" in statement for statement in connection.executed)
+    assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
+
+
+def test_existing_v46_database_applies_text_reviews_before_stamping() -> None:
+    connection = FakeConnection(
+        existing_tables={"user_account", "scan_task_outbox"},
+        existing_columns={
+            ("user_account", "system_account"),
+            ("scan_task_outbox", "metadata"),
+            ("review_task", "skill_id"),
+        },
+    )
+
+    asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
+
+    assert any("ADD COLUMN review_text VARCHAR(2000)" in statement for statement in connection.executed)
+    assert any("ADD COLUMN lock_version BIGINT" in statement for statement in connection.executed)
+    assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
+
+
+def test_existing_v47_database_applies_failure_reason_before_stamping() -> None:
+    connection = FakeConnection(
+        existing_tables={"user_account", "scan_task_outbox"},
+        existing_columns={
+            ("user_account", "system_account"),
+            ("scan_task_outbox", "metadata"),
+            ("review_task", "skill_id"),
+            ("skill_rating", "review_text"),
+        },
+    )
+
+    asyncio.run(migrations.upgrade_database(connection, flyway_dir=FLYWAY_DIR))
+
+    assert any("ADD COLUMN failure_reason VARCHAR(1000)" in statement for statement in connection.executed)
     assert any(migrations.BASELINE_REVISION in statement for statement in connection.executed)
 
 

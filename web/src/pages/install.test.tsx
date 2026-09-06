@@ -79,8 +79,8 @@ describe('InstallSkillsPage', () => {
     })
 
     const userCommands = [
-      'npx @astron-team/skillhub@latest install alpha --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
-      'npx @astron-team/skillhub@latest install zeta --namespace team-z --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
+      'npx @astron-team/skillhub@latest install @global/alpha --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
+      'npx @astron-team/skillhub@latest install @team-z/zeta --registry https://skillhub.example.com/skillhub --scope user --agent codex --force',
     ]
     expect(container.textContent).toContain(userCommands[0])
     expect(container.textContent).toContain(userCommands[1])
@@ -106,7 +106,7 @@ describe('InstallSkillsPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'installSkills.modeInteractive' }))
 
     const interactiveCommand = (
-      'npx @astron-team/skillhub@latest install alpha '
+      'npx @astron-team/skillhub@latest install @global/alpha '
       + '--registry https://skillhub.example.com/skillhub --scope user --force'
     )
     expect(screen.queryByLabelText('installSkills.agentsHeading')).toBeNull()
@@ -167,7 +167,7 @@ describe('InstallSkillsPage', () => {
 
     expect(container.textContent).toContain('installSkills.projectWarning')
     expect(container.textContent).toContain(
-      'install alpha --registry https://skillhub.example.com/skillhub --scope project --agent codex --force',
+      'install @global/alpha --registry https://skillhub.example.com/skillhub --scope project --agent codex --force',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'installSkills.removeSkill:Alpha' }))

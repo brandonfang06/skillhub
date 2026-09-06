@@ -60,6 +60,12 @@ View skill packages with the most stars and highest ratings to discover best pra
 3. The rating takes effect immediately and impacts the skill package's average rating
 4. You can update your rating at any time
 
+**Writing a Review**:
+
+1. Enter a text review of up to 2,000 characters on a published, downloadable skill page
+2. You can edit or clear your own review while keeping the numeric rating
+3. A moderator-hidden review is absent from public listings and remains hidden after an author edit until a moderator restores it
+
 **Viewing Notifications**:
 
 1. Click the notification icon in the top navigation bar
@@ -125,6 +131,14 @@ GET /api/v1/me/stars?page=0&size=20
 GET /api/v1/skills/{skillId}/rating
 ```
 
+**List Public Reviews and Manage My Review**:
+```bash
+GET /api/v1/skills/{skillId}/reviews?page=0&size=20
+GET /api/v1/skills/{skillId}/reviews/me
+PUT /api/v1/skills/{skillId}/reviews/me
+DELETE /api/v1/skills/{skillId}/reviews/me
+```
+
 **Response Example**:
 ```json
 {
@@ -135,7 +149,7 @@ GET /api/v1/skills/{skillId}/rating
 
 ## Notes
 
-> **Rating Rules**: Each user can rate each skill package only once. Ratings can be updated but not deleted.
+> **Rating Rules**: Each user can rate each skill package only once. Ratings can be updated but not deleted; clearing review text does not delete the star rating.
 
 - **Star Count**: A skill package's star count is displayed in search results and on the detail page
 - **Average Rating**: A skill package's average rating affects search ranking

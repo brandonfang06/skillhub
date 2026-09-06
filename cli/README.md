@@ -163,7 +163,7 @@ skillhub install pdf-parser --scope user --agent codex --agent claude-code
 # Install to custom directory
 skillhub install pdf-parser --dir ~/.claude/skills
 
-# Force overwrite existing installation
+# Reinstall a SkillHub-managed installation from the same source
 skillhub install pdf-parser --force
 ```
 
@@ -224,46 +224,70 @@ For a custom path or an unsupported Agent directory, use `--dir` to specify the 
 
 ```json
 {
+  "schemaVersion": 1,
   "registry": "https://skill.xfyun.cn",
   "namespace": "global",
   "slug": "pdf-parser",
   "version": "1.0.0",
+  "versionId": 123,
   "fingerprint": "sha256:...",
+  "files": { "SKILL.md": "sha256:..." },
   "source": "skillhub",
   "agent": "codex",
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
 
-## 🔄 Namespace Workspaces
+The CLI creates `.skillhub/metadata.json` after extracting a downloaded package.
+Installer-owned `.skillhub/` state is excluded when publishing that directory again.
 
-Namespace sync maintains installable skills from an existing namespace in one
-Agent workspace. It does not create namespaces or memberships.
+## ⬆️ Upgrade Installed Skills
+
+`upgrade` only operates on explicitly selected SkillHub-managed installations. It
+never installs a missing Skill and has no implicit upgrade-all mode.
 
 ```bash
-# Pull new and updated skills into ./.agents/skills
-skillhub sync pull --namespace team-a
+skillhub upgrade @global/skillhub-registry --check
+skillhub upgrade @global/skillhub-registry
+skillhub upgrade @team/code-review @team/java-guide --check --json
+```
+
+The source identity is `registry + namespace + slug`. `--force` may replace local
+changes only when that identity matches; it never overwrites an unmanaged directory
+or a Skill from another source. All targets sharing one inventory entry must remain
+on one version. Older or same-version-different-content registry results are blocked.
+
+## 🔄 Namespace Workspaces
+
+Namespace sync maintains explicitly selected skills from an existing namespace in
+one Agent workspace. Every sync action requires `--namespace`; `global` is not a
+valid sync target. It does not create namespaces or memberships.
+
+```bash
+# Pull selected skills into ./.agents/skills
+skillhub sync pull --namespace team-a --skill code-review --skill java-guide
 
 # Use an explicit workspace directory
-skillhub sync pull --namespace team-a --dir ./.claude/skills
+skillhub sync pull --namespace team-a --skill code-review --dir ./.claude/skills
 
 # Check without downloading, then inspect local and remote differences
 skillhub sync pull --namespace team-a --check
 skillhub sync status --namespace team-a --json
 skillhub sync diff --namespace team-a
 
-# Remove unchanged managed skills that no longer exist remotely
-skillhub sync pull --namespace team-a --prune
+# Remove an explicitly selected unchanged managed skill that no longer exists remotely
+skillhub sync pull --namespace team-a --skill retired-guide --prune
 
 # Validate or upload every local skill without replacing an existing version
 skillhub sync push --all --namespace team-a --dry-run
 skillhub sync push --all --namespace team-a --submit-review
 ```
 
-The default workspace is `<cwd>/.agents/skills`. Pull preserves local changes
-unless `--force` is supplied. Remote removals are reported as `orphaned` and
-remain on disk unless `--prune` is supplied; a changed orphan also requires
-`--force` before pruning.
+The default workspace is `<cwd>/.agents/skills`. In a TTY, pull presents a
+multi-select list; outside a TTY and with `--json`, one or more repeatable `--skill`
+options are required. `--check` remains whole-namespace and read-only. Pull preserves
+local changes unless `--force` is supplied. Downgrade, unorderable versions, and
+same-version content drift remain blocked even with force.
 
 Each pulled archive is hashed after extraction and must match the namespace
 manifest before any existing directory is replaced. Sync writes
@@ -362,7 +386,9 @@ Visibility options:
 - `namespace-only` — Visible to namespace members only
 - `private` — Visible to yourself only
 
-After successful publication, the skill detail page URL will be displayed.
+After the server accepts a submission, the CLI displays the raw `SCANNING`,
+`UPLOADED`, `PENDING_REVIEW`, or `PUBLISHED` status and the skill detail URL.
+Acceptance does not mean asynchronous scanning or review has finished.
 
 ## ⬆️ Self-Update
 
@@ -401,13 +427,15 @@ Update mechanism:
 | Command | Description |
 |---------|-------------|
 | `skillhub help [command]` | Display help information |
-| `skillhub version [--json]` | Display CLI version |
+| `skillhub version [--json]`, `skillhub --version`, `skillhub -v` | Display CLI version |
 | `skillhub login --token <token> [--registry <url>] [--json]` | Save token and registry configuration |
 | `skillhub logout [--registry <url>] [--json]` | Remove token for specified registry |
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
-| `skillhub sync <pull\|status\|diff\|push> [path] [--namespace <slug>] [--dir <path>] [--check] [--prune] [--force] [--all] [--visibility <v>] [--dry-run] [--submit-review] [--json]` | Maintain an existing namespace workspace |
+| `skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]` | Upgrade explicitly selected installed skills |
+| `skillhub sync pull --namespace <slug> [--skill <slug>]... [options]` | Pull explicitly selected namespace skills |
+| `skillhub sync <status\|diff\|push> --namespace <slug> [options]` | Inspect or push a namespace workspace |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |
@@ -452,13 +480,16 @@ skillhub search test --registry https://skillhub.example.com
 ### Installation Directory Conflict
 
 ```bash
-# Use --force to overwrite
+# Use --force only for a same-source managed reinstall
 skillhub install pdf-parser --force
 
 # Or remove first then install
 skillhub remove pdf-parser
 skillhub install pdf-parser
 ```
+
+`--force` does not bypass source ownership. Move or explicitly remove an unmanaged
+or different-source directory first.
 
 ### Corrupted Inventory
 

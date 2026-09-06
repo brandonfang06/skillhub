@@ -313,6 +313,16 @@ async def bind_oauth_principal(engine: Any, registration: dict[str, object], cla
     email = claims.get("email") if claims.get("emailVerified") is True else None
     avatar_url = claims.get("avatarUrl") or ""
     async with engine.begin() as connection:
+        await connection.execute(
+            text(
+                """
+                SELECT pg_advisory_xact_lock(
+                    hashtextextended(:identity_key, 0)
+                )
+                """
+            ),
+            {"identity_key": f"oauth:{provider}:{subject}"},
+        )
         user = await _find_bound_user(connection, provider, subject)
         if user is None:
             user_id = f"usr_{uuid.uuid4()}"

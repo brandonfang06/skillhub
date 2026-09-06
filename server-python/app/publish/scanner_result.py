@@ -91,6 +91,7 @@ async def apply_security_scan_result(
     *,
     version_id: int,
     scanner_type: str,
+    task_id: str | None = None,
     scan_result: SecurityScanResultInput,
 ) -> AppliedSecurityScanResult:
     db_scanner_type = scanner_type_db_value(scanner_type)
@@ -98,20 +99,51 @@ async def apply_security_scan_result(
         await connection.execute(
             text(
                 """
-                SELECT id
-                FROM security_audit
-                WHERE skill_version_id = :version_id
-                  AND scanner_type = :scanner_type
-                  AND deleted_at IS NULL
-                ORDER BY created_at DESC
+                SELECT audit.id, audit.task_id,
+                       audit.id = (
+                           SELECT latest.id
+                           FROM security_audit latest
+                           WHERE latest.skill_version_id = :version_id
+                             AND latest.scanner_type = :scanner_type
+                             AND latest.deleted_at IS NULL
+                           ORDER BY latest.created_at DESC, latest.id DESC
+                           LIMIT 1
+                       ) AS is_latest
+                FROM security_audit audit
+                WHERE audit.skill_version_id = :version_id
+                  AND audit.scanner_type = :scanner_type
+                  AND audit.deleted_at IS NULL
+                  AND (
+                      CAST(:task_id AS TEXT) IS NULL
+                      OR audit.task_id = CAST(:task_id AS TEXT)
+                      OR audit.task_id IS NULL
+                  )
+                ORDER BY audit.created_at DESC, audit.id DESC
                 LIMIT 1
                 """
             ),
-            {"version_id": version_id, "scanner_type": db_scanner_type},
+            {"version_id": version_id, "scanner_type": db_scanner_type, "task_id": task_id},
         )
     ).mappings().first()
     if audit_row is None:
         raise ValueError(f"SecurityAudit not found for versionId={version_id}, scannerType={scanner_type}")
+
+    if task_id is not None and not bool(audit_row.get("is_latest", True)):
+        version_row = (
+            await connection.execute(
+                text("SELECT status FROM skill_version WHERE id = :version_id"),
+                {"version_id": version_id},
+            )
+        ).mappings().first()
+        if version_row is None:
+            raise ValueError(f"SkillVersion not found: {version_id}")
+        current_status = str(version_row["status"])
+        return AppliedSecurityScanResult(
+            audit_id=int(audit_row["id"]),
+            previous_status=current_status,
+            new_status=current_status,
+            status_changed=False,
+        )
 
     transition_row = (
         await connection.execute(

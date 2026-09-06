@@ -330,15 +330,16 @@ async def cleanup_replaceable_version(connection: Any, version: ReplaceableVersi
             {"skill_id": version.skill_id, "publisher_id": version.publisher_id, "updated_at": now},
         )
 
-    await connection.execute(
-        text(
-            """
-            DELETE FROM review_task
-            WHERE skill_version_id = :version_id
-            """
-        ),
-        {"version_id": version.version_id},
-    )
+    if current_status != "REJECTED":
+        await connection.execute(
+            text(
+                """
+                DELETE FROM review_task
+                WHERE skill_version_id = :version_id
+                """
+            ),
+            {"version_id": version.version_id},
+        )
     await connection.execute(
         text(
             """

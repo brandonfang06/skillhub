@@ -42,12 +42,21 @@ assert_javascript_asset() {
   rm -f "$headers" "$body"
 }
 
+assert_cache_control() {
+  url="$1"
+  expected="$2"
+  actual=$(curl -fsS -o /dev/null -D - "$url" | tr -d '\r' | sed -n 's/^Cache-Control: //Ip')
+  if ! printf '%s' "$actual" | grep -F "$expected" >/dev/null; then
+    echo "unexpected Cache-Control for $url: $actual" >&2
+    return 1
+  fi
+}
+
 docker build -q -t "$IMAGE" -f "$ROOT_DIR/web/Dockerfile" "$ROOT_DIR/web" >/dev/null
 
 MSYS_NO_PATHCONV=1 docker run -d --name "$name_root" \
   -p "127.0.0.1:${root_port}:80" \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
-  -e SKILLHUB_PUBLIC_BASE_URL="http://127.0.0.1:${root_port}" \
   -e SKILLHUB_WEB_BASE_PATH= \
   "$IMAGE" >/dev/null
 
@@ -58,12 +67,25 @@ root_asset=$(MSYS_NO_PATHCONV=1 docker exec "$name_root" sh -c \
 test -n "$root_asset"
 assert_javascript_asset "$root_url$root_asset"
 curl -fsS "$root_url/dashboard" | grep -F 'id="root"' >/dev/null
+assert_cache_control "$root_url/" 'no-cache, must-revalidate'
+assert_cache_control "$root_url/index.html" 'no-cache, must-revalidate'
+assert_cache_control "$root_url/dashboard" 'no-cache, must-revalidate'
+assert_cache_control "$root_url$root_asset" 'public, immutable'
 test "$(curl -sS -o /dev/null -w '%{http_code}' "$root_url/api/v1/health")" = "502"
+root_guide=$(curl -fsS "$root_url/install/skillhub.md")
+printf '%s' "$root_guide" | grep -F "The browser guide belongs to \`$root_url\`." >/dev/null
+printf '%s' "$root_guide" | grep -F "The primary CLI registry is \`$root_url\`." >/dev/null
+untrusted_https=$(curl -fsS -H 'X-Forwarded-Proto: https' "$root_url/install/skillhub.md")
+printf '%s' "$untrusted_https" | grep -F "The browser guide belongs to \`$root_url\`." >/dev/null
+for hostile_host in 'evil.example;echo_injected' 'evil.example$(id)' 'evil.example&whoami'; do
+  test "$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: $hostile_host" "$root_url/install/skillhub.md")" = "400"
+done
 
 MSYS_NO_PATHCONV=1 docker run -d --name "$name_subpath" \
   -p "127.0.0.1:${subpath_port}:80" \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_PUBLIC_BASE_URL="http://127.0.0.1:${subpath_port}/skillhub" \
+  -e SKILLHUB_WEB_CLI_REGISTRY_URL="http://skillhub.internal/skillhub" \
   -e SKILLHUB_WEB_BASE_PATH=/skillhub \
   "$IMAGE" >/dev/null
 
@@ -77,8 +99,24 @@ test "$(curl -sS -o /dev/null -w '%{http_code}' "$subpath_url/skillhub")" = "301
 test "$(curl -sSI "$subpath_url/skillhub" | tr -d '\r' | sed -n 's/^Location: //p')" = "/skillhub/"
 assert_javascript_asset "$subpath_url/skillhub$subpath_asset"
 curl -fsS "$subpath_url/skillhub/dashboard" | grep -F 'id="root"' >/dev/null
+assert_cache_control "$subpath_url/skillhub/" 'no-cache, must-revalidate'
+assert_cache_control "$subpath_url/skillhub/dashboard" 'no-cache, must-revalidate'
+assert_cache_control "$subpath_url/skillhub$subpath_asset" 'public, immutable'
 curl -fsS "$subpath_url/skillhub/runtime-config.js" | grep -F 'basePath: "/skillhub"' >/dev/null
-curl -fsS "$subpath_url/skillhub/registry/skill.md" | grep -F "/skillhub" >/dev/null
+guide=$(curl -fsS "$subpath_url/skillhub/install/skillhub.md")
+legacy_guide=$(curl -fsS "$subpath_url/skillhub/registry/skill.md")
+test "$guide" = "$legacy_guide"
+printf '%s' "$guide" | grep -F "The browser guide belongs to \`$subpath_url/skillhub\`." >/dev/null
+printf '%s' "$guide" | grep -F 'The primary CLI registry is `http://skillhub.internal/skillhub`.' >/dev/null
+printf '%s' "$guide" | grep -F 'skillhub install @<namespace>/<slug>' >/dev/null
+printf '%s' "$guide" | grep -F -- '--version <version>' >/dev/null
+printf '%s' "$guide" | grep -F -- '--registry http://skillhub.internal/skillhub' >/dev/null
+test "$(curl -sSI "$subpath_url/skillhub/install/skillhub.md" | tr -d '\r' | sed -n 's/^Cache-Control: //Ip')" = "no-cache"
+explicit_hostile=$(curl -fsS -H 'Host: evil.example;echo_injected' "$subpath_url/skillhub/install/skillhub.md")
+if printf '%s' "$explicit_hostile" | grep -F 'echo_injected' >/dev/null; then
+  echo 'explicit Agent guide must not interpolate request Host' >&2
+  exit 1
+fi
 test "$(curl -fsS "$subpath_url/skillhub/nginx-health")" = "ok"
 
 # Raw-prefix requests must redispatch to the existing proxy locations.

@@ -23,7 +23,7 @@ case "${SKILLHUB_WEB_BASE_PATH}" in
     first_segment=${normalized_base_path#/}
     first_segment=${first_segment%%/*}
     case "$first_segment" in
-      api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+      api|oauth2|login|assets|install|registry|nginx-health|.well-known|runtime-config.js)
         echo "SKILLHUB_WEB_BASE_PATH must not start with a reserved segment: $first_segment" >&2
         exit 1
         ;;
@@ -36,13 +36,17 @@ case "${SKILLHUB_WEB_BASE_PATH}" in
 esac
 
 if [ -z "$normalized_base_path" ]; then
-  printf '%s\n' '# Root deployment: no sub-path routing.' >"${SKILLHUB_NGINX_BASE_PATH_CONFIG}"
+  printf '%s\n' \
+    'set $skillhub_forwarded_prefix "";' \
+    '# Root deployment: no sub-path routing.' \
+    >"${SKILLHUB_NGINX_BASE_PATH_CONFIG}"
   exit 0
 fi
 
 # $1 is an Nginx rewrite capture, not a shell parameter.
 # shellcheck disable=SC2016
-printf 'location = %s {\n    absolute_redirect off;\n    return 301 %s/;\n}\n\nlocation ^~ %s/ {\n    rewrite ^%s/(.*)$ /$1 last;\n}\n' \
+printf 'set $skillhub_forwarded_prefix "%s";\n\nlocation = %s {\n    absolute_redirect off;\n    return 301 %s/;\n}\n\nlocation ^~ %s/ {\n    rewrite ^%s/(.*)$ /$1 last;\n}\n' \
+  "$normalized_base_path" \
   "$normalized_base_path" \
   "$normalized_base_path" \
   "$normalized_base_path" \

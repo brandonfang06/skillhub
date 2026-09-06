@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto'
+import { unzipSync } from 'fflate'
+
 type FakeHandler = (req: Request) => Response | Promise<Response>
 
 export function createFakeRegistry(handlers: Record<string, FakeHandler>) {
@@ -22,18 +25,14 @@ export function createFakeRegistry(handlers: Record<string, FakeHandler>) {
 /**
  * Controls how a specific endpoint behaves when a failure is injected:
  *   'auth'         => 401 { code: 401, message: 'unauthorized' }
- *   'forbidden'    => 403 { code: 403, message: 'forbidden' }
+ *   'forbidden'    => 403 with a standard SkillHub error envelope
+ *   'forbidden_unstructured' => 403 with a non-JSON response body
  *   'not_found'    => 404 { code: 404, message: 'not found' }
+ *   'rate_limited' => 429 { code: 429, msg: 'rate limit exceeded' }
  *   'server_error' => 500 { code: 500, message: 'internal error' }
  *   'network'      => handler throws, causing fetch() to reject with a TypeError
  */
-export type FailureMode =
-  | 'auth'
-  | 'forbidden'
-  | 'forbidden_unstructured'
-  | 'not_found'
-  | 'server_error'
-  | 'network'
+export type FailureMode = 'auth' | 'forbidden' | 'forbidden_unstructured' | 'not_found' | 'rate_limited' | 'server_error' | 'network'
 
 function failureResponse(mode: FailureMode): Response {
   switch (mode) {
@@ -43,15 +42,17 @@ function failureResponse(mode: FailureMode): Response {
       return Response.json({
         code: 403,
         msg: 'API token is missing required scope: skill:publish',
-        requestId: 'req-test-forbidden',
+        requestId: 'req-test-forbidden'
       }, { status: 403 })
     case 'forbidden_unstructured':
       return new Response('<html>sensitive proxy denial</html>', {
         status: 403,
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 'Content-Type': 'text/html' }
       })
     case 'not_found':
       return Response.json({ code: 404, message: 'not found' }, { status: 404 })
+    case 'rate_limited':
+      return Response.json({ code: 429, msg: 'rate limit exceeded', requestId: 'req-test-rate-limit' }, { status: 429 })
     case 'server_error':
       return Response.json({ code: 500, message: 'internal error' }, { status: 500 })
     case 'network':
@@ -73,10 +74,23 @@ export interface FakeSkill {
   version?: string
   /** Numeric version id returned in resolve. Defaults to 1. */
   versionId?: number
-  /** SHA-256 fingerprint string. Defaults to 'deadbeef'. */
+  /** SHA-256 fingerprint string. Defaults to the fingerprint of zipBytes. */
   fingerprint?: string
   /** Raw bytes served as the ZIP body. Defaults to a minimal valid ZIP. */
   zipBytes?: Uint8Array
+}
+
+function resolveSkillFingerprint(skill: FakeSkill): string {
+  if (skill.fingerprint) return skill.fingerprint
+  const entries = unzipSync(skill.zipBytes ?? MINIMAL_ZIP)
+  const aggregate = createHash('sha256')
+  for (const path of Object.keys(entries)
+    .filter(path => !path.endsWith('/') && path !== '.skillhub' && !path.startsWith('.skillhub/'))
+    .sort((left, right) => left.localeCompare(right))) {
+    const fileHash = createHash('sha256').update(entries[path]!).digest('hex')
+    aggregate.update(`${path}:${fileHash}\n`, 'utf8')
+  }
+  return `sha256:${aggregate.digest('hex')}`
 }
 
 // Minimal valid ZIP: local file header + end-of-central-directory record with
@@ -108,6 +122,7 @@ export interface CapturedPublish {
   /** Visibility string from the multipart form field. */
   visibility: string
   rejectExistingVersion: boolean
+  archiveEntries: string[]
 }
 
 export interface CapturedValidate {
@@ -152,6 +167,7 @@ interface FakeRegistryOptions {
   /** Response to return for publish/validate (dry-run) requests. */
   dryRunResponse?: { valid: boolean; errors: string[]; warnings: string[]; resolvedSlug: string | null; resolvedVersion: string | null }
   publishStatus?: string
+  namespacePageSize?: number
   /**
    * Per-endpoint failure injection. When set for an endpoint, that endpoint
    * ignores all other logic and returns the specified failure (or throws for
@@ -208,7 +224,21 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
     delete: CapturedDelete | null
     validate: CapturedValidate | null
     review: CapturedReview | null
-  } = { publish: null, resolve: null, delete: null, validate: null, review: null }
+    resolves: number
+    downloads: number
+    reviews: number
+    namespaceRequests: number
+  } = {
+    publish: null,
+    resolve: null,
+    delete: null,
+    validate: null,
+    review: null,
+    resolves: 0,
+    downloads: 0,
+    reviews: 0,
+    namespaceRequests: 0
+  }
 
   // If any endpoint is configured with 'network' failure mode, we need a real
   // TCP-level failure. Start a connection-dropping server and return its URL
@@ -283,25 +313,31 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
 
       const namespaceSyncMatch = path.match(/^\/api\/cli\/v1\/namespaces\/([^/]+)\/skills$/)
       if (namespaceSyncMatch && req.method === 'GET') {
+        state.namespaceRequests += 1
         if (options.failures?.namespaceSync) return failureResponse(options.failures.namespaceSync)
         const authErr = checkAuth(req)
         if (authErr) return authErr
         const namespace = decodeURIComponent(namespaceSyncMatch[1]!)
         const skills = (options.skills ?? []).filter(skill => skill.namespace === namespace)
+        const offset = Number.parseInt(url.searchParams.get('cursor') ?? '0', 10)
+        const requestedLimit = Number.parseInt(url.searchParams.get('limit') ?? '100', 10)
+        const pageSize = Math.min(options.namespacePageSize ?? requestedLimit, 100)
+        const page = skills.slice(offset, offset + pageSize)
+        const nextOffset = offset + page.length
         return Response.json({
           code: 0,
           data: {
-            items: skills.map((skill, index) => ({
+            items: page.map((skill, index) => ({
               namespace,
               slug: skill.slug,
               version: skill.version ?? '1.0.0',
-              versionId: skill.versionId ?? index + 1,
-              fingerprint: skill.fingerprint ?? 'deadbeef',
+              versionId: skill.versionId ?? offset + index + 1,
+              fingerprint: resolveSkillFingerprint(skill),
               updatedAt: '2026-08-18T00:00:00Z',
               visibility: 'NAMESPACE_ONLY',
               downloadUrl: buildDownloadUrl(baseUrl, namespace, skill.slug, skill.version ?? '1.0.0')
             })),
-            nextCursor: null
+            nextCursor: nextOffset < skills.length ? String(nextOffset) : null
           }
         })
       }
@@ -313,6 +349,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
       // Resolve: GET /api/cli/v1/skills/:namespace/:slug/resolve
       const resolveMatch = path.match(/^\/api\/cli\/v1\/skills\/([^/]+)\/([^/]+)\/resolve$/)
       if (resolveMatch && req.method === 'GET') {
+        state.resolves++
         if (options.failures?.resolve) return failureResponse(options.failures.resolve)
         const namespace = resolveMatch[1]!
         const slug = resolveMatch[2]!
@@ -334,7 +371,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
             slug,
             version,
             versionId: skill.versionId ?? 1,
-            fingerprint: skill.fingerprint ?? 'deadbeef',
+            fingerprint: resolveSkillFingerprint(skill),
             downloadUrl: buildDownloadUrl(baseUrl, namespace, slug, version)
           }
         })
@@ -350,6 +387,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -369,6 +407,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         if (!skill) {
           return Response.json({ code: 404, message: 'not found' }, { status: 404 })
         }
+        state.downloads += 1
         const bytes = skill.zipBytes ?? MINIMAL_ZIP
         return new Response(bytes as BodyInit, {
           status: 200,
@@ -420,6 +459,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+
           state.validate = {
             namespace,
             fileName,
@@ -447,7 +487,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
         const namespace = publishMatch[1]!
 
         // Parse multipart form data asynchronously — return a Promise<Response>.
-        return req.formData().then(form => {
+        return req.formData().then(async form => {
           const fileField = form.get('file')
           const visibility = (form.get('visibility') as string | null) ?? 'PUBLIC'
 
@@ -456,13 +496,17 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
           if (fileField instanceof File) {
             fileName = fileField.name || fileName
           }
+          const archiveEntries = fileField instanceof File
+            ? Object.keys(unzipSync(new Uint8Array(await fileField.arrayBuffer()))).sort()
+            : []
 
           // Record for test assertions.
           state.publish = {
             namespace,
             fileName,
             visibility,
-            rejectExistingVersion: form.get('rejectExistingVersion') === 'true'
+            rejectExistingVersion: form.get('rejectExistingVersion') === 'true',
+            archiveEntries
           }
 
           return Response.json({
@@ -480,13 +524,14 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
 
       const submitReviewMatch = path.match(/^\/api\/v1\/skills\/([^/]+)\/([^/]+)\/submit-review$/)
       if (submitReviewMatch && req.method === 'POST') {
+        state.reviews += 1
         if (options.failures?.submitReview) return failureResponse(options.failures.submitReview)
         const authErr = checkAuth(req)
         if (authErr) return authErr
         return req.json().then(body => {
           const request = body as { version: string; targetVisibility: string }
-          const namespace = decodeURIComponent(submitReviewMatch[1]!)
-          const slug = decodeURIComponent(submitReviewMatch[2]!)
+          const namespace = submitReviewMatch[1]!
+          const slug = submitReviewMatch[2]!
           state.review = { namespace, slug, version: request.version, targetVisibility: request.targetVisibility }
           return Response.json({
             code: 0,

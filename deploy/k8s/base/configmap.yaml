@@ -49,7 +49,10 @@ data:
   security-scanner-enabled: "true"
   security-scanner-base-url: http://skillhub-scanner:8000
   security-scanner-mode: upload
+  security-scanner-read-timeout-ms: "900000"
   scan-consumer-enabled: "false"
+  scan-consumer-reclaim-min-idle-ms: "960000"
+  security-stream-max-unavailable-age-seconds: "3600"
   scanner-use-behavioral: "true"
   scanner-use-llm: "false"
   scanner-llm-provider: anthropic

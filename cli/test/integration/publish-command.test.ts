@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
@@ -117,6 +117,25 @@ describe('publish command — P0', () => {
     expect(registry.received.publish!.visibility).toBe('PUBLIC')
   })
 
+  test('directory publish excludes local SkillHub installation metadata', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok' })
+    await login(env, registry.url)
+
+    const dir = await makeTempDir(['SKILL.md', '# Demo'])
+    await mkdir(join(dir, '.skillhub'), { recursive: true })
+    await writeFile(join(dir, '.skillhub', 'metadata.json'), '{"registry":"private"}')
+
+    const result = await runCli(['publish', dir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(registry.received.publish!.archiveEntries).toContain('SKILL.md')
+    expect(registry.received.publish!.archiveEntries.some(path => path.startsWith('.skillhub'))).toBe(false)
+  })
+
   test('zip file happy path: exit 0, fileName matches passed file', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({ token: 'sk_ok' })
@@ -212,14 +231,60 @@ describe('publish command — P1', () => {
     expect(result.exitCode).toBe(0)
     const json = JSON.parse(result.stdout)
     expect(json.ok).toBe(true)
+    expect(json.action).toBe('submitted')
     expect(json.namespace).toBe('global')
     expect(typeof json.slug).toBe('string')
     expect(typeof json.version).toBe('string')
     expect(typeof json.visibility).toBe('string')
+    expect(json.status).toBe('PENDING_REVIEW')
     expect(json.detailUrl).toContain(registry.url)
     expect(json.detailUrl).toContain('global')
     expect(json.detailUrl).toContain(encodeURIComponent(json.slug))
   })
+
+  test.each(['PUBLISHED', 'PENDING_REVIEW', 'SCANNING', 'UPLOADED'])(
+    'treats server status %s as a successful submission and preserves it in JSON',
+    async status => {
+      const env = await createTempHome()
+      registry = await startFakeRegistry({ token: 'sk_ok', publishStatus: status })
+      await login(env, registry.url)
+
+      const dir = await makeTempDir(['SKILL.md', '# Demo'])
+      const result = await runCli(['publish', dir, '--registry', registry.url, '--json'], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: true,
+        action: 'submitted',
+        status
+      })
+    }
+  )
+
+  test.each(['PUBLISHED', 'PENDING_REVIEW', 'SCANNING', 'UPLOADED'])(
+    'uses submitted semantics for server status %s in human output',
+    async status => {
+      const env = await createTempHome()
+      registry = await startFakeRegistry({ token: 'sk_ok', publishStatus: status })
+      await login(env, registry.url)
+
+      const dir = await makeTempDir(['SKILL.md', '# Demo'])
+      const result = await runCli(['publish', dir, '--registry', registry.url], {
+        HOME: env.home,
+        USERPROFILE: env.home
+      })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stdout).toContain('Submitted successfully:')
+      expect(result.stdout).toContain(`Status: ${status}`)
+      expect(result.stdout).not.toContain('Published successfully')
+      expect(result.stdout).toContain('Check the Web page')
+    }
+  )
 
   test('server error during publish returns EXIT.generic', async () => {
     const env = await createTempHome()
@@ -236,13 +301,35 @@ describe('publish command — P1', () => {
     expect(result.exitCode).toBe(1)
     expect(result.stderr).toContain('registry')
   })
+
+  test.each([
+    { failure: 'forbidden' as const, exitCode: 2, message: 'API token is missing required scope', requestId: 'req-test-forbidden' },
+    { failure: 'rate_limited' as const, exitCode: 1, message: 'rate limit exceeded', requestId: 'req-test-rate-limit' }
+  ])('structured publish failure $failure preserves msg and requestId', async scenario => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok', failures: { publish: scenario.failure } })
+    await login(env, registry.url)
+
+    const dir = await makeTempDir(['SKILL.md', '# Demo'])
+    const result = await runCli(['publish', dir, '--registry', registry.url, '--json'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(scenario.exitCode)
+    expect(result.stdout).toBe('')
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining(scenario.message),
+      details: { requestId: scenario.requestId }
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------
 // P1 — content shape: directory layout and edge files
 // ---------------------------------------------------------------------------
 
-import { mkdir } from 'node:fs/promises'
 import { unzipSync, strFromU8 } from 'fflate'
 
 describe('publish command — content shape', () => {

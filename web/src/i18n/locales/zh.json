@@ -233,7 +233,7 @@
     "modeHeading": "安装方式",
     "modeDirect": "直接指定 Agent",
     "modeInteractive": "终端交互选择",
-    "interactiveWarning": "每个 Skill 都会在交互式终端中询问一次，可选择多个 Agents 或 Generic；最新版会替换所有选中的目标目录。不适用于 CI 或后台任务。",
+    "interactiveWarning": "每个 Skill 都会在交互式终端中询问一次，可选择多个 Agents 或 Generic；仅可替换同一来源且由 CLI 管理的现有安装。不适用于 CI 或后台任务。",
     "scopeHeading": "安装范围",
     "scopeUser": "用户",
     "scopeProject": "项目",
@@ -242,7 +242,7 @@
     "agentPlaceholder": "选择 Agent",
     "selectAgentRequired": "请选择一个受支持的 Agent，才能复制指令。",
     "commandsHeading": "终端指令",
-    "commandsHint": "每一行都会安装最新发布版本，并替换现有目标目录。",
+    "commandsHint": "每一行都会安装最新发布版本；--force 仅替换已验证为同一来源且由 CLI 管理的安装。",
     "copyAll": "复制全部指令",
     "copyCommand": "复制 {{skill}} 的安装指令"
   },
@@ -539,6 +539,43 @@
   "tokens": {
     "pageTitle": "Token 管理",
     "pageSubtitle": "管理 CLI 和 API 使用的访问凭证"
+  },
+  "skillReviews": {
+    "title": "用户评价", "count": "共 {{count}} 条评价", "write": "写评价", "edit": "编辑我的评价",
+    "scoreLabel": "你的评分", "ratingDisplay": "评分：5 星中 {{score}} 星", "ratingOption": "评为 5 星中 {{score}} 星",
+    "reviewTextLabel": "评价内容", "save": "保存评价", "cancel": "取消", "delete": "删除评价",
+    "saved": "评价已保存", "deleted": "评价已删除，星级评分已保留", "saveFailed": "评价保存失败",
+    "deleteFailed": "评价删除失败", "loadFailed": "评价加载失败", "empty": "还没有评价。", "loading": "正在加载评价...",
+    "hiddenStatus": "已隐藏", "yourReviewHidden": "你的评价已从公开列表隐藏。", "moderationReason": "原因：{{reason}}",
+    "hide": "隐藏评价", "restore": "恢复评价", "previous": "上一页", "next": "下一页"
+  },
+  "theme": {
+    "darkMode": "深色主题",
+    "switchToLight": "切换到浅色主题",
+    "switchToDark": "切换到深色主题"
+  },
+  "reviewProgress": {
+    "title": "我的审核进度",
+    "subtitle": "查看技能审核结果、反馈和历次重新提交",
+    "searchLabel": "搜索技能或命名空间",
+    "searchAction": "搜索",
+    "statusFilter": "按审核状态筛选",
+    "statusAll": "全部状态",
+    "statusPending": "审核中",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "statusSummary": "当前审核状态汇总",
+    "latestSubmitted": "最近提交：{{time}}",
+    "attemptCount": "{{count}} 次提交",
+    "attemptNumber": "第 {{number}} 次",
+    "submittedAt": "提交于 {{time}}",
+    "reviewedAt": "审核于 {{time}}",
+    "reviewedBy": "审核人：{{reviewer}}",
+    "history": "提交历史",
+    "resubmit": "修改并重新提交",
+    "error": "无法加载审核进度，请稍后重试。",
+    "historyError": "无法加载提交历史，请稍后重试。",
+    "emptyTitle": "暂无审核历史"
   },
   "reviews": {
     "title": "审核中心",
@@ -1037,6 +1074,7 @@
     "install": "安装",
     "installMethodClawhub": "ClawHub CLI",
     "installMethodSkillhub": "SkillHub CLI",
+    "installCommandUnsafeVersion": "此版本无法安全地用于跨平台命令，请联系发布者修正版本号。",
     "download": "下载",
     "tryInPlayground": "在 Playground 试用",
     "labelsSectionTitle": "标签管理",
@@ -1224,6 +1262,11 @@
       "button": "分享",
       "copied": "已复制",
       "defaultDescription": "实用技能"
+    },
+    "installForAgent": {
+      "button": "让 Agent 安装",
+      "copied": "已复制 Agent 提示词",
+      "prompt": "按照 {{guideUrl}} 连接 SkillHub，并从注册中心 {{registryUrl}} 安装 {{skill}} 的 {{version}} 版本。"
     }
   },
   "skillCompare": {

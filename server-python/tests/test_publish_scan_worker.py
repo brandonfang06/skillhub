@@ -372,6 +372,7 @@ async def test_mark_scan_task_failed_only_updates_scanning_version() -> None:
         version_id=202,
         scanner_type="skill-scanner",
         failure_code="SCANNER_UNAVAILABLE",
+        failure_reason="x" * 1200,
     )
 
     assert updated is True
@@ -383,6 +384,11 @@ async def test_mark_scan_task_failed_only_updates_scanning_version() -> None:
     )
     assert connection.params[execution_index]["security_audit_id"] == 801
     assert connection.params[execution_index]["scan_status"] == "FAILED"
+    failure_index = next(
+        index for index, statement in enumerate(connection.statements)
+        if "UPDATE security_audit" in statement and "failure_reason" in statement
+    )
+    assert connection.params[failure_index]["failure_reason"] == "x" * 1000
     assert connection.params[execution_index]["failure_code"] == "SCANNER_UNAVAILABLE"
 
     connection = FakeConnection()
