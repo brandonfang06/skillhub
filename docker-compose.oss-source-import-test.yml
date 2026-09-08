@@ -41,6 +41,8 @@ services:
       SKILLHUB_DATABASE_URL: postgresql+asyncpg://skillhub:skillhub_smoke_db@postgres:5432/skillhub
       SPRING_DATA_REDIS_PASSWORD: skillhub_smoke_redis
       SKILLHUB_STORAGE_PROVIDER: s3
+      # Scan staging uses a sibling of this path; keep both inside the writable volume.
+      SKILLHUB_STORAGE_BASE_PATH: /var/lib/skillhub/storage/local
       SKILLHUB_STORAGE_S3_ENDPOINT: http://minio:9000
       SKILLHUB_STORAGE_S3_BUCKET: skillhub-oss-import-smoke
       SKILLHUB_STORAGE_S3_ACCESS_KEY: skillhub-smoke

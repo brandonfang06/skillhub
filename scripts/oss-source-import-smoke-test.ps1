@@ -167,6 +167,9 @@ try {
     Assert-ComposeContract
     New-Item -ItemType Directory -Path $checkout, $reports -Force | Out-Null
     Copy-Item -Path (Join-Path $repoRoot "tests\fixtures\oss-source-repository\*") -Destination $checkout -Recurse
+    # Exercise Linux discovery using a lowercase manifest in the actual Git clone.
+    Rename-Item -LiteralPath (Join-Path $checkout "skills\alpha\SKILL.md") -NewName "manifest.tmp"
+    Rename-Item -LiteralPath (Join-Path $checkout "skills\alpha\manifest.tmp") -NewName "skill.md"
     $pipelineShellRoot = New-Item -ItemType Directory -Path (Join-Path $pipeline "deploy\gitlab") -Force
     $pipelineImporterRoot = New-Item -ItemType Directory -Path (Join-Path $pipeline "tools\oss-source-importer") -Force
     $pipelinePackageRoot = New-Item -ItemType Directory `
@@ -180,6 +183,7 @@ try {
     & git -C $checkout init -q --initial-branch=main
     & git -C $checkout config user.email smoke@example.test
     & git -C $checkout config user.name "SkillHub Smoke"
+    & git -C $checkout config core.autocrlf false
     & git -C $checkout add .
     & git -C $checkout commit -qm "Initial OSS fixture"
     $initialCommit = (& git -C $checkout rev-parse HEAD).Trim()
@@ -243,6 +247,7 @@ WHERE n.slug='$namespaceSlug'
   AND audit.actor_service_principal_id='$serviceId'
   AND source.imported_by='$triggerId'
   AND source.imported_by_service_principal_id='$serviceId'
+  AND sa.is_safe=true
   AND source.repository_revision_sha='$initialCommit';
 "@ -TuplesOnly
         if ($databaseEvidence.Trim() -eq "3") { break }
@@ -293,6 +298,24 @@ ORDER BY rt.id DESC LIMIT 1;
     $publicDetail = Invoke-RestMethod -Uri "http://localhost:$WebPort/api/v1/skills/$($coordinate[0])/$($coordinate[1])/versions/$version"
     Assert-Equal $publicDetail.data.status "PUBLISHED" "Approved version status"
     Assert-Equal $publicDetail.data.sourceProvenance.repositoryRevisionSha $initialCommit "Published provenance SHA"
+    $downloadPath = Join-Path $reports "alpha.zip"
+    Invoke-WebRequest -Uri "http://localhost:$WebPort/api/v1/skills/$($coordinate[0])/$($coordinate[1])/versions/$version/download" `
+        -WebSession $session -OutFile $downloadPath
+    $archive = [IO.Compression.ZipFile]::OpenRead($downloadPath)
+    try {
+        Assert-Equal (@($archive.Entries | Where-Object { $_.FullName -ceq "SKILL.md" }).Count) 1 "Canonical manifest"
+        Assert-Equal (@($archive.Entries | Where-Object { $_.FullName -ceq "skill.md" }).Count) 0 "No lowercase archive entry"
+        $manifestStream = $archive.GetEntry("SKILL.md").Open()
+        $manifestBytes = [IO.MemoryStream]::new()
+        try {
+            $manifestStream.CopyTo($manifestBytes)
+            Assert-Equal ([Convert]::ToBase64String($manifestBytes.ToArray())) `
+                ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $checkout "skills\alpha\skill.md")))) `
+                "Downloaded manifest preserves source bytes"
+        }
+        finally { $manifestStream.Dispose(); $manifestBytes.Dispose() }
+    }
+    finally { $archive.Dispose() }
 
     $retry = Invoke-Importer "http://web" $triggerId "retry.json" "2"
     Assert-Equal (($retry.skills.validation.outcome | Where-Object { $_ -notlike "SKIPPED_*" }).Count) 0 "Retry outcomes"
@@ -318,6 +341,7 @@ ORDER BY rt.id DESC LIMIT 1;
     Write-Output "OSS source import smoke passed: run=$runId initial=$initialCommit changed=$changedCommit"
 }
 finally {
+    Invoke-Psql "UPDATE service_token SET revoked_at=CURRENT_TIMESTAMP WHERE service_principal_id='$serviceId' AND revoked_at IS NULL;" | Out-Null
     if (Test-Path -LiteralPath $temporaryRoot) {
         if ($KeepTemporaryRoot) {
             Write-Output "OSS source import smoke temporary root retained: $temporaryRoot"

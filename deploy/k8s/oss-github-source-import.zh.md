@@ -237,7 +237,7 @@ namespace owner 代為送審。`Imported by` 依**選定版本**顯示。service
 1. Python 使用 `SKILLHUB_DEV_GITLAB_REPOSITORY_URL`，由 URL credential 或 `CI_JOB_TOKEN`
    驗證身分，shallow-fetch `refs/heads/$SKILLHUB_DEV_GITLAB_BRANCH` 並 detached checkout。
 2. Clone 後以 `git rev-parse HEAD` 取得 provenance revision；不抓 submodules，也不使用共享 job 目錄。
-3. 找出 exact-case `SKILL.md`；每個 skill root 獨立 ZIP，nested root 不重複塞進 parent ZIP。
+3. 不區分 ASCII 大小寫尋找 `SKILL.md`（包含 `skill.md`、`Skill.MD`）；每個 skill root 獨立 ZIP，nested root 不重複塞進 parent ZIP。ZIP 根目錄統一使用 `SKILL.md`，原始 checkout 檔名與內容不變。同一資料夾若存在多個大小寫變體，匯入會在呼叫 API 前失敗，請在來源移除歧義。
 4. Ensure namespace 一次，再 validate 所有 packages；任一 validation 失敗時提交數必須為 0。
 5. 全部 validation 通過後循序 submit。SkillHub 仍執行 scanner 與 namespace owner review。
 6. 相同來源與內容重跑可回 `SKIPPED_ALREADY_IMPORTED` 或 `SKIPPED_UNCHANGED`，視為成功。
@@ -288,7 +288,9 @@ Report 不得包含 service token、job token 或 credentialed URL。
 | `6` | 部分提交；保留 report，修正失敗原因後重跑 protected branch。 |
 | `10` | 未預期 importer 錯誤。 |
 
-- `0 個 SKILL.md`：確認大小寫與 `SKILLHUB_IMPORT_SOURCE_ROOT`。
+- `0 個 SKILL.md`：確認 `SKILLHUB_IMPORT_SOURCE_ROOT` 與檔案存在；支援大小寫變體，但不跟隨 symlink。
+- `Ambiguous SKILL.md filenames`：同一目錄有多個大小寫變體，請修正來源，系統不會自行選擇或丟棄其中一個。
+- `event=manifest_canonicalized`：來源 manifest 在 ZIP 中改名為 `SKILL.md`；內容不變，不需要新增 variables、重建 CLI 或調整 backend。將更新後的 `tools/oss-source-importer/` 同步至執行 pipeline 的 GitLab project 即可。
 - landing mismatch：確認 protected branch 在 `pull_code` 到 `publish_skillhub` 之間未被其他 pipeline 改寫。
 - Clone 失敗：依 job log 的 git stage 確認 Dev URL、branch、job-token allowlist、Runner Git/DNS 與企業憑證。
 - Identity not found／disabled／ambiguous：確認 `keycloak` 與 exact `preferred_username`。

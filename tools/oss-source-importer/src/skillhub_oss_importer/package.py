@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -7,6 +8,9 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from .discovery import DiscoveryError, SkillRoot
+from .job_logging import job_value
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -37,10 +41,18 @@ def build_skill_package(root: SkillRoot, all_roots: set[Path]) -> BuiltPackage:
                 resolved.relative_to(root.path.resolve())
             except ValueError as exc:
                 raise DiscoveryError(f"Package path escapes source root: {path}") from exc
-            files.append((path.relative_to(root.path).as_posix(), path))
+            archive_path = path.relative_to(root.path).as_posix()
+            if archive_path == root.manifest_name:
+                archive_path = "SKILL.md"
+            files.append((archive_path, path))
     if not any(name == "SKILL.md" for name, _path in files):
         raise DiscoveryError(f"Package root lacks SKILL.md: {root.source_path}")
     output = BytesIO()
+    if root.manifest_name != "SKILL.md":
+        logger.info(
+            "event=manifest_canonicalized source_path=%s source_name=%s target_name=SKILL.md",
+            job_value(root.source_path), job_value(root.manifest_name),
+        )
     with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
         for archive_path, source_path in sorted(files):
             info = ZipInfo(archive_path, date_time=(1980, 1, 1, 0, 0, 0))
