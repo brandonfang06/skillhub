@@ -2,6 +2,11 @@
 
 ## Status
 
+2026-09-10 amendment: Direct Agent now also offers Generic through the published
+CLI's `--dir`. This supersedes the earlier no-`--dir` decision only; see
+[Generic directory plan](2026-09-10-generic-dir-multi-install.md). Other approved
+authentication, scope, force, and interactive-mode decisions remain in effect.
+
 Approved for implementation on 2026-08-25. The user completed the
 `grill-with-docs` decision sequence, delegated the remaining implementation
 details, and authorized development and verification without commit or push.

@@ -254,6 +254,8 @@
     "continue": "Continue to install"
   },
   "installSkills": {
+    "genericLabel": "Generic (shared directory)",
+    "genericHint": "Uses .agents/skills via --dir. PowerShell / Bash / Zsh; only Agents that read this directory can use these skills.",
     "title": "Install Skills",
     "backToSearch": "Back to search",
     "empty": "No Skills are selected in this browser tab.",

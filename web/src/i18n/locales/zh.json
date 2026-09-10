@@ -254,6 +254,8 @@
     "continue": "继续安装"
   },
   "installSkills": {
+    "genericLabel": "Generic（共享目录）",
+    "genericHint": "通过 --dir 安装至 .agents/skills。支持 PowerShell／Bash／Zsh；仅供会读取此目录的 Agent 使用。",
     "title": "安装 Skills",
     "backToSearch": "返回搜索",
     "empty": "此浏览器分页中尚未选择任何 Skills。",

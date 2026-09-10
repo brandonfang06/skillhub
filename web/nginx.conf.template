@@ -29,6 +29,12 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # The SPA route shares its name with the directory holding install/skillhub.md.
+    location = /install {
+        add_header Cache-Control "no-cache, must-revalidate" always;
+        try_files /index.html =404;
+    }
+
     location /api/ {
         proxy_pass ${SKILLHUB_API_UPSTREAM};
         proxy_set_header Host $host;

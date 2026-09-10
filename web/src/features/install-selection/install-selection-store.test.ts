@@ -91,7 +91,7 @@ describe('install selection store', () => {
       displayName: 'Alpha',
     })
     firstStore.getState().setScope('project')
-    firstStore.getState().setAgent('codex')
+    firstStore.getState().setAgent('generic')
     firstStore.getState().setTargetMode('interactive')
 
     const restoredStore = createInstallSelectionStore(storage)
@@ -111,7 +111,7 @@ describe('install selection store', () => {
       ownerUserId: 'user-a',
       isSelectionMode: true,
       scope: 'project',
-      selectedAgentId: 'codex',
+      selectedAgentId: 'generic',
       targetMode: 'interactive',
     })
     expect(restoredStore.getState().selectedSkills).toHaveLength(1)
@@ -216,7 +216,7 @@ describe('install selection store', () => {
     store.getState().setAgent('cursor')
     expect(store.getState().selectedAgentId).toBe('cursor')
 
-    store.getState().setAgent('generic')
+    store.getState().setAgent('unsupported')
     expect(store.getState().selectedAgentId).toBe('cursor')
 
     store.getState().setAgent(null)

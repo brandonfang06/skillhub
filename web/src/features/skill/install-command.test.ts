@@ -115,12 +115,18 @@ describe('install-command', () => {
     )
   })
 
+  it('renders Generic user installs with a quoted portable home dir and no conflicting flags', () => {
+    expect(buildSkillhubInstallCommand('global', 'my-skill', 'https://skill.xfyun.cn/skillhub', {
+      scope: 'user', agentId: 'generic', force: true,
+    })).toBe('npx @astron-team/skillhub@latest install @global/my-skill --registry https://skill.xfyun.cn/skillhub --dir "$HOME/.agents/skills" --force')
+  })
+
   it('filters unsupported Agent ids from persisted browser input', () => {
     expect(buildSkillhubInstallCommand(
       'global',
       'my-skill',
       'https://skill.xfyun.cn',
-      { scope: 'user', agentId: 'generic', force: true },
+      { scope: 'user', agentId: 'unsupported', force: true },
     )).toBe(
       'npx @astron-team/skillhub@latest install @global/my-skill --registry https://skill.xfyun.cn --scope user --force',
     )

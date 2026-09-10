@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import en from './locales/en.json'
 import zh from './locales/zh.json'
 import zhTW from './locales/zh-TW.json'
+import ru from './locales/ru.json'
 
 const SELECTION_KEYS = [
   'start',
@@ -30,6 +31,8 @@ const PAGE_KEYS = [
   'projectWarning',
   'agentsHeading',
   'agentPlaceholder',
+  'genericLabel',
+  'genericHint',
   'selectAgentRequired',
   'commandsHeading',
   'commandsHint',
@@ -42,6 +45,7 @@ describe('multi-skill install locale contract', () => {
     ['en', en],
     ['zh', zh],
     ['zh-TW', zhTW],
+    ['ru', ru],
   ] as const)('defines every selection and install-page key in %s', (_name, locale) => {
     for (const key of SELECTION_KEYS) {
       expect(locale.installSelection[key]).toBeTruthy()

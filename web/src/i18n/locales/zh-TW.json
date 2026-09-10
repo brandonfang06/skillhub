@@ -254,6 +254,8 @@
     "continue": "繼續安裝"
   },
   "installSkills": {
+    "genericLabel": "Generic（共用目錄）",
+    "genericHint": "透過 --dir 安裝至 .agents/skills。支援 PowerShell／Bash／Zsh；僅供會讀取此目錄的 Agent 使用。",
     "title": "安裝 Skills",
     "backToSearch": "返回搜尋",
     "empty": "此瀏覽器分頁中尚未選取任何 Skills。",

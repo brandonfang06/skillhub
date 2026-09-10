@@ -254,6 +254,8 @@
     "continue": "Продолжить установку"
   },
   "installSkills": {
+    "genericLabel": "Generic (общий каталог)",
+    "genericHint": "Установка в .agents/skills через --dir. PowerShell / Bash / Zsh; только для агентов, читающих этот каталог.",
     "title": "Установка скиллов",
     "backToSearch": "Вернуться к поиску",
     "empty": "В этой вкладке браузера скиллы не выбраны.",

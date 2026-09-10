@@ -13,6 +13,7 @@ export const SUPPORTED_INSTALL_AGENTS = [
   { id: 'trae-cn', label: 'Trae CN' },
   { id: 'opencode', label: 'OpenCode' },
   { id: 'kilo', label: 'Kilo' },
+  { id: 'generic', label: 'Generic' },
 ] as const
 
 const SUPPORTED_INSTALL_AGENT_IDS = new Set<string>(

@@ -192,9 +192,12 @@ export function InstallSkillsPage() {
                   >
                     <option value="">{t('installSkills.agentPlaceholder')}</option>
                     {SUPPORTED_INSTALL_AGENTS.map((agent) => (
-                      <option key={agent.id} value={agent.id}>{agent.label}</option>
+                      <option key={agent.id} value={agent.id}>{agent.id === 'generic' ? t('installSkills.genericLabel') : agent.label}</option>
                     ))}
                   </select>
+                  {selectedAgentId === 'generic' && (
+                    <p className="mt-2 text-xs text-muted-foreground">{t('installSkills.genericHint')}</p>
+                  )}
                   {selectedAgentId === null && (
                     <p role="alert" className="mt-2 text-xs font-medium text-destructive">
                       {t('installSkills.selectAgentRequired')}

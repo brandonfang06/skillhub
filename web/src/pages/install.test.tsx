@@ -54,6 +54,23 @@ describe('InstallSkillsPage', () => {
     })
   })
 
+  it('offers Generic with scope-specific dir commands and retains it across interactive mode', () => {
+    installSelectionStore.getState().addSkill({ id: 1, namespace: 'global', slug: 'alpha', displayName: 'Alpha' })
+    const { container } = render(<InstallSkillsPage />)
+    fireEvent.change(screen.getByLabelText('installSkills.agentsHeading'), { target: { value: 'generic' } })
+    expect(container.textContent).toContain('installSkills.genericHint')
+    fireEvent.click(screen.getByRole('button', { name: 'installSkills.copyAll' }))
+    expect(copyMock).toHaveBeenLastCalledWith('npx @astron-team/skillhub@latest install @global/alpha --registry https://skillhub.example.com/skillhub --dir "$HOME/.agents/skills" --force')
+    fireEvent.click(screen.getByLabelText('installSkills.scopeProject'))
+    fireEvent.click(screen.getByRole('button', { name: 'installSkills.copyAll' }))
+    expect(copyMock).toHaveBeenLastCalledWith('npx @astron-team/skillhub@latest install @global/alpha --registry https://skillhub.example.com/skillhub --dir "./.agents/skills" --force')
+    fireEvent.click(screen.getByLabelText('installSkills.modeInteractive'))
+    expect(container.textContent).not.toContain('--dir')
+    fireEvent.click(screen.getByLabelText('installSkills.modeDirect'))
+    expect((screen.getByLabelText('installSkills.agentsHeading') as HTMLSelectElement).value).toBe('generic')
+    expect(container.textContent).toContain('--dir "./.agents/skills"')
+  })
+
   it('requires one Agent, then copies sorted commands with force already enabled', () => {
     installSelectionStore.getState().addSkill({
       id: 2,

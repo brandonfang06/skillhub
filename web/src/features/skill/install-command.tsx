@@ -61,10 +61,14 @@ export function buildSkillhubInstallCommand(
   }
   const coordinate = buildSkillhubCoordinate(namespace, slug)
   const versionArg = options.version ? ` --version ${options.version}` : ''
-  const scopeArg = options.scope ? ` --scope ${options.scope}` : ''
   const agentId = normalizeInstallAgentId(options.agentId)
-  const agentArg = agentId ? ` --agent ${agentId}` : ''
   const forceArg = options.force ? ' --force' : ''
+  if (agentId === 'generic') {
+    const directory = options.scope === 'project' ? './.agents/skills' : '$HOME/.agents/skills'
+    return `npx @astron-team/skillhub@latest install ${coordinate}${versionArg} --registry ${baseUrl} --dir "${directory}"${forceArg}`
+  }
+  const scopeArg = options.scope ? ` --scope ${options.scope}` : ''
+  const agentArg = agentId ? ` --agent ${agentId}` : ''
   return `npx @astron-team/skillhub@latest install ${coordinate}${versionArg} --registry ${baseUrl}${scopeArg}${agentArg}${forceArg}`
 }
 
