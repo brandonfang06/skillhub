@@ -3,6 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { ReviewProgressPage } from './review-progress'
 
+vi.mock('@/features/review/namespace-reviewers-card', () => ({
+  NamespaceReviewersCard: ({ skillId, version }: { skillId: number; version: string }) => <div data-skill-id={skillId} data-version={version} />,
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'zh-TW' } }),
 }))

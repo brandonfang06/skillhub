@@ -1,5 +1,7 @@
 # 审核与治理
 
+发布者查看谁可以审核：[Namespace 可審核人員（繁體中文）](./namespace-reviewers.zh-TW.md)。此功能仅展示 Namespace ADMIN，既有审核权限不变。
+
 ## 功能描述
 
 SkillHub 提供了完整的审核工作流，确保发布到注册中心的技能包符合团队规范。

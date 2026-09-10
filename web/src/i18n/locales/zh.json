@@ -1,4 +1,34 @@
 {
+  "namespaceReviewers": {
+    "title": "Namespace 可审核人员",
+    "version": "版本 {{version}}",
+    "loading": "正在加载审核人员…",
+    "error": "无法加载审核信息，您的访问权限可能已变更。",
+    "retry": "重试",
+    "submitted": "送审时间：{{time}}",
+    "waiting": "已等待 {{count}} 分钟",
+    "reviewed": "实际审核人员：{{name}} · {{time}}",
+    "unknownReviewer": "无法获取审核人员",
+    "global": "此 GLOBAL namespace 按现有平台审核流程处理。",
+    "anyOne": "以下任一位 Namespace ADMIN 均可处理审核，目前未指派专人。",
+    "blocked": "以下为 Namespace ADMIN；须先解除上述阻塞，才能进行一般批准。",
+    "total": "Namespace ADMIN：{{count}} 人",
+    "empty": "目前没有可列出的 ACTIVE Namespace ADMIN，请联系平台管理员。",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "{{page}} / {{total}}",
+    "authorityNote": "此列表不变更现有 OWNER 与平台角色的审核权限。",
+    "reasons": {
+      "HUMAN_REVIEW": "等待 Namespace 人工审核",
+      "SCANNING": "等待安全扫描完成",
+      "SCAN_FAILED": "安全扫描失败，请先处理扫描问题",
+      "SCAN_PARTIAL": "扫描未完整完成，须按现有平台例外批准规则及确认程序处理",
+      "NAMESPACE_UNAVAILABLE": "Namespace 非 ACTIVE，请先解除 namespace 状态限制",
+      "NOT_SUBMITTED": "此版本目前未在等待审核",
+      "APPROVED": "已批准",
+      "REJECTED": "已驳回"
+    }
+  },
   "common": {
     "expand": "展开详情",
     "collapse": "收起详情"

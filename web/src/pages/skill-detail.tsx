@@ -31,6 +31,7 @@ import { StarButton } from '@/features/social/star-button'
 import { SubscribeButton } from '@/features/social/subscribe-button'
 import { SkillReviews } from '@/features/social/skill-reviews'
 import { useAuth } from '@/features/auth/use-auth'
+import { NamespaceReviewersCard } from '@/features/review/namespace-reviewers-card'
 import { adminApi, ApiError, buildApiUrl, getPlaygroundRuntimeConfig, WEB_API_PREFIX } from '@/api/client'
 import { useSubmitSkillReport } from '@/features/report/use-skill-reports'
 import { SecurityAuditSummary } from '@/features/security-audit/security-audit-summary'
@@ -977,6 +978,10 @@ export function SkillDetailPage() {
             </Card>
           )}
         </div>
+
+        {user && (skill.canManageLifecycle || governanceVisible) && (ownerPreviewVersion?.version || selectedVersion) ? (
+          <NamespaceReviewersCard key={`${skill.id}:${ownerPreviewVersion?.version ?? selectedVersion}`} skillId={skill.id} version={ownerPreviewVersion?.version ?? selectedVersion!} />
+        ) : null}
 
         <Tabs defaultValue="readme">
           <TabsList>

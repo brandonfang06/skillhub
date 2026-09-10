@@ -28,6 +28,7 @@ from app.api.playground import router as playground_router
 from app.api.promotions import router as promotions_router
 from app.api.publish import router as publish_router
 from app.api.reviews import router as reviews_router
+from app.api.review_context import router as review_context_router
 from app.api.security_audit import router as security_audit_router
 from app.api.skill_reports import router as skill_reports_router
 from app.api.skills import router as skills_router
@@ -185,6 +186,7 @@ def create_app() -> FastAPI:
     app.include_router(tokens_router)
     app.include_router(user_profile_router)
     app.include_router(reviews_router)
+    app.include_router(review_context_router)
     app.include_router(skills_router)
     app.include_router(well_known_router)
     install_frontend_openapi_contracts(app)

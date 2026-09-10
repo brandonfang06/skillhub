@@ -1,4 +1,34 @@
 {
+  "namespaceReviewers": {
+    "title": "Namespace reviewers",
+    "version": "Version {{version}}",
+    "loading": "Loading reviewers…",
+    "error": "Unable to load review information. Your access may have changed.",
+    "retry": "Try again",
+    "submitted": "Submitted {{time}}",
+    "waiting": "Waiting {{count}} minutes",
+    "reviewed": "Reviewed by {{name}} · {{time}}",
+    "unknownReviewer": "Unavailable reviewer",
+    "global": "This GLOBAL namespace follows the existing platform review process.",
+    "anyOne": "Any one of the following namespace admins can handle the review; no individual has been assigned.",
+    "blocked": "These are the namespace admins. The blocker above must be resolved before normal approval.",
+    "total": "Namespace ADMINs: {{count}}",
+    "empty": "No active Namespace ADMIN is currently listed. Please contact a platform administrator.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "{{page}} / {{total}}",
+    "authorityNote": "This list does not change existing OWNER or platform review permissions.",
+    "reasons": {
+      "HUMAN_REVIEW": "Waiting for namespace review",
+      "SCANNING": "Waiting for security scanning",
+      "SCAN_FAILED": "Security scan failed; resolve the scan failure first",
+      "SCAN_PARTIAL": "Scan incomplete; existing platform override rules and confirmation apply",
+      "NAMESPACE_UNAVAILABLE": "Namespace is not active; resolve the namespace restriction first",
+      "NOT_SUBMITTED": "This version is not currently awaiting review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    }
+  },
   "common": {
     "expand": "Expand details",
     "collapse": "Collapse details"

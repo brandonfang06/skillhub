@@ -82,6 +82,10 @@ vi.mock('@/features/auth/use-auth', () => ({
   useAuth: () => authState,
 }))
 
+vi.mock('@/features/review/namespace-reviewers-card', () => ({
+  NamespaceReviewersCard: ({ skillId, version }: { skillId: number; version: string }) => <div data-testid="namespace-reviewers" data-skill-id={skillId} data-version={version} />,
+}))
+
 vi.mock('@/features/report/use-skill-reports', () => ({
   useSubmitSkillReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
@@ -1012,6 +1016,7 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('skillDetail.versionStatusPendingReview')
     expect(html).not.toContain('skillDetail.versionStatusScanFailed')
+    expect(html).toContain('data-version="1.2.0"')
   })
 
   it('allows long pending review versions to wrap inside the review card', () => {
